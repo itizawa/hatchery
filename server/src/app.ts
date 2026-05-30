@@ -2,7 +2,10 @@ import express, { type Express } from "express";
 import session from "express-session";
 
 import { createPassport } from "./auth/passport.js";
+import { SECURITY_DEFAULTS } from "./config/env.js";
 import { errorHandler } from "./middleware/errorHandler.js";
+import { createRateLimiter } from "./middleware/rateLimiter.js";
+import { createJsonBodyParser, createRequestTimeout } from "./middleware/requestLimits.js";
 import {
   InMemoryChannelMembershipRepository,
   type ChannelMembershipRepository,
@@ -14,6 +17,21 @@ import { createChannelsRouter } from "./routes/channels.js";
 import { healthRouter } from "./routes/health.js";
 import { createMessagesRouter } from "./routes/messages.js";
 
+/** DDoS/過負荷対策（#34）の設定。未指定の項目は安全な既定値を使う。 */
+export interface SecurityOptions {
+  /** レート制限ウィンドウ長（ミリ秒）。既定 60000。 */
+  rateLimitWindowMs?: number;
+  /** レート制限のウィンドウあたり最大リクエスト数（IP ごと）。既定 300。 */
+  rateLimitMax?: number;
+  /** リクエストボディサイズ上限（express.json の limit 記法）。既定 "100kb"。 */
+  bodyLimit?: string;
+  /** リクエストタイムアウト（ミリ秒）。既定 30000。 */
+  requestTimeoutMs?: number;
+}
+
+/** SecurityOptions の既定値（env.ts と共有＝単一情報源。本番は server.ts が env から渡す）。 */
+const DEFAULT_SECURITY: Required<SecurityOptions> = { ...SECURITY_DEFAULTS };
+
 /** createApp の依存（永続化は注入する＝Express/Prisma からドメインを独立させる）。 */
 export interface AppDeps {
   messageRepository: MessageRepository;
@@ -21,6 +39,8 @@ export interface AppDeps {
   userRepository?: UserRepository;
   /** チャンネル所属（多対多）の永続化。省略時はインメモリ（#33）。 */
   channelMembershipRepository?: ChannelMembershipRepository;
+  /** DDoS/過負荷対策の設定（#34）。省略時は既定値。 */
+  security?: SecurityOptions;
 }
 
 /**
@@ -33,12 +53,20 @@ export function createApp(deps: AppDeps): Express {
   const channelMembershipRepository =
     deps.channelMembershipRepository ?? new InMemoryChannelMembershipRepository();
 
+  const security = { ...DEFAULT_SECURITY, ...deps.security };
+
   const sessionSecret = process.env.SESSION_SECRET;
   if (!sessionSecret && process.env.NODE_ENV === "production") {
     throw new Error("SESSION_SECRET 環境変数が設定されていません。本番環境では必須です。");
   }
 
-  app.use(express.json());
+  // DDoS/過負荷対策（#34）はボディ解釈より前に置き、過大・過多なリクエストを早期に弾く。
+  // 注: レート制限は req.ip ごとに数える。リバースプロキシ/LB の背後で運用する場合は、
+  //     正しいクライアント IP を得るためデプロイ側で app.set("trust proxy", ...) の設定が必要
+  //     （未設定だと全クライアントがプロキシ IP に集約される）。本 MVP は単一プロセス前提。
+  app.use(createRateLimiter({ windowMs: security.rateLimitWindowMs, max: security.rateLimitMax }));
+  app.use(createRequestTimeout(security.requestTimeoutMs));
+  app.use(createJsonBodyParser(security.bodyLimit));
 
   app.use(
     session({

@@ -18,4 +18,29 @@ describe("loadEnv", () => {
   it("数値でない PORT は ZodError で弾く", () => {
     expect(() => loadEnv({ PORT: "abc" })).toThrow();
   });
+
+  it("セキュリティ設定の既定値を返す", () => {
+    const env = loadEnv({});
+    expect(env.rateLimitWindowMs).toBe(60_000);
+    expect(env.rateLimitMax).toBe(300);
+    expect(env.bodyLimit).toBe("100kb");
+    expect(env.requestTimeoutMs).toBe(30_000);
+  });
+
+  it("セキュリティ設定を環境変数から読み取る", () => {
+    const env = loadEnv({
+      RATE_LIMIT_WINDOW_MS: "1000",
+      RATE_LIMIT_MAX: "5",
+      REQUEST_BODY_LIMIT: "200kb",
+      REQUEST_TIMEOUT_MS: "5000",
+    });
+    expect(env.rateLimitWindowMs).toBe(1000);
+    expect(env.rateLimitMax).toBe(5);
+    expect(env.bodyLimit).toBe("200kb");
+    expect(env.requestTimeoutMs).toBe(5000);
+  });
+
+  it("不正な RATE_LIMIT_MAX（非正）は ZodError で弾く", () => {
+    expect(() => loadEnv({ RATE_LIMIT_MAX: "0" })).toThrow();
+  });
 });

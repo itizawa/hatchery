@@ -25,7 +25,9 @@ async function login(app: ReturnType<typeof createApp>) {
 describe("POST /channels/:channelId/employees（追加・認証必須）", () => {
   it("未ログインだと 401 を返す", async () => {
     const { app } = await buildApp();
-    const res = await request(app).post("/channels/zatsudan/employees").send({ employeeId: "haru" });
+    const res = await request(app)
+      .post("/channels/zatsudan/employees")
+      .send({ employeeId: "haru" });
     expect(res.status).toBe(401);
   });
 

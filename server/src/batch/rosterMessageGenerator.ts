@@ -19,6 +19,12 @@ export interface RosterMessageGeneratorOptions {
   perChannel?: number;
   /** 乱数源（既定 Math.random）。テストで決定的にするため注入可能。 */
   rng?: () => number;
+  /**
+   * チャンネル id → 所属 Employee id 群（#33）。
+   * 指定すると、各チャンネルで所属する Employee のみを発言候補にする。
+   * 未指定なら全 employees が候補（後方互換）。
+   */
+  membershipByChannel?: Readonly<Record<string, readonly string[]>>;
 }
 
 /**
@@ -34,6 +40,7 @@ export function createRosterMessageGenerator(
   const templates = options.templates ?? EMPLOYEE_MESSAGE_TEMPLATES;
   const perChannel = options.perChannel ?? 2;
   const rng = options.rng ?? Math.random;
+  const membershipByChannel = options.membershipByChannel;
 
   return (): Message[] =>
     buildRosterMessages({
@@ -42,5 +49,6 @@ export function createRosterMessageGenerator(
       templates,
       perChannel,
       rng,
+      membershipByChannel,
     });
 }

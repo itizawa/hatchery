@@ -11,6 +11,7 @@ Employee とチャンネルは **多対多**（1 人の Employee が複数チャ
 ## 2. スコープ（やること / やらないこと）
 
 ### やること
+
 - Prisma に Employee ↔ Channel の多対多リレーション（明示的中間テーブル `ChannelEmployee`）を定義し migration を追加。
 - 永続化境界（ポート）`ChannelMembershipRepository` と InMemory / Prisma 実装。
 - ユースケース（追加 / 除外）と `/channels/:channelId/employees` ルータ。
@@ -23,6 +24,7 @@ Employee とチャンネルは **多対多**（1 人の Employee が複数チャ
   common の `buildRosterMessages` に**任意の所属マップ**を渡せるよう拡張し、generator / バッチ CLI を連携。
 
 ### やらないこと
+
 - Employee / Channel 自体の CRUD（#47 / 別 Issue）。本 Issue は所属関係に限定。
 - AI によるメッセージ生成（#53）。バッチ連携は既存の静的テンプレート生成器に対して行う。
 - 所属に伴う権限・ロールの拡張（MVP 外）。
@@ -44,6 +46,7 @@ Employee とチャンネルは **多対多**（1 人の Employee が複数チャ
 層分離（ADR-0004）と依存方向（client/server → common 一方向、ADR-0005）に従う。
 
 ### common（純粋・単一情報源）
+
 - `common/src/domain/channelMembership/channelMembership.ts`
   - `AddChannelMemberSchema = z.object({ employeeId: z.string().min(1) })` … POST のリクエストボディ検証。
   - `ChannelMembershipSchema = z.object({ channelId: z.string().min(1), employeeId: z.string().min(1) })` … 所属 1 件の表現。
@@ -53,6 +56,7 @@ Employee とチャンネルは **多対多**（1 人の Employee が複数チャ
   - 指定時は各チャンネルの発言候補を「そのチャンネルに所属する Employee」に絞る（未指定なら従来どおり全 Employee）。
 
 ### server（層分離）
+
 - 永続化: `server/src/persistence/channelMembershipRepository.ts`（ポート + `InMemoryChannelMembershipRepository`）、
   `prismaChannelMembershipRepository.ts`（Prisma 実装）。
   - `addMember(channelId, employeeId)` … 冪等（既存なら何もしない）。
@@ -68,6 +72,7 @@ Employee とチャンネルは **多対多**（1 人の Employee が複数チャ
   `batch/index.ts` で `PrismaChannelMembershipRepository.listMembershipByChannel()` を取得して generator に渡す。
 
 ### Prisma スキーマ
+
 ```prisma
 model ChannelEmployee {
   channelId  String
@@ -78,6 +83,7 @@ model ChannelEmployee {
   @@index([employeeId])
 }
 ```
+
 Channel / Employee に逆リレーション `members ChannelEmployee[]` / `channels ChannelEmployee[]` を追加。
 
 ## 5. 影響範囲 / 既存への変更

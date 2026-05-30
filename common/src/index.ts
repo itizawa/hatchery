@@ -5,6 +5,7 @@
  */
 export * from "./domain/auth/index.js";
 export * from "./domain/channel/index.js";
+export * from "./domain/channelMembership/index.js";
 export * from "./domain/employee/index.js";
 export * from "./domain/message/index.js";
 export * from "./domain/task/index.js";

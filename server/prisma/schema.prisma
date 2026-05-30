@@ -21,16 +21,30 @@ model User {
 
 /// AI 社員。common の EmployeeSchema に対応（id / displayName / role?）。
 model Employee {
-  id          String  @id
+  id          String            @id
   displayName String
   role        String?
   tasks       Task[]
+  channels    ChannelEmployee[]
 }
 
 /// 話題の入れ物。common の ChannelSchema に対応（id / label）。
 model Channel {
-  id    String @id
-  label String
+  id      String            @id
+  label   String
+  members ChannelEmployee[]
+}
+
+/// Employee ↔ Channel の所属（多対多）の明示的中間テーブル（#33）。
+/// 1 人の Employee が複数チャンネルに所属でき、1 チャンネルに複数 Employee が所属できる。
+model ChannelEmployee {
+  channelId  String
+  employeeId String
+  channel    Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@id([channelId, employeeId])
+  @@index([employeeId])
 }
 
 /// channel に直接紐づく 1 発言（ADR-0009: Scene 廃止）。

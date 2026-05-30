@@ -3,9 +3,14 @@ import session from "express-session";
 
 import { createPassport } from "./auth/passport.js";
 import { errorHandler } from "./middleware/errorHandler.js";
+import {
+  InMemoryChannelMembershipRepository,
+  type ChannelMembershipRepository,
+} from "./persistence/channelMembershipRepository.js";
 import type { MessageRepository } from "./persistence/messageRepository.js";
 import { InMemoryUserRepository, type UserRepository } from "./persistence/userRepository.js";
 import { createAuthRouter } from "./routes/auth.js";
+import { createChannelsRouter } from "./routes/channels.js";
 import { healthRouter } from "./routes/health.js";
 import { createMessagesRouter } from "./routes/messages.js";
 
@@ -14,6 +19,8 @@ export interface AppDeps {
   messageRepository: MessageRepository;
   /** 省略時はテスト用の空リポジトリを使用。本番では PrismaUserRepository を渡す。 */
   userRepository?: UserRepository;
+  /** チャンネル所属（多対多）の永続化。省略時はインメモリ（#33）。 */
+  channelMembershipRepository?: ChannelMembershipRepository;
 }
 
 /**
@@ -23,6 +30,8 @@ export interface AppDeps {
 export function createApp(deps: AppDeps): Express {
   const app = express();
   const userRepository = deps.userRepository ?? new InMemoryUserRepository();
+  const channelMembershipRepository =
+    deps.channelMembershipRepository ?? new InMemoryChannelMembershipRepository();
 
   const sessionSecret = process.env.SESSION_SECRET;
   if (!sessionSecret && process.env.NODE_ENV === "production") {
@@ -52,6 +61,7 @@ export function createApp(deps: AppDeps): Express {
   app.use("/health", healthRouter);
   app.use("/auth", createAuthRouter(passportInstance));
   app.use("/messages", createMessagesRouter(deps.messageRepository));
+  app.use("/channels", createChannelsRouter(channelMembershipRepository));
   app.use(errorHandler);
   return app;
 }

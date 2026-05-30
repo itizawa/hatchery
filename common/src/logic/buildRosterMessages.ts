@@ -41,18 +41,30 @@ export interface BuildRosterMessagesInput {
   perChannel: number;
   /** 乱数源（既定 Math.random）。注入で決定的にできる。 */
   rng?: Rng;
+  /**
+   * チャンネル id → 所属 Employee id 群（#33）。
+   * 指定すると、各チャンネルの発言候補をそのチャンネルに所属する Employee のみに絞る。
+   * 未指定なら従来どおり employees 全員が候補（後方互換）。
+   * マップに無い・所属が空のチャンネルでは誰も発言しない。
+   */
+  membershipByChannel?: Readonly<Record<string, readonly string[]>>;
 }
 
 /**
- * 定時の発言一覧を組み立てる純粋関数（#32 MVP）。
+ * 定時の発言一覧を組み立てる純粋関数（#32 MVP / #33 で所属フィルタ追加）。
  * 各チャンネルで perChannel 名をランダム選定し、各社員の静的テンプレートから 1 文をランダムに選ぶ。
+ * membershipByChannel 指定時は、当該チャンネルに所属する Employee のみを候補にする。
  * テンプレートが無い社員はスキップする。React/DOM/Node 非依存（ADR-0005）。
  */
 export const buildRosterMessages = (input: BuildRosterMessagesInput): Message[] => {
   const rng = input.rng ?? Math.random;
   const messages: Message[] = [];
   for (const channel of input.channels) {
-    const speakers = selectRandomMembers(input.employees, input.perChannel, rng);
+    // 所属マップがあれば、そのチャンネルに所属する Employee のみを発言候補にする（#33）。
+    const channelMembers = input.membershipByChannel
+      ? input.employees.filter((e) => (input.membershipByChannel?.[channel] ?? []).includes(e.id))
+      : input.employees;
+    const speakers = selectRandomMembers(channelMembers, input.perChannel, rng);
     for (const speaker of speakers) {
       const candidates = input.templates[speaker] ?? [];
       if (candidates.length === 0) continue;

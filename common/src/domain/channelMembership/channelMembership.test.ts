@@ -24,9 +24,9 @@ describe("ChannelMembershipSchema（所属 1 件）", () => {
   });
 
   it("いずれかが空なら拒否する", () => {
-    expect(
-      ChannelMembershipSchema.safeParse({ channelId: "", employeeId: "haru" }).success,
-    ).toBe(false);
+    expect(ChannelMembershipSchema.safeParse({ channelId: "", employeeId: "haru" }).success).toBe(
+      false,
+    );
     expect(
       ChannelMembershipSchema.safeParse({ channelId: "zatsudan", employeeId: "" }).success,
     ).toBe(false);

@@ -15,6 +15,6 @@ describe("AppRoot", () => {
     });
     render(<AppRoot router={router} />);
     expect(await screen.findByText("#雑談")).toBeInTheDocument();
-    expect(await screen.findByRole("heading", { name: /シーン/ })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /タイムライン/ })).toBeInTheDocument();
   });
 });

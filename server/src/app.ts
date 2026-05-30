@@ -1,13 +1,13 @@
 import express, { type Express } from "express";
 
 import { errorHandler } from "./middleware/errorHandler.js";
-import type { SceneRepository } from "./persistence/sceneRepository.js";
+import type { MessageRepository } from "./persistence/messageRepository.js";
 import { healthRouter } from "./routes/health.js";
-import { createScenesRouter } from "./routes/scenes.js";
+import { createMessagesRouter } from "./routes/messages.js";
 
 /** createApp の依存（永続化は注入する＝Express/Prisma からドメインを独立させる）。 */
 export interface AppDeps {
-  sceneRepository: SceneRepository;
+  messageRepository: MessageRepository;
 }
 
 /**
@@ -18,7 +18,7 @@ export function createApp(deps: AppDeps): Express {
   const app = express();
   app.use(express.json());
   app.use("/health", healthRouter);
-  app.use("/scenes", createScenesRouter(deps.sceneRepository));
+  app.use("/messages", createMessagesRouter(deps.messageRepository));
   app.use(errorHandler);
   return app;
 }

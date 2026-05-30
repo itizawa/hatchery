@@ -1,0 +1,42 @@
+name: CI
+
+# Dark Factory フェーズ C のマージ前ゲート（test/lint/build の番人）。
+# develop 向け PR と develop への push で turbo run lint test build を実行する。
+# main 昇格は人間ゲートのため、本 CI は develop に限定する（/df ゲート1 と整合）。
+on:
+  pull_request:
+    branches: [develop]
+  push:
+    branches: [develop]
+
+# 同一ブランチ/PR の古い実行はキャンセルして Actions 分を節約する。
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # pnpm バージョンはルート package.json の packageManager フィールドから解決する。
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      # Node バージョンは .nvmrc 単一情報源（ADR-0002: Node 26）から取得する。
+      # cache: pnpm で pnpm ストアの依存キャッシュを有効化する。
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      # lockfile 不整合時はジョブを失敗させ、ローカルと CI の依存差異を防ぐ。
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # ADR-0002 のタスク定義をそのまま回す。Turborepo が依存順と並列を解決する。
+      - name: Lint / Test / Build
+        run: pnpm turbo run lint test build

@@ -84,7 +84,9 @@ describe("ジョブのステップ定義 (受け入れ条件 #3, #4, #5, #6)", (
   it("pnpm install --frozen-lockfile を実行する", () => {
     const steps = allSteps(loadWorkflow());
     expect(
-      steps.some((s) => /pnpm\s+install\b/.test(s.run ?? "") && /--frozen-lockfile/.test(s.run ?? "")),
+      steps.some(
+        (s) => /pnpm\s+install\b/.test(s.run ?? "") && /--frozen-lockfile/.test(s.run ?? ""),
+      ),
     ).toBe(true);
   });
 

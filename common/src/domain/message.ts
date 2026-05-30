@@ -16,3 +16,8 @@ export const MessageSchema = z.object({
 });
 
 export type Message = z.infer<typeof MessageSchema>;
+
+/** 定時バッチで一括生成する発言の配列スキーマ。1 件以上必須（ADR-0009）。 */
+export const MessageArraySchema = z.array(MessageSchema).min(1);
+
+export type MessageArray = z.infer<typeof MessageArraySchema>;

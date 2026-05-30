@@ -39,10 +39,8 @@ export class SystemScheduler implements SchedulerPort {
       timer = setTimeout(() => {
         if (cancelled) return;
         handler();
-        arm();
+        arm(); // 翌日分を再登録して日次運用する。
       }, msUntilNext(hour, minute));
-      // プロセスの存続を妨げないようにする（スケジューラがイベントループを占有しない）。
-      timer.unref?.();
     };
 
     arm();

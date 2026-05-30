@@ -6,7 +6,7 @@ export type Rng = () => number;
 
 /**
  * 候補社員から count 名を**重複なくランダムに**選び、その id 配列を返す（#32）。
- * Fisher–Yates の部分シャッフルで先頭 count 件を取り出す。
+ * Fisher–Yates でコピーをシャッフルし、先頭 count 件を取り出す。
  *
  * - count <= 0 なら空配列。count が候補数以上なら全員（順序はシャッフル後）。
  * - rng を注入すれば決定的（同じ rng 列に対し同じ結果）。
@@ -19,7 +19,7 @@ export const selectRandomMembers = (
 ): string[] => {
   if (count <= 0) return [];
   const ids = employees.map((e) => e.id);
-  // 末尾から i 番目を [0, i] のいずれかと入れ替える（部分シャッフル）。
+  // 末尾から i 番目を [0, i] のいずれかと入れ替える（Fisher–Yates シャッフル）。
   for (let i = ids.length - 1; i > 0; i -= 1) {
     const j = Math.floor(rng() * (i + 1));
     const tmp = ids[i] as string;

@@ -69,6 +69,13 @@ export default tseslint.config(
       ],
     },
   },
+  // client はブラウザ実行（React SPA）。document/window 等のブラウザ globals を許可する。
+  {
+    files: ["client/**/*.{ts,tsx}"],
+    languageOptions: {
+      globals: { ...globals.browser },
+    },
+  },
   // 補助: パッケージ名（@hatchery/*）経由の依存方向違反をワークスペースごとに塞ぐ。
   {
     files: ["client/**/*.{ts,tsx}"],

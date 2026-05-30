@@ -1,7 +1,7 @@
 ---
 description: Dark Factory ディスパッチャ。GitHub の Open Issue の df:* ラベルから「今 AI が何をすべきか」を自律判断し、最優先の AI 実行可能 Issue を正しいフェーズ（設計 / TDD実装 / レビュー→developマージ）で1件処理してラベルを安全に遷移させる。
 argument-hint: "[Issue番号(省略可)]"
-allowed-tools: Bash(gh issue list:*), Bash(gh issue view:*), Bash(gh issue edit:*), Bash(gh issue comment:*), Bash(gh pr create:*), Bash(gh pr view:*), Bash(gh pr list:*), Bash(gh pr checks:*), Bash(gh pr merge:*), Bash(gh pr diff:*), Bash(gh pr comment:*), Bash(gh label list:*), Bash(gh repo view:*), Bash(gh api:*), Bash(git status:*), Bash(git switch:*), Bash(git checkout:*), Bash(git branch:*), Bash(git fetch:*), Bash(git pull:*), Bash(git ls-remote:*), Bash(git rev-parse:*), Bash(git show-ref:*), Bash(git worktree:*), Bash(cd:*), Bash(git push -u origin design/issue-*:*), Bash(git push origin design/issue-*:*), Bash(git push -u origin feature/issue-*:*), Bash(git push origin feature/issue-*:*), Bash(git add:*), Bash(git commit:*), Bash(git log:*), Bash(git diff:*), Bash(pnpm:*), Bash(npm:*), Bash(npx:*), Read, Write, Edit, Glob, Grep, Skill(code-review:code-review)
+allowed-tools: Bash(gh issue list:*), Bash(gh issue view:*), Bash(gh issue edit:*), Bash(gh issue comment:*), Bash(gh pr create:*), Bash(gh pr view:*), Bash(gh pr list:*), Bash(gh pr checks:*), Bash(gh pr merge:*), Bash(gh pr diff:*), Bash(gh pr comment:*), Bash(gh label list:*), Bash(gh repo view:*), Bash(gh api:*), Bash(git status:*), Bash(git switch:*), Bash(git checkout:*), Bash(git branch:*), Bash(git fetch:*), Bash(git pull:*), Bash(git ls-remote:*), Bash(git rev-parse:*), Bash(git show-ref:*), Bash(git worktree:*), Bash(cd:*), Bash(git push -u origin design/issue-*:*), Bash(git push origin design/issue-*:*), Bash(git push -u origin feature/issue-*:*), Bash(git push origin feature/issue-*:*), Bash(git add:*), Bash(git commit:*), Bash(git log:*), Bash(git diff:*), Bash(pnpm:*), Bash(npm:*), Bash(npx:*), Bash(corepack:*), Bash(volta:*), Bash(node:*), Bash(which:*), Bash(echo:*), Bash(cat:*), Bash(head:*), Bash(tail:*), Bash(ls:*), Bash(pwd), Bash(wc:*), Bash(env), Bash(printenv:*), Bash(sort:*), Bash(uniq:*), Bash(test:*), Bash(true), Bash(grep:*), Bash(find:*), Read, Write, Edit, Glob, Grep, Skill(code-review:code-review)
 ---
 
 # /df — Dark Factory ディスパッチャ
@@ -14,6 +14,8 @@ GitHub の Open Issue を確認し、各 Issue の `df:*` ラベルから「今 
 - 正本は `docs/dark-factory-workflow.md` と `CLAUDE.md`。判断に迷ったら必ずこの 2 つを読んで従う。以下は単体で完走できるよう要点を自己完結させたもの。
 - 会話・コメント・PR 本文・設計書はすべて **日本語**（このリポジトリの規約）。
 - **実体作業（設計書生成・実装・テスト/lint・コミット・push）はすべて専用の git worktree 内で行い、ユーザーのメイン作業ツリー（カレントのチェックアウト）には一切触れない。** `git switch` でメインのブランチを切り替えない。これにより人間や別セッションが develop 上で並行作業していても干渉せず、`/loop` や複数同時実行でも安全。手順は「STEP 2 共通: 🌲 隔離ワークトゥリーで作業する」。
+- **自走優先・人間への確認は最小化する。** 本コマンドは無人運転（`/loop` 等）が前提。判断はゲートと手順に従って自動で進め、人間に問いを投げてよいのは「ゲート 4 に該当して `df:blocked` を付けるとき」だけ。それ以外で停止・質問しない。
+  - **権限プロンプトを増やさない**: Bash は上記 `allowed-tools` に列挙した範囲で実行する。とくに複合コマンド（`&&` / `;` / パイプ）は各サブコマンドが分割判定されるため、**許可リスト外のコマンドを混ぜない**（混ぜると全体がプロンプトになる）。診断は `which` / `echo` / `node` / `cat` / `head` / `ls` / `corepack` / `volta` など許可済みのものを使い、迷う複合ワンライナーは小さな単一コマンドに分割して実行する。
 
 ---
 

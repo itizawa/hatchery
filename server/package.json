@@ -33,6 +33,7 @@
   "devDependencies": {
     "@types/express": "^5",
     "@types/supertest": "^6",
+    "openapi3-ts": "^4.5.0",
     "prisma": "^6",
     "supertest": "^7",
     "tsx": "^4"

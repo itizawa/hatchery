@@ -3,6 +3,7 @@ import {
   OpenAPIRegistry,
   extendZodWithOpenApi,
 } from "@asteasolutions/zod-to-openapi";
+import type { OpenAPIObject } from "openapi3-ts/oas31";
 import { z } from "zod";
 
 import { MessageSchema, SceneSchema } from "@hatchery/common";
@@ -65,7 +66,7 @@ registry.registerPath({
 });
 
 /** OpenAPI 3.1 ドキュメントを生成して返す。generate.ts やテストから呼ぶ。 */
-export function generateOpenApiDocument() {
+export function generateOpenApiDocument(): OpenAPIObject {
   const generator = new OpenApiGeneratorV31(registry.definitions);
   return generator.generateDocument({
     openapi: "3.1.0",

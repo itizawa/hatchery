@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { CHANNEL_IDS, ChannelSchema, DEFAULT_CHANNELS } from "./channel.js";
+import { CHANNEL_IDS, ChannelSchema, DEFAULT_CHANNELS, findChannelById } from "./channel.js";
 
 describe("Channel / CHANNEL_IDS (A-7)", () => {
   it("CHANNEL_IDS は MVP の 2 チャンネル zatsudan / shigoto を含む", () => {
@@ -24,5 +24,15 @@ describe("Channel / CHANNEL_IDS (A-7)", () => {
     for (const ch of DEFAULT_CHANNELS) {
       expect(ChannelSchema.safeParse(ch).success).toBe(true);
     }
+  });
+});
+
+describe("findChannelById", () => {
+  it("既知のチャンネル ID から DEFAULT_CHANNELS の Channel を返す", () => {
+    expect(findChannelById("zatsudan")).toEqual({ id: "zatsudan", label: "#雑談" });
+  });
+
+  it("未知のチャンネル ID では undefined を返す", () => {
+    expect(findChannelById("does-not-exist")).toBeUndefined();
   });
 });

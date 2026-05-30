@@ -18,3 +18,11 @@ export const DEFAULT_CHANNELS: readonly Channel[] = [
   { id: "zatsudan", label: "#雑談" },
   { id: "shigoto", label: "#仕事" },
 ];
+
+/**
+ * チャンネル ID から既定チャンネル（DEFAULT_CHANNELS）の Channel を引く。
+ * 未知 ID は undefined を返す（フォールバック表示など UI 側の方針は呼び出し側に委ねる）。
+ * DEFAULT_CHANNELS の正本（common）に解決ロジックを集約する（ADR-0005）。
+ */
+export const findChannelById = (channelId: string): Channel | undefined =>
+  DEFAULT_CHANNELS.find((channel) => channel.id === channelId);

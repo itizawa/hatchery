@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { DEFAULT_EMPLOYEES, EmployeeSchema } from "./employee.js";
+import { createDisplayNameResolver, DEFAULT_EMPLOYEES, EmployeeSchema } from "./employee.js";
 
 describe("EmployeeSchema (A-1 / A-2)", () => {
   it("id / displayName を持つ社員は parse 成功する（role は任意）", () => {
@@ -33,5 +33,29 @@ describe("DEFAULT_EMPLOYEES (#25)", () => {
   it("id が一意である", () => {
     const ids = DEFAULT_EMPLOYEES.map((e) => e.id);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+});
+
+describe("createDisplayNameResolver", () => {
+  const employees = [
+    { id: "haru", displayName: "ハル" },
+    { id: "ken", displayName: "ケン" },
+  ];
+
+  it("既知の employee ID を displayName に解決する", () => {
+    const resolve = createDisplayNameResolver(employees);
+    expect(resolve("haru")).toBe("ハル");
+    expect(resolve("ken")).toBe("ケン");
+  });
+
+  it("未知の ID はその ID をそのままフォールバック表示する", () => {
+    const resolve = createDisplayNameResolver(employees);
+    expect(resolve("unknown-id")).toBe("unknown-id");
+  });
+
+  it("引数省略時は DEFAULT_EMPLOYEES で解決する", () => {
+    const resolve = createDisplayNameResolver();
+    const haru = DEFAULT_EMPLOYEES.find((e) => e.id === "haru")!;
+    expect(resolve("haru")).toBe(haru.displayName);
   });
 });

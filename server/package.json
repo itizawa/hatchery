@@ -16,6 +16,7 @@
     "dev": "tsx watch src/server.ts",
     "start": "node dist/server.js",
     "batch": "tsx src/batch/index.ts",
+    "openapi": "tsx src/openapi/generate.ts",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",
     "db:migrate:dev": "prisma migrate dev",
@@ -23,6 +24,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@asteasolutions/zod-to-openapi": "^7.3.4",
     "@hatchery/common": "workspace:*",
     "@prisma/client": "^6",
     "express": "^5.0.0",
@@ -31,6 +33,7 @@
   "devDependencies": {
     "@types/express": "^5",
     "@types/supertest": "^6",
+    "openapi3-ts": "^4.5.0",
     "prisma": "^6",
     "supertest": "^7",
     "tsx": "^4"

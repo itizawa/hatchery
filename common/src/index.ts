@@ -8,5 +8,7 @@ export * from "./domain/channel/index.js";
 export * from "./domain/employee/index.js";
 export * from "./domain/message/index.js";
 export * from "./domain/task/index.js";
+export * from "./constants/employeeMessages.js";
+export * from "./logic/buildRosterMessages.js";
 export * from "./logic/formatRecentLog.js";
 export * from "./logic/selectAppearingMembers.js";

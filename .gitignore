@@ -7,13 +7,14 @@ node_modules/
 dist/
 build/
 out/
-*.tsbuildignore
+*.tsbuildinfo
 .turbo/
 storybook-static/
 
 # Generated
 **/generated/
 *.gen.ts
+**/openapi.json
 
 # Env
 .env

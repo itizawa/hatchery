@@ -1,4 +1,4 @@
-import { DEFAULT_CHANNELS, type Channel } from "@hatchery/common";
+import { findChannelById, type Channel } from "@hatchery/common";
 import { useParams } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 
@@ -7,7 +7,7 @@ import { getFixtureMessages } from "../fixtures/channelMessages";
 
 /** channelId から既定チャンネルを解決する。未知 ID は `#${id}` ラベルでフォールバックする。 */
 const resolveChannel = (channelId: string): Channel =>
-  DEFAULT_CHANNELS.find((c) => c.id === channelId) ?? { id: channelId, label: `#${channelId}` };
+  findChannelById(channelId) ?? { id: channelId, label: `#${channelId}` };
 
 /**
  * チャンネル別ビュー（/channels/$channelId）のコンテナ（#30）。

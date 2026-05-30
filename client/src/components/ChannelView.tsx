@@ -1,4 +1,10 @@
-import { DEFAULT_EMPLOYEES, type Channel, type Employee, type Message } from "@hatchery/common";
+import {
+  createDisplayNameResolver,
+  DEFAULT_EMPLOYEES,
+  type Channel,
+  type Employee,
+  type Message,
+} from "@hatchery/common";
 import Box from "@mui/material/Box";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
@@ -27,8 +33,8 @@ export const ChannelView = ({
   messages,
   employees = DEFAULT_EMPLOYEES,
 }: ChannelViewProps): ReactElement => {
-  // speaker(ID) → displayName の解決表（O(1) 参照）。未解決時は ID をそのまま使う。
-  const displayNameById = new Map(employees.map((e) => [e.id, e.displayName]));
+  // speaker(ID) → displayName の解決（common の純粋関数。未解決は ID フォールバック）。
+  const resolveDisplayName = createDisplayNameResolver(employees);
 
   return (
     <Box component="section" sx={{ p: 3 }}>
@@ -46,7 +52,7 @@ export const ChannelView = ({
             <ListItem key={`${message.speaker}-${index}`} alignItems="flex-start" disableGutters>
               <Stack spacing={0.5}>
                 <Typography variant="subtitle2" component="span">
-                  {displayNameById.get(message.speaker) ?? message.speaker}
+                  {resolveDisplayName(message.speaker)}
                 </Typography>
                 <Typography variant="body2" component="span">
                   {message.text}

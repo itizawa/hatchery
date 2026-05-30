@@ -19,7 +19,9 @@ export const RootLayout = (): ReactElement => (
         width: 260,
         flexShrink: 0,
         bgcolor: "background.paper",
-        color: "common.white",
+        color: "text.primary",
+        borderRight: 1,
+        borderColor: "divider",
         p: 2,
       }}
     >

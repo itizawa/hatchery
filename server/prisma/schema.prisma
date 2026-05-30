@@ -1,0 +1,62 @@
+// Hatchery MVP の永続化スキーマ（ADR-0004 / Issue #6）。
+// common（@hatchery/common）のドメイン型に対応する最小構成。
+// 社員・チャンネル・シーン（あらすじ + 発言列）・タスク（new/done）。
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// AI 社員。common の EmployeeSchema に対応（id / displayName / role?）。
+model Employee {
+  id          String  @id
+  displayName String
+  role        String?
+  tasks       Task[]
+}
+
+/// 話題の入れ物。common の ChannelSchema に対応（id / label）。
+model Channel {
+  id    String @id
+  label String
+}
+
+/// 1 定時で生成される 1 シーン。common の SceneSchema の `scene`（あらすじ）を summary に持ち、
+/// messages を 1:N で保持する。
+model Scene {
+  id        String    @id @default(cuid())
+  summary   String
+  createdAt DateTime  @default(now())
+  messages  Message[]
+}
+
+/// シーンに属する 1 発言。common の MessageSchema に対応（speaker / channel / text）。
+/// order は発言順を保持する。
+model Message {
+  id      String @id @default(cuid())
+  scene   Scene  @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+  sceneId String
+  speaker String
+  channel String
+  text    String
+  order   Int
+}
+
+/// MVP のタスク状態（common の TaskStatusSchema に対応）。
+enum TaskStatus {
+  new
+  done
+}
+
+/// 社員が抱えるタスク。common の TaskSchema に対応（id / text / status）。
+model Task {
+  id         String     @id
+  text       String
+  status     TaskStatus @default(new)
+  employee   Employee?  @relation(fields: [employeeId], references: [id])
+  employeeId String?
+}

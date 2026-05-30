@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **ドキュメント／設計フェーズ。アプリのコードはまだ存在しない。** 現在あるのは `concept.md`（プロダクト企画）、`docs/adr/`（技術選定の記録）、`docs/dark-factory-workflow.md`（開発体制の定義）のみ。ADR で決めた構成（monorepo / pnpm + Turborepo / client・server・common）は**まだ実装されていない**＝`package.json`・`pnpm-workspace.yaml`・各ワークスペースは未作成。セットアップは別 Issue で行う前提（ADR-0002 のフォローアップ参照）。
 
-実装着手前に必ず該当 ADR と Issue の設計書（`docs/design/issue-<N>.md`）を読むこと。ADR の決定が「正本」であり、それに反する実装をしない。
+実装着手前に必ず該当 ADR と Issue 本文（目的・受け入れ条件）を読むこと。ADR の決定が「正本」であり、それに反する実装をしない。
 
 ## プロダクト: Hatchery
 
@@ -17,33 +17,36 @@ Slack 型 UI で「自分の会社の AI 社員」を放置して眺める観察
 
 ## 開発ワークフロー: Dark Factory（最重要）
 
-このリポジトリは **Dark Factory パターン**で開発する。人間はゲート（承認）だけを担い、設計・実装・テスト・レビューは AI が回す。全文は `docs/dark-factory-workflow.md`。
+このリポジトリは **Dark Factory パターン**で開発する。人間が触るのは **Issue 起票** と **main 昇格** の 2 点だけ。設計・実装・テスト・レビュー・develop マージはすべて AI が回す。全文は `docs/dark-factory-workflow.md`。
+
+> 旧フローにあった「独立した設計 PR とその人間承認」は**廃止**した。人間確認を減らすため、AI は Issue 本文の受け入れ条件から直接実装に入り、**1 回の `/df` 実行で 実装 → 実装 PR → セルフレビュー → develop マージまで通す**。設計書（`docs/design/issue-<N>.md`）は廃止せず、feature ブランチで実装と一緒に書いて**実装 PR に同梱**する（人間承認は挟まない）。作業は専用 worktree を使わず **feature ブランチで直接**行う。
+
+### フロー（人間ゲートは2点のみ）
+
+1. 👤 人間が Issue を起票（ラベル `df:todo`）
+2. 🤖 AI が Issue を解決する実装 PR を作成（`df:todo → df:dev-review`）
+3. 🤖 AI がその PR をセルフレビュー・修正し、CI 緑 + 指摘ゼロで `develop` へマージ（`df:dev-review → df:done`）
+4. 👤 人間が `develop → main` を昇格して本番反映
 
 ### ブランチ戦略
 
 - `main` — 本番。**人間のみマージ可**。直接 push 禁止。
 - `develop` — 統合。実装 PR は **AI 自身がレビュー → 修正 → マージ**（人間承認不要、CI 緑必須）。
-- `design/issue-<N>` — 設計書専用ブランチ → `develop` への**設計 PR**。
 - `feature/issue-<N>` — 実装ブランチ → `develop` への**実装 PR**。
-
-設計と実装で**ブランチ・PR を分ける**。設計の承認（人間ゲート）と実装（AI 自走）を独立させるため。
 
 ### ラベル状態機械（Issue の状態＝次に動く担当）
 
 | ラベル | 意味 | 次の担当 |
 |--------|------|----------|
-| `df:design-needed` | Issue 作成済み・設計待ち | 🤖 AI（設計） |
-| `df:design-review` | 設計 PR 作成済み | 👤 人間 |
-| `df:approved` | 設計承認済み・実装開始可 | 🤖 AI（実装） |
+| `df:todo` | 人間が Issue 起票済み・AI 着手待ち | 🤖 AI（実装） |
 | `df:dev-review` | 実装 PR 作成済み・レビュー〜マージ | 🤖 AI |
 | `df:done` | develop マージ済み・本番昇格待ち | 👤 人間 |
 | `df:blocked` | AI が判断不能・要人間介入 | 👤 人間 |
 
 ### フェーズごとの AI の動き
 
-- **設計（`df:design-needed`）**: `design/issue-<N>` を作成 → `docs/design/issue-<N>.md` に設計書を生成（テンプレートは workflow §6）→ `develop` へ設計 PR（タイトル `Design: <題名> (#N)`、本文 `Refs #N`）→ Issue を `df:design-review` に。**コードは書かない。**
-- **実装（`df:approved`）**: `feature/issue-<N>` を `develop` から作成 → 後述の TDD で実装 → `develop` へ実装 PR（本文 `Closes #N` + テスト結果サマリ）→ Issue を `df:dev-review` に。
-- **レビュー（`df:dev-review`）**: `/code-review` で実装 PR をレビュー → 指摘を自分で修正 → 収束まで反復 → CI 緑 + 指摘ゼロで **AI が `develop` へマージ** → `df:done`。自力で解消できない場合は `df:blocked` を付け人間に委ねる。
+- **実装（`df:todo`）**: `feature/issue-<N>` を `develop` から作成（worktree を使わず直接 checkout）→ 設計書 `docs/design/issue-<N>.md` を書いてコミット → Issue 本文の受け入れ条件を入出力に落とし後述の TDD で実装 → `develop` へ実装 PR（設計書を含む。本文 `Closes #N` + 設計判断の要点 + テスト結果サマリ）→ Issue を `df:dev-review` に → **そのまま続けてレビューへ**。
+- **レビュー（`df:dev-review`）**: `/code-review` で実装 PR をレビュー → 指摘を自分で修正 → 収束まで反復 → CI 緑 + 指摘ゼロで **AI が `develop` へマージ** → `df:done`。自力で解消できない場合は `df:blocked` を付け人間に委ねる。`/df` は 1 回の実行で実装からこのマージまでを続けて完走する。
 - **本番（`df:done`）**: `develop → main` の昇格 PR は**人間のみ**がマージ。
 
 ### TDD（実装フェーズ）

@@ -1,12 +1,12 @@
 import { LoginRequestSchema } from "@hatchery/common";
 import type { RequestHandler } from "express";
 import { Router } from "express";
-import type { Passport } from "passport";
 
+import type { PassportInstance } from "../auth/passport.js";
 import { requireAuth } from "../middleware/requireAuth.js";
 import { validateBody } from "../middleware/validateBody.js";
 
-export function createAuthRouter(passportInstance: Passport): Router {
+export function createAuthRouter(passportInstance: PassportInstance): Router {
   const router = Router();
 
   router.post(

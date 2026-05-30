@@ -1,4 +1,4 @@
-import type { Message } from "../domain/message.js";
+import type { Message } from "../domain/message/index.js";
 
 /**
  * 直近ログの整形（concept.md「ユーザーメッセージ（直近ログ）」/ タイムライン整形の共通土台）。

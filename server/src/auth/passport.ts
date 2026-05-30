@@ -4,8 +4,15 @@ import { Strategy as LocalStrategy } from "passport-local";
 
 import type { UserRepository } from "../persistence/userRepository.js";
 
+/**
+ * createPassport が返す passport インスタンスの型。
+ * @types/passport では `Passport` は値（コンストラクタ）で型として使えないため、
+ * その instance 型を導出して単一情報源とする。
+ */
+export type PassportInstance = InstanceType<typeof Passport>;
+
 /** userRepo に束縛された独立した Passport インスタンスを生成する（グローバル汚染回避）。 */
-export function createPassport(userRepo: UserRepository): Passport {
+export function createPassport(userRepo: UserRepository): PassportInstance {
   const p = new Passport();
 
   p.use(

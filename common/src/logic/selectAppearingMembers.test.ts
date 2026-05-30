@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { Employee } from "../domain/employee.js";
+import type { Employee } from "../domain/employee/index.js";
 import { selectAppearingMembers } from "./selectAppearingMembers.js";
 
 const emp = (id: string): Employee => ({ id, displayName: id });

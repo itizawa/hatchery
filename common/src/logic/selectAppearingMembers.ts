@@ -1,4 +1,4 @@
-import type { Employee } from "../domain/employee.js";
+import type { Employee } from "../domain/employee/index.js";
 
 /**
  * 登場メンバー選定（concept.md「生成方式」のローテーション制御の純粋ロジック土台）。

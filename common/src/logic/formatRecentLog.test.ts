@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { Message } from "../domain/message.js";
+import type { Message } from "../domain/message/index.js";
 import { formatRecentLog } from "./formatRecentLog.js";
 
 const msg = (speaker: string, channel: string, text: string): Message => ({

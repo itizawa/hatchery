@@ -9,13 +9,13 @@ describe("generateOpenApiDocument", () => {
     expect(doc.info.title).toBeDefined();
   });
 
-  it("paths に /scenes が含まれる", () => {
+  it("paths に /messages が含まれる", () => {
     const doc = generateOpenApiDocument();
-    expect(doc.paths).toHaveProperty("/scenes");
+    expect(doc.paths).toHaveProperty("/messages");
   });
 
-  it("components.schemas に Scene が含まれる", () => {
+  it("components.schemas に Message が含まれる", () => {
     const doc = generateOpenApiDocument();
-    expect(doc.components?.schemas).toHaveProperty("Scene");
+    expect(doc.components?.schemas).toHaveProperty("Message");
   });
 });

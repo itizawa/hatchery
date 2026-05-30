@@ -8,16 +8,23 @@ export { loadEnv, type ServerEnv } from "./config/env.js";
 export { validateBody } from "./middleware/validateBody.js";
 export { errorHandler } from "./middleware/errorHandler.js";
 export {
-  InMemorySceneRepository,
-  type SceneRecord,
-  type SceneRepository,
-} from "./persistence/sceneRepository.js";
-export { PrismaSceneRepository } from "./persistence/prismaSceneRepository.js";
-export { listScenes } from "./usecases/listScenes.js";
-export { createScene } from "./usecases/createScene.js";
+  InMemoryMessageRepository,
+  type MessageRecord,
+  type MessageRepository,
+} from "./persistence/messageRepository.js";
+export { PrismaMessageRepository } from "./persistence/prismaMessageRepository.js";
 export {
-  runSceneBatch,
-  stubSceneGenerator,
-  type RunSceneBatchDeps,
-  type SceneGenerator,
-} from "./batch/runSceneBatch.js";
+  InMemoryUserRepository,
+  type UserRepository,
+  type User,
+} from "./persistence/userRepository.js";
+export { PrismaUserRepository } from "./persistence/prismaUserRepository.js";
+export { requireAuth } from "./middleware/requireAuth.js";
+export { listMessages } from "./usecases/listMessages.js";
+export { createMessages } from "./usecases/createMessages.js";
+export {
+  runMessageBatch,
+  stubMessageGenerator,
+  type RunMessageBatchDeps,
+  type MessageGenerator,
+} from "./batch/runMessageBatch.js";

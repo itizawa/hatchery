@@ -6,7 +6,7 @@ import {
 import type { OpenAPIObject } from "openapi3-ts/oas31";
 import { z } from "zod";
 
-import { MessageSchema, SceneSchema } from "@hatchery/common";
+import { MessageSchema } from "@hatchery/common";
 
 extendZodWithOpenApi(z);
 
@@ -14,26 +14,19 @@ const registry = new OpenAPIRegistry();
 
 const MessageComponent = registry.register(
   "Message",
-  MessageSchema.openapi({ description: "社員の 1 発言" }),
-);
-
-const SceneComponent = registry.register(
-  "Scene",
-  SceneSchema.extend({
-    messages: z.array(MessageComponent).min(1),
-  }).openapi({ description: "1 定時で生成される 1 シーン" }),
+  MessageSchema.openapi({ description: "channel に直接紐づく社員の 1 発言（ADR-0009）" }),
 );
 
 registry.registerPath({
   method: "get",
-  path: "/scenes",
-  summary: "シーン一覧を取得",
+  path: "/messages",
+  summary: "メッセージ一覧を取得",
   responses: {
     200: {
-      description: "シーン一覧",
+      description: "メッセージ一覧",
       content: {
         "application/json": {
-          schema: z.array(SceneComponent),
+          schema: z.array(MessageComponent),
         },
       },
     },
@@ -42,23 +35,23 @@ registry.registerPath({
 
 registry.registerPath({
   method: "post",
-  path: "/scenes",
-  summary: "シーンを作成",
+  path: "/messages",
+  summary: "メッセージを一括作成",
   request: {
     body: {
       content: {
         "application/json": {
-          schema: SceneComponent,
+          schema: z.array(MessageComponent).min(1),
         },
       },
     },
   },
   responses: {
     201: {
-      description: "作成されたシーン",
+      description: "作成されたメッセージ一覧",
       content: {
         "application/json": {
-          schema: SceneComponent,
+          schema: z.array(MessageComponent),
         },
       },
     },

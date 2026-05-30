@@ -4,14 +4,14 @@ import { describe, expect, it } from "vitest";
 
 import { createAppRouter } from "./router";
 
-// 受け入れ条件 #4: コードベース定義の最小ルート。ホーム（/）でシーン表示の枠が描画される。
+// 受け入れ条件 #4: コードベース定義の最小ルート。ホーム（/）でタイムライン表示の枠が描画される。
 describe("createAppRouter", () => {
-  it("ホームルート（/）でシーン表示の枠の見出しを描画する", async () => {
+  it("ホームルート（/）でタイムライン表示の枠の見出しを描画する", async () => {
     const router = createAppRouter({
       history: createMemoryHistory({ initialEntries: ["/"] }),
     });
     render(<RouterProvider router={router} />);
-    expect(await screen.findByRole("heading", { name: /シーン/ })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /タイムライン/ })).toBeInTheDocument();
   });
 
   it("サイドバーにチャンネル一覧（#雑談）を描画する", async () => {

@@ -1,13 +1,19 @@
 import express, { type Express } from "express";
+import session from "express-session";
 
+import { createPassport } from "./auth/passport.js";
 import { errorHandler } from "./middleware/errorHandler.js";
-import type { SceneRepository } from "./persistence/sceneRepository.js";
+import type { MessageRepository } from "./persistence/messageRepository.js";
+import { InMemoryUserRepository, type UserRepository } from "./persistence/userRepository.js";
+import { createAuthRouter } from "./routes/auth.js";
 import { healthRouter } from "./routes/health.js";
-import { createScenesRouter } from "./routes/scenes.js";
+import { createMessagesRouter } from "./routes/messages.js";
 
 /** createApp の依存（永続化は注入する＝Express/Prisma からドメインを独立させる）。 */
 export interface AppDeps {
-  sceneRepository: SceneRepository;
+  messageRepository: MessageRepository;
+  /** 省略時はテスト用の空リポジトリを使用。本番では PrismaUserRepository を渡す。 */
+  userRepository?: UserRepository;
 }
 
 /**
@@ -16,9 +22,36 @@ export interface AppDeps {
  */
 export function createApp(deps: AppDeps): Express {
   const app = express();
+  const userRepository = deps.userRepository ?? new InMemoryUserRepository();
+
+  const sessionSecret = process.env.SESSION_SECRET;
+  if (!sessionSecret && process.env.NODE_ENV === "production") {
+    throw new Error("SESSION_SECRET 環境変数が設定されていません。本番環境では必須です。");
+  }
+
   app.use(express.json());
+
+  app.use(
+    session({
+      secret: sessionSecret ?? "hatchery-dev-secret",
+      resave: false,
+      saveUninitialized: false,
+      cookie: {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 24 * 60 * 60 * 1000,
+      },
+    }),
+  );
+
+  const passportInstance = createPassport(userRepository);
+  app.use(passportInstance.initialize());
+  app.use(passportInstance.session());
+
   app.use("/health", healthRouter);
-  app.use("/scenes", createScenesRouter(deps.sceneRepository));
+  app.use("/auth", createAuthRouter(passportInstance));
+  app.use("/messages", createMessagesRouter(deps.messageRepository));
   app.use(errorHandler);
   return app;
 }

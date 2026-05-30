@@ -1,0 +1,98 @@
+import request from "supertest";
+import { describe, expect, it } from "vitest";
+
+import { createApp } from "../app.js";
+import { InMemoryMessageRepository } from "../persistence/messageRepository.js";
+import type { UserRepository } from "../persistence/userRepository.js";
+import { InMemoryUserRepository } from "../persistence/userRepository.js";
+
+async function buildApp(userRepo?: UserRepository) {
+  const repo = userRepo ?? (await InMemoryUserRepository.createWithTestUser());
+  return createApp({
+    messageRepository: new InMemoryMessageRepository(),
+    userRepository: repo,
+  });
+}
+
+describe("POST /auth/login", () => {
+  it("正しい資格情報で 200 と Set-Cookie が返る", async () => {
+    const app = await buildApp();
+    const res = await request(app)
+      .post("/auth/login")
+      .send({ id: "testuser", password: "testpass" });
+    expect(res.status).toBe(200);
+    expect(res.headers["set-cookie"]).toBeDefined();
+    expect(res.body).toMatchObject({ id: "testuser", displayName: "Test User" });
+  });
+
+  it("間違ったパスワードで 401 が返る", async () => {
+    const app = await buildApp();
+    const res = await request(app)
+      .post("/auth/login")
+      .send({ id: "testuser", password: "wrong" });
+    expect(res.status).toBe(401);
+  });
+
+  it("存在しない id で 401 が返る", async () => {
+    const app = await buildApp();
+    const res = await request(app)
+      .post("/auth/login")
+      .send({ id: "nobody", password: "pass" });
+    expect(res.status).toBe(401);
+  });
+
+  it("空フィールドで 400 が返る（Zod バリデーション）", async () => {
+    const app = await buildApp();
+    const res = await request(app)
+      .post("/auth/login")
+      .send({ id: "", password: "pass" });
+    expect(res.status).toBe(400);
+  });
+});
+
+describe("GET /auth/me", () => {
+  it("セッション cookie ありで 200 と AuthUser が返る", async () => {
+    const app = await buildApp();
+    const agent = request.agent(app);
+    await agent.post("/auth/login").send({ id: "testuser", password: "testpass" });
+    const res = await agent.get("/auth/me");
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ id: "testuser", displayName: "Test User" });
+    expect(res.body).not.toHaveProperty("passwordHash");
+  });
+
+  it("セッション cookie なしで 401 が返る", async () => {
+    const app = await buildApp();
+    const res = await request(app).get("/auth/me");
+    expect(res.status).toBe(401);
+  });
+});
+
+describe("POST /auth/logout", () => {
+  it("ログアウト後に GET /auth/me が 401 になる", async () => {
+    const app = await buildApp();
+    const agent = request.agent(app);
+    await agent.post("/auth/login").send({ id: "testuser", password: "testpass" });
+    const before = await agent.get("/auth/me");
+    expect(before.status).toBe(200);
+    await agent.post("/auth/logout");
+    const after = await agent.get("/auth/me");
+    expect(after.status).toBe(401);
+  });
+});
+
+describe("requireAuth ミドルウェア", () => {
+  it("保護されたルートに未ログインでアクセスすると 401 が返る", async () => {
+    const app = await buildApp();
+    const res = await request(app).get("/auth/me");
+    expect(res.status).toBe(401);
+  });
+
+  it("保護されたルートに認証済みでアクセスすると成功する", async () => {
+    const app = await buildApp();
+    const agent = request.agent(app);
+    await agent.post("/auth/login").send({ id: "testuser", password: "testpass" });
+    const res = await agent.get("/auth/me");
+    expect(res.status).toBe(200);
+  });
+});

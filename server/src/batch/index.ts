@@ -1,13 +1,13 @@
 import { prisma } from "../persistence/prismaClient.js";
-import { PrismaSceneRepository } from "../persistence/prismaSceneRepository.js";
+import { PrismaMessageRepository } from "../persistence/prismaMessageRepository.js";
 
-import { runSceneBatch } from "./runSceneBatch.js";
+import { runMessageBatch } from "./runMessageBatch.js";
 
-/** 定時バッチの CLI エントリ。スケジューラから Express とは別プロセスで起動する。 */
+/** 定時バッチの CLI エントリ。スケジューラから Express とは別プロセスで起動する（ADR-0009）。 */
 async function main(): Promise<void> {
-  const repo = new PrismaSceneRepository(prisma);
-  const record = await runSceneBatch({ sceneRepository: repo });
-  console.log(`[batch] scene created: ${record.id}`);
+  const repo = new PrismaMessageRepository(prisma);
+  const records = await runMessageBatch({ messageRepository: repo });
+  console.log(`[batch] ${records.length} messages created`);
   await prisma.$disconnect();
 }
 

@@ -1,6 +1,7 @@
-// Hatchery MVP の永続化スキーマ（ADR-0004 / Issue #6）。
+// Hatchery MVP の永続化スキーマ（ADR-0004 / Issue #6 / ADR-0009 / Issue #27）。
 // common（@hatchery/common）のドメイン型に対応する最小構成。
-// 社員・チャンネル・シーン（あらすじ + 発言列）・タスク（new/done）。
+// 社員・チャンネル・メッセージ（channel 直接紐づき）・タスク（new/done）。
+// Scene は ADR-0009 で廃止した。
 
 generator client {
   provider = "prisma-client-js"
@@ -9,6 +10,13 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+/// 認証ユーザー（Issue #26 / ADR-0009）。パスワードは bcrypt ハッシュで保存する。
+model User {
+  id           String @id
+  displayName  String
+  passwordHash String
 }
 
 /// AI 社員。common の EmployeeSchema に対応（id / displayName / role?）。
@@ -25,25 +33,17 @@ model Channel {
   label String
 }
 
-/// 1 定時で生成される 1 シーン。common の SceneSchema の `scene`（あらすじ）を summary に持ち、
-/// messages を 1:N で保持する。
-model Scene {
-  id        String    @id @default(cuid())
-  summary   String
-  createdAt DateTime  @default(now())
-  messages  Message[]
-}
-
-/// シーンに属する 1 発言。common の MessageSchema に対応（speaker / channel / text）。
-/// order は発言順を保持する。
+/// channel に直接紐づく 1 発言（ADR-0009: Scene 廃止）。
+/// createdAt でバッチ間の時系列順を保ち、order でバッチ内の発言順を保つ。
 model Message {
-  id      String @id @default(cuid())
-  scene   Scene  @relation(fields: [sceneId], references: [id], onDelete: Cascade)
-  sceneId String
-  speaker String
-  channel String
-  text    String
-  order   Int
+  id        String   @id @default(cuid())
+  speaker   String
+  channel   String
+  text      String
+  createdAt DateTime @default(now())
+  order     Int
+
+  @@index([channel, createdAt])
 }
 
 /// MVP のタスク状態（common の TaskStatusSchema に対応）。

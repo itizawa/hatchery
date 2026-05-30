@@ -2,12 +2,16 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
+  redirect,
   type RouterHistory,
 } from "@tanstack/react-router";
 
+import { fetchMe } from "./api/auth.js";
 import { ChannelScene } from "./routes/ChannelScene";
 import { HomeScene } from "./routes/HomeScene";
+import { LoginScene } from "./routes/LoginScene";
 import { RootLayout } from "./routes/RootLayout";
+import { SettingsScene } from "./routes/SettingsScene";
 
 // ルートはコードベースで定義する（ファイルルーティングの codegen には依存しない）。
 const rootRoute = createRootRoute({
@@ -28,7 +32,25 @@ const channelRoute = createRoute({
   component: ChannelScene,
 });
 
-const routeTree = rootRoute.addChildren([indexRoute, channelRoute]);
+/** ログイン画面（/login）。 */
+const loginRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/login",
+  component: LoginScene,
+});
+
+/** 設定画面（/settings）。未ログインの場合は /login へリダイレクト。 */
+const settingsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/settings",
+  component: SettingsScene,
+  beforeLoad: async () => {
+    const user = await fetchMe();
+    if (!user) throw redirect({ to: "/login" });
+  },
+});
+
+const routeTree = rootRoute.addChildren([indexRoute, channelRoute, loginRoute, settingsRoute]);
 
 export interface CreateAppRouterOptions {
   /** テストで memory history を差し込むための任意 history（未指定なら browser history）。 */

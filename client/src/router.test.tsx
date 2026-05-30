@@ -22,13 +22,12 @@ describe("createAppRouter", () => {
     expect(await screen.findByText("#雑談")).toBeInTheDocument();
   });
 
-  it("チャンネルルート（/channels/$channelId）で選択中チャンネル ID を描画する", async () => {
+  it("チャンネルルート（/channels/$channelId）で選択中チャンネルの詳細（ヘッダ）を描画する", async () => {
     const router = createAppRouter({
       history: createMemoryHistory({ initialEntries: ["/channels/zatsudan"] }),
     });
     render(<RouterProvider router={router} />);
-    expect(
-      await screen.findByRole("heading", { name: /チャンネル: zatsudan/ }),
-    ).toBeInTheDocument();
+    // ChannelView のヘッダ（見出し）として channel.label を描画する（サイドバーの一覧は heading ではない）。
+    expect(await screen.findByRole("heading", { name: "#雑談" })).toBeInTheDocument();
   });
 });

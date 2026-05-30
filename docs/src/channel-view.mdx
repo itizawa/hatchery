@@ -1,0 +1,61 @@
+import { Meta } from "@storybook/blocks";
+
+import * as ChannelViewStories from "../../client/src/components/ChannelView.stories";
+
+<Meta of={ChannelViewStories} />
+
+# 画面設計書: チャンネル詳細画面（ChannelView）
+
+> 関連: Issue #30 / 設計書 `docs/design/issue-30.md` / ADR-0003（client）・ADR-0007（docs）・ADR-0009（#27 Scene 廃止）
+
+## 目的
+
+チャンネル別ビュー（`/channels/$channelId`）で、そのチャンネルに属するメッセージ（社員の掛け合い）を
+**Slack 風のフラットなメッセージ一覧**として表示する。実 API（型共有 #8/#41・定時バッチ #32）が整うまでは
+**props 駆動の presentational** として実装し、fixture で動作確認する。
+
+## レイアウト
+
+```
+┌────────────┬─────────────────────────────┐
+│ サイドバー  │ #チャンネルラベル（ヘッダ）       │
+│ (RootLayout)│ ─────────────────────────── │
+│ ・チャンネル │ ハル   おはようございます！        │
+│   一覧      │ ケン   おはよう。                │
+│ ・設定      │ メイ   よろしくお願いします。      │
+│            │ ...（フラットなメッセージ一覧）    │
+└────────────┴─────────────────────────────┘
+```
+
+サイドバー（`RootLayout` + `ChannelList`）はルートシェル側の責務。`ChannelView` はメイン領域の
+**ヘッダ + メッセージ一覧（または空状態）**のみを描画する。
+
+## 構成要素
+
+- **ヘッダ**: `channel.label`（例 `#雑談`）を見出しとして表示。
+- **メッセージ一覧**: 各行に「発言者名 + 本文」。発言者名は `speaker`（Employee ID）を
+  `employees` の `displayName` に解決し、未解決 ID はそのまま表示する。
+- **空状態**: メッセージが 0 件のとき、空状態メッセージを表示（一覧は描画しない）。
+
+## 状態
+
+| 状態 | 説明                             | ストーリー |
+| ---- | -------------------------------- | ---------- |
+| 通常 | 複数社員・複数発言が並ぶ         | `Default`  |
+| 空   | 当該チャンネルにメッセージが無い | `Empty`    |
+
+## データ契約
+
+- `channel: Channel` … common の `Channel`（`id` / `label`）。
+- `messages: readonly Message[]` … common の `Message`（`speaker` / `channel` / `text`）。#27 後は
+  message が channel に直接紐づくため、channel 単位の `Message[]` をそのまま描画できる。
+- `employees?: readonly Employee[]` … speaker 解決用。未指定時は common の `DEFAULT_EMPLOYEES`。
+
+依存方向は **client → common** の一方向のみ（ADR）。本コンポーネントは server / API に依存しない。
+
+## 関連 ADR / Issue
+
+- ADR-0003: client ワークスペースの技術選定（Vite + React 19 / MUI v6 + Emotion）
+- ADR-0005: common を単一情報源とするドメインモデル / Zod スキーマ
+- ADR-0007: ドキュメント基盤（Storybook + GitHub Pages）
+- Issue #30（本画面）/ #9（Storybook 基盤）/ #27（Scene 廃止・message を channel に紐づけ）

@@ -1,7 +1,7 @@
 ---
 description: Dark Factory ディスパッチャ。GitHub の Open Issue の df:* ラベルから「今 AI が何をすべきか」を自律判断し、最優先の AI 実行可能 Issue を 1 件選んで、設計書 + TDD 実装 → 実装 PR → セルフレビュー → develop マージまでを 1 回の実行で完走させ、ラベルを安全に遷移させる。
 argument-hint: "[Issue番号(省略可)]"
-allowed-tools: Bash(gh issue list:*), Bash(gh issue view:*), Bash(gh issue edit:*), Bash(gh issue comment:*), Bash(gh pr create:*), Bash(gh pr view:*), Bash(gh pr list:*), Bash(gh pr checks:*), Bash(gh pr merge:*), Bash(gh pr diff:*), Bash(gh pr comment:*), Bash(gh label list:*), Bash(gh repo view:*), Bash(gh api:*), Bash(git status:*), Bash(git switch:*), Bash(git checkout:*), Bash(git branch:*), Bash(git fetch:*), Bash(git pull:*), Bash(git ls-remote:*), Bash(git rev-parse:*), Bash(git show-ref:*), Bash(git push -u origin feature/issue-*:*), Bash(git push origin feature/issue-*:*), Bash(git add:*), Bash(git commit:*), Bash(git log:*), Bash(git diff:*), Bash(pnpm:*), Bash(npm:*), Bash(npx:*), Bash(corepack:*), Bash(volta:*), Bash(node:*), Bash(which:*), Bash(echo:*), Bash(cat:*), Bash(head:*), Bash(tail:*), Bash(ls:*), Bash(pwd), Bash(wc:*), Bash(env), Bash(printenv:*), Bash(sort:*), Bash(uniq:*), Bash(test:*), Bash(true), Bash(grep:*), Bash(find:*), Read, Write, Edit, Glob, Grep, Skill(code-review:code-review)
+allowed-tools: Bash(gh issue list:*), Bash(gh issue view:*), Bash(gh issue edit:*), Bash(gh issue comment:*), Bash(gh pr create:*), Bash(gh pr view:*), Bash(gh pr list:*), Bash(gh pr checks:*), Bash(gh pr merge:*), Bash(gh pr diff:*), Bash(gh pr comment:*), Bash(gh label list:*), Bash(gh repo view:*), Bash(gh api:*), Bash(git status:*), Bash(git switch:*), Bash(git checkout:*), Bash(git branch:*), Bash(git worktree:*), Bash(git fetch:*), Bash(git pull:*), Bash(git ls-remote:*), Bash(git rev-parse:*), Bash(git show-ref:*), Bash(git push -u origin feature/issue-*:*), Bash(git push origin feature/issue-*:*), Bash(git add:*), Bash(git commit:*), Bash(git log:*), Bash(git diff:*), Bash(pnpm:*), Bash(npm:*), Bash(npx:*), Bash(corepack:*), Bash(volta:*), Bash(node:*), Bash(which:*), Bash(echo:*), Bash(cat:*), Bash(head:*), Bash(tail:*), Bash(ls:*), Bash(pwd), Bash(cd:*), Bash(wc:*), Bash(env), Bash(printenv:*), Bash(sort:*), Bash(uniq:*), Bash(test:*), Bash(true), Bash(grep:*), Bash(find:*), Read, Write, Edit, Glob, Grep, Skill(code-review:code-review)
 ---
 
 # /df — Dark Factory ディスパッチャ
@@ -14,7 +14,7 @@ GitHub の Open Issue を確認し、各 Issue の `df:*` ラベルから「今 
 - 引数 `$ARGUMENTS` / `$1` に **Issue 番号があればその Issue を対象**にする。無ければ後述の自動選択ロジックで 1 件選ぶ。
 - 正本は `docs/dark-factory-workflow.md` と `CLAUDE.md`。判断に迷ったら必ずこの 2 つを読んで従う。以下は単体で完走できるよう要点を自己完結させたもの。
 - 会話・コメント・PR 本文・設計書はすべて **日本語**（このリポジトリの規約）。
-- **作業は `feature/issue-<N>` ブランチで直接行う（専用 worktree は使わない）。** `git switch` でブランチを切り替えてよいが、その前に**作業ツリーがクリーンであること**を必ず確認する（人間の未コミット作業を巻き込まないため。STEP 0）。作業が済んだら `develop` に戻す。
+- **作業は専用 git worktree で隔離して行う（メインの作業ツリーは一切 `switch` しない）。** Issue ごとに `.claude/worktrees/issue-<N>/`（`.gitignore` 済み）へ `feature/issue-<N>` ブランチの worktree を作成し、`cd` してその中で設計書作成・TDD 実装・コミット・push を行う。これにより、人間がメインツリーで未コミット作業をしていても、また `/loop /df` で複数 Issue を並行処理しても**互いにコンフリクトしない**。完了後（マージ後／ブロック停止時）は worktree を撤去し、メインツリー（`/Users/itizawa/ai-workspace`）へ `cd` で戻る。
 - **自走優先・人間への確認は最小化する。** 本コマンドは無人運転（`/loop` 等）が前提。判断はゲートと手順に従って自動で進め、人間に問いを投げてよいのは「ゲート 3 に該当して `df:blocked` を付けるとき」だけ。それ以外で停止・質問しない。
   - **権限プロンプトを増やさない**: Bash は上記 `allowed-tools` に列挙した範囲で実行する。とくに複合コマンド（`&&` / `;` / パイプ）は各サブコマンドが分割判定されるため、**許可リスト外のコマンドを混ぜない**（混ぜると全体がプロンプトになる）。診断は `which` / `echo` / `node` / `cat` / `head` / `ls` / `corepack` / `volta` など許可済みのものを使い、迷う複合ワンライナーは小さな単一コマンドに分割して実行する。
 
@@ -40,7 +40,7 @@ GitHub の Open Issue を確認し、各 Issue の `df:*` ラベルから「今 
 4. **TDD 厳守（`CLAUDE.md`）**: まずテストを書く → 失敗を確認 → コミット → 最小実装で緑。**実装中はテストを変更しない**。lint も通す。
 5. **ブランチ命名**: 実装 `feature/issue-<N>`（設計専用ブランチは作らない＝設計書は実装ブランチに同梱）。**コミット規約**: `feat:` / `fix:` / `refactor:` / `docs:` / `config:` / `test:` / `style:`。
 6. **`df:done` / `df:blocked` の Issue には着手しない。** これらは「人間の番」。**他の df ラベルが併記されていても**着手禁止。一覧で「人間の番」と報告するだけ。
-7. **作業ツリーを壊さない。** 着手前に `git status` がクリーンであることを確認する。未コミットの変更があれば `git switch` で人間の作業を巻き込む恐れがあるため、**着手せず報告して終了**する（`df:blocked` ではなく単なる no-op 報告）。
+7. **メインの作業ツリーを切り替えない／壊さない。** 全作業は専用 worktree（`.claude/worktrees/issue-<N>/`）の中だけで行い、メインツリー（`/Users/itizawa/ai-workspace`）では `git switch` / `git checkout <branch>` を**実行しない**。worktree で隔離するため、人間がメインツリーで未コミット作業をしていても着手してよい（巻き込まない）。ただしマージ／リベース進行中など `.git` の異常が見えた場合は、推測で進めず停止・報告する。
 8. **既存グローバル `/auto-task` は流用しない**（ゲート無視で即マージ・main も触りうるため）。本コマンドの手順とゲートのみに従う。
 
 > 迷ったら止まる。推測で `main` を触る・CI 未確認でマージするくらいなら、`df:blocked` を付けて人間に渡すのが常に正しい。
@@ -64,9 +64,10 @@ GitHub の Open Issue を確認し、各 Issue の `df:*` ラベルから「今 
 ## STEP 0 — 状況把握とガード（必ず最初に実行）
 
 1. リポジトリと既定ブランチを確認: `gh repo view --json nameWithOwner,defaultBranchRef -q '"\(.nameWithOwner) default=\(.defaultBranchRef.name)"'`
-2. **作業ツリーのクリーン確認（ゲート 7）**: `git status --porcelain` を実行。
-   - 出力が**空でない（未コミットの変更がある）** → 本コマンドはブランチを `git switch` するため、人間の作業を巻き込む恐れがある。**着手せず**「作業ツリーに未コミットの変更があるため /df を実行しません。コミット or stash してから再実行してください」と報告して終了。
-   - マージ/リベース進行中・`.git` 破損などの異常が見えた場合も同様に停止・報告。
+2. **リポジトリ健全性の確認（ゲート 7）**: `git status --porcelain` で状態を確認する。
+   - 本コマンドはメインツリーを `switch` せず**専用 worktree で隔離作業**するため、メインツリーに未コミットの変更があっても**着手してよい**（人間の作業は巻き込まれない）。STEP 0 でクリーンを要求しない点が旧方式との違い。
+   - ただしマージ／リベース進行中・`.git` 破損などの異常が見えた場合は、推測で進めず停止・報告する。
+   - **既存 worktree の把握**: `git worktree list` で `.claude/worktrees/` 配下の登録状況を確認する（再入時に作り直さず再利用するため）。
 3. **ブランチ保護の実在確認（ゲート 1 の技術的裏付けチェック）**: `gh api repos/<owner>/<repo>/branches/main/protection 2>&1`
    - **404（Branch not protected）が返る = main にブランチ保護が無い**。この場合、ゲート 1（main を触らない）を機械的に強制する番人が存在しないことを最終報告に明記し、push/merge 系操作を一層慎重に扱う（禁止コマンド例を再確認する）。
    - `develop` についても同様（保護が無ければ CI 緑・指摘ゼロの確認は完全に本コマンドの責務）。
@@ -130,7 +131,7 @@ AI 実行可能 Issue が 1 件も無ければ、STEP 0 の表とともに「現
 
 > 🔁 **再入可能性（idempotency）の共通ルール**: 本コマンドは `/loop` 等で反復起動される前提。ブランチ／PR を作る前に「既存のブランチ・PR」を必ず確認し、あれば作り直さず再利用する（手順は各フェーズに明記）。状況が不一致なら作り直さず「ブロック手順」へ。
 >
-> 🌿 **作業ブランチの扱い（worktree は使わない）**: `feature/issue-<N>` を直接 checkout して作業する。STEP 0 でクリーンを確認済みなので `git switch` してよい。フェーズ完了後（マージ後／ブロックで停止時）は **`develop` に戻す**（`git switch develop`）。
+> 🌿 **作業ブランチの扱い（専用 worktree で隔離）**: メインツリーは `switch` せず、`.claude/worktrees/issue-<N>/` に `feature/issue-<N>` の worktree を作成（既存なら再利用）して `cd` し、その中で作業する。設計書作成・TDD・コミット・push はすべて worktree 内（カレントディレクトリ）で行う。フェーズ完了後（マージ後）は worktree を撤去（`git worktree remove`）し、`cd /Users/itizawa/ai-workspace` でメインツリーに戻る。ブロックで停止する場合は worktree を残してメインツリーへ戻る（再入で再利用）。
 
 ---
 
@@ -147,15 +148,15 @@ AI 実行可能 Issue が 1 件も無ければ、STEP 0 の表とともに「現
    ```
    - 同 Issue の open な実装 PR が**既にある** → フェーズ A はスキップし、**フェーズ B（レビュー → マージ）へ直行**する（PR 作成済み）。
    - PR は無いが実装ブランチだけある → その既存ブランチを再利用して実装を継続する。base が `develop` でない／状況が手順と不一致なら「ブロック手順」へ。
-4. **実装ブランチを用意**（worktree は使わず直接 checkout。STEP 0 でクリーン確認済み）:
+4. **実装用 worktree を用意**（メインツリーは `switch` しない。`.claude/worktrees/issue-<N>/` に隔離して作る）。まず最新化:
    ```
    git fetch origin --prune
-   git switch develop
-   git pull --ff-only
-   # 既存ブランチがあれば再利用、無ければ develop から作成
-   git show-ref --verify --quiet refs/heads/feature/issue-<N> && git switch feature/issue-<N> || git switch -c feature/issue-<N>
    ```
-   remote にだけブランチがある場合は `git switch feature/issue-<N>`（追跡ブランチを自動作成）でよい。checkout に失敗したら続行せず「ブロック手順」へ。
+   次に状況に応じて worktree を用意し、その中へ `cd` する（`git worktree list` の結果で分岐）:
+   - **既に worktree がある**（`.claude/worktrees/issue-<N>` が `git worktree list` にある＝再入）→ 作り直さず再利用: `cd .claude/worktrees/issue-<N>` → 追跡があれば `git pull --ff-only`。
+   - **worktree は無いがブランチが既にある**（`git show-ref --verify --quiet refs/heads/feature/issue-<N>` が真、または remote に `feature/issue-<N>` がある）→ 既存ブランチで作成: `git worktree add .claude/worktrees/issue-<N> feature/issue-<N>` → `cd .claude/worktrees/issue-<N>`。base が `develop` 起点でない等、状況が手順と不一致なら作り直さず「ブロック手順」へ。
+   - **どちらも無い**（新規）→ develop 最新から分岐して作成: `git worktree add .claude/worktrees/issue-<N> -b feature/issue-<N> origin/develop` → `cd .claude/worktrees/issue-<N>`。
+   worktree 作成または `cd` に失敗したら続行せず「ブロック手順」へ。**以降のファイル作成・コミット・push はすべてこの worktree 内（カレントディレクトリ）で行う。**
 5. **設計書を生成**: `docs/design/issue-<N>.md` を以下テンプレート（`docs/dark-factory-workflow.md` §6 準拠）で作成（`docs/design/` が無ければ作る）。**受け入れ条件はテストに落とせる粒度**で書く。**独立した設計 PR は作らない**（この実装ブランチに同梱する）。
    ```markdown
    # 設計書: <Issue題名> (#N)
@@ -228,11 +229,7 @@ AI 実行可能 Issue が 1 件も無ければ、STEP 0 の表とともに「現
    ```
    見つからない／特定できない → 「ブロック手順」へ（実装 PR 未作成。`df:dev-review` 単独で来てここに該当する場合はフェーズ A 未完の可能性／ゲート 3）。
    **PR の base が `main` だった場合は即停止・ブロック**（ゲート 1。実装 PR は必ず develop ベース）。
-2. **実装ブランチを最新化**（フェーズ A から継続している場合は既に checkout 済み。`df:dev-review` から開始した場合は checkout する）:
-   ```
-   git switch feature/issue-<N>
-   git pull --ff-only
-   ```
+2. **実装 worktree に入る／最新化**: フェーズ A から継続している場合は既に worktree 内へ `cd` 済み。`df:dev-review` から開始した場合は、フェーズ A 手順 4 と同じ要領で worktree を用意して `cd` する（既存ブランチで `git worktree add .claude/worktrees/issue-<N> feature/issue-<N>`、既に worktree があれば `cd` で再利用）。入ったら `git pull --ff-only` で最新化する。
 3. **セルフレビュー**: `/code-review`（`code-review:code-review` スキル）で実装 PR をレビューする（`--fix` で作業ツリーに適用してもよい）。
 4. 指摘（バグ・簡素化・効率・設計逸脱）を**自分で修正してコミット・push**（`fix:` / `refactor:`）。**指摘が無くなる（収束する）まで 3〜4 を反復**。
    - 反復しても解消できない・設計どおりか確信が持てない指摘が残る → 捏造修正をせず「ブロック手順」へ（ゲート 3）。
@@ -263,11 +260,14 @@ AI 実行可能 Issue が 1 件も無ければ、STEP 0 の表とともに「現
    gh issue edit <N> --remove-label "df:dev-review" --add-label "df:done"
    gh issue comment <N> --body "🤖 実装 → セルフレビュー（/code-review 指摘ゼロ）→ CI緑（test/lint）を確認し、実装 PR <PR-URL> を develop へマージしました（\`df:done\`）。本番反映（develop → main の昇格）は👤人間の番です。"
    ```
-8. **後片付け**: `git switch develop` で develop に戻す（必要なら `git pull --ff-only`）。マージで remote ブランチは削除済み。用済みのローカル実装ブランチが残っていれば掃除してよい（`feature/issue-*` に限定）:
+8. **後片付け**（worktree を撤去してメインツリーへ戻る）。マージで remote ブランチは削除済み。worktree とローカルブランチを掃除する（対象は `.claude/worktrees/issue-*` / `feature/issue-*` に限定）:
    ```
-   git switch develop
+   cd /Users/itizawa/ai-workspace
+   git worktree remove .claude/worktrees/issue-<N> --force
+   git worktree prune
    git branch -D feature/issue-<N> 2>/dev/null || true
    ```
+   メインツリーは元のブランチ（通常 develop）のまま・未コミット作業も無傷で残る。`git worktree remove` はカレントが worktree 内だと失敗するので、必ず先に `cd` でメインツリーへ戻ってから実行する。
 
 **`develop → main` の昇格 PR は作らない・マージしない（人間のみ＝ゲート 1）。** STEP 3 の報告へ。
 （任意）最終報告の「残候補／推奨」に **「develop・main に branch protection を設定すること」** を人間向け改善提案として添えてよい。
@@ -296,7 +296,7 @@ EOF
 ```
 
 - 進行中ラベル（`df:todo` / `df:dev-review`）を外すかは状況次第。**勝手に AI の番のまま放置せず**、`df:blocked` を**併記**して人間に委ねる（次回以降は `df:blocked` を含むため「人間の番」と判定され AI は再着手しない＝意図した動作）。
-- **ブロック時の作業ブランチ**: コミット済みの途中成果はそのままブランチ（必要なら push）に残す。**`develop` に戻してよい**が、未コミットの変更があると `git switch` できないので、その場合は WIP コミット（`wip: Issue #<N> 途中成果`）してから戻すか、ブランチに留まったまま報告する。最終報告に作業ブランチ名を明記する。
+- **ブロック時の worktree の扱い**: コミット済みの途中成果はブランチ（必要なら push）に残す。worktree は**撤去せずそのまま残す**（次回の再入で再利用する）。未コミットの変更が worktree にある場合は WIP コミット（`wip: Issue #<N> 途中成果`）してから、`cd /Users/itizawa/ai-workspace` でメインツリーへ戻って報告する。最終報告に作業ブランチ名と worktree パス（`.claude/worktrees/issue-<N>`）を明記する。
 
 報告では「`df:blocked` にした Issue 番号・止まったフェーズ・理由・人間に必要な判断・作業ブランチ名」を明記する。
 
@@ -306,7 +306,7 @@ EOF
 
 1. **状況サマリ表**（STEP 0 の「誰の番か」分類テーブル: # / タイトル / df ラベル / 優先度 / 次の担当 / AI 実行可能）。
 2. **ブランチ保護の状態**: STEP 0 で確認した main/develop の protection 有無を 1 行で（無い場合「ゲート 1・2 は本コマンドの遵守のみが砦」と明記）。
-3. **選定と処理内容**: 処理した Issue 番号・タイトル・実行フェーズ（A→B / B のみ）・選定理由（引数指定ならその旨）。作成/更新した成果物（設計書パス・PR URL・コミット・テスト/CI 結果）。**作業した feature ブランチ名と、develop に戻したか／ブロックで残置したか**。
+3. **選定と処理内容**: 処理した Issue 番号・タイトル・実行フェーズ（A→B / B のみ）・選定理由（引数指定ならその旨）。作成/更新した成果物（設計書パス・PR URL・コミット・テスト/CI 結果）。**作業した feature ブランチ名・worktree パス（`.claude/worktrees/issue-<N>`）と、worktree を撤去したか／ブロックで残置したか**。
 4. **ラベル遷移**: `旧ラベル → 新ラベル`。
 5. **次のアクション**: 次に動くのは AI か人間か（人間ゲートなら何を待っているか / AI の番なら次回 `/df` で処理される旨）。
 6. **AI 実行可能な残候補**（あれば優先度順。`/loop /df` や `/schedule` で連続実行する人間向け）。任意で **branch protection 設定の推奨**を添える。
@@ -329,9 +329,9 @@ STEP 0: 状況テーブルを出す（誰の番か分類）＋ git status クリ
             フェーズ(dev-review>todo) → 古い順 で1件 →
             絞り込み後にAI実行可能df複数(矛盾)なら blocked
             ↓
-      ※ 作業は feature/issue-<N> ブランチで直接（worktreeなし・git switch）。完了後 develop に戻す。
-      df:todo      → 既存PR/ブランチ確認 → (PRあれば B直行) → ブランチ用意 → 設計書commit → TDD実装(test先行→失敗→commit→最小実装→lint) → 実装PR(Closes #N, 設計書同梱) → df:dev-review → そのままB
-      df:dev-review→ 実装PR特定 → code-review→修正→収束→(base=develop & CI=test/lint緑 & 指摘ゼロ)→[BASE==developの単一連鎖で]developへマージ → df:done → developに戻す
+      ※ 作業は専用 worktree（.claude/worktrees/issue-<N>/ に feature/issue-<N> を add → cd）で隔離。メインツリーは switch しない。完了後は worktree remove してメインツリーへ戻る。
+      df:todo      → 既存PR/ブランチ/worktree確認 → (PRあれば B直行) → worktree用意(add+cd) → 設計書commit → TDD実装(test先行→失敗→commit→最小実装→lint) → 実装PR(Closes #N, 設計書同梱) → df:dev-review → そのままB
+      df:dev-review→ 実装PR特定 → worktree入場 → code-review→修正→収束→(base=develop & CI=test/lint緑 & 指摘ゼロ)→[BASE==developの単一連鎖で]developへマージ → df:done → worktree撤去しメインツリーへ
             ↓
       迷い/曖昧/受け入れ条件不可/自力解消不能/状態矛盾/外部チェックのみでtest-lint無し → どの局面でも df:blocked + コメントで停止（作業ブランチは残す）
             ↓

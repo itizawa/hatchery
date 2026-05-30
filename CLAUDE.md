@@ -19,7 +19,7 @@ Slack 型 UI で「自分の会社の AI 社員」を放置して眺める観察
 
 このリポジトリは **Dark Factory パターン**で開発する。人間が触るのは **Issue 起票** と **main 昇格** の 2 点だけ。設計・実装・テスト・レビュー・develop マージはすべて AI が回す。全文は `docs/dark-factory-workflow.md`。
 
-> 旧フローにあった「独立した設計 PR とその人間承認」は**廃止**した。人間確認を減らすため、AI は Issue 本文の受け入れ条件から直接実装に入り、**1 回の `/df` 実行で 実装 → 実装 PR → セルフレビュー → develop マージまで通す**。設計書（`docs/design/issue-<N>.md`）は廃止せず、feature ブランチで実装と一緒に書いて**実装 PR に同梱**する（人間承認は挟まない）。作業は専用 worktree を使わず **feature ブランチで直接**行う。
+> 旧フローにあった「独立した設計 PR とその人間承認」は**廃止**した。人間確認を減らすため、AI は Issue 本文の受け入れ条件から直接実装に入り、**1 回の `/df` 実行で 実装 → 実装 PR → セルフレビュー → develop マージまで通す**。設計書（`docs/design/issue-<N>.md`）は廃止せず、feature ブランチで実装と一緒に書いて**実装 PR に同梱**する（人間承認は挟まない）。作業は**専用 git worktree（`.claude/worktrees/issue-<N>/`・`.gitignore` 済み）で隔離**して行い、メインの作業ツリーは `switch` しない（人間の未コミット作業や `/loop /df` の並行実行とコンフリクトしないため）。
 
 ### フロー（人間ゲートは2点のみ）
 
@@ -45,7 +45,7 @@ Slack 型 UI で「自分の会社の AI 社員」を放置して眺める観察
 
 ### フェーズごとの AI の動き
 
-- **実装（`df:todo`）**: `feature/issue-<N>` を `develop` から作成（worktree を使わず直接 checkout）→ 設計書 `docs/design/issue-<N>.md` を書いてコミット → Issue 本文の受け入れ条件を入出力に落とし後述の TDD で実装 → `develop` へ実装 PR（設計書を含む。本文 `Closes #N` + 設計判断の要点 + テスト結果サマリ）→ Issue を `df:dev-review` に → **そのまま続けてレビューへ**。
+- **実装（`df:todo`）**: `feature/issue-<N>` の worktree を `.claude/worktrees/issue-<N>/` に作成（`git worktree add ... origin/develop`。メインツリーは switch しない）→ 設計書 `docs/design/issue-<N>.md` を書いてコミット → Issue 本文の受け入れ条件を入出力に落とし後述の TDD で実装 → `develop` へ実装 PR（設計書を含む。本文 `Closes #N` + 設計判断の要点 + テスト結果サマリ）→ Issue を `df:dev-review` に → **そのまま続けてレビューへ**。
 - **レビュー（`df:dev-review`）**: `/code-review` で実装 PR をレビュー → 指摘を自分で修正 → 収束まで反復 → CI 緑 + 指摘ゼロで **AI が `develop` へマージ** → `df:done`。自力で解消できない場合は `df:blocked` を付け人間に委ねる。`/df` は 1 回の実行で実装からこのマージまでを続けて完走する。
 - **本番（`df:done`）**: `develop → main` の昇格 PR は**人間のみ**がマージ。
 

@@ -35,3 +35,6 @@ yarn-error.log*
 
 # Test / coverage
 coverage/
+
+# Dark Factory: /df の作業用 git worktree（隔離・コミットしない）
+.claude/worktrees/

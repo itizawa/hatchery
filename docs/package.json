@@ -12,12 +12,29 @@
     }
   },
   "scripts": {
+    "storybook": "storybook dev -p 6006",
+    "storybook:build": "storybook build",
     "build": "tsc -b",
     "test": "vitest run",
     "lint": "eslint ."
   },
   "dependencies": {
+    "@emotion/react": "^11.13.5",
+    "@emotion/styled": "^11.13.5",
     "@hatchery/client": "workspace:*",
-    "@hatchery/common": "workspace:*"
+    "@hatchery/common": "workspace:*",
+    "@mui/material": "^6.1.10",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@storybook/addon-essentials": "^8.0.0",
+    "@storybook/blocks": "^8.0.0",
+    "@storybook/react": "^8.0.0",
+    "@storybook/react-vite": "^8.0.0",
+    "@types/react": "^19.0.1",
+    "@types/react-dom": "^19.0.2",
+    "storybook": "^8.0.0",
+    "vite": "^6.0.3"
   }
 }

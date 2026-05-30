@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { total } from "./index.js";
+import { channelCount } from "./index.js";
 
 describe("@hatchery/client", () => {
-  it("パッケージ API（docs/Storybook 契約用の純粋関数）を公開する", () => {
-    expect(total(4, 5)).toBe(9);
+  it("common の CHANNEL_IDS を参照してチャンネル数を返す (client → common)", () => {
+    expect(channelCount()).toBe(2);
   });
 });

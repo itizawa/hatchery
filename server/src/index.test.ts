@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { sum } from "./index.js";
+import { createApp, InMemorySceneRepository, runSceneBatch } from "./index.js";
 
-describe("@hatchery/server", () => {
-  it("placeholder の sum が合計を返す（実体は #6 で差し替え）", () => {
-    expect(sum(2, 3)).toBe(5);
+describe("@hatchery/server パッケージエントリ", () => {
+  it("createApp / runSceneBatch / InMemorySceneRepository を公開する", () => {
+    expect(typeof createApp).toBe("function");
+    expect(typeof runSceneBatch).toBe("function");
+    expect(typeof InMemorySceneRepository).toBe("function");
   });
 });

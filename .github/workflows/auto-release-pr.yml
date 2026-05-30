@@ -1,0 +1,60 @@
+name: Auto Release PR
+
+# develop が更新されるたびに develop → main の「リリース PR」を自動で作成／更新する。
+# マージ（本番昇格）は人間ゲート（Dark Factory ゲート1）。本ワークフローは PR の
+# 作成・更新のみを行い、マージは一切行わない。
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+# リリース PR は常に 1 本。連続 push 時の多重実行を防ぐ。
+concurrency:
+  group: auto-release-pr
+  cancel-in-progress: true
+
+# 最小権限: 履歴は読み取りのみ、PR の作成・更新に pull-requests: write のみ付与。
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  release-pr:
+    runs-on: ubuntu-latest
+    steps:
+      # main..develop の差分件数・コミット一覧を計算するため全履歴を取得する。
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create or update release PR (develop -> main)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          base=main
+          head=develop
+
+          # main 未反映の develop コミットが無ければリリース PR は不要。
+          ahead=$(git rev-list --count "origin/${base}..origin/${head}")
+          if [ "$ahead" -eq 0 ]; then
+            echo "develop は main と同一です。リリース PR は不要のためスキップします。"
+            exit 0
+          fi
+
+          title="Release: develop -> main ($(date -u +%Y-%m-%d))"
+          # main..develop のコミット一覧（リリース内容）を本文に詰める。
+          commits=$(git log --no-merges --pretty=format:'- %s (%h)' "origin/${base}..origin/${head}")
+          body=$(printf '## リリース内容 (develop -> main)\n\n本番昇格はこの PR を **人間がマージ** することで行います（Dark Factory ゲート1）。自動マージはしません。\n\n### 含まれるコミット (%s 件)\n\n%s\n\n---\n🤖 develop への push を検知して自動作成／更新されたリリース PR です。\n' "$ahead" "$commits")
+
+          # 既存のオープンなリリース PR があれば本文・タイトルを更新、無ければ新規作成。
+          # （マージは行わない＝本番昇格は人間ゲート / ゲート1）
+          existing=$(gh pr list --base main --head develop --state open --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh pr edit "$existing" --title "$title" --body "$body"
+            echo "既存のリリース PR #${existing} を更新しました。"
+          else
+            gh pr create --base main --head develop --title "$title" --body "$body"
+            echo "リリース PR を新規作成しました。"
+          fi

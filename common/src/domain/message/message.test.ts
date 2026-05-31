@@ -66,8 +66,15 @@ describe("MessageRecordSchema (#40・永続化形)", () => {
   });
 
   it("id が欠損すると parse に失敗する", () => {
-    const { id: _id, ...withoutId } = base;
-    expect(MessageRecordSchema.safeParse(withoutId).success).toBe(false);
+    expect(
+      MessageRecordSchema.safeParse({
+        speaker: base.speaker,
+        channel: base.channel,
+        text: base.text,
+        createdAt: base.createdAt,
+        order: base.order,
+      }).success,
+    ).toBe(false);
   });
 
   it("createdAt が Date でない（文字列）と parse に失敗する", () => {

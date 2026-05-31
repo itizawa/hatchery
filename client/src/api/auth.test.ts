@@ -13,7 +13,8 @@ function jsonResponse(status: number, body?: unknown): Response {
 // #41: GET /auth/me で生成型（openapi-fetch）が end-to-end に流れることを示すテスト。
 describe("fetchMe (GET /auth/me e2e 型フロー)", () => {
   afterEach(() => {
-    vi.restoreAllMocks();
+    // stubGlobal は unstubAllGlobals で戻す（restoreAllMocks は global スタブを戻さない）。
+    vi.unstubAllGlobals();
   });
 
   it("200 のとき AuthUser を返す", async () => {

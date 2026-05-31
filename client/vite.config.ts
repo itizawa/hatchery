@@ -9,6 +9,12 @@ import { defineConfig } from "vitest/config";
  */
 export default defineConfig({
   plugins: [react()],
+  server: {
+    proxy: {
+      "/auth": "http://localhost:3000",
+      "/api": "http://localhost:3000",
+    },
+  },
   build: {
     outDir: "dist/web",
     emptyOutDir: true,

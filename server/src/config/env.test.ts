@@ -43,4 +43,16 @@ describe("loadEnv", () => {
   it("不正な RATE_LIMIT_MAX（非正）は ZodError で弾く", () => {
     expect(() => loadEnv({ RATE_LIMIT_MAX: "0" })).toThrow();
   });
+
+  it("CORS_ALLOWED_ORIGINS 未設定なら空配列を返す", () => {
+    const env = loadEnv({});
+    expect(env.corsAllowedOrigins).toEqual([]);
+  });
+
+  it("CORS_ALLOWED_ORIGINS をカンマ区切りで配列化し、前後空白と空要素を除去する", () => {
+    const env = loadEnv({
+      CORS_ALLOWED_ORIGINS: " https://a.example.com , https://b.example.com ,, ",
+    });
+    expect(env.corsAllowedOrigins).toEqual(["https://a.example.com", "https://b.example.com"]);
+  });
 });

@@ -28,4 +28,25 @@ describe("createApp のセキュリティ防御", () => {
     expect(res.status).toBe(413);
     expect(res.body.error).toBe("PayloadTooLarge");
   });
+
+  it("全応答にセキュアヘッダを付与し X-Powered-By を除去する（/health に適用）", async () => {
+    const app = createApp({ messageRepository: new InMemoryMessageRepository() });
+    const res = await request(app).get("/health");
+    expect(res.headers["x-content-type-options"]).toBe("nosniff");
+    expect(res.headers["x-frame-options"]).toBe("DENY");
+    expect(res.headers["x-xss-protection"]).toBe("1; mode=block");
+    expect(res.headers["referrer-policy"]).toBe("no-referrer");
+    expect(res.headers["x-powered-by"]).toBeUndefined();
+  });
+
+  it("corsAllowedOrigins に含まれるオリジンへ CORS ヘッダを付与する", async () => {
+    const origin = "https://app.example.com";
+    const app = createApp({
+      messageRepository: new InMemoryMessageRepository(),
+      security: { corsAllowedOrigins: [origin] },
+    });
+    const res = await request(app).get("/health").set("Origin", origin);
+    expect(res.headers["access-control-allow-origin"]).toBe(origin);
+    expect(res.headers["access-control-allow-credentials"]).toBe("true");
+  });
 });

@@ -1,14 +1,19 @@
 import type { AuthUser, LoginRequest } from "@hatchery/common";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
+import { openApiClient } from "./client.js";
+
 export const AUTH_ME_QUERY_KEY = ["auth", "me"] as const;
 
-/** GET /auth/me を呼び出す。未ログイン（401）のときは null を返す。 */
+/**
+ * GET /auth/me を openapi-fetch（生成型）経由で呼び出す。未ログイン（401）のときは null を返す。
+ * ADR-0006: openapi.json 由来の型で server → client の型が end-to-end に流れる（#41）。
+ */
 export async function fetchMe(): Promise<AuthUser | null> {
-  const res = await fetch("/auth/me", { credentials: "include" });
-  if (res.status === 401) return null;
-  if (!res.ok) throw new Error(`GET /auth/me failed: ${res.status}`);
-  return res.json() as Promise<AuthUser>;
+  const { data, response } = await openApiClient.GET("/auth/me", { credentials: "include" });
+  if (response.status === 401) return null;
+  if (!response.ok) throw new Error(`GET /auth/me failed: ${response.status}`);
+  return data ?? null;
 }
 
 /** POST /auth/login を呼び出す。成功時は AuthUser を返す。失敗時は例外を投げる。 */

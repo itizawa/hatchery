@@ -22,11 +22,11 @@ describe("fetchMe (GET /auth/me e2e 型フロー)", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(fetchMe()).resolves.toEqual(user);
-    // openapi-fetch 経由で /auth/me を GET していること。
+    // openapi-fetch 経由で /auth/me を GET していること（fetch には Request が 1 つ渡る）。
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    const [url, init] = fetchMock.mock.calls[0] as [string | URL, RequestInit];
-    expect(String(url)).toContain("/auth/me");
-    expect(init.method).toBe("GET");
+    const request = fetchMock.mock.calls[0][0] as Request;
+    expect(request.url).toContain("/auth/me");
+    expect(request.method).toBe("GET");
   });
 
   it("401（未ログイン）のとき null を返す", async () => {

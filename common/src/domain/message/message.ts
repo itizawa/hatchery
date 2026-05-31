@@ -21,3 +21,19 @@ export type Message = z.infer<typeof MessageSchema>;
 export const MessageArraySchema = z.array(MessageSchema).min(1);
 
 export type MessageArray = z.infer<typeof MessageArraySchema>;
+
+/**
+ * 永続化された 1 発言（#40）。生成ペイロード MessageSchema に、永続化由来の
+ * id / createdAt / order を加えたもの。common を単一情報源とし、server の
+ * MessageRecord はこの型から導出する（ADR-0005）。
+ * order は定時バッチ内での発言順（0 始まり、ADR-0009）。
+ * 注: id を必須にするのは「永続化形」のみ。生成入力（MessageSchema / MessageArraySchema）には
+ * id を含めない（AI 生成・リクエスト検証・OpenAPI を壊さないため）。
+ */
+export const MessageRecordSchema = MessageSchema.extend({
+  id: z.string().min(1),
+  createdAt: z.date(),
+  order: z.number().int().nonnegative(),
+});
+
+export type MessageRecord = z.infer<typeof MessageRecordSchema>;

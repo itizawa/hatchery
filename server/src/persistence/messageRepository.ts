@@ -1,20 +1,13 @@
-import type { Message } from "@hatchery/common";
+import type { Message, MessageRecord } from "@hatchery/common";
+
+/**
+ * 永続化された 1 発言。common の MessageRecordSchema を単一情報源とする（#40 / ADR-0005）。
+ * 以前 server で独立定義していたインターフェースを common 由来の型に統合した。
+ */
+export type { MessageRecord };
 
 function cloneRecord(record: MessageRecord): MessageRecord {
   return { ...record };
-}
-
-/**
- * 永続化された 1 発言。common の Message に永続化由来の id / createdAt / order を加えたもの。
- * order は定時バッチ内での発言順（ADR-0009）。
- */
-export interface MessageRecord {
-  id: string;
-  speaker: string;
-  channel: string;
-  text: string;
-  createdAt: Date;
-  order: number;
 }
 
 /**

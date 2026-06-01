@@ -4,6 +4,7 @@ import Typography from "@mui/material/Typography";
 import { Link as RouterLink, Outlet } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 
+import { AddChannelForm } from "../components/AddChannelForm";
 import { ChannelList } from "../components/ChannelList";
 
 /**
@@ -29,6 +30,7 @@ export const RootLayout = (): ReactElement => (
         Hatchery
       </Typography>
       <ChannelList />
+      <AddChannelForm />
       <Box sx={{ mt: 2 }}>
         <Link component={RouterLink} to="/settings" color="inherit" underline="hover">
           設定

@@ -10,6 +10,7 @@ import {
   AddChannelMemberSchema,
   AuthUserSchema,
   ChannelSchema,
+  CreateChannelSchema,
   EmployeeSchema,
   LoginRequestSchema,
   MessageSchema,
@@ -34,6 +35,11 @@ const ChannelComponent = registry.register(
 const UpdateChannelComponent = registry.register(
   "UpdateChannel",
   UpdateChannelSchema.openapi({ description: "チャンネル名更新リクエストボディ（#37）" }),
+);
+
+const CreateChannelComponent = registry.register(
+  "CreateChannel",
+  CreateChannelSchema.openapi({ description: "チャンネル作成リクエストボディ（#47・label のみ）" }),
 );
 
 const AddChannelMemberComponent = registry.register(
@@ -140,6 +146,35 @@ registry.registerPath({
 const channelIdParam = z.string().openapi({ param: { name: "channelId", in: "path" } });
 const employeeIdParam = z.string().openapi({ param: { name: "employeeId", in: "path" } });
 const channelPathIdParam = z.string().openapi({ param: { name: "id", in: "path" } });
+
+registry.registerPath({
+  method: "get",
+  path: "/channels",
+  summary: "チャンネル一覧を取得（認証不要・#47）",
+  responses: {
+    200: {
+      description: "チャンネル一覧",
+      content: { "application/json": { schema: z.array(ChannelComponent) } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/channels",
+  summary: "チャンネルを作成（認証必須・#47）",
+  request: {
+    body: { content: { "application/json": { schema: CreateChannelComponent } } },
+  },
+  responses: {
+    201: {
+      description: "作成されたチャンネル",
+      content: { "application/json": { schema: ChannelComponent } },
+    },
+    400: { description: "リクエストボディが不正（label 空など）", ...errorJson },
+    401: { description: "未認証", ...errorJson },
+  },
+});
 
 registry.registerPath({
   method: "patch",

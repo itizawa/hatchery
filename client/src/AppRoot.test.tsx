@@ -1,6 +1,6 @@
 import { createMemoryHistory } from "@tanstack/react-router";
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AppRoot } from "./AppRoot";
 import { createAppRouter } from "./router";
@@ -9,6 +9,22 @@ import { createAppRouter } from "./router";
 // クラッシュせずチャンネル一覧とホーム枠を描画する。
 // テスト間の状態リークを避けるため memory history のルータを注入する。
 describe("AppRoot", () => {
+  beforeEach(() => {
+    // サイドバー（ChannelList）が呼ぶ GET /channels を既定チャンネルで応答する（#47）。
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify([{ id: "zatsudan", label: "#雑談" }]), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      ),
+    );
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("クラッシュせずチャンネル一覧とホーム枠を描画する", async () => {
     const router = createAppRouter({
       history: createMemoryHistory({ initialEntries: ["/"] }),

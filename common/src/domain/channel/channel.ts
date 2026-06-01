@@ -13,7 +13,12 @@ export const ChannelSchema = z.object({
 
 export type Channel = z.infer<typeof ChannelSchema>;
 
-/** MVP の既定チャンネル定義。CHANNEL_IDS と 1 対 1 に対応する。 */
+/**
+ * 既定チャンネルの定義（seed の単一情報源・#47）。
+ * チャンネル一覧は DB から `GET /channels` で取得する方式へ移行したため、これは
+ * client 実行時の描画ソースではなく、開発用 seed（server/prisma/seedDevData）・
+ * インメモリ実装・バッチ既定の初期値としてのみ用いる。CHANNEL_IDS と 1 対 1 に対応する。
+ */
 export const DEFAULT_CHANNELS: readonly Channel[] = [
   { id: "zatsudan", label: "#雑談" },
   { id: "shigoto", label: "#仕事" },
@@ -33,3 +38,10 @@ export const UpdateChannelSchema = z.object({
 });
 
 export type UpdateChannelInput = z.infer<typeof UpdateChannelSchema>;
+
+/** チャンネル作成リクエストのボディ検証スキーマ（POST /channels・#47）。id はサーバが採番する。 */
+export const CreateChannelSchema = z.object({
+  label: z.string().min(1),
+});
+
+export type CreateChannelInput = z.infer<typeof CreateChannelSchema>;

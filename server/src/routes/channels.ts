@@ -1,4 +1,10 @@
-import { AddChannelMemberSchema, UpdateChannelSchema, type UpdateChannelInput } from "@hatchery/common";
+import {
+  AddChannelMemberSchema,
+  CreateChannelSchema,
+  UpdateChannelSchema,
+  type CreateChannelInput,
+  type UpdateChannelInput,
+} from "@hatchery/common";
 import { Router } from "express";
 
 import { requireAuth } from "../middleware/requireAuth.js";
@@ -17,6 +23,23 @@ export function createChannelsRouter(
   channelRepo: ChannelRepository,
 ): Router {
   const router = Router();
+
+  // チャンネル一覧（認証不要・#47）。状態確認・バッチ連携の素材として公開する。
+  router.get("/", (_req, res, next) => {
+    channelRepo
+      .list()
+      .then((channels) => res.status(200).json(channels))
+      .catch(next);
+  });
+
+  // チャンネル作成（認証必須・#47）。id はリポジトリが採番する。
+  router.post("/", requireAuth, validateBody(CreateChannelSchema), (req, res, next) => {
+    const { label } = req.body as CreateChannelInput;
+    channelRepo
+      .create({ label })
+      .then((channel) => res.status(201).json(channel))
+      .catch(next);
+  });
 
   router.patch("/:id", requireAuth, validateBody(UpdateChannelSchema), (req, res, next) => {
     const { id } = req.params as { id: string };

@@ -1,26 +1,21 @@
-import bcrypt from "bcrypt";
 import { PrismaClient } from "@prisma/client";
 
+import { seedDevData } from "./seedDevData.js";
+
+/**
+ * `prisma db seed` から起動される CLI エントリ。
+ * 実 PrismaClient を生成して seedDevData に委譲し、最後に切断する。
+ * 投入ロジック本体・本番ガードは seedDevData 側に集約している（設計書 §4）。
+ */
 const prisma = new PrismaClient();
 
 async function main() {
-  if (process.env.NODE_ENV === "production") {
+  const result = await seedDevData(prisma);
+  if (result.skipped) {
     console.log("本番環境ではシードを実行しません");
     return;
   }
-
-  const passwordHash = await bcrypt.hash("testpass", 10);
-  await prisma.user.upsert({
-    where: { id: "testuser" },
-    update: {},
-    create: {
-      id: "testuser",
-      displayName: "Test User",
-      passwordHash,
-    },
-  });
-
-  console.log("シードユーザーを作成しました: testuser / testpass");
+  console.log("シードを投入しました: testuser / testpass・既定の社員・チャンネル");
 }
 
 main()

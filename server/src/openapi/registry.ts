@@ -6,7 +6,12 @@ import {
 import type { OpenAPIObject } from "openapi3-ts/oas31";
 import { z } from "zod";
 
-import { AddChannelMemberSchema, MessageSchema } from "@hatchery/common";
+import {
+  AddChannelMemberSchema,
+  AuthUserSchema,
+  LoginRequestSchema,
+  MessageSchema,
+} from "@hatchery/common";
 
 extendZodWithOpenApi(z);
 
@@ -23,6 +28,25 @@ const AddChannelMemberComponent = registry.register(
     description: "チャンネルへ Employee を追加するリクエストボディ（#33）",
   }),
 );
+
+const AuthUserComponent = registry.register(
+  "AuthUser",
+  AuthUserSchema.openapi({
+    description: "認証済みユーザーの公開情報（passwordHash 等は含まない）",
+  }),
+);
+
+const LoginRequestComponent = registry.register(
+  "LoginRequest",
+  LoginRequestSchema.openapi({ description: "ログインリクエストボディ（id / password）" }),
+);
+
+// エラー応答スキーマ。実装（validateBody / errorHandler）が実際に返す形 `{ error: string }` に忠実。
+const ErrorComponent = registry.register(
+  "Error",
+  z.object({ error: z.string() }).openapi({ description: "エラー応答（実装の実際の形に準拠）" }),
+);
+const errorJson = { content: { "application/json": { schema: ErrorComponent } } };
 
 registry.registerPath({
   method: "get",
@@ -116,6 +140,62 @@ registry.registerPath({
   responses: {
     204: { description: "除外完了" },
     401: { description: "未認証" },
+  },
+});
+
+// 認証（#26 / routes/auth.ts。createApp は /auth プレフィックスでマウント）。
+registry.registerPath({
+  method: "post",
+  path: "/auth/login",
+  summary: "ID / パスワードでログイン（passport-local）",
+  request: {
+    body: { content: { "application/json": { schema: LoginRequestComponent } } },
+  },
+  responses: {
+    200: {
+      description: "ログイン成功。認証済みユーザーを返す",
+      content: { "application/json": { schema: AuthUserComponent } },
+    },
+    400: { description: "リクエストボディが不正（id / password 空など）", ...errorJson },
+    401: { description: "認証失敗（ID またはパスワード不一致）" },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/auth/logout",
+  summary: "ログアウト（セッション破棄）",
+  responses: {
+    200: {
+      description: "ログアウト成功",
+      content: { "application/json": { schema: z.object({ ok: z.boolean() }) } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/auth/me",
+  summary: "現在の認証済みユーザーを取得（認証必須）",
+  responses: {
+    200: {
+      description: "認証済みユーザー",
+      content: { "application/json": { schema: AuthUserComponent } },
+    },
+    401: { description: "未認証", ...errorJson },
+  },
+});
+
+// ヘルスチェック（routes/health.ts。/health でマウント）。
+registry.registerPath({
+  method: "get",
+  path: "/health",
+  summary: "ヘルスチェック",
+  responses: {
+    200: {
+      description: "稼働中",
+      content: { "application/json": { schema: z.object({ status: z.literal("ok") }) } },
+    },
   },
 });
 

@@ -8,8 +8,12 @@ export const EmployeeSchema = z.object({
   id: z.string().min(1),
   displayName: z.string().min(1),
   role: z.string().min(1).optional(),
+  // #49: AI 社員（true）とユーザー所有社員（false）を区別する。省略時は false。
+  isBot: z.boolean().default(false),
 });
 
+// 出力型（parse 後）を採用し、`isBot` は常に boolean とする（#49）。
+// `.default(false)` により parse 時に既定が埋まるため、bot 判定（#48 で利用）を型安全に扱える。
 export type Employee = z.infer<typeof EmployeeSchema>;
 
 /**
@@ -18,9 +22,9 @@ export type Employee = z.infer<typeof EmployeeSchema>;
  * 表示名・役割は MVP 暫定で、正典の社員定義（Phase 1 のプロンプト設計）が固まれば差し替える。
  */
 export const DEFAULT_EMPLOYEES: readonly Employee[] = [
-  { id: "haru", displayName: "haru", role: "ムードメーカー" },
-  { id: "ken", displayName: "ken", role: "ベテラン" },
-  { id: "mei", displayName: "mei", role: "新人" },
+  { id: "haru", displayName: "haru", role: "ムードメーカー", isBot: true },
+  { id: "ken", displayName: "ken", role: "ベテラン", isBot: true },
+  { id: "mei", displayName: "mei", role: "新人", isBot: true },
 ];
 
 /**

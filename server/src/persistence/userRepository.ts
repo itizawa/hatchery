@@ -4,6 +4,8 @@ export interface User {
   id: string;
   displayName: string;
   passwordHash: string;
+  /** 紐づく Employee の id（#49）。未紐づけなら null。 */
+  employeeId: string | null;
 }
 
 export interface UserRepository {
@@ -22,11 +24,16 @@ export class InMemoryUserRepository implements UserRepository {
     return this.users.find((u) => u.id === id) ?? null;
   }
 
-  /** テスト用ユーザー（testuser / testpass）を持つインスタンスを生成する。 */
-  static async createWithTestUser(): Promise<InMemoryUserRepository> {
+  /**
+   * テスト用ユーザー（testuser / testpass）を持つインスタンスを生成する。
+   * employeeId を渡すと紐づく Employee の id として設定する（#49。既定は未紐づけ＝null）。
+   */
+  static async createWithTestUser(
+    employeeId: string | null = null,
+  ): Promise<InMemoryUserRepository> {
     const passwordHash = await bcrypt.hash("testpass", 10);
     return new InMemoryUserRepository([
-      { id: "testuser", displayName: "Test User", passwordHash },
+      { id: "testuser", displayName: "Test User", passwordHash, employeeId },
     ]);
   }
 }

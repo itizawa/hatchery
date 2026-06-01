@@ -17,6 +17,17 @@ describe("EmployeeSchema (A-1 / A-2)", () => {
     expect(EmployeeSchema.safeParse({ id: "", displayName: "haru" }).success).toBe(false);
     expect(EmployeeSchema.safeParse({ id: "haru", displayName: "" }).success).toBe(false);
   });
+
+  // #49: AI 社員とユーザー所有社員を区別する isBot フラグ。
+  it("isBot を省略すると既定で false になる（AC-4）", () => {
+    const parsed = EmployeeSchema.parse({ id: "haru", displayName: "haru" });
+    expect(parsed.isBot).toBe(false);
+  });
+
+  it("isBot: true を指定するとそのまま反映される（AC-5）", () => {
+    const parsed = EmployeeSchema.parse({ id: "haru", displayName: "haru", isBot: true });
+    expect(parsed.isBot).toBe(true);
+  });
 });
 
 describe("DEFAULT_EMPLOYEES (#25)", () => {
@@ -33,6 +44,11 @@ describe("DEFAULT_EMPLOYEES (#25)", () => {
   it("id が一意である", () => {
     const ids = DEFAULT_EMPLOYEES.map((e) => e.id);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  // #49: 既定 AI 社員は全員 bot（ユーザー所有社員と区別する）。
+  it("全員が isBot=true（AC-7）", () => {
+    expect(DEFAULT_EMPLOYEES.every((e) => e.isBot === true)).toBe(true);
   });
 });
 

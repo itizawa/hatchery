@@ -48,4 +48,21 @@ describe("AuthUserSchema", () => {
       expect(result.data).not.toHaveProperty("passwordHash");
     }
   });
+
+  // #49: 自身の Employee を指す employeeId（任意）。
+  it("employeeId を付与してもパースが成功する（AC-8）", () => {
+    const result = AuthUserSchema.safeParse({ id: "user1", displayName: "Alice", employeeId: "emp1" });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.employeeId).toBe("emp1");
+    }
+  });
+
+  it("employeeId を省略してもパースが成功する（AC-8 / 任意フィールド）", () => {
+    const result = AuthUserSchema.safeParse({ id: "user1", displayName: "Alice" });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.employeeId).toBeUndefined();
+    }
+  });
 });

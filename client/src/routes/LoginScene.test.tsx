@@ -20,21 +20,21 @@ function renderApp(initialPath: string) {
   );
 }
 
-describe("設定画面ガード", () => {
+describe("管理画面ガード", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
 
-  it("未ログイン状態で /settings にアクセスするとログイン画面が表示される", async () => {
+  it("未ログイン状態で /admin にアクセスするとログイン画面が表示される", async () => {
     vi.spyOn(authApi, "fetchMe").mockResolvedValue(null);
-    renderApp("/settings");
+    renderApp("/admin");
     expect(await screen.findByRole("heading", { name: /ログイン/ })).toBeInTheDocument();
   });
 
-  it("ログイン済み状態で /settings にアクセスすると設定画面が表示される", async () => {
+  it("ログイン済み状態で /admin にアクセスすると管理画面が表示される", async () => {
     vi.spyOn(authApi, "fetchMe").mockResolvedValue({ id: "user1", displayName: "Alice" });
-    renderApp("/settings");
-    expect(await screen.findByRole("heading", { name: /設定/ })).toBeInTheDocument();
+    renderApp("/admin");
+    expect(await screen.findByRole("heading", { name: /管理画面/ })).toBeInTheDocument();
   });
 });
 

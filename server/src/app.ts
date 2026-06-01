@@ -12,6 +12,10 @@ import {
   InMemoryChannelMembershipRepository,
   type ChannelMembershipRepository,
 } from "./persistence/channelMembershipRepository.js";
+import {
+  InMemoryChannelRepository,
+  type ChannelRepository,
+} from "./persistence/channelRepository.js";
 import type { MessageRepository } from "./persistence/messageRepository.js";
 import { InMemoryUserRepository, type UserRepository } from "./persistence/userRepository.js";
 import { createAuthRouter } from "./routes/auth.js";
@@ -49,6 +53,8 @@ export interface AppDeps {
   userRepository?: UserRepository;
   /** チャンネル所属（多対多）の永続化。省略時はインメモリ（#33）。 */
   channelMembershipRepository?: ChannelMembershipRepository;
+  /** チャンネル CRUD の永続化。省略時はインメモリ（#37）。 */
+  channelRepository?: ChannelRepository;
   /** DDoS/過負荷対策の設定（#34）。省略時は既定値。 */
   security?: SecurityOptions;
 }
@@ -62,6 +68,7 @@ export function createApp(deps: AppDeps): Express {
   const userRepository = deps.userRepository ?? new InMemoryUserRepository();
   const channelMembershipRepository =
     deps.channelMembershipRepository ?? new InMemoryChannelMembershipRepository();
+  const channelRepository = deps.channelRepository ?? new InMemoryChannelRepository();
 
   const security = { ...DEFAULT_SECURITY, ...deps.security };
 
@@ -104,7 +111,7 @@ export function createApp(deps: AppDeps): Express {
   app.use("/health", healthRouter);
   app.use("/auth", createAuthRouter(passportInstance));
   app.use("/messages", createMessagesRouter(deps.messageRepository));
-  app.use("/channels", createChannelsRouter(channelMembershipRepository));
+  app.use("/channels", createChannelsRouter(channelMembershipRepository, channelRepository));
   app.use(errorHandler);
   return app;
 }

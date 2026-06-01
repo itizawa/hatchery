@@ -1,4 +1,4 @@
-import { AddChannelMemberSchema, UpdateChannelSchema } from "@hatchery/common";
+import { AddChannelMemberSchema, UpdateChannelSchema, type UpdateChannelInput } from "@hatchery/common";
 import { Router } from "express";
 
 import { requireAuth } from "../middleware/requireAuth.js";
@@ -20,7 +20,7 @@ export function createChannelsRouter(
 
   router.patch("/:id", requireAuth, validateBody(UpdateChannelSchema), (req, res, next) => {
     const { id } = req.params as { id: string };
-    const { label } = req.body as { label: string };
+    const { label } = req.body as UpdateChannelInput;
     channelRepo
       .updateLabel(id, label)
       .then((channel) => {

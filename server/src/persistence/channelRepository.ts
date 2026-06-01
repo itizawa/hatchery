@@ -2,7 +2,6 @@ import { DEFAULT_CHANNELS } from "@hatchery/common";
 import type { Channel } from "@hatchery/common";
 
 export interface ChannelRepository {
-  findById(id: string): Promise<Channel | null>;
   updateLabel(id: string, label: string): Promise<Channel | null>;
 }
 
@@ -12,10 +11,6 @@ export class InMemoryChannelRepository implements ChannelRepository {
 
   constructor(channels: Channel[] = DEFAULT_CHANNELS.map((c) => ({ ...c }))) {
     this.channels = channels;
-  }
-
-  async findById(id: string): Promise<Channel | null> {
-    return this.channels.find((c) => c.id === id) ?? null;
   }
 
   async updateLabel(id: string, label: string): Promise<Channel | null> {

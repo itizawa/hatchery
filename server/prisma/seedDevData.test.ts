@@ -7,7 +7,7 @@ import { seedDevData, type SeedPrisma } from "./seedDevData.js";
 function createFakePrisma() {
   const calls = {
     user: [] as Array<{ id: string; displayName: string }>,
-    employee: [] as Array<{ id: string }>,
+    employee: [] as Array<{ id: string; isBot: boolean; userId: string | null }>,
     channel: [] as Array<{ id: string }>,
     channelEmployee: [] as Array<{ channelId: string; employeeId: string }>,
   };
@@ -19,7 +19,11 @@ function createFakePrisma() {
     },
     employee: {
       async upsert(args) {
-        calls.employee.push({ id: args.create.id });
+        calls.employee.push({
+          id: args.create.id,
+          isBot: args.create.isBot,
+          userId: args.create.userId ?? null,
+        });
       },
     },
     channel: {
@@ -58,13 +62,29 @@ describe("seedDevData", () => {
     expect(calls.user[0]).toEqual({ id: "testuser", displayName: "Test User" });
   });
 
-  it("AC1: DEFAULT_EMPLOYEES 全件を employee.upsert で投入する", async () => {
+  it("AC1: DEFAULT_EMPLOYEES 全件を isBot=true / userId=null で投入する（#49）", async () => {
     const { prisma, calls } = createFakePrisma();
     await seedDevData(prisma);
-    expect(new Set(calls.employee.map((e) => e.id))).toEqual(
+    const aiEmployees = calls.employee.filter((e) =>
+      DEFAULT_EMPLOYEES.some((d) => d.id === e.id),
+    );
+    expect(new Set(aiEmployees.map((e) => e.id))).toEqual(
       new Set(DEFAULT_EMPLOYEES.map((e) => e.id)),
     );
-    expect(calls.employee).toHaveLength(DEFAULT_EMPLOYEES.length);
+    expect(aiEmployees).toHaveLength(DEFAULT_EMPLOYEES.length);
+    expect(aiEmployees.every((e) => e.isBot === true)).toBe(true);
+    expect(aiEmployees.every((e) => e.userId === null)).toBe(true);
+  });
+
+  it("#49: ログインユーザーに紐づく Employee を isBot=false / userId=testuser で投入する", async () => {
+    const { prisma, calls } = createFakePrisma();
+    await seedDevData(prisma);
+    // AI 社員 3 名 + ユーザー所有社員 1 名。
+    expect(calls.employee).toHaveLength(DEFAULT_EMPLOYEES.length + 1);
+    const owned = calls.employee.find((e) => e.userId === "testuser");
+    expect(owned).toBeDefined();
+    expect(owned?.id).toBe("emp-testuser");
+    expect(owned?.isBot).toBe(false);
   });
 
   it("AC2: DEFAULT_CHANNELS 全件を channel.upsert で投入する", async () => {

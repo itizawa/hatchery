@@ -66,6 +66,26 @@ describe("GET /auth/me", () => {
     const res = await request(app).get("/auth/me");
     expect(res.status).toBe(401);
   });
+
+  // #49: User ↔ Employee を JOIN し、自身の employeeId を返す。
+  it("Employee が紐づくユーザーでは employeeId を含む（AC-9）", async () => {
+    const repo = await InMemoryUserRepository.createWithTestUser("emp-testuser");
+    const app = await buildApp(repo);
+    const agent = request.agent(app);
+    await agent.post("/auth/login").send({ id: "testuser", password: "testpass" });
+    const res = await agent.get("/auth/me");
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ id: "testuser", employeeId: "emp-testuser" });
+  });
+
+  it("Employee が紐づかないユーザーでは employeeId を含めない（AC-10）", async () => {
+    const app = await buildApp();
+    const agent = request.agent(app);
+    await agent.post("/auth/login").send({ id: "testuser", password: "testpass" });
+    const res = await agent.get("/auth/me");
+    expect(res.status).toBe(200);
+    expect(res.body).not.toHaveProperty("employeeId");
+  });
 });
 
 describe("POST /auth/logout", () => {

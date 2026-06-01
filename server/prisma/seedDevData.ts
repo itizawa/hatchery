@@ -18,7 +18,13 @@ export interface SeedPrisma {
     upsert(args: {
       where: { id: string };
       update: Record<string, never>;
-      create: { id: string; displayName: string; role: string | null };
+      create: {
+        id: string;
+        displayName: string;
+        role: string | null;
+        isBot: boolean;
+        userId?: string | null;
+      };
     }): Promise<unknown>;
   };
   channel: {
@@ -45,9 +51,13 @@ export interface SeedResult {
 /** 開発用テストユーザーの資格情報（既存コードベースの標準: testuser / testpass）。 */
 const DEV_USER = { id: "testuser", displayName: "Test User", password: "testpass" } as const;
 
+/** ログインユーザーに紐づく Employee の id（#49）。 */
+const DEV_USER_EMPLOYEE_ID = "emp-testuser";
+
 /**
- * 開発環境向けのテストデータを冪等に投入する（設計書 §4）。
+ * 開発環境向けのテストデータを冪等に投入する（設計書 §4 / #49）。
  * - common の DEFAULT_EMPLOYEES / DEFAULT_CHANNELS を単一情報源として upsert する（ADR-0005）。
+ * - AI 社員は isBot=true / userId=null、ログインユーザー所有の Employee は isBot=false / userId 紐付けで投入する（#49）。
  * - 全 Employee を全 Channel に所属させ、観察ループの最小データを用意する。
  * - 本番環境（NODE_ENV=production）では何も投入せずスキップする。
  * すべて upsert のため再実行しても安全。
@@ -64,6 +74,7 @@ export async function seedDevData(prisma: SeedPrisma): Promise<SeedResult> {
     create: { id: DEV_USER.id, displayName: DEV_USER.displayName, passwordHash },
   });
 
+  // AI 社員（既定 3 名）は isBot=true / userId は紐付けない（#49）。
   for (const employee of DEFAULT_EMPLOYEES) {
     await prisma.employee.upsert({
       where: { id: employee.id },
@@ -72,9 +83,23 @@ export async function seedDevData(prisma: SeedPrisma): Promise<SeedResult> {
         id: employee.id,
         displayName: employee.displayName,
         role: employee.role ?? null,
+        isBot: true,
       },
     });
   }
+
+  // ログインユーザーに対応する Employee は isBot=false / userId で User と 1:1 紐付け（#49）。
+  await prisma.employee.upsert({
+    where: { id: DEV_USER_EMPLOYEE_ID },
+    update: {},
+    create: {
+      id: DEV_USER_EMPLOYEE_ID,
+      displayName: DEV_USER.displayName,
+      role: null,
+      isBot: false,
+      userId: DEV_USER.id,
+    },
+  });
 
   for (const channel of DEFAULT_CHANNELS) {
     await prisma.channel.upsert({

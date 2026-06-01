@@ -14,16 +14,23 @@ datasource db {
 
 /// 認証ユーザー（Issue #26 / ADR-0009）。パスワードは bcrypt ハッシュで保存する。
 model User {
-  id           String @id
+  id           String    @id
   displayName  String
   passwordHash String
+  /// 1 ユーザー = 1 Employee の任意リレーション（#49）。
+  employee     Employee?
 }
 
-/// AI 社員。common の EmployeeSchema に対応（id / displayName / role?）。
+/// AI 社員。common の EmployeeSchema に対応（id / displayName / role? / isBot）。
 model Employee {
   id          String            @id
   displayName String
   role        String?
+  /// AI 社員は true、ユーザー所有社員は false（#49）。
+  isBot       Boolean           @default(false)
+  /// ユーザー所有社員のみ User と 1:1 で紐づく。AI 社員は null（#49）。
+  userId      String?           @unique
+  user        User?             @relation(fields: [userId], references: [id])
   tasks       Task[]
   channels    ChannelEmployee[]
 }

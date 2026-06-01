@@ -34,6 +34,17 @@ describe("generateOpenApiDocument", () => {
     expect(doc.components?.schemas).toHaveProperty("LoginRequest");
   });
 
+  // #49: AuthUser に自身の employeeId（任意）が含まれる。
+  it("AuthUser スキーマに employeeId プロパティが含まれる（AC-11）", () => {
+    const doc = generateOpenApiDocument();
+    const authUser = doc.components?.schemas?.AuthUser as
+      | { properties?: Record<string, unknown>; required?: string[] }
+      | undefined;
+    expect(authUser?.properties).toHaveProperty("employeeId");
+    // 任意フィールドなので required には含めない。
+    expect(authUser?.required ?? []).not.toContain("employeeId");
+  });
+
   it("/auth/login(post) は LoginRequest を受け取り 200 で AuthUser を返す", () => {
     const doc = generateOpenApiDocument();
     const login = doc.paths?.["/auth/login"]?.post;

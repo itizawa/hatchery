@@ -1,8 +1,17 @@
+import type { AuthUser } from "@hatchery/common";
 import bcrypt from "bcrypt";
 import { Passport } from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 
-import type { UserRepository } from "../persistence/userRepository.js";
+import type { User, UserRepository } from "../persistence/userRepository.js";
+
+/** 認証ユーザー（DB の User）をセッションに載せる公開情報（AuthUser）へ写す（#49）。 */
+function toAuthUser(user: User): AuthUser {
+  const authUser: AuthUser = { id: user.id, displayName: user.displayName };
+  // 未紐づけ（null）のときは employeeId を省略する（AuthUser は任意フィールド）。
+  if (user.employeeId) authUser.employeeId = user.employeeId;
+  return authUser;
+}
 
 /**
  * createPassport が返す passport インスタンスの型。
@@ -22,7 +31,7 @@ export function createPassport(userRepo: UserRepository): PassportInstance {
         if (!user) return done(null, false);
         const match = await bcrypt.compare(password, user.passwordHash);
         if (!match) return done(null, false);
-        return done(null, { id: user.id, displayName: user.displayName });
+        return done(null, toAuthUser(user));
       } catch (err) {
         return done(err);
       }
@@ -37,7 +46,7 @@ export function createPassport(userRepo: UserRepository): PassportInstance {
     try {
       const user = await userRepo.findById(id);
       if (!user) return done(null, false);
-      done(null, { id: user.id, displayName: user.displayName });
+      done(null, toAuthUser(user));
     } catch (err) {
       done(err);
     }

@@ -7,6 +7,7 @@ Slack 型 UI で「全社員 AI」をほのぼの観察するサービス **Hatc
 - [コンセプト](./concept.md) — プロダクトの狙いと動作モデル
 - [Dark Factory 開発ワークフロー](./docs/dark-factory-workflow.md) — Issue → 設計 → 実装 → レビュー → リリースの進め方
 - [ADR（アーキテクチャ決定記録）](./docs/adr/) — 技術選定の記録
+- [セットアップ / 環境変数ガイド](./docs/SETUP.md) — client/server の `.env` と CI/CD でのシークレット注入
 
 ## 開発の進め方
 

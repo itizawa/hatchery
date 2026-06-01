@@ -14,6 +14,20 @@ import { LoginScene } from "./routes/LoginScene";
 import { RootLayout } from "./routes/RootLayout";
 import { SettingsScene } from "./routes/SettingsScene";
 
+/**
+ * 認証ガード: 未ログイン（fetchMe が null を返す）またはネットワークエラーの場合に /login へリダイレクト。
+ * adminRoute・accountRoute の beforeLoad で共有する。
+ */
+async function requireAuth(): Promise<void> {
+  let user: Awaited<ReturnType<typeof fetchMe>>;
+  try {
+    user = await fetchMe();
+  } catch {
+    throw redirect({ to: "/login" });
+  }
+  if (!user) throw redirect({ to: "/login" });
+}
+
 // ルートはコードベースで定義する（ファイルルーティングの codegen には依存しない）。
 const rootRoute = createRootRoute({
   component: RootLayout,
@@ -40,26 +54,20 @@ const loginRoute = createRoute({
   component: LoginScene,
 });
 
-/** 管理画面（/admin）。未ログインの場合は /login へリダイレクト。 */
+/** 管理画面（/admin）。未ログインまたはネットワークエラーの場合は /login へリダイレクト。 */
 const adminRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/admin",
   component: SettingsScene,
-  beforeLoad: async () => {
-    const user = await fetchMe();
-    if (!user) throw redirect({ to: "/login" });
-  },
+  beforeLoad: requireAuth,
 });
 
-/** アカウント設定画面（/account）。未ログインの場合は /login へリダイレクト。 */
+/** アカウント設定画面（/account）。未ログインまたはネットワークエラーの場合は /login へリダイレクト。 */
 const accountRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/account",
   component: AccountScene,
-  beforeLoad: async () => {
-    const user = await fetchMe();
-    if (!user) throw redirect({ to: "/login" });
-  },
+  beforeLoad: requireAuth,
 });
 
 const routeTree = rootRoute.addChildren([

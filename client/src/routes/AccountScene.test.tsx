@@ -1,6 +1,6 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider, createMemoryHistory } from "@tanstack/react-router";
-import { act, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import * as authApi from "../api/auth.js";
@@ -49,11 +49,18 @@ describe("アカウント設定画面（#50）", () => {
     vi.unstubAllGlobals();
   });
 
-  it("/account にアクセスするとアカウント設定の見出しが表示される", async () => {
+  it("ログイン済みで /account にアクセスするとアカウント設定の見出しが表示される", async () => {
     vi.spyOn(authApi, "fetchMe").mockResolvedValue({ id: "user1", displayName: "Alice" });
     renderApp("/account");
 
     expect(await screen.findByRole("heading", { name: /アカウント設定/ })).toBeInTheDocument();
+  });
+
+  it("未ログイン状態で /account にアクセスするとログイン画面が表示される", async () => {
+    vi.spyOn(authApi, "fetchMe").mockResolvedValue(null);
+    renderApp("/account");
+
+    expect(await screen.findByRole("heading", { name: /ログイン/ })).toBeInTheDocument();
   });
 
   it("ログイン済み時はサイドバーに「アカウント設定」リンクが表示される", async () => {
@@ -67,11 +74,8 @@ describe("アカウント設定画面（#50）", () => {
     stubFetch(false);
     renderApp("/");
 
-    await screen.findByText("Hatchery");
-    // auth クエリが解決するまで待つ（act でラップして act() 警告を抑制）
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    });
+    // 「管理画面」リンクが描画されるまで待機（auth クエリが解決するまでの安定指標）
+    await screen.findByRole("link", { name: "管理画面" });
     expect(screen.queryByRole("link", { name: "アカウント設定" })).not.toBeInTheDocument();
   });
 });

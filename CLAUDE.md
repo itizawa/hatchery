@@ -43,6 +43,8 @@ Slack 型 UI で「自分の会社の AI 社員」を放置して眺める観察
 | `df:done` | develop マージ済み・本番昇格待ち | 👤 人間 |
 | `df:blocked` | AI が判断不能・要人間介入 | 👤 人間 |
 
+優先度ラベル `priority/{critical,high,medium,low}` は `df:*` と直交する軸で、複数の AI 実行可能 Issue があるとき `/df`（引数なし）が**着手順**を決めるのに使う（重み降順 → フェーズ進捗 `df:dev-review`>`df:todo` → `createdAt` 古い順）。**未設定は `medium` 相当**。詳細は `docs/dark-factory-workflow.md` §3 と `.claude/commands/df.md`。
+
 ### フェーズごとの AI の動き
 
 - **実装（`df:todo`）**: `feature/issue-<N>` の worktree を `.claude/worktrees/issue-<N>/` に作成（`git worktree add ... origin/develop`。メインツリーは switch しない）→ 設計書 `docs/design/issue-<N>.md` を書いてコミット → Issue 本文の受け入れ条件を入出力に落とし後述の TDD で実装 → `develop` へ実装 PR（設計書を含む。本文 `Closes #N` + 設計判断の要点 + テスト結果サマリ）→ Issue を `df:dev-review` に → **そのまま続けてレビューへ**。

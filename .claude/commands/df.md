@@ -87,6 +87,21 @@ GitHub の Open Issue を確認し、各 Issue の `df:*` ラベルから「今 
 > human-gate ラベル（`df:done` / `df:blocked`）は、他の df ラベルと**併記**されていても常に優先して「人間の番」と判定する。
 > `df:dev-review` は通常 1 回の実行内でフェーズ A から自動的に通過する中間状態。独立して残っているのは「前回 PR 作成後にマージ前で停止した」場合で、その再開口として使う。
 
+## 優先度ラベル（`priority/*`・着手順の決定要素）
+
+`df:*`（誰の番か）とは**直交**する軸で、AI 実行可能 Issue が複数あるときに**どれを先に着手するか**を決める。引数なし自動選択（STEP 1-B）でのみ使う。人間が起票時に任意で 1 つ付ける。
+
+| ラベル | 意味 | 重み |
+|--------|------|:----:|
+| `priority/critical` | 緊急・最優先 | 4 |
+| `priority/high` | 高 | 3 |
+| `priority/medium` | 中（**ラベル無しと同等のデフォルト**） | 2 |
+| `priority/low` | 低（最後に着手） | 1 |
+
+- **`priority/*` が無い Issue は `priority/medium`（重み 2）として扱う**（=未設定でも埋もれない）。
+- `priority/*` は**併記しない**前提（複数付いていたら最も高いものを採用）。
+- 優先度は着手順を決めるだけで、`df:done` / `df:blocked`（人間の番）の判定を上書きしない（ゲート 6 が常に優先）。
+
 ---
 
 ## STEP 0 — 状況把握とガード（必ず最初に実行）
@@ -137,8 +152,10 @@ GitHub の Open Issue を確認し、各 Issue の `df:*` ラベルから「今 
 
 1. **候補集合のフィルタ**: Open Issue から、`df:done` / `df:blocked` を 1 つでも含む Issue を**除外**する。残った中で AI 実行可能 df ラベルを持つものだけを候補にする。
 
-2. **優先順位**（上から順に評価し、最初に 1 件決まったら確定）:
-   1. **緊急度優先**: `priority/critical` を最優先、次に `priority/high`。
+2. **優先順位**（上から順に評価し、最初に 1 件決まったら確定。**先のキーで差がついたら後のキーは見ない**）:
+   1. **優先度ラベルの重み降順**（前述「優先度ラベル」表）: `priority/critical`(4) ＞ `priority/high`(3) ＞ `priority/medium`(2) ＞ `priority/low`(1)。
+      - **`priority/*` が無い Issue は重み 2（medium）**として比較に参加させる（未設定でも low に負けない）。
+      - `priority/*` が複数付いていたら**最も高い重み**を採用する。
    2. 同優先度内では **「進行中の作業を先に終わらせる」**（フェーズ進捗度の降順）: `df:dev-review`（あと一歩でマージ）＞ `df:todo`（起点）。
       - 根拠: 仕掛かり（WIP）を減らすほどリードタイムが短くなり、未マージの実装 PR が古びてコンフリクトする事故を防げる。「終わりに近いものから片付ける」。
    3. それでも同点なら **`createdAt` が古い順**（FIFO。滞留 Issue の飢餓＝永久放置を防ぐ）。
@@ -353,7 +370,7 @@ STEP 0: 状況テーブルを出す（誰の番か分類）＋ git status クリ
  ├ Yes → その Issue。短絡評価で上から判定:
  │        closed / human-gate(done/blocked 併記含む) / ラベル無し / AI実行可能df複数(矛盾)→blocked
  │        のいずれでもなければ: df:todo→フェーズA→B / df:dev-review→フェーズBのみ
- └ No  → 候補から done/blocked を除外 → 優先度(critical>high) →
+ └ No  → 候補から done/blocked を除外 → 優先度(critical>high>medium=無印>low) →
             フェーズ(dev-review>todo) → 古い順 で1件 →
             絞り込み後にAI実行可能df複数(矛盾)なら blocked
             ↓

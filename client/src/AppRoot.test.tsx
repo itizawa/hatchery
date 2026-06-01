@@ -10,15 +10,27 @@ import { createAppRouter } from "./router";
 // テスト間の状態リークを避けるため memory history のルータを注入する。
 describe("AppRoot", () => {
   beforeEach(() => {
-    // サイドバー（ChannelList）が呼ぶ GET /channels を既定チャンネルで応答する（#47）。
+    // URL ごとに応答を分ける: /auth/me は未ログイン(401)、GET /channels は既定チャンネル（#47）。
+    // 全 URL に配列を返すと /auth/me が truthy になり AddChannelForm が誤って表示されてしまうため。
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue(
-        new Response(JSON.stringify([{ id: "zatsudan", label: "#雑談" }]), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        }),
-      ),
+      vi.fn((input: Request | string) => {
+        const url = typeof input === "string" ? input : input.url;
+        if (url.includes("/auth/me")) {
+          return Promise.resolve(
+            new Response(JSON.stringify({ error: "Unauthorized" }), {
+              status: 401,
+              headers: { "Content-Type": "application/json" },
+            }),
+          );
+        }
+        return Promise.resolve(
+          new Response(JSON.stringify([{ id: "zatsudan", label: "#雑談" }]), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        );
+      }),
     );
   });
   afterEach(() => {

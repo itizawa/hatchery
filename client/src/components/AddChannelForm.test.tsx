@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -44,10 +44,14 @@ describe("AddChannelForm（ログイン時のみ表示・#47）", () => {
   });
 
   it("未ログイン（401）のときは何も表示しない", async () => {
-    stubFetch(401, { error: "Unauthorized" });
+    const fetchSpy = vi.fn((input: Request | string) => {
+      const url = typeof input === "string" ? input : input.url;
+      return Promise.resolve(jsonResponse(url.includes("/auth/me") ? 401 : 201, { error: "x" }));
+    });
+    vi.stubGlobal("fetch", fetchSpy);
     const { container } = renderWithClient(<AddChannelForm />);
-    // useAuth が解決して null になっても何も描画されないこと。
-    await Promise.resolve();
+    // useAuth（GET /auth/me）が実際に呼ばれ 401 で解決したことを待ってから、何も描画されないことを検証する。
+    await waitFor(() => expect(fetchSpy).toHaveBeenCalled());
     expect(screen.queryByRole("button", { name: "追加" })).not.toBeInTheDocument();
     expect(container).toBeEmptyDOMElement();
   });

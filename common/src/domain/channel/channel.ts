@@ -26,3 +26,10 @@ export const DEFAULT_CHANNELS: readonly Channel[] = [
  */
 export const findChannelById = (channelId: string): Channel | undefined =>
   DEFAULT_CHANNELS.find((channel) => channel.id === channelId);
+
+/** チャンネル名更新リクエストのボディ検証スキーマ（PATCH /channels/:id）。 */
+export const UpdateChannelSchema = z.object({
+  label: z.string().min(1),
+});
+
+export type UpdateChannelInput = z.infer<typeof UpdateChannelSchema>;

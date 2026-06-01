@@ -9,8 +9,10 @@ import { z } from "zod";
 import {
   AddChannelMemberSchema,
   AuthUserSchema,
+  ChannelSchema,
   LoginRequestSchema,
   MessageSchema,
+  UpdateChannelSchema,
 } from "@hatchery/common";
 
 extendZodWithOpenApi(z);
@@ -20,6 +22,16 @@ const registry = new OpenAPIRegistry();
 const MessageComponent = registry.register(
   "Message",
   MessageSchema.openapi({ description: "channel に直接紐づく社員の 1 発言（ADR-0009）" }),
+);
+
+const ChannelComponent = registry.register(
+  "Channel",
+  ChannelSchema.openapi({ description: "チャンネル（id / label）" }),
+);
+
+const UpdateChannelComponent = registry.register(
+  "UpdateChannel",
+  UpdateChannelSchema.openapi({ description: "チャンネル名更新リクエストボディ（#37）" }),
 );
 
 const AddChannelMemberComponent = registry.register(
@@ -89,9 +101,31 @@ registry.registerPath({
   },
 });
 
-// チャンネルへの Employee 所属（多対多 / #33）。
+// チャンネル CRUD（#37 / #47）。
 const channelIdParam = z.string().openapi({ param: { name: "channelId", in: "path" } });
 const employeeIdParam = z.string().openapi({ param: { name: "employeeId", in: "path" } });
+const channelPathIdParam = z.string().openapi({ param: { name: "id", in: "path" } });
+
+registry.registerPath({
+  method: "patch",
+  path: "/channels/{id}",
+  summary: "チャンネル名を更新（認証必須）",
+  request: {
+    params: z.object({ id: channelPathIdParam }),
+    body: {
+      content: { "application/json": { schema: UpdateChannelComponent } },
+    },
+  },
+  responses: {
+    200: {
+      description: "更新後のチャンネル情報",
+      content: { "application/json": { schema: ChannelComponent } },
+    },
+    400: { description: "リクエストボディが不正（label 空など）", ...errorJson },
+    401: { description: "未認証", ...errorJson },
+    404: { description: "チャンネルが存在しない", ...errorJson },
+  },
+});
 
 registry.registerPath({
   method: "get",

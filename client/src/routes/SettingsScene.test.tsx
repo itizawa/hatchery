@@ -21,24 +21,24 @@ function renderApp(initialPath: string) {
   );
 }
 
-describe("設定画面（#25）", () => {
+describe("管理画面（#50）", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
 
-  it("ログイン済みでサイドバーの設定導線をクリックすると設定画面が表示される", async () => {
+  it("ログイン済みでサイドバーの「管理画面」リンクをクリックすると管理画面が表示される", async () => {
     vi.spyOn(authApi, "fetchMe").mockResolvedValue({ id: "user1", displayName: "Alice" });
     renderApp("/");
 
-    const settingsLink = await screen.findByRole("link", { name: /設定/ });
-    await userEvent.click(settingsLink);
+    const adminLink = await screen.findByRole("link", { name: "管理画面" });
+    await userEvent.click(adminLink);
 
-    expect(await screen.findByRole("heading", { name: /設定/ })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /管理画面/ })).toBeInTheDocument();
   });
 
-  it("設定画面のユーザー一覧タブに全 AI ボットの表示名が表示される", async () => {
+  it("管理画面（/admin）のユーザー一覧タブに全 AI ボットの表示名が表示される", async () => {
     vi.spyOn(authApi, "fetchMe").mockResolvedValue({ id: "user1", displayName: "Alice" });
-    renderApp("/settings");
+    renderApp("/admin");
 
     expect(await screen.findByRole("tab", { name: /ユーザー一覧/ })).toBeInTheDocument();
     await waitFor(() => {

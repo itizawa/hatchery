@@ -13,8 +13,10 @@ export interface ClientEnv {
 }
 
 /**
- * 環境変数のスキーマ。server の `config/env.ts` と同じく Zod で検証し、不正値は parse 時に弾く
- * （ビルド/起動時に気付ける）。Vite は `import.meta.env.VITE_*` を自動的にクライアントへ公開する。
+ * 環境変数のスキーマ。server の `config/env.ts` と同じく Zod で検証し、不正値は parse 時に弾く。
+ * Vite の値はビルド時に静的に埋め込まれるが、検証（loadClientEnv）はアプリ初期化時に走るため、
+ * 不正値はアプリ起動時（モジュール読込時）に ZodError として顕在化する。
+ * Vite は `import.meta.env.VITE_*` を自動的にクライアントへ公開する。
  */
 const ClientEnvSchema = z.object({
   // 空文字は未設定（同一オリジン）とみなす。値があるときのみ URL 形式を要求する。

@@ -17,14 +17,19 @@ const ApiTokenSettings = (): ReactElement => {
   const saveMutation = useSaveAdminSetting();
   const [apiKey, setApiKey] = useState("");
   const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [errorOpen, setErrorOpen] = useState(false);
 
   const currentMasked =
     settings?.find((s) => s.key === "CLAUDE_API_KEY")?.maskedValue ?? null;
 
   const handleSave = async () => {
-    await saveMutation.mutateAsync({ key: "CLAUDE_API_KEY", value: apiKey });
-    setApiKey("");
-    setSnackbarOpen(true);
+    try {
+      await saveMutation.mutateAsync({ key: "CLAUDE_API_KEY", value: apiKey });
+      setApiKey("");
+      setSnackbarOpen(true);
+    } catch {
+      setErrorOpen(true);
+    }
   };
 
   return (
@@ -60,6 +65,15 @@ const ApiTokenSettings = (): ReactElement => {
       >
         <Alert severity="success" onClose={() => setSnackbarOpen(false)}>
           APIキーを保存しました
+        </Alert>
+      </Snackbar>
+      <Snackbar
+        open={errorOpen}
+        autoHideDuration={4000}
+        onClose={() => setErrorOpen(false)}
+      >
+        <Alert severity="error" onClose={() => setErrorOpen(false)}>
+          APIキーの保存に失敗しました
         </Alert>
       </Snackbar>
     </Box>

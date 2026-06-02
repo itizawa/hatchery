@@ -1,10 +1,12 @@
 import request from "supertest";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createApp } from "../app.js";
 import { InMemoryMessageRepository } from "../persistence/messageRepository.js";
 import { InMemoryAppSettingRepository } from "../persistence/appSettingRepository.js";
 import { InMemoryUserRepository } from "../persistence/userRepository.js";
+import { getApiKey } from "./admin.js";
+import { encrypt } from "../utils/crypto.js";
 
 async function makeApp(appSettingRepo = new InMemoryAppSettingRepository()) {
   const userRepo = await InMemoryUserRepository.createWithTestUser();
@@ -87,5 +89,38 @@ describe("PATCH /admin/settings", () => {
     const agent = await loginAgent(app);
     const res = await agent.patch("/admin/settings").send({ key: "CLAUDE_API_KEY", value: "" });
     expect(res.status).toBe(200);
+  });
+});
+
+describe("getApiKey", () => {
+  const originalEnv = process.env.ANTHROPIC_API_KEY;
+
+  afterEach(() => {
+    if (originalEnv === undefined) {
+      delete process.env.ANTHROPIC_API_KEY;
+    } else {
+      process.env.ANTHROPIC_API_KEY = originalEnv;
+    }
+  });
+
+  it("DB 未設定・env 未設定の場合は undefined を返す", async () => {
+    delete process.env.ANTHROPIC_API_KEY;
+    const repo = new InMemoryAppSettingRepository();
+    expect(await getApiKey(repo)).toBeUndefined();
+  });
+
+  it("DB に設定済みの場合は復号した値を返す", async () => {
+    delete process.env.ANTHROPIC_API_KEY;
+    const plaintext = "sk-ant-api03-test-key";
+    const repo = new InMemoryAppSettingRepository([
+      { key: "CLAUDE_API_KEY", value: encrypt(plaintext), updatedAt: new Date() },
+    ]);
+    expect(await getApiKey(repo)).toBe(plaintext);
+  });
+
+  it("DB 未設定・env 設定済みの場合は env 値を返す", async () => {
+    process.env.ANTHROPIC_API_KEY = "sk-ant-env-key";
+    const repo = new InMemoryAppSettingRepository();
+    expect(await getApiKey(repo)).toBe("sk-ant-env-key");
   });
 });

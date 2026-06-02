@@ -1,11 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { AppSettingResponse } from "@hatchery/common";
 
 export const ADMIN_SETTINGS_QUERY_KEY = ["admin", "settings"] as const;
 
-export interface AppSettingResponse {
-  key: string;
-  maskedValue: string | null;
-}
+export type { AppSettingResponse };
 
 async function fetchSettings(): Promise<AppSettingResponse[]> {
   const res = await fetch("/admin/settings", { credentials: "include" });

@@ -1,4 +1,4 @@
-import type { AuthUser, LoginRequest } from "@hatchery/common";
+import type { AuthUser, LoginRequest, UpdateProfile } from "@hatchery/common";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { openApiClient } from "./client.js";
@@ -59,5 +59,26 @@ export function useLogout() {
   return useMutation({
     mutationFn: logout,
     onSuccess: () => queryClient.setQueryData(AUTH_ME_QUERY_KEY, null),
+  });
+}
+
+/** PATCH /auth/me を呼び出す。成功時は更新後の AuthUser を返す。 */
+export async function updateProfile(body: UpdateProfile): Promise<AuthUser> {
+  const res = await fetch("/auth/me", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error(`PATCH /auth/me failed: ${res.status}`);
+  return res.json() as Promise<AuthUser>;
+}
+
+/** プロフィール更新ミューテーションフック。成功後に auth キャッシュを直接更新する（再フェッチ不要）。 */
+export function useUpdateProfile() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: updateProfile,
+    onSuccess: (data) => queryClient.setQueryData(AUTH_ME_QUERY_KEY, data),
   });
 }

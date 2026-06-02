@@ -1,6 +1,7 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider, createMemoryHistory } from "@tanstack/react-router";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import * as authApi from "../api/auth.js";
@@ -77,5 +78,64 @@ describe("アカウント設定画面（#50）", () => {
     // 「管理画面」リンクが描画されるまで待機（auth クエリが解決するまでの安定指標）
     await screen.findByRole("link", { name: "管理画面" });
     expect(screen.queryByRole("link", { name: "アカウント設定" })).not.toBeInTheDocument();
+  });
+});
+
+describe("プロフィール編集フォーム (#51)", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("displayName が空のとき保存ボタンが無効化される", async () => {
+    vi.spyOn(authApi, "fetchMe").mockResolvedValue({ id: "user1", displayName: "Alice" });
+    renderApp("/account");
+
+    const input = await screen.findByRole("textbox", { name: /表示名/ });
+    await userEvent.clear(input);
+
+    const button = screen.getByRole("button", { name: /保存/ });
+    expect(button).toBeDisabled();
+  });
+
+  it("保存ボタン押下で updateProfile が呼ばれる", async () => {
+    const mockUpdate = vi.spyOn(authApi, "updateProfile").mockResolvedValue({
+      id: "user1",
+      displayName: "New Name",
+    });
+    vi.spyOn(authApi, "fetchMe").mockResolvedValue({ id: "user1", displayName: "Alice" });
+    renderApp("/account");
+
+    const input = await screen.findByRole("textbox", { name: /表示名/ });
+    await userEvent.clear(input);
+    await userEvent.type(input, "New Name");
+
+    const button = screen.getByRole("button", { name: /保存/ });
+    await userEvent.click(button);
+
+    await waitFor(() => {
+      expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({ displayName: "New Name" }));
+    });
+  });
+
+  it("保存成功時にスナックバーが表示される", async () => {
+    vi.spyOn(authApi, "updateProfile").mockResolvedValue({
+      id: "user1",
+      displayName: "New Name",
+    });
+    vi.spyOn(authApi, "fetchMe").mockResolvedValue({ id: "user1", displayName: "Alice" });
+    renderApp("/account");
+
+    const input = await screen.findByRole("textbox", { name: /表示名/ });
+    await userEvent.clear(input);
+    await userEvent.type(input, "New Name");
+
+    const button = screen.getByRole("button", { name: /保存/ });
+    await userEvent.click(button);
+
+    expect(await screen.findByText(/保存しました/)).toBeInTheDocument();
   });
 });

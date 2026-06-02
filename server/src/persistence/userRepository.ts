@@ -6,10 +6,14 @@ export interface User {
   passwordHash: string;
   /** 紐づく Employee の id（#49）。未紐づけなら null。 */
   employeeId: string | null;
+  /** プロフィール画像 URL（#51）。未設定なら null。 */
+  avatarUrl: string | null;
 }
 
 export interface UserRepository {
   findById(id: string): Promise<User | null>;
+  /** #51: displayName と avatarUrl を更新する。 */
+  updateProfile(id: string, data: { displayName: string; avatarUrl?: string }): Promise<User>;
 }
 
 /** インメモリ実装（テスト用）。 */
@@ -24,6 +28,14 @@ export class InMemoryUserRepository implements UserRepository {
     return this.users.find((u) => u.id === id) ?? null;
   }
 
+  async updateProfile(id: string, data: { displayName: string; avatarUrl?: string }): Promise<User> {
+    const user = this.users.find((u) => u.id === id);
+    if (!user) throw new Error(`User not found: ${id}`);
+    user.displayName = data.displayName;
+    user.avatarUrl = data.avatarUrl ?? user.avatarUrl;
+    return user;
+  }
+
   /**
    * テスト用ユーザー（testuser / testpass）を持つインスタンスを生成する。
    * employeeId を渡すと紐づく Employee の id として設定する（#49。既定は未紐づけ＝null）。
@@ -33,7 +45,7 @@ export class InMemoryUserRepository implements UserRepository {
   ): Promise<InMemoryUserRepository> {
     const passwordHash = await bcrypt.hash("testpass", 10);
     return new InMemoryUserRepository([
-      { id: "testuser", displayName: "Test User", passwordHash, employeeId },
+      { id: "testuser", displayName: "Test User", passwordHash, employeeId, avatarUrl: null },
     ]);
   }
 }

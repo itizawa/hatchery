@@ -1,12 +1,88 @@
+import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Snackbar from "@mui/material/Snackbar";
+import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
-import type { ReactElement } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { type ReactElement, useEffect, useRef, useState } from "react";
 
-/** アカウント設定画面（/account）。プロフィール編集等は #51 で追加する。 */
-export const AccountScene = (): ReactElement => (
-  <Box component="section" sx={{ p: 3 }}>
-    <Typography variant="h5" component="h1" gutterBottom>
-      アカウント設定
-    </Typography>
-  </Box>
-);
+import * as authApi from "../api/auth.js";
+
+export const AccountScene = (): ReactElement => {
+  const { data: authUser } = authApi.useAuth();
+  const queryClient = useQueryClient();
+  const updateMutation = useMutation({
+    mutationFn: (body: Parameters<typeof authApi.updateProfile>[0]) => authApi.updateProfile(body),
+    onSuccess: (data) => queryClient.setQueryData(authApi.AUTH_ME_QUERY_KEY, data),
+  });
+
+  const [displayName, setDisplayName] = useState(authUser?.displayName ?? "");
+  const [avatarUrl, setAvatarUrl] = useState(authUser?.avatarUrl ?? "");
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const initialized = useRef(false);
+
+  useEffect(() => {
+    if (authUser && !initialized.current) {
+      setDisplayName(authUser.displayName);
+      setAvatarUrl(authUser.avatarUrl ?? "");
+      initialized.current = true;
+    }
+  }, [authUser]);
+
+  const handleSubmit = async () => {
+    await updateMutation.mutateAsync({
+      displayName,
+      ...(avatarUrl ? { avatarUrl } : {}),
+    });
+    setSnackbarOpen(true);
+  };
+
+  const isDisabled = displayName.trim() === "" || updateMutation.isPending;
+
+  return (
+    <Box component="section" sx={{ p: 3, maxWidth: 480 }}>
+      <Typography variant="h5" component="h1" gutterBottom>
+        アカウント設定
+      </Typography>
+
+      <Box component="form" noValidate sx={{ mt: 2, display: "flex", flexDirection: "column", gap: 2 }}>
+        <TextField
+          label="表示名"
+          value={displayName}
+          onChange={(e) => setDisplayName(e.target.value)}
+          required
+          fullWidth
+          size="small"
+        />
+        <TextField
+          label="プロフィール画像 URL"
+          value={avatarUrl}
+          onChange={(e) => setAvatarUrl(e.target.value)}
+          fullWidth
+          size="small"
+          placeholder="https://example.com/avatar.png"
+        />
+        <Button
+          variant="contained"
+          onClick={handleSubmit}
+          disabled={isDisabled}
+          sx={{ alignSelf: "flex-start" }}
+        >
+          保存
+        </Button>
+      </Box>
+
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={3000}
+        onClose={() => setSnackbarOpen(false)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert severity="success" onClose={() => setSnackbarOpen(false)}>
+          保存しました
+        </Alert>
+      </Snackbar>
+    </Box>
+  );
+};

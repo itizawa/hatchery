@@ -117,7 +117,7 @@ export function createApp(deps: AppDeps): Express {
   app.use(passportInstance.session());
 
   app.use("/health", healthRouter);
-  app.use("/auth", createAuthRouter(passportInstance));
+  app.use("/auth", createAuthRouter(passportInstance, userRepository));
   app.use("/messages", createMessagesRouter(deps.messageRepository));
   app.use(
     "/channels",

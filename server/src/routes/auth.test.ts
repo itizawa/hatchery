@@ -116,3 +116,71 @@ describe("requireAuth ミドルウェア", () => {
     expect(res.status).toBe(200);
   });
 });
+
+describe("PATCH /auth/me (#51)", () => {
+  it("未認証で 401 が返る", async () => {
+    const app = await buildApp();
+    const res = await request(app).patch("/auth/me").send({ displayName: "New Name" });
+    expect(res.status).toBe(401);
+  });
+
+  it("認証済みで displayName のみ送ると 200 で更新後のユーザーが返る", async () => {
+    const app = await buildApp();
+    const agent = request.agent(app);
+    await agent.post("/auth/login").send({ id: "testuser", password: "testpass" });
+    const res = await agent.patch("/auth/me").send({ displayName: "Updated Name" });
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ id: "testuser", displayName: "Updated Name" });
+  });
+
+  it("認証済みで displayName + avatarUrl を送ると 200 で更新後のユーザーが返る", async () => {
+    const app = await buildApp();
+    const agent = request.agent(app);
+    await agent.post("/auth/login").send({ id: "testuser", password: "testpass" });
+    const res = await agent.patch("/auth/me").send({
+      displayName: "Alice",
+      avatarUrl: "https://example.com/avatar.png",
+    });
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      id: "testuser",
+      displayName: "Alice",
+      avatarUrl: "https://example.com/avatar.png",
+    });
+  });
+
+  it("displayName が空文字のとき 400 が返る", async () => {
+    const app = await buildApp();
+    const agent = request.agent(app);
+    await agent.post("/auth/login").send({ id: "testuser", password: "testpass" });
+    const res = await agent.patch("/auth/me").send({ displayName: "" });
+    expect(res.status).toBe(400);
+  });
+
+  it("avatarUrl が不正な URL 形式のとき 400 が返る", async () => {
+    const app = await buildApp();
+    const agent = request.agent(app);
+    await agent.post("/auth/login").send({ id: "testuser", password: "testpass" });
+    const res = await agent.patch("/auth/me").send({ displayName: "Alice", avatarUrl: "not-a-url" });
+    expect(res.status).toBe(400);
+  });
+
+  it("レスポンスに passwordHash が含まれない", async () => {
+    const app = await buildApp();
+    const agent = request.agent(app);
+    await agent.post("/auth/login").send({ id: "testuser", password: "testpass" });
+    const res = await agent.patch("/auth/me").send({ displayName: "Updated" });
+    expect(res.status).toBe(200);
+    expect(res.body).not.toHaveProperty("passwordHash");
+  });
+
+  it("更新後に GET /auth/me で更新内容が反映される", async () => {
+    const app = await buildApp();
+    const agent = request.agent(app);
+    await agent.post("/auth/login").send({ id: "testuser", password: "testpass" });
+    await agent.patch("/auth/me").send({ displayName: "Changed Name" });
+    const res = await agent.get("/auth/me");
+    expect(res.status).toBe(200);
+    expect(res.body.displayName).toBe("Changed Name");
+  });
+});

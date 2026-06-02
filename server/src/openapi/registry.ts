@@ -18,6 +18,7 @@ import {
   MessageSchema,
   UpdateChannelSchema,
   UpdateEmployeeSchema,
+  UpdateProfileSchema,
 } from "@hatchery/common";
 
 extendZodWithOpenApi(z);
@@ -333,6 +334,28 @@ registry.registerPath({
       description: "認証済みユーザー",
       content: { "application/json": { schema: AuthUserComponent } },
     },
+    401: { description: "未認証", ...errorJson },
+  },
+});
+
+const UpdateProfileComponent = registry.register(
+  "UpdateProfile",
+  UpdateProfileSchema.openapi({ description: "プロフィール更新リクエストボディ（#51）" }),
+);
+
+registry.registerPath({
+  method: "patch",
+  path: "/auth/me",
+  summary: "自分自身のプロフィールを更新（認証必須・#51）",
+  request: {
+    body: { content: { "application/json": { schema: UpdateProfileComponent } } },
+  },
+  responses: {
+    200: {
+      description: "更新後の認証済みユーザー",
+      content: { "application/json": { schema: AuthUserComponent } },
+    },
+    400: { description: "リクエストボディが不正（displayName 空・avatarUrl 不正など）", ...errorJson },
     401: { description: "未認証", ...errorJson },
   },
 });

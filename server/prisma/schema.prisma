@@ -17,6 +17,8 @@ model User {
   id           String    @id
   displayName  String
   passwordHash String
+  /// プロフィール画像 URL（#51）。nullable。
+  avatarUrl    String?
   /// 1 ユーザー = 1 Employee の任意リレーション（#49）。
   employee     Employee?
 }

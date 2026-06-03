@@ -28,4 +28,26 @@ export const slackTheme: Theme = createTheme({
       default: SLACK_COLORS.background,
     },
   },
+  components: {
+    MuiTabs: {
+      styleOverrides: {
+        indicator: {
+          backgroundColor: SLACK_COLORS.blue,
+        },
+      },
+    },
+    MuiTab: {
+      styleOverrides: {
+        root: {
+          color: "rgba(0, 0, 0, 0.6)",
+          "&:hover": {
+            color: "rgba(0, 0, 0, 0.87)",
+          },
+          "&.Mui-selected": {
+            color: SLACK_COLORS.blue,
+          },
+        },
+      },
+    },
+  },
 });

@@ -7,6 +7,12 @@ import {
 } from "@tanstack/react-router";
 
 import { fetchMe } from "./api/auth.js";
+import {
+  SETTINGS_TAB_VALUES,
+  type SettingsTabValue,
+} from "./routes/settingsTabValues.js";
+
+export { SETTINGS_TAB_VALUES, type SettingsTabValue } from "./routes/settingsTabValues.js";
 import { AccountScene } from "./routes/AccountScene";
 import { ChannelScene } from "./routes/ChannelScene";
 import { HomeScene } from "./routes/HomeScene";
@@ -60,6 +66,16 @@ const adminRoute = createRoute({
   path: "/admin",
   component: SettingsScene,
   beforeLoad: requireAuth,
+  validateSearch: (search: Record<string, unknown>): { tab: SettingsTabValue } => {
+    const tab = search.tab;
+    if (
+      typeof tab === "string" &&
+      (SETTINGS_TAB_VALUES as readonly string[]).includes(tab)
+    ) {
+      return { tab: tab as SettingsTabValue };
+    }
+    return { tab: "users" };
+  },
 });
 
 /** アカウント設定画面（/account）。未ログインまたはネットワークエラーの場合は /login へリダイレクト。 */

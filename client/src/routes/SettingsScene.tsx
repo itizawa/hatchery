@@ -6,10 +6,12 @@ import Tab from "@mui/material/Tab";
 import Tabs from "@mui/material/Tabs";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
-import { useState, type ReactElement, type ReactNode } from "react";
+import { useNavigate, useSearch } from "@tanstack/react-router";
+import { type SyntheticEvent, useState, type ReactElement, type ReactNode } from "react";
 
 import { useAdminSettings, useSaveAdminSetting } from "../api/admin.js";
 import { EmployeeTable } from "../components/EmployeeTable";
+import { type SettingsTabValue } from "./settingsTabValues.js";
 
 /** API トークン設定タブのコンテンツ（#52）。 */
 const ApiTokenSettings = (): ReactElement => {
@@ -83,7 +85,7 @@ const ApiTokenSettings = (): ReactElement => {
 /** 管理画面のタブ定義。配列駆動にして将来のタブ追加（会社設定・定時設定など）を妨げない。 */
 interface SettingsTab {
   label: string;
-  value: string;
+  value: SettingsTabValue;
   content: ReactNode;
 }
 
@@ -94,7 +96,13 @@ const SETTINGS_TABS: readonly [SettingsTab, ...SettingsTab[]] = [
 
 /** 管理画面（/admin）。タブ UI を持ち、ユーザー一覧タブに AI 社員をテーブル表示する（#25）。 */
 export const SettingsScene = (): ReactElement => {
-  const [active, setActive] = useState(SETTINGS_TABS[0].value);
+  const { tab } = useSearch({ from: "/admin" });
+  const navigate = useNavigate({ from: "/admin" });
+  const active: SettingsTabValue = tab;
+
+  const handleTabChange = (_: SyntheticEvent, value: SettingsTabValue) => {
+    void navigate({ search: (prev) => ({ ...prev, tab: value }) });
+  };
 
   return (
     <Box component="section" sx={{ p: 3 }}>
@@ -103,16 +111,31 @@ export const SettingsScene = (): ReactElement => {
       </Typography>
       <Tabs
         value={active}
-        onChange={(_, value: string) => setActive(value)}
+        onChange={handleTabChange}
         aria-label="管理画面タブ"
+        variant="scrollable"
+        scrollButtons="auto"
       >
-        {SETTINGS_TABS.map((tab) => (
-          <Tab key={tab.value} label={tab.label} value={tab.value} />
+        {SETTINGS_TABS.map((t) => (
+          <Tab
+            key={t.value}
+            label={t.label}
+            value={t.value}
+            id={`settings-tab-${t.value}`}
+            aria-controls={`settings-tabpanel-${t.value}`}
+          />
         ))}
       </Tabs>
-      {SETTINGS_TABS.map((tab) => (
-        <Box key={tab.value} role="tabpanel" hidden={active !== tab.value} sx={{ pt: 2 }}>
-          {active === tab.value && tab.content}
+      {SETTINGS_TABS.map((t) => (
+        <Box
+          key={t.value}
+          id={`settings-tabpanel-${t.value}`}
+          role="tabpanel"
+          aria-labelledby={`settings-tab-${t.value}`}
+          hidden={active !== t.value}
+          sx={{ pt: 2 }}
+        >
+          {active === t.value && t.content}
         </Box>
       ))}
     </Box>

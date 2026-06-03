@@ -16,18 +16,19 @@ const previewTheme = createTheme({
   },
 });
 
-const queryClient = createQueryClient();
-
 const preview: Preview = {
   decorators: [
-    (Story) => (
-      <QueryClientProvider client={queryClient}>
-        <ThemeProvider theme={previewTheme}>
-          <CssBaseline />
-          <Story />
-        </ThemeProvider>
-      </QueryClientProvider>
-    ),
+    (Story) => {
+      const queryClient = createQueryClient();
+      return (
+        <QueryClientProvider client={queryClient}>
+          <ThemeProvider theme={previewTheme}>
+            <CssBaseline />
+            <Story />
+          </ThemeProvider>
+        </QueryClientProvider>
+      );
+    },
   ],
   parameters: {
     controls: {

@@ -30,7 +30,7 @@ export interface SeedPrisma {
   channel: {
     upsert(args: {
       where: { id: string };
-      update: Record<string, never>;
+      update: { type: "zatsudan" | "task" };
       create: { id: string; label: string; type: "zatsudan" | "task" };
     }): Promise<unknown>;
   };
@@ -104,7 +104,7 @@ export async function seedDevData(prisma: SeedPrisma): Promise<SeedResult> {
   for (const channel of DEFAULT_CHANNELS) {
     await prisma.channel.upsert({
       where: { id: channel.id },
-      update: {},
+      update: { type: channel.type },
       create: { id: channel.id, label: channel.label, type: channel.type },
     });
   }

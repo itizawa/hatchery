@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import type { Channel, CreateChannelInput, UpdateChannelInput } from "@hatchery/common";
-import type { PrismaClient } from "@prisma/client";
+import { Prisma, type PrismaClient } from "@prisma/client";
 
 import type { ChannelRepository } from "./channelRepository.js";
 
@@ -27,20 +27,22 @@ export class PrismaChannelRepository implements ChannelRepository {
   }
 
   async update(id: string, input: UpdateChannelInput): Promise<Channel | null> {
-    const current = await this.prisma.channel.findUnique({
-      where: { id },
-      select: { id: true, label: true, type: true },
-    });
-    if (!current) return null;
-    const updated = await this.prisma.channel.update({
-      where: { id },
-      data: {
-        ...(input.label !== undefined && { label: input.label }),
-        ...(input.type !== undefined && { type: input.type }),
-      },
-      select: { id: true, label: true, type: true },
-    });
-    return { id: updated.id, label: updated.label, type: updated.type };
+    try {
+      const updated = await this.prisma.channel.update({
+        where: { id },
+        data: {
+          ...(input.label !== undefined && { label: input.label }),
+          ...(input.type !== undefined && { type: input.type }),
+        },
+        select: { id: true, label: true, type: true },
+      });
+      return { id: updated.id, label: updated.label, type: updated.type };
+    } catch (e) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2025") {
+        return null;
+      }
+      throw e;
+    }
   }
 
   async findById(id: string): Promise<Channel | null> {

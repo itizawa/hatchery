@@ -20,10 +20,24 @@ describe("slackTheme", () => {
     expect(slackTheme.palette.background.default).not.toBe("#1A1D21");
   });
 
-  // #4: サイドバー背景（paper）はライト用の明るい色で、旧オーバジン色ではない。
-  it("サイドバー背景（paper）がライト用の明るい色である（旧オーバジン色ではない）", () => {
+  // #4: サイドバー背景（paper）は SLACK_COLORS.sidebar と一致し、旧オーバジン色ではない。
+  it("サイドバー背景（paper）が SLACK_COLORS.sidebar と一致し旧オーバジン色ではない", () => {
     expect(slackTheme.palette.background.paper).toBe(SLACK_COLORS.sidebar);
     expect(slackTheme.palette.background.paper).not.toBe("#3F0E40");
+  });
+
+  // #65: サイドバー背景色が #26334D（ダークネイビー）に変更されている。
+  it("サイドバー背景色が #26334D（ダークネイビー）である", () => {
+    expect(SLACK_COLORS.sidebar).toBe("#26334D");
+    expect(slackTheme.palette.background.paper).toBe("#26334D");
+  });
+
+  // #65: ダーク背景上で視認できるよう ListItemButton に明色テキストの styleOverride が設定されている。
+  it("MuiListItemButton の styleOverrides に明色テキスト設定が存在する", () => {
+    const overrides = slackTheme.components?.MuiListItemButton?.styleOverrides?.root;
+    expect(overrides).toBeDefined();
+    const color = (overrides as Record<string, unknown>)?.color;
+    expect(color).toBeTruthy();
   });
 
   // #5: メイン背景とサイドバー背景は区別できる（レイアウト境界の判別）。

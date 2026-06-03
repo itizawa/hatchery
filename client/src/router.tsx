@@ -74,7 +74,7 @@ const adminRoute = createRoute({
     ) {
       return { tab: tab as SettingsTabValue };
     }
-    return { tab: SETTINGS_TAB_VALUES[0] };
+    return { tab: "users" };
   },
 });
 

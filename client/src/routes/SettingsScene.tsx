@@ -11,7 +11,7 @@ import { type SyntheticEvent, useState, type ReactElement, type ReactNode } from
 
 import { useAdminSettings, useSaveAdminSetting } from "../api/admin.js";
 import { EmployeeTable } from "../components/EmployeeTable";
-import { SETTINGS_TAB_VALUES, type SettingsTabValue } from "./settingsTabValues.js";
+import { type SettingsTabValue } from "./settingsTabValues.js";
 
 /** API トークン設定タブのコンテンツ（#52）。 */
 const ApiTokenSettings = (): ReactElement => {
@@ -90,8 +90,8 @@ interface SettingsTab {
 }
 
 const SETTINGS_TABS: readonly [SettingsTab, ...SettingsTab[]] = [
-  { label: "ユーザー一覧", value: SETTINGS_TAB_VALUES[0], content: <EmployeeTable /> },
-  { label: "API トークン設定", value: SETTINGS_TAB_VALUES[1], content: <ApiTokenSettings /> },
+  { label: "ユーザー一覧", value: "users", content: <EmployeeTable /> },
+  { label: "API トークン設定", value: "api-token", content: <ApiTokenSettings /> },
 ];
 
 /** 管理画面（/admin）。タブ UI を持ち、ユーザー一覧タブに AI 社員をテーブル表示する（#25）。 */
@@ -101,7 +101,7 @@ export const SettingsScene = (): ReactElement => {
   const active: SettingsTabValue = tab;
 
   const handleTabChange = (_: SyntheticEvent, value: SettingsTabValue) => {
-    void navigate({ search: { tab: value } });
+    void navigate({ search: (prev) => ({ ...prev, tab: value }) });
   };
 
   return (

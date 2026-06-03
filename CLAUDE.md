@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## このリポジトリの現状
 
-**ドキュメント／設計フェーズ。アプリのコードはまだ存在しない。** 現在あるのは `concept.md`（プロダクト企画）、`docs/adr/`（技術選定の記録）、`docs/dark-factory-workflow.md`（開発体制の定義）のみ。ADR で決めた構成（monorepo / pnpm + Turborepo / client・server・common）は**まだ実装されていない**＝`package.json`・`pnpm-workspace.yaml`・各ワークスペースは未作成。セットアップは別 Issue で行う前提（ADR-0002 のフォローアップ参照）。
+**実装フェーズ。** ADR で決めた構成（monorepo / pnpm + Turborepo / client・server・common・docs）は実装済みで、`package.json`・`pnpm-workspace.yaml`・各ワークスペースが存在する。`common`（Zod スキーマ＋ドメインロジック）・`server`（Express 5 / Prisma / OpenAPI 生成・認証・定時バッチ）・`client`（Vite + React 19 SPA・型安全 API クライアント）の MVP 機能が出揃いつつある段階。引き続き Issue 単位で機能を積み増していく。
 
-実装着手前に必ず該当 ADR と Issue 本文（目的・受け入れ条件）を読むこと。ADR の決定が「正本」であり、それに反する実装をしない。
+企画・決定の正本は `concept.md`（プロダクト企画）、`docs/adr/`（技術選定の記録）、`docs/dark-factory-workflow.md`（開発体制の定義）。実装着手前に必ず該当 ADR と Issue 本文（目的・受け入れ条件）を読むこと。ADR の決定が「正本」であり、それに反する実装をしない。
 
 ## プロダクト: Hatchery
 
@@ -57,7 +57,7 @@ Slack 型 UI で「自分の会社の AI 社員」を放置して眺める観察
 
 コミットメッセージ規約: `feat:` / `fix:` / `refactor:` / `docs:` / `config:` / `test:` / `style:`
 
-## アーキテクチャ（ADR で決定済み・実装はこれから）
+## アーキテクチャ（ADR で決定済み・実装済み）
 
 monorepo の 4 ワークスペース。**依存方向は client → common / server → common の一方向のみ**（client と server は相互依存しない。common はアプリ固有パッケージに依存しない）。ESLint の import 制約でこの境界を機械的に強制する。
 
@@ -68,22 +68,26 @@ monorepo の 4 ワークスペース。**依存方向は client → common / ser
 
 ### client ↔ server の型共有（ADR-0006）
 
-OpenAPI を HTTP 境界の単一情報源とし、**一方向フロー**で流す:
+OpenAPI を HTTP 境界の単一情報源とし、**一方向フロー**で流す（実装済み）:
 
 ```
 common: Zod スキーマ → server: zod-to-openapi で openapi.json 生成 → client: openapi-typescript で型生成 → openapi-fetch + TanStack Query で利用
 ```
 
-生成物（型・openapi.json 由来の `*.gen.ts` / `generated/`）は**コミットしない**（`.gitignore` 済み）。ビルド前タスクで再生成し、Turborepo で `server:openapi → client:gen-types → client:build` の順を保証する。
+実装上の対応:
 
-## ツールチェーン（ADR-0002・未セットアップ）
+- **server** — `server/src/openapi/{registry,generate}.ts`。`@asteasolutions/zod-to-openapi` で common の Zod スキーマからレジストリを組み、`pnpm --filter @hatchery/server openapi`（script `openapi`）で `server/openapi.json` を生成する。
+- **client** — `pnpm --filter @hatchery/client gen-types`（script `gen-types`）が `openapi-typescript` で `server/openapi.json` → `client/src/api/openapi.gen.ts`（`paths` 型）を生成。型安全な **fetch クライアントは `client/src/api/client.ts` の `openApiClient`**（`openapi-fetch` の `createClient<paths>`）として実装済みで、`client/src/api/{auth,channels,scenes,admin}.ts` がこれを使う。
 
-実装が始まると以下になる予定。コマンドは `package.json` / `turbo.json` 整備後に確定:
+生成物（型・openapi.json 由来の `*.gen.ts` / `generated/`）は**コミットしない**（`.gitignore` 済み）。ビルド前タスクで再生成し、Turborepo (`turbo.json`) で `@hatchery/server#openapi → @hatchery/client#gen-types → @hatchery/client#build` の順を保証する。
 
-- パッケージマネージャ: **pnpm**（workspaces）/ タスク: **Turborepo**（`turbo run build|test|lint|dev`）
-- Node **22 LTS**（`.nvmrc`）/ TypeScript strict（`tsconfig.base.json` を各ワークスペースが extends、project references）
-- テスト: **Vitest**（全ワークスペース共通）。client は + React Testing Library
-- lint/format: **ESLint（flat config）+ Prettier**
+## ツールチェーン（ADR-0002・セットアップ済み）
+
+- パッケージマネージャ: **pnpm**（workspaces, `packageManager: pnpm@9.15.0`）/ タスク: **Turborepo**。ルート script: `pnpm build|test|lint|dev`（= `turbo run ...`）、`pnpm typecheck`（`tsc -b`）、`pnpm test:repo`（リポジトリ規約テスト `tests/`）
+- Node **26**（`.nvmrc` = `26` / `engines.node >=26` / Volta `26.2.0`）/ TypeScript strict（`tsconfig.base.json` を各ワークスペースが extends、project references）
+- テスト: **Vitest**（全ワークスペース共通）。client は + React Testing Library（jsdom）
+- lint/format: **ESLint（flat config）+ Prettier**。client→common / server→common の一方向 import 境界を ESLint で強制
+- ワークスペース別の主要 script は各 `*/package.json` 参照（例: server `dev`/`batch`/`openapi`/`db:*`、client `dev`/`gen-types`/`build`）
 
 ## ADR の追加・更新
 

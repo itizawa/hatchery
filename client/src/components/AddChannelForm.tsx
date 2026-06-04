@@ -44,7 +44,7 @@ export const AddChannelForm = (): ReactElement | null => {
         label="チャンネル名"
         value={label}
         onChange={(e) => setLabel(e.target.value)}
-        inputProps={{ "aria-label": "チャンネル名" }}
+        inputProps={{ "aria-label": "チャンネル名", maxLength: 50 }}
       />
       <FormControl>
         <FormLabel>タイプ</FormLabel>

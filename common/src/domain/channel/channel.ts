@@ -13,7 +13,7 @@ export type ChannelType = z.infer<typeof ChannelTypeSchema>;
 /** 話題の入れ物。id（チャンネル ID）・表示ラベル・タイプを持つ。 */
 export const ChannelSchema = z.object({
   id: z.string().min(1),
-  label: z.string().min(1),
+  label: z.string().min(1).max(50),
   type: ChannelTypeSchema,
 });
 
@@ -43,7 +43,7 @@ export const findChannelById = (channelId: string): Channel | undefined =>
  * label / type のどちらか一方は必須。 */
 export const UpdateChannelSchema = z
   .object({
-    label: z.string().min(1).optional(),
+    label: z.string().min(1).max(50).optional(),
     type: ChannelTypeSchema.optional(),
   })
   .refine((data) => data.label !== undefined || data.type !== undefined, {
@@ -54,7 +54,7 @@ export type UpdateChannelInput = z.infer<typeof UpdateChannelSchema>;
 
 /** チャンネル作成リクエストのボディ検証スキーマ（POST /channels・#47・#54）。type 省略時は zatsudan。 */
 export const CreateChannelSchema = z.object({
-  label: z.string().min(1),
+  label: z.string().min(1).max(50),
   type: ChannelTypeSchema.optional().default("zatsudan"),
 });
 

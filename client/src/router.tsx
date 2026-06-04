@@ -37,8 +37,11 @@ async function requireAuth(): Promise<void> {
   if (!user) throw redirect({ to: "/login" });
 }
 
-/** auth ルート（サイドバーなし）のパス一覧。 */
-const AUTH_PATHS = ["/login"] as const;
+/**
+ * サイドバーなしで描画する auth ルートのパス一覧。
+ * 新しい auth ルート（/signup 等）を追加した場合はここにも追記すること。
+ */
+const AUTH_PATHS = ["/login"] as const satisfies readonly string[];
 
 /**
  * アプリ全体のシェル。現在のパスに応じて
@@ -48,7 +51,7 @@ const AUTH_PATHS = ["/login"] as const;
  */
 function AppShell(): ReactElement {
   const { pathname } = useLocation();
-  if ((AUTH_PATHS as readonly string[]).includes(pathname)) {
+  if (AUTH_PATHS.some((p) => p === pathname)) {
     return <AuthLayout />;
   }
   return <RootLayout />;

@@ -99,3 +99,21 @@ model AppSetting {
   value     String
   updatedAt DateTime @updatedAt
 }
+
+/// バッチ実行ログ（#75）。定時バッチの成功・失敗を記録する。
+model BatchRunLog {
+  id           String            @id @default(cuid())
+  executedAt   DateTime          @default(now())
+  status       BatchRunLogStatus
+  messageCount Int               @default(0)
+  errorMessage String?
+  errorCode    String?
+
+  @@index([executedAt])
+}
+
+/// バッチ実行ステータス（#75）。
+enum BatchRunLogStatus {
+  success
+  failure
+}

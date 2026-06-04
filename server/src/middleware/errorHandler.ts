@@ -1,7 +1,9 @@
+import { AppError } from "@hatchery/common";
 import type { ErrorRequestHandler } from "express";
 
 /**
  * 集約エラーハンドラ。
+ * AppError（common 定義）は statusCode に応じた HTTP レスポンスを返す。
  * body-parser が投げる過大ペイロードエラー（status 413 / type "entity.too.large"）は
  * 413 PayloadTooLarge に変換する。それ以外のユースケース/永続化の例外は 500 に変換する。
  */
@@ -10,6 +12,10 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, next) => {
   // 二重送信で ERR_HTTP_HEADERS_SENT を投げないよう Express 既定のハンドラへ委譲する。
   if (res.headersSent) {
     next(err);
+    return;
+  }
+  if (err instanceof AppError) {
+    res.status(err.statusCode).json({ error: err.message });
     return;
   }
   const e = err as { status?: number; statusCode?: number; type?: string } | null;

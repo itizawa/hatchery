@@ -1,7 +1,9 @@
 import {
   AddChannelMemberSchema,
+  BadRequestError,
   CreateChannelMessageSchema,
   CreateChannelSchema,
+  NotFoundError,
   UpdateChannelSchema,
   type CreateChannelInput,
   type UpdateChannelInput,
@@ -52,8 +54,7 @@ export function createChannelsRouter(
       .update(id, input)
       .then((channel) => {
         if (!channel) {
-          res.status(404).json({ error: "ChannelNotFound" });
-          return;
+          throw new NotFoundError("ChannelNotFound");
         }
         res.status(200).json(channel);
       })
@@ -78,7 +79,7 @@ export function createChannelsRouter(
       const { channelId } = req.params as { channelId: string };
       const user = req.user!;
       if (!user.employeeId) {
-        res.status(400).json({ error: "EmployeeNotLinked" });
+        next(new BadRequestError("EmployeeNotLinked"));
         return;
       }
       const { text } = req.body as { text: string };
@@ -86,8 +87,7 @@ export function createChannelsRouter(
         .findById(channelId)
         .then((channel) => {
           if (!channel) {
-            res.status(404).json({ error: "ChannelNotFound" });
-            return;
+            throw new NotFoundError("ChannelNotFound");
           }
           return messageRepo
             .createMany([{ speaker: user.employeeId!, channel: channelId, text }])

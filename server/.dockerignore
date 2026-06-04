@@ -1,0 +1,29 @@
+# ビルドに不要なファイルを除外して Docker イメージを軽量化する
+
+# git 管理ファイル
+.git
+.gitignore
+
+# 開発・ドキュメント
+.claude
+client
+docs
+*.md
+
+# テスト・設定
+tests
+node_modules
+*/node_modules
+
+# ビルド成果物（builder ステージでコピーするのでルートレベルは除外）
+dist
+*/dist
+coverage
+*/coverage
+
+# 環境変数
+.env
+.env.*
+
+# Storybook
+storybook-static

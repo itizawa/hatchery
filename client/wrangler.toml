@@ -1,0 +1,9 @@
+name = "hatchery"
+compatibility_date = "2025-01-01"
+
+# Cloudflare Pages のビルド出力ディレクトリ
+pages_build_output_dir = "dist"
+
+# VITE_API_BASE_URL 等のビルド変数は Cloudflare Pages ダッシュボードの
+# 「環境変数 → プレビュー」で設定するか、GitHub Actions ワークフローで
+# ビルド時に渡す（deploy-client-dev.yml 参照）。

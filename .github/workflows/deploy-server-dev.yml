@@ -1,0 +1,62 @@
+name: Deploy Server (dev)
+
+# develop マージをトリガーに server を Cloud Run（dev 環境）へ自動デプロイする。
+# 認証は Workload Identity Federation（サービスアカウントキー不要）。
+# ゲート1: develop への push のみトリガー。main への push は含まない。
+on:
+  push:
+    branches: [develop]
+
+concurrency:
+  group: deploy-server-dev
+  cancel-in-progress: true
+
+env:
+  REGION: ${{ secrets.GCP_REGION }}
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  SERVICE_NAME: hatchery-server
+  REGISTRY: ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/hatchery
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud (WIF)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SA_EMAIL }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
+      - name: Build and push Docker image
+        env:
+          IMAGE: ${{ env.REGISTRY }}/server:${{ github.sha }}
+        run: |
+          docker build -f server/Dockerfile -t $IMAGE .
+          docker push $IMAGE
+
+      - name: Deploy to Cloud Run
+        env:
+          IMAGE: ${{ env.REGISTRY }}/server:${{ github.sha }}
+        run: |
+          gcloud run deploy ${{ env.SERVICE_NAME }} \
+            --image=$IMAGE \
+            --region=${{ env.REGION }} \
+            --platform=managed \
+            --allow-unauthenticated \
+            --min-instances=0 \
+            --max-instances=3 \
+            --port=8080 \
+            --set-env-vars="DATABASE_URL=${{ secrets.DATABASE_URL }},SESSION_SECRET=${{ secrets.SESSION_SECRET }},ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }},CLIENT_ORIGIN=${{ secrets.CLIENT_ORIGIN }},NODE_ENV=production"

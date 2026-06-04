@@ -12,6 +12,7 @@ import { SLACK_COLORS } from "../theme.js";
 const CHANNEL_TYPE_SYMBOLS: Record<ChannelType, string> = {
   zatsudan: "#",
   task: "✓",
+  planning: "💡",
 };
 
 function ChannelTypeIcon({ type }: { type: ChannelType }): ReactElement {

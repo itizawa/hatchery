@@ -113,21 +113,24 @@ export async function runPlanningBatch(deps: RunPlanningBatchDeps): Promise<Mess
   }
 
   const clientUrl = (process.env.CLIENT_URL ?? "http://localhost:5173").replace(/\/$/, "");
-  const pageContents: Record<string, string> = {};
 
-  for (const path of DEFAULT_PATHS) {
+  const fetchPage = async (path: string): Promise<string> => {
     try {
       const res = await fetch(`${clientUrl}${path}`);
       if (res.ok) {
         const html = await res.text();
-        pageContents[path] = extractTextFromHtml(html);
-      } else {
-        pageContents[path] = "";
+        return extractTextFromHtml(html);
       }
     } catch {
-      pageContents[path] = "";
+      // ページ取得失敗は空文字で続行
     }
-  }
+    return "";
+  };
+
+  const contents = await Promise.all(DEFAULT_PATHS.map(fetchPage));
+  const pageContents: Record<string, string> = Object.fromEntries(
+    DEFAULT_PATHS.map((path, i) => [path, contents[i]]),
+  );
 
   const generate = deps.generateProposals ?? generateProposalsWithClaude;
   let proposals: UxProposal[];

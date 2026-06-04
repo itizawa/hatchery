@@ -19,7 +19,7 @@ export function createPlanningIssuesRouter(messageRepo: MessageRepository): Rout
     "/:channelId/messages/:messageId/create-issue",
     requireAuth,
     async (req, res, next) => {
-      const { messageId } = req.params as { channelId: string; messageId: string };
+      const { channelId, messageId } = req.params as { channelId: string; messageId: string };
 
       const token = process.env.GITHUB_TOKEN;
       const owner = process.env.GITHUB_OWNER;
@@ -30,8 +30,8 @@ export function createPlanningIssuesRouter(messageRepo: MessageRepository): Rout
         return;
       }
 
-      const messages = await messageRepo.list().catch(() => []);
-      const message = messages.find((m) => m.id === messageId);
+      const channelMessages = await messageRepo.listByChannel(channelId);
+      const message = channelMessages.find((m) => m.id === messageId);
       if (!message) {
         next(new NotFoundError("MessageNotFound"));
         return;
@@ -44,11 +44,11 @@ export function createPlanningIssuesRouter(messageRepo: MessageRepository): Rout
       const body = [
         message.proposalReason ?? message.text,
         "",
-        message.proposalTargetUrl ? `**対象画面**: ${message.proposalTargetUrl}` : "",
+        message.proposalTargetUrl ? `**対象画面**: ${message.proposalTargetUrl}` : null,
         "",
         "_AI が #企画 チャンネルから自動起票_",
       ]
-        .filter((line) => line !== undefined)
+        .filter((line): line is string => line !== null)
         .join("\n");
 
       try {
@@ -61,7 +61,10 @@ export function createPlanningIssuesRouter(messageRepo: MessageRepository): Rout
           labels: ["df:todo"],
         });
 
-        await messageRepo.updateIssueRef(messageId, data.number, data.html_url);
+        const updated = await messageRepo.updateIssueRef(messageId, data.number, data.html_url);
+        if (!updated) {
+          console.error(`[planning-issues] updateIssueRef failed for messageId=${messageId} after issuing #${data.number}`);
+        }
 
         res.status(201).json({
           issueNumber: data.number,

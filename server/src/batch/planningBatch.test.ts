@@ -41,17 +41,16 @@ describe("runPlanningBatch (#76)", () => {
 
   it("#企画チャンネルが存在しなければメッセージ保存せず空配列を返す", async () => {
     process.env = { ...process.env, ANTHROPIC_API_KEY: "test-key" };
-    // channelRepo は空（kikaku チャンネルなし）
+    // 空リストで初期化することで kikaku チャンネルを含まない状態を作る
+    channelRepo = new InMemoryChannelRepository([]);
 
     const result = await runPlanningBatch({ channelRepo, messageRepo, appSettingRepo });
     expect(result).toHaveLength(0);
   });
 
   it("提案を生成してメッセージを保存する", async () => {
+    // channelRepo は DEFAULT_CHANNELS（kikaku を含む）で初期化済み
     process.env = { ...process.env, ANTHROPIC_API_KEY: "test-key", CLIENT_URL: "http://localhost:3000" };
-
-    // #企画チャンネルを追加
-    await channelRepo.create({ label: "#企画", type: "planning" });
 
     // fetch のモック（HTML レスポンス）
     fetchMock.mockResolvedValue({
@@ -82,8 +81,8 @@ describe("runPlanningBatch (#76)", () => {
   });
 
   it("提案生成が空配列を返したらメッセージを保存しない", async () => {
+    // channelRepo は DEFAULT_CHANNELS（kikaku を含む）で初期化済み
     process.env = { ...process.env, ANTHROPIC_API_KEY: "test-key" };
-    await channelRepo.create({ label: "#企画", type: "planning" });
 
     fetchMock.mockResolvedValue({
       ok: true,

@@ -129,7 +129,7 @@ export async function runPlanningBatch(deps: RunPlanningBatchDeps): Promise<Mess
 
   const contents = await Promise.all(DEFAULT_PATHS.map(fetchPage));
   const pageContents: Record<string, string> = Object.fromEntries(
-    DEFAULT_PATHS.map((path, i) => [path, contents[i]]),
+    DEFAULT_PATHS.map((path, i): [string, string] => [path, contents[i] ?? ""]),
   );
 
   const generate = deps.generateProposals ?? generateProposalsWithClaude;

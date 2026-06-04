@@ -8,4 +8,8 @@ describe("storybook preview", () => {
     expect(preview).toBeDefined();
     expect(preview.decorators!.length).toBeGreaterThan(0);
   });
+
+  it("decorators が 2 つ以上定義されている（QueryClientProvider decorator を含む）", () => {
+    expect(preview.decorators!.length).toBeGreaterThanOrEqual(2);
+  });
 });

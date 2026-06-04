@@ -7,6 +7,7 @@ import type { ReactElement } from "react";
 
 import type { ChannelType } from "@hatchery/common";
 import { useChannels } from "../api/channels.js";
+import { SLACK_COLORS } from "../theme.js";
 
 const CHANNEL_TYPE_SYMBOLS: Record<ChannelType, string> = {
   zatsudan: "#",
@@ -38,7 +39,7 @@ export const ChannelList = (): ReactElement => {
     <List dense aria-label="チャンネル一覧">
       {channels.map((channel) => (
         <ListItem key={channel.id} disablePadding>
-          <ListItemButton>
+          <ListItemButton sx={{ color: SLACK_COLORS.sidebarText }}>
             <ChannelTypeIcon type={channel.type} />
             <ListItemText primary={channel.label} />
           </ListItemButton>

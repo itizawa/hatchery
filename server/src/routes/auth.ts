@@ -1,4 +1,4 @@
-import { LoginRequestSchema, UpdateProfileSchema, type AuthUser } from "@hatchery/common";
+import { LoginRequestSchema, UpdateProfileSchema } from "@hatchery/common";
 import type { RequestHandler } from "express";
 import { Router } from "express";
 
@@ -36,7 +36,7 @@ export function createAuthRouter(
 
   router.patch("/me", requireAuth, validateBody(UpdateProfileSchema), async (req, res, next) => {
     try {
-      const userId = (req.user as AuthUser).id;
+      const userId = req.user!.id;
       const updated = await userRepository.updateProfile(userId, req.body);
       res.status(200).json(toAuthUser(updated));
     } catch (err) {

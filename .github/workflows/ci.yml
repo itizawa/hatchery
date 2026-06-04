@@ -40,3 +40,62 @@ jobs:
       # ADR-0002 のタスク定義をそのまま回す。Turborepo が依存順と並列を解決する。
       - name: Lint / Test / Build
         run: pnpm turbo run lint test build
+
+      # 各ワークスペースのカバレッジを生成する（--coverage で vitest に渡す）。
+      # DATABASE_URL が無い CI 環境では .int.test.ts は skipIf で自動スキップされる。
+      - name: Test with coverage (common)
+        run: pnpm --filter @hatchery/common test -- --coverage
+
+      - name: Test with coverage (server)
+        run: pnpm --filter @hatchery/server test -- --coverage
+
+      - name: Test with coverage (client)
+        run: pnpm --filter @hatchery/client test -- --coverage
+
+      - name: Upload coverage (common)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-common
+          path: common/coverage/
+          retention-days: 7
+
+      - name: Upload coverage (server)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-server
+          path: server/coverage/
+          retention-days: 7
+
+      - name: Upload coverage (client)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-client
+          path: client/coverage/
+          retention-days: 7
+
+      # PR のみカバレッジサマリコメントを投稿する（push イベントは PR がないためスキップ）。
+      # always() を付けることで閾値未達でテストが失敗した場合もコメントを投稿する。
+      # json-summary-compare-path は省略（ベースブランチの artifact を別途 download する実装が必要なため）。
+      - name: Post coverage report (common)
+        uses: davelosert/vitest-coverage-report-action@v2
+        if: always() && github.event_name == 'pull_request'
+        with:
+          name: common
+          json-summary-path: common/coverage/coverage-summary.json
+
+      - name: Post coverage report (server)
+        uses: davelosert/vitest-coverage-report-action@v2
+        if: always() && github.event_name == 'pull_request'
+        with:
+          name: server
+          json-summary-path: server/coverage/coverage-summary.json
+
+      - name: Post coverage report (client)
+        uses: davelosert/vitest-coverage-report-action@v2
+        if: always() && github.event_name == 'pull_request'
+        with:
+          name: client
+          json-summary-path: client/coverage/coverage-summary.json

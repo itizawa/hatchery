@@ -14,7 +14,7 @@ export function createEmployeesRouter(employeeRepository: EmployeeRepository): R
     validateBody(UpdateEmployeeSchema),
     (req, res, next) => {
       const { id } = req.params as { id: string };
-      const user = req.user as { employeeId: string | null };
+      const user = req.user!;
 
       if (user.employeeId !== id) {
         res.status(403).json({ error: "Forbidden" });

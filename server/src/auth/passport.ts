@@ -39,7 +39,7 @@ export function createPassport(userRepo: UserRepository): PassportInstance {
   );
 
   p.serializeUser((user, done) => {
-    done(null, (user as { id: string }).id);
+    done(null, user.id);
   });
 
   p.deserializeUser(async (id: string, done) => {

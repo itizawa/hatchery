@@ -3,7 +3,6 @@ import {
   CreateChannelMessageSchema,
   CreateChannelSchema,
   UpdateChannelSchema,
-  type AuthUser,
   type CreateChannelInput,
   type UpdateChannelInput,
 } from "@hatchery/common";
@@ -77,7 +76,7 @@ export function createChannelsRouter(
     validateBody(CreateChannelMessageSchema),
     (req, res, next) => {
       const { channelId } = req.params as { channelId: string };
-      const user = req.user as AuthUser;
+      const user = req.user!;
       if (!user.employeeId) {
         res.status(400).json({ error: "EmployeeNotLinked" });
         return;

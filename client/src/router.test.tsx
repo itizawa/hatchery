@@ -32,6 +32,21 @@ function renderRouter(router: AppRouter): ReactElement {
   );
 }
 
+describe("AuthLayout（ログインページ専用レイアウト）", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("/login ではサイドバーが表示されない", async () => {
+    const router = createAppRouter({
+      history: createMemoryHistory({ initialEntries: ["/login"] }),
+    });
+    render(renderRouter(router));
+    expect(await screen.findByRole("heading", { name: /ログイン/ })).toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: /サイドバー/ })).not.toBeInTheDocument();
+  });
+});
+
 // 受け入れ条件 #4: コードベース定義の最小ルート。ホーム（/）でタイムライン表示の枠が描画される。
 describe("createAppRouter", () => {
   beforeEach(() => {

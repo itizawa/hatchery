@@ -7,8 +7,10 @@ import { createTheme, type Theme } from "@mui/material/styles";
 export const SLACK_COLORS = {
   /** プライマリ（Slack ブルー）。ライト背景でもアクセシブルなので据え置き。 */
   blue: "#1164A3",
-  /** サイドバー背景（白に近い明るいグレー）。MUI の background.paper に割り当てる。 */
-  sidebar: "#F8F8FA",
+  /** サイドバー背景（ダークネイビー）。RootLayout で直接参照する（Issue #65）。 */
+  sidebar: "#26334D",
+  /** サイドバーテキスト色（白）。サイドバー内の要素に明示設定する（Issue #65）。 */
+  sidebarText: "#FFFFFF",
   /** メイン背景（白）。 */
   background: "#FFFFFF",
 } as const;
@@ -24,7 +26,28 @@ export const slackTheme: Theme = createTheme({
     primary: { main: SLACK_COLORS.blue },
     background: {
       default: SLACK_COLORS.background,
-      paper: SLACK_COLORS.sidebar,
+    },
+  },
+  components: {
+    MuiTabs: {
+      styleOverrides: {
+        indicator: {
+          backgroundColor: SLACK_COLORS.blue,
+        },
+      },
+    },
+    MuiTab: {
+      styleOverrides: {
+        root: {
+          color: "rgba(0, 0, 0, 0.6)",
+          "&:hover": {
+            color: "rgba(0, 0, 0, 0.87)",
+          },
+          "&.Mui-selected": {
+            color: SLACK_COLORS.blue,
+          },
+        },
+      },
     },
   },
 });

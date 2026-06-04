@@ -48,6 +48,15 @@ describe("POST /auth/login", () => {
       .send({ id: "", password: "pass" });
     expect(res.status).toBe(400);
   });
+
+  it("レスポンスに passwordHash が含まれない（#68）", async () => {
+    const app = await buildApp();
+    const res = await request(app)
+      .post("/auth/login")
+      .send({ id: "testuser", password: "testpass" });
+    expect(res.status).toBe(200);
+    expect(res.body).not.toHaveProperty("passwordHash");
+  });
 });
 
 describe("GET /auth/me", () => {
@@ -85,6 +94,15 @@ describe("GET /auth/me", () => {
     const res = await agent.get("/auth/me");
     expect(res.status).toBe(200);
     expect(res.body).not.toHaveProperty("employeeId");
+  });
+
+  it("レスポンスに passwordHash が含まれない（#68）", async () => {
+    const app = await buildApp();
+    const agent = request.agent(app);
+    await agent.post("/auth/login").send({ id: "testuser", password: "testpass" });
+    const res = await agent.get("/auth/me");
+    expect(res.status).toBe(200);
+    expect(res.body).not.toHaveProperty("passwordHash");
   });
 });
 

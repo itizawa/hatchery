@@ -20,19 +20,23 @@ describe("slackTheme", () => {
     expect(slackTheme.palette.background.default).not.toBe("#1A1D21");
   });
 
-  // #4: サイドバー背景（paper）はライト用の明るい色で、旧オーバジン色ではない。
-  it("サイドバー背景（paper）がライト用の明るい色である（旧オーバジン色ではない）", () => {
-    expect(slackTheme.palette.background.paper).toBe(SLACK_COLORS.sidebar);
-    expect(slackTheme.palette.background.paper).not.toBe("#3F0E40");
-  });
-
-  // #5: メイン背景とサイドバー背景は区別できる（レイアウト境界の判別）。
-  it("メイン背景とサイドバー背景が互いに異なる", () => {
-    expect(slackTheme.palette.background.default).not.toBe(slackTheme.palette.background.paper);
-  });
-
   // #6: テキスト色はライト背景上で視認できる暗色である。
   it("テキスト色がライト背景上で視認できる暗色である", () => {
     expect(slackTheme.palette.text.primary).toMatch(/rgba\(0,\s*0,\s*0/);
+  });
+
+  // #65: サイドバー背景色が #26334D（ダークネイビー）に変更されている。
+  it("SLACK_COLORS.sidebar が #26334D（ダークネイビー）である", () => {
+    expect(SLACK_COLORS.sidebar).toBe("#26334D");
+  });
+
+  // #65: サイドバーテキスト色が白（#FFFFFF）として定義されている。
+  it("SLACK_COLORS.sidebarText が #FFFFFF（白）である", () => {
+    expect(SLACK_COLORS.sidebarText).toBe("#FFFFFF");
+  });
+
+  // #65: グローバルな Paper サーフェスがサイドバー色に汚染されていない（background.paper はデフォルト白）。
+  it("background.paper がサイドバー暗色（#26334D）に汚染されていない", () => {
+    expect(slackTheme.palette.background.paper).not.toBe("#26334D");
   });
 });

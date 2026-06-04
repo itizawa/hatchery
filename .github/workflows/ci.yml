@@ -77,26 +77,25 @@ jobs:
           retention-days: 7
 
       # PR のみカバレッジサマリコメントを投稿する（push イベントは PR がないためスキップ）。
+      # always() を付けることで閾値未達でテストが失敗した場合もコメントを投稿する。
+      # json-summary-compare-path は省略（ベースブランチの artifact を別途 download する実装が必要なため）。
       - name: Post coverage report (common)
         uses: davelosert/vitest-coverage-report-action@v2
-        if: github.event_name == 'pull_request'
+        if: always() && github.event_name == 'pull_request'
         with:
           name: common
           json-summary-path: common/coverage/coverage-summary.json
-          json-summary-compare-path: common/coverage/coverage-summary.json
 
       - name: Post coverage report (server)
         uses: davelosert/vitest-coverage-report-action@v2
-        if: github.event_name == 'pull_request'
+        if: always() && github.event_name == 'pull_request'
         with:
           name: server
           json-summary-path: server/coverage/coverage-summary.json
-          json-summary-compare-path: server/coverage/coverage-summary.json
 
       - name: Post coverage report (client)
         uses: davelosert/vitest-coverage-report-action@v2
-        if: github.event_name == 'pull_request'
+        if: always() && github.event_name == 'pull_request'
         with:
           name: client
           json-summary-path: client/coverage/coverage-summary.json
-          json-summary-compare-path: client/coverage/coverage-summary.json

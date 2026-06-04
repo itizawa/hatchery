@@ -28,6 +28,12 @@ describe("Channel / CHANNEL_IDS (A-7)", () => {
     expect(ChannelSchema.safeParse({ id: "zatsudan", label: "", type: "zatsudan" }).success).toBe(false);
   });
 
+  it("label が 51 文字以上なら parse に失敗する（#91）", () => {
+    expect(
+      ChannelSchema.safeParse({ id: "zatsudan", label: "a".repeat(51), type: "zatsudan" }).success,
+    ).toBe(false);
+  });
+
   it("type が無いと parse に失敗する", () => {
     expect(ChannelSchema.safeParse({ id: "zatsudan", label: "#雑談" }).success).toBe(false);
   });
@@ -92,6 +98,10 @@ describe("CreateChannelSchema（POST /channels ボディ・#47 / #54）", () => 
   it("label が無いと parse に失敗する", () => {
     expect(CreateChannelSchema.safeParse({}).success).toBe(false);
   });
+
+  it("label が 51 文字以上なら parse に失敗する（#91）", () => {
+    expect(CreateChannelSchema.safeParse({ label: "a".repeat(51) }).success).toBe(false);
+  });
 });
 
 describe("UpdateChannelSchema（PATCH /channels/:id ボディ・#54）", () => {
@@ -116,6 +126,14 @@ describe("UpdateChannelSchema（PATCH /channels/:id ボディ・#54）", () => {
 
   it("label が空文字なら parse に失敗する", () => {
     expect(UpdateChannelSchema.safeParse({ label: "" }).success).toBe(false);
+  });
+
+  it("label が 50 文字ちょうどなら parse 成功する（#91）", () => {
+    expect(UpdateChannelSchema.safeParse({ label: "a".repeat(50) }).success).toBe(true);
+  });
+
+  it("label が 51 文字以上なら parse に失敗する（#91）", () => {
+    expect(UpdateChannelSchema.safeParse({ label: "a".repeat(51) }).success).toBe(false);
   });
 });
 

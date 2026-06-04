@@ -10,10 +10,13 @@ export const ChannelTypeSchema = z.enum(["zatsudan", "task", "planning"]);
 
 export type ChannelType = z.infer<typeof ChannelTypeSchema>;
 
+/** チャンネル名（label）の最大文字数（#91）。スキーマと UI で共有する単一情報源。 */
+export const CHANNEL_LABEL_MAX_LENGTH = 50;
+
 /** 話題の入れ物。id（チャンネル ID）・表示ラベル・タイプを持つ。 */
 export const ChannelSchema = z.object({
   id: z.string().min(1),
-  label: z.string().min(1),
+  label: z.string().min(1).max(CHANNEL_LABEL_MAX_LENGTH),
   type: ChannelTypeSchema,
 });
 
@@ -43,7 +46,7 @@ export const findChannelById = (channelId: string): Channel | undefined =>
  * label / type のどちらか一方は必須。 */
 export const UpdateChannelSchema = z
   .object({
-    label: z.string().min(1).optional(),
+    label: z.string().min(1).max(CHANNEL_LABEL_MAX_LENGTH).optional(),
     type: ChannelTypeSchema.optional(),
   })
   .refine((data) => data.label !== undefined || data.type !== undefined, {
@@ -54,7 +57,7 @@ export type UpdateChannelInput = z.infer<typeof UpdateChannelSchema>;
 
 /** チャンネル作成リクエストのボディ検証スキーマ（POST /channels・#47・#54）。type 省略時は zatsudan。 */
 export const CreateChannelSchema = z.object({
-  label: z.string().min(1),
+  label: z.string().min(1).max(CHANNEL_LABEL_MAX_LENGTH),
   type: ChannelTypeSchema.optional().default("zatsudan"),
 });
 

@@ -89,6 +89,13 @@ common: Zod スキーマ → server: zod-to-openapi で openapi.json 生成 → 
 - lint/format: **ESLint（flat config）+ Prettier**。client→common / server→common の一方向 import 境界を ESLint で強制
 - ワークスペース別の主要 script は各 `*/package.json` 参照（例: server `dev`/`batch`/`openapi`/`db:*`、client `dev`/`gen-types`/`build`）
 
+## バリデーションルール
+
+**ユーザーが入力する文字列フィールドは、Zod スキーマで必ず `.max()` による上限を設定すること**（#91）。
+フロントエンドでも `inputProps={{ maxLength: N }}` 等で同じ上限を強制し、サーバ側 Zod と二重で守る。
+上限値は表示・DB・UX を考慮して各フィールドごとに決める（例: チャンネル名 50 文字）。
+`.max()` が無い `z.string()` は不正データ・表示崩れ・DB 負荷の原因になるため、レビューで指摘対象とする。
+
 ## ADR の追加・更新
 
 技術的な決定は `docs/adr/NNNN-kebab-case-title.md`（連番 4 桁）に MADR 風フォーマットで 1 ファイル 1 決定で残す。新規は `docs/adr/template.md` をコピーし、`docs/adr/README.md` の一覧表に行を追加する。

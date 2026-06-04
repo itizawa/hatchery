@@ -145,6 +145,21 @@ describe("PATCH /channels/:id（チャンネル更新・認証必須・#54）", 
     const res = await agent.patch("/channels/zatsudan").send({});
     expect(res.status).toBe(400);
   });
+
+  it("label が 51 文字以上なら 400 を返す（#91）", async () => {
+    const { app } = await buildApp();
+    const agent = await login(app);
+    const res = await agent.patch("/channels/zatsudan").send({ label: "a".repeat(51) });
+    expect(res.status).toBe(400);
+  });
+
+  it("label が 50 文字ちょうどなら 200 を返す（#91）", async () => {
+    const { app } = await buildApp();
+    const agent = await login(app);
+    const res = await agent.patch("/channels/zatsudan").send({ label: "a".repeat(50) });
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ id: "zatsudan", label: "a".repeat(50) });
+  });
 });
 
 describe("GET /channels（一覧・認証不要・#47 / #54）", () => {

@@ -2,8 +2,6 @@ import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
-import IconButton from "@mui/material/IconButton";
-import RefreshIcon from "@mui/icons-material/Refresh";
 import Snackbar from "@mui/material/Snackbar";
 import Tab from "@mui/material/Tab";
 import Table from "@mui/material/Table";
@@ -102,9 +100,9 @@ const BatchLogs = (): ReactElement => {
         <Typography variant="body2" color="text.secondary">
           直近 50 件のバッチ実行ログを表示します。
         </Typography>
-        <IconButton size="small" onClick={refresh} aria-label="更新">
-          <RefreshIcon fontSize="small" />
-        </IconButton>
+        <Button size="small" onClick={refresh} variant="outlined">
+          更新
+        </Button>
       </Box>
       {logs.length === 0 ? (
         <Typography variant="body2" color="text.secondary">

@@ -32,9 +32,9 @@ export const LoginScene = (): ReactElement => {
   return (
     <Box
       component="form"
-      onSubmit={(e) => {
+      onSubmit={async (e) => {
         e.preventDefault();
-        form.handleSubmit();
+        await form.handleSubmit();
       }}
       sx={{ maxWidth: 400, mx: "auto", mt: 8, p: 4, display: "flex", flexDirection: "column", gap: 2 }}
     >
@@ -61,6 +61,7 @@ export const LoginScene = (): ReactElement => {
             onChange={(e) => field.handleChange(e.target.value)}
             onBlur={field.handleBlur}
             autoFocus
+            required
             error={field.state.meta.errors.length > 0}
             helperText={field.state.meta.errors[0] ?? ""}
           />
@@ -81,6 +82,7 @@ export const LoginScene = (): ReactElement => {
             value={field.state.value}
             onChange={(e) => field.handleChange(e.target.value)}
             onBlur={field.handleBlur}
+            required
             error={field.state.meta.errors.length > 0}
             helperText={field.state.meta.errors[0] ?? ""}
           />

@@ -4,6 +4,7 @@
  * Scene は ADR-0009（#27）で廃止。
  */
 export * from "./domain/appSetting/index.js";
+export * from "./domain/batchRunLog/index.js";
 export * from "./domain/auth/index.js";
 export * from "./domain/channel/index.js";
 export * from "./domain/channelMembership/index.js";

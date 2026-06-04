@@ -10,6 +10,7 @@ import {
   AddChannelMemberSchema,
   AppSettingResponseSchema,
   AuthUserSchema,
+  BatchRunLogSchema,
   ChannelSchema,
   CreateChannelMessageSchema,
   CreateChannelSchema,
@@ -401,6 +402,25 @@ registry.registerPath({
       content: { "application/json": { schema: AppSettingResponseComponent } },
     },
     400: { description: "リクエストボディが不正（key 空など）", ...errorJson },
+    401: { description: "未認証", ...errorJson },
+  },
+});
+
+// バッチ実行ログ（#75）。認証必須。
+const BatchRunLogComponent = registry.register(
+  "BatchRunLog",
+  BatchRunLogSchema.openapi({ description: "バッチ実行ログ（成功・失敗）" }),
+);
+
+registry.registerPath({
+  method: "get",
+  path: "/admin/batch-logs",
+  summary: "バッチ実行ログ一覧を取得（認証必須・直近 50 件・executedAt 降順）（#75）",
+  responses: {
+    200: {
+      description: "バッチ実行ログ一覧",
+      content: { "application/json": { schema: z.array(BatchRunLogComponent) } },
+    },
     401: { description: "未認証", ...errorJson },
   },
 });

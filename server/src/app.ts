@@ -26,7 +26,12 @@ import {
   InMemoryAppSettingRepository,
   type AppSettingRepository,
 } from "./persistence/appSettingRepository.js";
+import {
+  InMemoryBatchRunLogRepository,
+  type BatchRunLogRepository,
+} from "./persistence/batchRunLogRepository.js";
 import { createAdminRouter } from "./routes/admin.js";
+import { createBatchLogsRouter } from "./routes/batch-logs.js";
 import { createAuthRouter } from "./routes/auth.js";
 import { createChannelsRouter } from "./routes/channels.js";
 import { createEmployeesRouter } from "./routes/employees.js";
@@ -69,6 +74,8 @@ export interface AppDeps {
   employeeRepository?: EmployeeRepository;
   /** アプリ設定（API キー等）の永続化。省略時はインメモリ（#52）。 */
   appSettingRepository?: AppSettingRepository;
+  /** バッチ実行ログの永続化。省略時はインメモリ（#75）。 */
+  batchRunLogRepository?: BatchRunLogRepository;
   /** DDoS/過負荷対策の設定（#34）。省略時は既定値。 */
   security?: SecurityOptions;
 }
@@ -85,6 +92,8 @@ export function createApp(deps: AppDeps): Express {
   const channelRepository = deps.channelRepository ?? new InMemoryChannelRepository();
   const employeeRepository = deps.employeeRepository ?? new InMemoryEmployeeRepository();
   const appSettingRepository = deps.appSettingRepository ?? new InMemoryAppSettingRepository();
+  const batchRunLogRepository =
+    deps.batchRunLogRepository ?? new InMemoryBatchRunLogRepository();
 
   const security = { ...DEFAULT_SECURITY, ...deps.security };
 
@@ -132,6 +141,7 @@ export function createApp(deps: AppDeps): Express {
     createChannelsRouter(channelMembershipRepository, channelRepository, deps.messageRepository),
   );
   app.use("/employees", createEmployeesRouter(employeeRepository));
+  app.use("/admin/batch-logs", createBatchLogsRouter(batchRunLogRepository));
   app.use("/admin", createAdminRouter(appSettingRepository));
   app.use(errorHandler);
   return app;

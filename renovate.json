@@ -1,0 +1,32 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "baseBranches": ["develop"],
+  "schedule": ["every weekend"],
+  "minimumReleaseAge": "7 days",
+  "labels": ["dependencies"],
+  "packageRules": [
+    {
+      "matchUpdateTypes": ["major"],
+      "labels": ["dependencies", "major"],
+      "automerge": false,
+      "groupName": "major updates"
+    },
+    {
+      "matchUpdateTypes": ["minor", "patch"],
+      "matchDepTypes": ["devDependencies"],
+      "groupName": "devDependencies (minor/patch)",
+      "labels": ["dependencies", "dev"]
+    },
+    {
+      "matchUpdateTypes": ["minor", "patch"],
+      "matchDepTypes": ["dependencies"],
+      "groupName": "dependencies (minor/patch)",
+      "labels": ["dependencies", "prod"]
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "labels": ["dependencies", "security"],
+    "minimumReleaseAge": "0 days"
+  }
+}

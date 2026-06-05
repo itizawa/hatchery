@@ -37,6 +37,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # ADR-0013: サプライチェーン対策。high/critical のみ fail にし低重要度は開発を止めない。
+      - name: Dependency audit
+        run: pnpm audit --audit-level=high
+
       # ADR-0002 のタスク定義をそのまま回す。Turborepo が依存順と並列を解決する。
       - name: Lint / Test / Build
         run: pnpm turbo run lint test build

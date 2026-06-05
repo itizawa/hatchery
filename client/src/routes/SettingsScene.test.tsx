@@ -28,7 +28,7 @@ describe("管理画面（#50）", () => {
   });
 
   it("ログイン済みでサイドバーの「管理画面」リンクをクリックすると管理画面が表示される", async () => {
-    vi.spyOn(authApi, "fetchMe").mockResolvedValue({ id: "user1", displayName: "Alice" });
+    vi.spyOn(authApi, "fetchMe").mockResolvedValue({ id: "user1", displayName: "Alice", role: "admin" });
     renderApp("/");
 
     const adminLink = await screen.findByRole("link", { name: "管理画面" });
@@ -38,7 +38,7 @@ describe("管理画面（#50）", () => {
   });
 
   it("管理画面（/admin）のユーザー一覧タブに全 AI ボットの表示名が表示される", async () => {
-    vi.spyOn(authApi, "fetchMe").mockResolvedValue({ id: "user1", displayName: "Alice" });
+    vi.spyOn(authApi, "fetchMe").mockResolvedValue({ id: "user1", displayName: "Alice", role: "admin" });
     renderApp("/admin");
 
     expect(await screen.findByRole("tab", { name: /ユーザー一覧/ })).toBeInTheDocument();
@@ -53,7 +53,7 @@ describe("管理画面（#50）", () => {
 describe("設定画面タブ URL 同期・アクセシビリティ（#67）", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    vi.spyOn(authApi, "fetchMe").mockResolvedValue({ id: "user1", displayName: "Alice" });
+    vi.spyOn(authApi, "fetchMe").mockResolvedValue({ id: "user1", displayName: "Alice", role: "admin" });
   });
 
   it("?tab=api-token で開くと「API トークン設定」タブがアクティブになる", async () => {

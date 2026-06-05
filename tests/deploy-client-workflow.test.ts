@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const workflowPath = path.join(repoRoot, ".github", "workflows", "deploy-client-dev.yml");
 const wranglerTomlPath = path.join(repoRoot, "client", "wrangler.toml");
+const clientPkgPath = path.join(repoRoot, "client", "package.json");
 const setupDocPath = path.join(repoRoot, "docs", "deploy", "setup.md");
 
 interface Workflow {
@@ -128,5 +129,35 @@ describe("セットアップ手順書の存在 (受け入れ条件 #5)", () => {
   it("Cloudflare のセットアップ手順が含まれる", () => {
     const content = readFileSync(setupDocPath, "utf8");
     expect(content).toContain("Cloudflare");
+  });
+});
+
+describe("wrangler の解決方法 (Issue #141)", () => {
+  it("client に wrangler が devDependency としてバージョン固定で含まれる (受け入れ条件 #1)", () => {
+    const pkg = JSON.parse(readFileSync(clientPkgPath, "utf8")) as {
+      devDependencies?: Record<string, string>;
+    };
+    const version = pkg.devDependencies?.wrangler;
+    expect(version, "client devDependencies に wrangler がある").toBeTypeOf("string");
+    expect((version ?? "").length, "wrangler のバージョン指定が空でない").toBeGreaterThan(0);
+  });
+
+  it("cloudflare/wrangler-action を使わない（動的インストールの排除） (受け入れ条件 #2)", () => {
+    const raw = readFileSync(workflowPath, "utf8");
+    expect(raw).not.toContain("cloudflare/wrangler-action");
+  });
+
+  it("デプロイは pnpm exec wrangler pages deploy で実行する (受け入れ条件 #3)", () => {
+    const steps = allSteps(loadWorkflow());
+    const deployStep = steps.find((s) => /wrangler pages deploy/.test(s.run ?? ""));
+    expect(deployStep, "wrangler pages deploy を実行するステップが存在する").toBeDefined();
+    expect(deployStep?.run).toMatch(/pnpm exec wrangler pages deploy/);
+  });
+
+  it("Cloudflare 認証情報を env 経由で wrangler に渡す (受け入れ条件 #4)", () => {
+    const steps = allSteps(loadWorkflow());
+    const deployStep = steps.find((s) => /wrangler pages deploy/.test(s.run ?? ""));
+    expect(deployStep?.env?.CLOUDFLARE_API_TOKEN).toContain("secrets.CLOUDFLARE_API_TOKEN");
+    expect(deployStep?.env?.CLOUDFLARE_ACCOUNT_ID).toContain("secrets.CLOUDFLARE_ACCOUNT_ID");
   });
 });

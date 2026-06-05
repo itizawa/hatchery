@@ -6,6 +6,7 @@ import { SECURITY_DEFAULTS } from "./config/env.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { createCors } from "./middleware/cors.js";
 import { createRateLimiter } from "./middleware/rateLimiter.js";
+import { createRequestLogger } from "./middleware/requestLogger.js";
 import { createJsonBodyParser, createRequestTimeout } from "./middleware/requestLimits.js";
 import { createSecureHeaders } from "./middleware/secureHeaders.js";
 import {
@@ -107,6 +108,7 @@ export function createApp(deps: AppDeps): Express {
   // CORS のプリフライト（OPTIONS）は createCors が 204 で打ち切るため、レート制限等より前に置く。
   app.use(createSecureHeaders({ enableHsts: security.enableHsts }));
   app.use(createCors({ allowedOrigins: security.corsAllowedOrigins }));
+  app.use(createRequestLogger());
 
   // DDoS/過負荷対策（#34）はボディ解釈より前に置き、過大・過多なリクエストを早期に弾く。
   // 注: レート制限は req.ip ごとに数える。リバースプロキシ/LB の背後で運用する場合は、

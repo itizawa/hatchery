@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { AuthUserSchema, LoginRequestSchema, UpdateProfileSchema } from "./auth.js";
+import { AuthUserSchema, LoginRequestSchema, UpdateProfileSchema, UserRoleSchema, isAdmin } from "./auth.js";
 
 describe("LoginRequestSchema", () => {
   it("有効な id と password でパースが成功する", () => {
@@ -32,17 +32,56 @@ describe("LoginRequestSchema", () => {
   });
 });
 
+describe("UserRoleSchema (#136)", () => {
+  it("'admin' でパースが成功する", () => {
+    const result = UserRoleSchema.safeParse("admin");
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data).toBe("admin");
+  });
+
+  it("'member' でパースが成功する", () => {
+    const result = UserRoleSchema.safeParse("member");
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data).toBe("member");
+  });
+
+  it("不正な値（'owner'）のときパースが失敗する", () => {
+    const result = UserRoleSchema.safeParse("owner");
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("isAdmin (#136)", () => {
+  it("role が 'admin' のとき true を返す", () => {
+    expect(isAdmin({ id: "u1", displayName: "Alice", role: "admin" })).toBe(true);
+  });
+
+  it("role が 'member' のとき false を返す", () => {
+    expect(isAdmin({ id: "u1", displayName: "Alice", role: "member" })).toBe(false);
+  });
+});
+
 describe("AuthUserSchema", () => {
-  it("有効な id と displayName でパースが成功する", () => {
-    const result = AuthUserSchema.safeParse({ id: "user1", displayName: "Alice" });
+  it("id / displayName / role（admin）でパースが成功する", () => {
+    const result = AuthUserSchema.safeParse({ id: "user1", displayName: "Alice", role: "admin" });
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data).toEqual({ id: "user1", displayName: "Alice" });
+      expect(result.data).toMatchObject({ id: "user1", displayName: "Alice", role: "admin" });
     }
   });
 
+  it("role が欠落しているときパースが失敗する（必須フィールド）", () => {
+    const result = AuthUserSchema.safeParse({ id: "user1", displayName: "Alice" });
+    expect(result.success).toBe(false);
+  });
+
+  it("role が不正値のときパースが失敗する", () => {
+    const result = AuthUserSchema.safeParse({ id: "user1", displayName: "Alice", role: "superadmin" });
+    expect(result.success).toBe(false);
+  });
+
   it("passwordHash を含んでいても parseStrict しない（余分なフィールドは strip される）", () => {
-    const result = AuthUserSchema.safeParse({ id: "user1", displayName: "Alice", passwordHash: "secret" });
+    const result = AuthUserSchema.safeParse({ id: "user1", displayName: "Alice", role: "admin", passwordHash: "secret" });
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data).not.toHaveProperty("passwordHash");
@@ -51,7 +90,7 @@ describe("AuthUserSchema", () => {
 
   // #49: 自身の Employee を指す employeeId（任意）。
   it("employeeId を付与してもパースが成功する（AC-8）", () => {
-    const result = AuthUserSchema.safeParse({ id: "user1", displayName: "Alice", employeeId: "emp1" });
+    const result = AuthUserSchema.safeParse({ id: "user1", displayName: "Alice", role: "admin", employeeId: "emp1" });
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.employeeId).toBe("emp1");
@@ -59,7 +98,7 @@ describe("AuthUserSchema", () => {
   });
 
   it("employeeId を省略してもパースが成功する（AC-8 / 任意フィールド）", () => {
-    const result = AuthUserSchema.safeParse({ id: "user1", displayName: "Alice" });
+    const result = AuthUserSchema.safeParse({ id: "user1", displayName: "Alice", role: "member" });
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.employeeId).toBeUndefined();
@@ -70,6 +109,7 @@ describe("AuthUserSchema", () => {
     const result = AuthUserSchema.safeParse({
       id: "user1",
       displayName: "Alice",
+      role: "admin",
       avatarUrl: "https://example.com/avatar.png",
     });
     expect(result.success).toBe(true);
@@ -79,7 +119,7 @@ describe("AuthUserSchema", () => {
   });
 
   it("avatarUrl を省略してもパースが成功する（#51 / 任意フィールド）", () => {
-    const result = AuthUserSchema.safeParse({ id: "user1", displayName: "Alice" });
+    const result = AuthUserSchema.safeParse({ id: "user1", displayName: "Alice", role: "member" });
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.avatarUrl).toBeUndefined();

@@ -1,0 +1,44 @@
+import { Meta } from "@storybook/blocks";
+import * as AccountSceneStories from "../../client/src/routes/AccountScene.stories";
+
+<Meta of={AccountSceneStories} />
+
+# 画面設計書: アカウント設定画面（AccountScene）
+
+> 関連: Issue #108 / ADR-0003（client）・ADR-0007（docs）
+
+## 目的
+
+アカウント設定画面（`/account`）。ログイン済みユーザーが自身のプロフィール（表示名・パスワード等）を
+確認・更新できる画面。`useAuth()` フックが `/auth/me` を呼び出してユーザー情報を取得する。
+
+## URL / ルート
+
+| URL | 画面 | 認証 |
+|-----|------|------|
+| `/account` | AccountScene | 推奨（未ログインはフォーム空） |
+
+参照: [`docs/design/url-list.md`](./url-list.md)
+
+## 認証要否
+
+認証は必須ではないが、ログイン済みの場合に現在のプロフィールがフォームに反映される。
+未ログイン（`/auth/me` が 401）の場合はフォームが空になる。
+
+## 状態一覧
+
+| 状態 | 説明 | ストーリー |
+|------|------|----------|
+| ログイン済み | ユーザー情報がフォームに表示される | `Default` |
+| 未ログイン | `/auth/me` が 401 → フォーム空 | `LoggedOut` |
+
+## データ契約
+
+- `GET /auth/me` → `AuthUser | null`（ログイン状態の確認・フォーム初期値取得）
+- `PATCH /auth/me` → `AuthUser`（プロフィール更新）
+
+## 関連 ADR / Issue
+
+- ADR-0003: client スタック（TanStack Query / Router）
+- ADR-0006: OpenAPI 型共有
+- Issue #108Ｈ本 Story の整備）

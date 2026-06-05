@@ -41,7 +41,7 @@ export function createInvitationsRouter(
       try {
         const { id, displayName, password } = req.body as AcceptInvitation;
 
-        const record = await invitationLinkRepository.findByToken(req.params.token);
+        const record = await invitationLinkRepository.findByToken(req.params.token as string);
         if (!record) {
           res.status(404).json({ error: "Invitation not found" });
           return;

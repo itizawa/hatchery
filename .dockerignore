@@ -9,7 +9,9 @@
 # 開発・ドキュメント
 .claude
 client
+!client/package.json
 docs
+!docs/package.json
 *.md
 
 # テスト・設定

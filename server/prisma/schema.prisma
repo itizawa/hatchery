@@ -133,3 +133,24 @@ enum BatchRunLogStatus {
   success
   failure
 }
+
+/// 招待リンク（#131）。管理者が発行し、期限 + single-use で新規ユーザーを招待する。
+model InvitationLink {
+  id              String    @id @default(cuid())
+  /// URL に載せる招待トークン。推測困難な乱数（base64url）。平文保存（再コピー可・期限+single-use でリスク軽減）。
+  token           String    @unique
+  expiresAt       DateTime
+  /// 受諾された日時。null=未使用。ここが入ると single-use 失効（#132 で書き込み）。
+  usedAt          DateTime?
+  /// 受諾で作成された User の id（監査用）。#132 で書き込み。
+  usedByUserId    String?
+  /// 管理者が手動失効した日時。null=未失効。
+  revokedAt       DateTime?
+  /// 発行した管理者の User.id。
+  createdByUserId String
+  /// 管理者用メモ（任意・200 文字以内）。
+  memo            String?
+  createdAt       DateTime  @default(now())
+
+  @@index([createdAt])
+}

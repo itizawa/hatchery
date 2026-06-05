@@ -7,6 +7,7 @@ import { prisma } from "./persistence/prismaClient.js";
 import { PrismaEmployeeRepository } from "./persistence/prismaEmployeeRepository.js";
 import { PrismaMessageRepository } from "./persistence/prismaMessageRepository.js";
 import { PrismaUserRepository } from "./persistence/prismaUserRepository.js";
+import { PrismaInvitationLinkRepository } from "./persistence/prismaInvitationLinkRepository.js";
 
 /** API プロセスの起動エントリ。createApp に Prisma 実装を注入して listen する。 */
 const env = loadEnv();
@@ -17,6 +18,7 @@ const app = createApp({
   channelRepository: new PrismaChannelRepository(prisma),
   employeeRepository: new PrismaEmployeeRepository(prisma),
   appSettingRepository: new PrismaAppSettingRepository(prisma),
+  invitationLinkRepository: new PrismaInvitationLinkRepository(prisma),
   security: {
     rateLimitWindowMs: env.rateLimitWindowMs,
     rateLimitMax: env.rateLimitMax,

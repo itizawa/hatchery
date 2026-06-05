@@ -14,7 +14,10 @@ import {
   ChannelSchema,
   CreateChannelMessageSchema,
   CreateChannelSchema,
+  CreateInvitationSchema,
   EmployeeSchema,
+  InvitationSchema,
+  InvitationStatusSchema,
   LoginRequestSchema,
   MessageRecordSchema,
   MessageSchema,
@@ -467,6 +470,71 @@ registry.registerPath({
     401: { description: "未認証", ...errorJson },
     404: { description: "メッセージが存在しない", ...errorJson },
     500: { description: "GITHUB_TOKEN 等の環境変数未設定", ...errorJson },
+  },
+});
+
+// 招待リンク API（#131）。管理者が招待リンクを発行・一覧・失効できる。
+registry.register("InvitationStatus", InvitationStatusSchema.openapi({ description: "招待リンクのステータス（#131）" }));
+
+const InvitationComponent = registry.register(
+  "Invitation",
+  InvitationSchema.openapi({ description: "招待リンク（管理者向け。token 含む）" }),
+);
+
+const CreateInvitationComponent = registry.register(
+  "CreateInvitation",
+  CreateInvitationSchema.openapi({ description: "招待リンク発行リクエスト（expiresInHours / memo?）" }),
+);
+
+const invitationIdParam = z.string().openapi({ param: { name: "id", in: "path" } });
+
+registry.registerPath({
+  method: "post",
+  path: "/admin/invitations",
+  summary: "招待リンクを発行（認証必須・admin ロール・#131）",
+  request: {
+    body: { content: { "application/json": { schema: CreateInvitationComponent } } },
+  },
+  responses: {
+    201: {
+      description: "発行された招待リンク（token 含む）",
+      content: { "application/json": { schema: InvitationComponent } },
+    },
+    400: { description: "リクエストボディが不正（expiresInHours 範囲外など）", ...errorJson },
+    401: { description: "未認証", ...errorJson },
+    403: { description: "admin 権限なし", ...errorJson },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/admin/invitations",
+  summary: "招待リンク一覧を取得（認証必須・admin ロール・#131）",
+  responses: {
+    200: {
+      description: "招待リンク一覧（ステータス込み）",
+      content: { "application/json": { schema: z.array(InvitationComponent) } },
+    },
+    401: { description: "未認証", ...errorJson },
+    403: { description: "admin 権限なし", ...errorJson },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/admin/invitations/{id}/revoke",
+  summary: "招待リンクを手動失効（認証必須・admin ロール・#131）",
+  request: {
+    params: z.object({ id: invitationIdParam }),
+  },
+  responses: {
+    200: {
+      description: "失効後の招待リンク（status: revoked）",
+      content: { "application/json": { schema: InvitationComponent } },
+    },
+    401: { description: "未認証", ...errorJson },
+    403: { description: "admin 権限なし", ...errorJson },
+    404: { description: "招待リンクが存在しない", ...errorJson },
   },
 });
 

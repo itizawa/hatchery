@@ -63,7 +63,7 @@ const UpdateChannelComponent = registry.register(
 
 const CreateChannelComponent = registry.register(
   "CreateChannel",
-  CreateChannelSchema.openapi({ description: "チャンネル作成リクエストボディ（#47セlabel のみ）" }),
+  CreateChannelSchema.openapi({ description: "チャンネル作成リクエストボディ（#47・label のみ）" }),
 );
 
 const AddChannelMemberComponent = registry.register(
@@ -366,7 +366,7 @@ registry.registerPath({
       description: "更新後の認証済みユーザー",
       content: { "application/json": { schema: AuthUserComponent } },
     },
-    400: { description: "リクエストボディが不正（displayName 空セavatarUrl 不正など）", ...errorJson },
+    400: { description: "リクエストボディが不正（displayName 空・avatarUrl 不正など）", ...errorJson },
     401: { description: "未認証", ...errorJson },
   },
 });
@@ -423,7 +423,7 @@ const BatchRunLogComponent = registry.register(
 registry.registerPath({
   method: "get",
   path: "/admin/batch-logs",
-  summary: "バッチ実行ログ一覧を取得（認証必須・直近 50 件ゾxecutedAt 降順）（#75）",
+  summary: "バッチ実行ログ一覧を取得（認証必須・直近 50 件・executedAt 降順）（#75）",
   responses: {
     200: {
       description: "バッチ実行ログ一覧",
@@ -493,7 +493,7 @@ const invitationIdParam = z.string().openapi({ param: { name: "id", in: "path" }
 registry.registerPath({
   method: "post",
   path: "/admin/invitations",
-  summary: "招待リンクを発行（認証必須タadmin ロール・#131）",
+  summary: "招待リンクを発行（認証必須・admin ロール・#131）",
   request: {
     body: { content: { "application/json": { schema: CreateInvitationComponent } } },
   },
@@ -511,7 +511,7 @@ registry.registerPath({
 registry.registerPath({
   method: "get",
   path: "/admin/invitations",
-  summary: "招待リンク一覧を取得（認証必須タadmin ロール・#131）",
+  summary: "招待リンク一覧を取得（認証必須・admin ロール・#131）",
   responses: {
     200: {
       description: "招待リンク一覧（ステータス込み）",
@@ -525,7 +525,7 @@ registry.registerPath({
 registry.registerPath({
   method: "post",
   path: "/admin/invitations/{id}/revoke",
-  summary: "招待リンクを手動失効（認証必須タadmin ロール・#131）",
+  summary: "招待リンクを手動失効（認証必須・admin ロール・#131）",
   request: {
     params: z.object({ id: invitationIdParam }),
   },

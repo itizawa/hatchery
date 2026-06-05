@@ -12,6 +12,11 @@ client
 docs
 *.md
 
+# ただし client/docs の package.json は pnpm workspace 解決のため server/Dockerfile が COPY する（#144）。
+# ディレクトリ全除外の後に個別ファイルを再 include する（.dockerignore は後勝ち）。中身（ソース等）は除外のまま。
+!client/package.json
+!docs/package.json
+
 # テスト・設定
 tests
 node_modules

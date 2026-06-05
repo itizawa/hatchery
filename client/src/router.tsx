@@ -7,7 +7,7 @@ import {
   type RouterHistory,
 } from "@tanstack/react-router";
 import { isAdmin } from "@hatchery/common";
-import type { ReactElement } from "react";
+import { Suspense, type ReactElement } from "react";
 
 import { fetchMe } from "./api/auth.js";
 import {
@@ -23,6 +23,7 @@ import { HomeScene } from "./routes/HomeScene";
 import { LoginScene } from "./routes/LoginScene";
 import { RootLayout } from "./routes/RootLayout";
 import { SettingsScene } from "./routes/SettingsScene";
+import { ChannelViewSkeleton } from "./components/ChannelViewSkeleton";
 
 /**
  * 認証ガード: 未ログイン（fetchMe が null を返す）またはネットワークエラーの場合に /login へリダイレクト。
@@ -89,7 +90,11 @@ const indexRoute = createRoute({
 const channelRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/channels/$channelId",
-  component: ChannelScene,
+  component: () => (
+    <Suspense fallback={<ChannelViewSkeleton />}>
+      <ChannelScene />
+    </Suspense>
+  ),
 });
 
 /** ログイン画面（/login）。サイドバーなしの AuthLayout 経由で描画する。 */

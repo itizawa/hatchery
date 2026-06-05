@@ -1,5 +1,5 @@
 import type { Channel, ChannelType, MessageRecord } from "@hatchery/common";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 
 import { openApiClient } from "./client.js";
 
@@ -10,9 +10,10 @@ export const channelMessagesQueryKey = (channelId: string) =>
 /**
  * GET /channels を openapi-fetch（生成型）経由で取得するフック（ADR-0006）。
  * サーバ状態は TanStack Query に集約する（ADR-0003）。
+ * Suspense 対応: ローディング中は Promise を throw し、data は常に Channel[]（undefined なし）。
  */
 export function useChannels() {
-  return useQuery({
+  return useSuspenseQuery({
     queryKey: CHANNELS_QUERY_KEY,
     queryFn: async (): Promise<Channel[]> => {
       const { data, error } = await openApiClient.GET("/channels");
@@ -44,9 +45,10 @@ export function useCreateChannel() {
 
 /**
  * GET /channels/{channelId}/messages でチャンネルのメッセージ一覧を取得するフック（#48）。
+ * Suspense 対応: ローディング中は Promise を throw し、data は常に MessageRecord[]（undefined なし）。
  */
 export function useChannelMessages(channelId: string) {
-  return useQuery({
+  return useSuspenseQuery({
     queryKey: channelMessagesQueryKey(channelId),
     queryFn: async (): Promise<MessageRecord[]> => {
       const { data, error } = await openApiClient.GET("/channels/{channelId}/messages", {

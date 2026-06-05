@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { getInvitationStatus } from "./invitation.js";
+import { AcceptInvitationSchema, getInvitationStatus } from "./invitation.js";
 
 describe("getInvitationStatus", () => {
   const now = new Date("2026-06-05T12:00:00Z");
@@ -47,5 +47,45 @@ describe("getInvitationStatus", () => {
     expect(
       getInvitationStatus({ revokedAt: null, usedAt: now, expiresAt: past }, now),
     ).toBe("used");
+  });
+});
+
+describe("AcceptInvitationSchema (#132)", () => {
+  const valid = { id: "user01", displayName: "テストユーザー", password: "password123" };
+
+  it("有効なデータはパースできる", () => {
+    expect(AcceptInvitationSchema.safeParse(valid).success).toBe(true);
+  });
+
+  it("id が空文字列の場合は失敗", () => {
+    expect(AcceptInvitationSchema.safeParse({ ...valid, id: "" }).success).toBe(false);
+  });
+
+  it("id が 50 文字を超えると失敗", () => {
+    expect(AcceptInvitationSchema.safeParse({ ...valid, id: "a".repeat(51) }).success).toBe(false);
+  });
+
+  it("id が 50 文字ちょうどは成功", () => {
+    expect(AcceptInvitationSchema.safeParse({ ...valid, id: "a".repeat(50) }).success).toBe(true);
+  });
+
+  it("displayName が空文字列の場合は失敗", () => {
+    expect(AcceptInvitationSchema.safeParse({ ...valid, displayName: "" }).success).toBe(false);
+  });
+
+  it("displayName が 100 文字を超えると失敗", () => {
+    expect(AcceptInvitationSchema.safeParse({ ...valid, displayName: "a".repeat(101) }).success).toBe(false);
+  });
+
+  it("password が 7 文字以下の場合は失敗", () => {
+    expect(AcceptInvitationSchema.safeParse({ ...valid, password: "short12" }).success).toBe(false);
+  });
+
+  it("password が 8 文字以上の場合は成功", () => {
+    expect(AcceptInvitationSchema.safeParse({ ...valid, password: "pass1234" }).success).toBe(true);
+  });
+
+  it("password が 100 文字を超えると失敗", () => {
+    expect(AcceptInvitationSchema.safeParse({ ...valid, password: "a".repeat(101) }).success).toBe(false);
   });
 });

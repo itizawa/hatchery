@@ -35,5 +35,8 @@ export function validateBasicAuth(
 ): boolean {
   const credentials = parseBasicAuth(authHeader ?? null);
   if (!credentials) return false;
-  return safeEqual(credentials.user, expectedUser) && safeEqual(credentials.password, expectedPassword);
+  // 両方を先に評価して && 短絡評価によるタイミング差を防ぐ
+  const userOk = safeEqual(credentials.user, expectedUser);
+  const passOk = safeEqual(credentials.password, expectedPassword);
+  return userOk && passOk;
 }

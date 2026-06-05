@@ -3,11 +3,12 @@ import Link from "@mui/material/Link";
 import Typography from "@mui/material/Typography";
 import { isAdmin } from "@hatchery/common";
 import { Link as RouterLink, Outlet } from "@tanstack/react-router";
-import type { ReactElement } from "react";
+import { Suspense, type ReactElement } from "react";
 
 import { useAuth } from "../api/auth.js";
 import { AddChannelForm } from "../components/AddChannelForm";
 import { ChannelList } from "../components/ChannelList";
+import { ChannelListSkeleton } from "../components/ChannelListSkeleton";
 import { UserFooter } from "../components/UserFooter";
 import { SLACK_COLORS } from "../theme.js";
 
@@ -37,7 +38,9 @@ export const RootLayout = (): ReactElement => {
         <Typography variant="h6" component="p" gutterBottom sx={{ color: SLACK_COLORS.sidebarText }}>
           Hatchery
         </Typography>
-        <ChannelList />
+        <Suspense fallback={<ChannelListSkeleton />}>
+          <ChannelList />
+        </Suspense>
         <AddChannelForm />
         {user && isAdmin(user) && (
           <Box sx={{ mt: 2 }}>

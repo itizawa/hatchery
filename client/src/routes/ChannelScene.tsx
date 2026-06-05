@@ -21,7 +21,7 @@ export const ChannelScene = (): ReactElement => {
   const id = channelId ?? "";
   const channel = resolveChannel(id);
 
-  const { data: messages = [] } = useChannelMessages(id);
+  const { data: messages } = useChannelMessages(id);
   const { data: authUser } = useAuth();
   const { mutate: postMessage, isPending } = usePostChannelMessage(id);
 

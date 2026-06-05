@@ -6,19 +6,27 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createAppRouter, type AppRouter } from "./router";
 
-/** サイドバー（ChannelList）が呼ぶ GET /channels を既定チャンネルで応答する fetch スタブ。 */
+const CHANNELS_DATA = [
+  { id: "zatsudan", label: "#雑談", type: "zatsudan" },
+  { id: "shigoto", label: "#仕事", type: "task" },
+];
+
+/** サイドバー（ChannelList）・ChannelScene が呼ぶ fetch を応答する。
+ * mockImplementation で毎回新しい Response を生成する（useSuspenseQuery は複数回 fetch するため）。
+ * /auth/me → 401（未ログイン）、/messages → []、その他 → CHANNELS_DATA */
 function stubChannelsFetch() {
   vi.stubGlobal(
     "fetch",
-    vi.fn().mockResolvedValue(
-      new Response(
-        JSON.stringify([
-          { id: "zatsudan", label: "#雑談" },
-          { id: "shigoto", label: "#仕事" },
-        ]),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      ),
-    ),
+    vi.fn().mockImplementation((input: string | URL | Request) => {
+      const urlStr = input instanceof Request ? input.url : String(input);
+      if (urlStr.includes("/auth/me")) {
+        return Promise.resolve(new Response(null, { status: 401 }));
+      }
+      const body = urlStr.includes("/messages") ? JSON.stringify([]) : JSON.stringify(CHANNELS_DATA);
+      return Promise.resolve(
+        new Response(body, { status: 200, headers: { "Content-Type": "application/json" } }),
+      );
+    }),
   );
 }
 

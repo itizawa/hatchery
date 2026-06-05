@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
-import type { ReactElement } from "react";
+import { Suspense, type ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ChannelList } from "./ChannelList";
@@ -13,10 +13,14 @@ function jsonResponse(status: number, body: unknown): Response {
   });
 }
 
-/** retry を無効化した QueryClient で children を包む（テスト間でキャッシュを共有しない）。 */
+/** retry を無効化した QueryClient と Suspense で children を包む（テスト間でキャッシュを共有しない）。 */
 function renderWithClient(ui: ReactElement) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <Suspense fallback={<div>Loading...</div>}>{ui}</Suspense>
+    </QueryClientProvider>,
+  );
 }
 
 // 受け入れ条件 AC6: ChannelList は GET /channels の結果を描画し、DEFAULT_CHANNELS を直接参照しない。

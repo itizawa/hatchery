@@ -1,4 +1,4 @@
-import React from "react";
+import React, { Suspense } from "react";
 import type { Preview } from "@storybook/react";
 import CssBaseline from "@mui/material/CssBaseline";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
@@ -22,7 +22,9 @@ const preview: Preview = {
       const queryClientRef = React.useRef(createQueryClient());
       return (
         <QueryClientProvider client={queryClientRef.current}>
-          <Story />
+          <Suspense fallback={null}>
+            <Story />
+          </Suspense>
         </QueryClientProvider>
       );
     },

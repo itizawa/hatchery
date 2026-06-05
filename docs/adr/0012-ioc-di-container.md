@@ -44,7 +44,7 @@ employeeRepository, appSettingRepository, batchRunLogRepository（省略可）
 
 ## 理由
 
-1. **composition root が既に存在する**: `server.ts` は `PrismaXxxRepository` を生成して `createApp` に渡しており、配線が 1 箇所に集まっている。コンテナを導入しても現状以上の集約にはならない。
+1. **composition root が既に存在する**: `server.ts` は `PrismaXxxRepository` を生成して `createApp` に渡す本番用 composition root として機能している（`createApp` 内の `??` フォールバックはテスト用の InMemory 実装で、テスト容易性を担保する設計上の意図）。コンテナを導入しても現状以上の集約にはならない。
 
 2. **テスト容易性が高い**: 現行の `createApp(deps)` パターンは `supertest` + InMemory 実装の組み合わせで API 単体テストが書きやすく、モック差し替えも直感的。DI コンテナを導入してもこの容易性が向上するわけではない。
 

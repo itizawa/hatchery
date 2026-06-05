@@ -10,6 +10,7 @@ export * from "./domain/channel/index.js";
 export * from "./domain/channelMembership/index.js";
 export * from "./domain/employee/index.js";
 export * from "./domain/message/index.js";
+export * from "./domain/invitation/index.js";
 export * from "./domain/task/index.js";
 export * from "./constants/employeeMessages.js";
 export * from "./errors/index.js";

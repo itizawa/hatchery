@@ -8,12 +8,13 @@ const config: StorybookConfig = {
     // docs の設計 MDX ドキュメントを取り込む
     "../src/**/*.mdx",
   ],
-  addons: ["@storybook/addon-essentials"],
+  addons: ["@storybook/addon-essentials", "msw-storybook-addon"],
   framework: {
     name: "@storybook/react-vite",
     options: {},
   },
   docs: {},
+  staticDirs: ["../public"],
   viteFinal: async (config, { configType }) => {
     config.resolve = config.resolve ?? {};
     config.resolve.alias = Object.assign({}, config.resolve.alias ?? {}, {

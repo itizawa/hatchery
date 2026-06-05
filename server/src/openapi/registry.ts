@@ -7,6 +7,7 @@ import type { OpenAPIObject } from "openapi3-ts/oas31";
 import { z } from "zod";
 
 import {
+  AcceptInvitationSchema,
   AddChannelMemberSchema,
   AppSettingResponseSchema,
   AuthUserSchema,
@@ -16,6 +17,7 @@ import {
   CreateChannelSchema,
   CreateInvitationSchema,
   EmployeeSchema,
+  InvitationPublicSchema,
   InvitationSchema,
   InvitationStatusSchema,
   LoginRequestSchema,
@@ -61,7 +63,7 @@ const UpdateChannelComponent = registry.register(
 
 const CreateChannelComponent = registry.register(
   "CreateChannel",
-  CreateChannelSchema.openapi({ description: "チャンネル作成リクエストボディ（#47・label のみ）" }),
+  CreateChannelSchema.openapi({ description: "チャンネル作成リクエストボディ（#47セlabel のみ）" }),
 );
 
 const AddChannelMemberComponent = registry.register(
@@ -364,7 +366,7 @@ registry.registerPath({
       description: "更新後の認証済みユーザー",
       content: { "application/json": { schema: AuthUserComponent } },
     },
-    400: { description: "リクエストボディが不正（displayName 空・avatarUrl 不正など）", ...errorJson },
+    400: { description: "リクエストボディが不正（displayName 空セavatarUrl 不正など）", ...errorJson },
     401: { description: "未認証", ...errorJson },
   },
 });
@@ -421,7 +423,7 @@ const BatchRunLogComponent = registry.register(
 registry.registerPath({
   method: "get",
   path: "/admin/batch-logs",
-  summary: "バッチ実行ログ一覧を取得（認証必須・直近 50 件・executedAt 降順）（#75）",
+  summary: "バッチ実行ログ一覧を取得（認証必須・直近 50 件ゾxecutedAt 降順）（#75）",
   responses: {
     200: {
       description: "バッチ実行ログ一覧",
@@ -491,7 +493,7 @@ const invitationIdParam = z.string().openapi({ param: { name: "id", in: "path" }
 registry.registerPath({
   method: "post",
   path: "/admin/invitations",
-  summary: "招待リンクを発行（認証必須・admin ロール・#131）",
+  summary: "招待リンクを発行（認証必須タadmin ロール・#131）",
   request: {
     body: { content: { "application/json": { schema: CreateInvitationComponent } } },
   },
@@ -509,7 +511,7 @@ registry.registerPath({
 registry.registerPath({
   method: "get",
   path: "/admin/invitations",
-  summary: "招待リンク一覧を取得（認証必須・admin ロール・#131）",
+  summary: "招待リンク一覧を取得（認証必須タadmin ロール・#131）",
   responses: {
     200: {
       description: "招待リンク一覧（ステータス込み）",
@@ -523,7 +525,7 @@ registry.registerPath({
 registry.registerPath({
   method: "post",
   path: "/admin/invitations/{id}/revoke",
-  summary: "招待リンクを手動失効（認証必須・admin ロール・#131）",
+  summary: "招待リンクを手動失効（認証必須タadmin ロール・#131）",
   request: {
     params: z.object({ id: invitationIdParam }),
   },
@@ -535,6 +537,54 @@ registry.registerPath({
     401: { description: "未認証", ...errorJson },
     403: { description: "admin 権限なし", ...errorJson },
     404: { description: "招待リンクが存在しない", ...errorJson },
+  },
+});
+
+// 招待受諾 API（#132）。公開エンドポイント（requireAuth なし）。
+const InvitationPublicComponent = registry.register(
+  "InvitationPublic",
+  InvitationPublicSchema.openapi({ description: "招待トークン検証レスポンス（公開・機微情報なし）" }),
+);
+
+const AcceptInvitationComponent = registry.register(
+  "AcceptInvitation",
+  AcceptInvitationSchema.openapi({ description: "招待受諾リクエスト（id / displayName / password）" }),
+);
+
+const invitationTokenParam = z.string().openapi({ param: { name: "token", in: "path" } });
+
+registry.registerPath({
+  method: "get",
+  path: "/invitations/{token}",
+  summary: "招待トークンを検証（公開・認証不要・#132）",
+  request: {
+    params: z.object({ token: invitationTokenParam }),
+  },
+  responses: {
+    200: {
+      description: "トークンのステータスと有効期限",
+      content: { "application/json": { schema: InvitationPublicComponent } },
+    },
+    404: { description: "トークンが存在しない", ...errorJson },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/invitations/{token}/accept",
+  summary: "招待を受諾して新規ユーザーを登録（公開・認証不要・#132）",
+  request: {
+    params: z.object({ token: invitationTokenParam }),
+    body: { content: { "application/json": { schema: AcceptInvitationComponent } } },
+  },
+  responses: {
+    201: {
+      description: "受諾成功。作成されたユーザーを返す（セッション確立済み）",
+      content: { "application/json": { schema: AuthUserComponent } },
+    },
+    400: { description: "バリデーションエラー（password 短すぎ等）", ...errorJson },
+    404: { description: "トークンが存在しない", ...errorJson },
+    409: { description: "招待が無効（期限切れ・使用済み・失効済み）または id 重複", ...errorJson },
   },
 });
 

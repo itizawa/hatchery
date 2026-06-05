@@ -1,7 +1,7 @@
 import { UserRoleSchema } from "@hatchery/common";
 import { Prisma, type PrismaClient } from "@prisma/client";
 
-import type { User, UserRepository } from "./userRepository.js";
+import { UserIdAlreadyExistsError, type User, type UserRepository } from "./userRepository.js";
 
 export class PrismaUserRepository implements UserRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -44,6 +44,33 @@ export class PrismaUserRepository implements UserRepository {
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025") {
         throw new Error(`User not found: ${id}`);
+      }
+      throw err;
+    }
+  }
+
+  async create(input: { id: string; displayName: string; passwordHash: string }): Promise<User> {
+    try {
+      const row = await this.prisma.user.create({
+        data: {
+          id: input.id,
+          displayName: input.displayName,
+          passwordHash: input.passwordHash,
+          role: "member",
+        },
+        include: { employee: { select: { id: true } } },
+      });
+      return {
+        id: row.id,
+        displayName: row.displayName,
+        passwordHash: row.passwordHash,
+        role: UserRoleSchema.parse(row.role ?? "member"),
+        employeeId: row.employee?.id ?? null,
+        avatarUrl: row.avatarUrl ?? null,
+      };
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+        throw new UserIdAlreadyExistsError(input.id);
       }
       throw err;
     }

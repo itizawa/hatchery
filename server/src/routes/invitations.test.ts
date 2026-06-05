@@ -24,6 +24,16 @@ async function loginAgent(app: ReturnType<typeof createApp>) {
   return agent;
 }
 
+/** admin として招待リンクを 1 件作成し、token を返す。 */
+async function createInvitationToken(
+  app: ReturnType<typeof createApp>,
+  expiresInHours = 24,
+): Promise<string> {
+  const agent = await loginAgent(app);
+  const res = await agent.post("/admin/invitations").send({ expiresInHours });
+  return res.body.token as string;
+}
+
 describe("POST /admin/invitations", () => {
   it("未認証の場合は 401 を返す", async () => {
     const app = await makeApp();
@@ -178,5 +188,176 @@ describe("POST /admin/invitations/:id/revoke", () => {
 
     const listRes = await agent.get("/admin/invitations");
     expect(listRes.body[0].status).toBe("revoked");
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// 公開エンドポイント（#132）
+// ──────────────────────────────────────────────────────────────────────────────
+
+describe("GET /invitations/:token (#132)", () => {
+  it("存在しない token は 404 を返す", async () => {
+    const app = await makeApp();
+    const res = await request(app).get("/invitations/nonexistent-token");
+    expect(res.status).toBe(404);
+  });
+
+  it("有効な token は 200 と status: active を返す", async () => {
+    const app = await makeApp();
+    const token = await createInvitationToken(app);
+    const res = await request(app).get(`/invitations/${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ status: "active" });
+    expect(res.body).toHaveProperty("expiresAt");
+  });
+
+  it("使用済みトークンは 200 と status: used を返す", async () => {
+    const repo = new InMemoryInvitationLinkRepository();
+    const app = await makeApp(repo);
+    const token = await createInvitationToken(app);
+
+    // 受諾して使用済みにする
+    await request(app).post(`/invitations/${token}/accept`).send({
+      id: "newuser1",
+      displayName: "新ユーザー",
+      password: "password123",
+    });
+
+    const res = await request(app).get(`/invitations/${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe("used");
+  });
+
+  it("レスポンスに token が含まれない", async () => {
+    const app = await makeApp();
+    const token = await createInvitationToken(app);
+    const res = await request(app).get(`/invitations/${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body).not.toHaveProperty("token");
+    expect(res.body).not.toHaveProperty("id");
+    expect(res.body).not.toHaveProperty("createdByUserId");
+  });
+});
+
+describe("POST /invitations/:token/accept (#132)", () => {
+  const validBody = {
+    id: "newuser",
+    displayName: "新規ユーザー",
+    password: "password123",
+  };
+
+  it("存在しない token は 404 を返す", async () => {
+    const app = await makeApp();
+    const res = await request(app)
+      .post("/invitations/nonexistent/accept")
+      .send(validBody);
+    expect(res.status).toBe(404);
+  });
+
+  it("active な招待で 201 と AuthUser を返す", async () => {
+    const app = await makeApp();
+    const token = await createInvitationToken(app);
+    const res = await request(app).post(`/invitations/${token}/accept`).send(validBody);
+    expect(res.status).toBe(201);
+    expect(res.body).toMatchObject({
+      id: "newuser",
+      displayName: "新規ユーザー",
+      role: "member",
+    });
+  });
+
+  it("レスポンスに passwordHash が含まれない", async () => {
+    const app = await makeApp();
+    const token = await createInvitationToken(app);
+    const res = await request(app).post(`/invitations/${token}/accept`).send(validBody);
+    expect(res.status).toBe(201);
+    expect(res.body).not.toHaveProperty("passwordHash");
+  });
+
+  it("受諾成功後 GET /auth/me が新ユーザーを返す（セッション確立）", async () => {
+    const app = await makeApp();
+    const token = await createInvitationToken(app);
+    const agent = request.agent(app);
+    const acceptRes = await agent.post(`/invitations/${token}/accept`).send(validBody);
+    expect(acceptRes.status).toBe(201);
+
+    const meRes = await agent.get("/auth/me");
+    expect(meRes.status).toBe(200);
+    expect(meRes.body).toMatchObject({ id: "newuser", displayName: "新規ユーザー" });
+  });
+
+  it("同じ token への 2 回目の accept は 409 を返す（single-use）", async () => {
+    const app = await makeApp();
+    const token = await createInvitationToken(app);
+    await request(app).post(`/invitations/${token}/accept`).send(validBody);
+    const res2 = await request(app)
+      .post(`/invitations/${token}/accept`)
+      .send({ id: "newuser2", displayName: "別ユーザー", password: "password123" });
+    expect(res2.status).toBe(409);
+  });
+
+  it("期限切れトークンは 409 を返す", async () => {
+    const repo = new InMemoryInvitationLinkRepository();
+    const pastDate = new Date(Date.now() - 1000);
+    await repo.create({
+      token: "expired-token",
+      expiresAt: pastDate,
+      createdByUserId: "admin",
+    });
+    const app = await makeApp(repo);
+    const res = await request(app)
+      .post("/invitations/expired-token/accept")
+      .send(validBody);
+    expect(res.status).toBe(409);
+  });
+
+  it("失効済みトークンは 409 を返す", async () => {
+    const repo = new InMemoryInvitationLinkRepository();
+    const record = await repo.create({
+      token: "revoked-token",
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      createdByUserId: "admin",
+    });
+    await repo.revoke(record.id);
+    const app = await makeApp(repo);
+    const res = await request(app)
+      .post("/invitations/revoked-token/accept")
+      .send(validBody);
+    expect(res.status).toBe(409);
+  });
+
+  it("id 重複時は 409 を返し usedAt が立たない", async () => {
+    const app = await makeApp();
+    const token = await createInvitationToken(app);
+
+    // 同じ id で accept を試みる
+    const res = await request(app).post(`/invitations/${token}/accept`).send({
+      id: "testuser", // 既存ユーザーと同じ id
+      displayName: "重複ユーザー",
+      password: "password123",
+    });
+    expect(res.status).toBe(409);
+
+    // usedAt が立っていないことを確認（招待は消費されていない）
+    const statusRes = await request(app).get(`/invitations/${token}`);
+    expect(statusRes.body.status).toBe("active");
+  });
+
+  it("password が 7 文字以下は 400 を返す", async () => {
+    const app = await makeApp();
+    const token = await createInvitationToken(app);
+    const res = await request(app)
+      .post(`/invitations/${token}/accept`)
+      .send({ ...validBody, password: "short12" });
+    expect(res.status).toBe(400);
+  });
+
+  it("id が空文字列は 400 を返す", async () => {
+    const app = await makeApp();
+    const token = await createInvitationToken(app);
+    const res = await request(app)
+      .post(`/invitations/${token}/accept`)
+      .send({ ...validBody, id: "" });
+    expect(res.status).toBe(400);
   });
 });

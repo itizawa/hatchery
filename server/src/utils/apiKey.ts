@@ -12,8 +12,8 @@ export async function getApiKey(
   if (setting?.value) {
     try {
       return decrypt(setting.value);
-    } catch {
-      // 復号失敗時は env フォールバック
+    } catch (err) {
+      console.warn("[getApiKey] CLAUDE_API_KEY の復号に失敗しました。env フォールバックを使用します:", err instanceof Error ? err.message : String(err));
     }
   }
   return process.env.ANTHROPIC_API_KEY ?? undefined;

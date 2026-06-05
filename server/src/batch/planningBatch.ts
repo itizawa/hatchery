@@ -4,6 +4,7 @@ import * as cheerio from "cheerio";
 import type { AppSettingRepository } from "../persistence/appSettingRepository.js";
 import type { ChannelRepository } from "../persistence/channelRepository.js";
 import type { MessageRecord, MessageRepository } from "../persistence/messageRepository.js";
+import { getApiKey } from "../utils/apiKey.js";
 
 /** UX 提案の構造体（#76）。 */
 export interface UxProposal {
@@ -47,7 +48,7 @@ async function generateProposalsWithClaude(
   const client = new Anthropic({ apiKey });
 
   const pagesDescription = Object.entries(pageContents)
-    .map(([url, content]) => `[${url}]\n${content || "(コンテンツ取得不可)"}`)
+    .map(([url, content]) => `[${url}]\n${content || "(コンテンツ取得不可)"}}`)
     .join("\n\n");
 
   const prompt = `あなたは UX の専門家です。以下のウェブアプリのページコンテンツを分析し、UX 改善点を最大 ${MAX_PROPOSALS} 件提案してください。
@@ -100,7 +101,7 @@ ${pagesDescription}
  * - CLIENT_URL のページを巡回して UX 提案を生成し、#企画 チャンネルへ保存する
  */
 export async function runPlanningBatch(deps: RunPlanningBatchDeps): Promise<MessageRecord[]> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = await getApiKey(deps.appSettingRepo);
   if (!apiKey) {
     console.error("[planningBatch] ANTHROPIC_API_KEY が設定されていないためスキップします");
     return [];
@@ -112,7 +113,7 @@ export async function runPlanningBatch(deps: RunPlanningBatchDeps): Promise<Mess
     return [];
   }
 
-  const clientUrl = (process.env.CLIENT_URL ?? "http://localhost:5173").replace(/\/$/, "");
+  const clientUrl = (process.env.CLIENT_URL ?? "http://localhost:5173").replace(/\/$/,  "");
 
   const fetchPage = async (path: string): Promise<string> => {
     try {

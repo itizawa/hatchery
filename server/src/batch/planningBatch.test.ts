@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppSettingRepository } from "../persistence/appSettingRepository.js";
 import { InMemoryChannelRepository } from "../persistence/channelRepository.js";
 import { InMemoryMessageRepository } from "../persistence/messageRepository.js";
+import { encrypt } from "../utils/crypto.js";
 import { type UxProposal, runPlanningBatch } from "./planningBatch.js";
 
 /** fetch をモックする */
@@ -99,5 +100,36 @@ describe("runPlanningBatch (#76)", () => {
     expect(result).toHaveLength(0);
     const saved = await messageRepo.list();
     expect(saved).toHaveLength(0);
+  });
+
+  it("DB に CLAUDE_API_KEY が保存されている場合は env よりも DB の値を優先して使う", async () => {
+    // env には ANTHROPIC_API_KEY を設定しない（DB キーだけが存在する状態）
+    const env = { ...process.env, CLIENT_URL: "http://localhost:3000" };
+    delete env["ANTHROPIC_API_KEY"];
+    process.env = env;
+
+    // DB に暗号化済みの API キーを設定
+    const encryptedKey = encrypt("db-api-key");
+    (appSettingRepo.findByKey as ReturnType<typeof vi.fn>).mockResolvedValue({
+      key: "CLAUDE_API_KEY",
+      value: encryptedKey,
+      updatedAt: new Date(),
+    });
+
+    fetchMock.mockResolvedValue({
+      ok: true,
+      text: () => Promise.resolve("<html><body>test</body></html>"),
+    });
+
+    const mockGenerate = vi.fn().mockResolvedValue([]);
+    await runPlanningBatch({
+      channelRepo,
+      messageRepo,
+      appSettingRepo,
+      generateProposals: mockGenerate,
+    });
+
+    // DB からキーが取得され generateProposals が呼ばれた（スキップされていない）
+    expect(mockGenerate).toHaveBeenCalledWith(expect.any(Object), "db-api-key");
   });
 });

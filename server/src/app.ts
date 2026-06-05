@@ -41,6 +41,7 @@ import { createAuthRouter } from "./routes/auth.js";
 import { createChannelsRouter } from "./routes/channels.js";
 import { createEmployeesRouter } from "./routes/employees.js";
 import { healthRouter } from "./routes/health.js";
+import { createInvitationsRouter } from "./routes/invitations.js";
 import { createMessagesRouter } from "./routes/messages.js";
 import { createPlanningIssuesRouter } from "./routes/planning-issues.js";
 
@@ -154,6 +155,7 @@ export function createApp(deps: AppDeps): Express {
   app.use("/employees", createEmployeesRouter(employeeRepository));
   app.use("/admin/batch-logs", createBatchLogsRouter(batchRunLogRepository));
   app.use("/admin", createAdminRouter(appSettingRepository, invitationLinkRepository));
+  app.use("/invitations", createInvitationsRouter(invitationLinkRepository, userRepository));
   app.use("/channels", createPlanningIssuesRouter(deps.messageRepository));
   app.use(errorHandler);
   return app;

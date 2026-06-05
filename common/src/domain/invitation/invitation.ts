@@ -12,6 +12,24 @@ export const CreateInvitationSchema = z.object({
 });
 export type CreateInvitation = z.infer<typeof CreateInvitationSchema>;
 
+/** 招待受諾リクエスト（#132）。新規ユーザーが招待リンクから登録する際のボディ。 */
+export const AcceptInvitationSchema = z.object({
+  /** 新規ユーザーのログイン ID。 */
+  id: z.string().min(1).max(50),
+  /** 表示名。 */
+  displayName: z.string().min(1).max(100),
+  /** パスワード（8 文字以上・100 文字以内）。bcrypt ハッシュ化して保存する。 */
+  password: z.string().min(8).max(100),
+});
+export type AcceptInvitation = z.infer<typeof AcceptInvitationSchema>;
+
+/** 招待トークン検証レスポンス（公開 API）。機微情報を出さない（#132）。 */
+export const InvitationPublicSchema = z.object({
+  status: InvitationStatusSchema,
+  expiresAt: z.coerce.date(),
+});
+export type InvitationPublic = z.infer<typeof InvitationPublicSchema>;
+
 /** 招待リンクのレスポンス（一覧/詳細）。内部情報は出さない。 */
 export const InvitationSchema = z.object({
   id: z.string(),

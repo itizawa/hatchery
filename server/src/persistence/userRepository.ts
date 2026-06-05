@@ -13,10 +13,20 @@ export interface User {
   avatarUrl: string | null;
 }
 
+/** id 重複時にスローされるドメインエラー（#132）。 */
+export class UserIdAlreadyExistsError extends Error {
+  constructor(id: string) {
+    super(`User id already exists: ${id}`);
+    this.name = "UserIdAlreadyExistsError";
+  }
+}
+
 export interface UserRepository {
   findById(id: string): Promise<User | null>;
   /** #51: displayName と avatarUrl を更新する。 */
   updateProfile(id: string, data: { displayName: string; avatarUrl?: string }): Promise<User>;
+  /** #132: 新規ユーザーを作成する。id 重複時は UserIdAlreadyExistsError をスロー。 */
+  create(input: { id: string; displayName: string; passwordHash: string }): Promise<User>;
 }
 
 /** インメモリ実装（テスト用）。 */
@@ -37,6 +47,22 @@ export class InMemoryUserRepository implements UserRepository {
     user.displayName = data.displayName;
     user.avatarUrl = data.avatarUrl ?? user.avatarUrl;
     return user;
+  }
+
+  async create(input: { id: string; displayName: string; passwordHash: string }): Promise<User> {
+    if (this.users.some((u) => u.id === input.id)) {
+      throw new UserIdAlreadyExistsError(input.id);
+    }
+    const user: User = {
+      id: input.id,
+      displayName: input.displayName,
+      passwordHash: input.passwordHash,
+      role: "member",
+      employeeId: null,
+      avatarUrl: null,
+    };
+    this.users.push(user);
+    return { ...user };
   }
 
   /**

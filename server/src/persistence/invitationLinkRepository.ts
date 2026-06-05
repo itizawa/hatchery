@@ -40,6 +40,12 @@ export interface InvitationLinkRepository {
   findByToken(token: string): Promise<InvitationLinkRecord | null>;
   /** 招待リンクを手動失効させる（revokedAt をセット）。 */
   revoke(id: string): Promise<InvitationLinkRecord | null>;
+  /**
+   * 招待リンクを使用済みにする（#132）。
+   * 条件付き更新: usedAt IS NULL かつ revokedAt IS NULL かつ expiresAt > now のときのみ。
+   * 条件を満たさない場合は null を返す（競合・使用済み・失効・期限切れ）。
+   */
+  markUsed(id: string, usedByUserId: string): Promise<InvitationLinkRecord | null>;
 }
 
 /** ステータス付きレスポンスに変換する純粋関数。 */
@@ -102,6 +108,18 @@ export class InMemoryInvitationLinkRepository implements InvitationLinkRepositor
     const record = this.records.find((r) => r.id === id);
     if (!record) return null;
     record.revokedAt = new Date();
+    return { ...record };
+  }
+
+  async markUsed(id: string, usedByUserId: string): Promise<InvitationLinkRecord | null> {
+    const now = new Date();
+    const record = this.records.find((r) => r.id === id);
+    if (!record) return null;
+    if (record.usedAt !== null || record.revokedAt !== null || record.expiresAt <= now) {
+      return null;
+    }
+    record.usedAt = now;
+    record.usedByUserId = usedByUserId;
     return { ...record };
   }
 }

@@ -55,6 +55,22 @@ export class PrismaInvitationLinkRepository implements InvitationLinkRepository 
     }
   }
 
+  async markUsed(id: string, usedByUserId: string): Promise<InvitationLinkRecord | null> {
+    const now = new Date();
+    const result = await this.prisma.invitationLink.updateMany({
+      where: {
+        id,
+        usedAt: null,
+        revokedAt: null,
+        expiresAt: { gt: now },
+      },
+      data: { usedAt: now, usedByUserId },
+    });
+    if (result.count === 0) return null;
+    const record = await this.prisma.invitationLink.findUnique({ where: { id } });
+    return record ? this.toRecord(record) : null;
+  }
+
   private toRecord(r: {
     id: string;
     token: string;

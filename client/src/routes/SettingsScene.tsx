@@ -1,14 +1,8 @@
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import Chip from "@mui/material/Chip";
 import Snackbar from "@mui/material/Snackbar";
 import Tab from "@mui/material/Tab";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import TableCell from "@mui/material/TableCell";
-import TableHead from "@mui/material/TableHead";
-import TableRow from "@mui/material/TableRow";
 import Tabs from "@mui/material/Tabs";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
@@ -16,7 +10,7 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 import { type SyntheticEvent, useState, type ReactElement, type ReactNode } from "react";
 
 import { useAdminSettings, useSaveAdminSetting } from "../api/admin.js";
-import { useBatchLogs, useRefreshBatchLogs } from "../api/batchLogs.js";
+import { BatchLogTab } from "../components/BatchLogTab.js";
 import { EmployeeTable } from "../components/EmployeeTable";
 import { type SettingsTabValue } from "./settingsTabValues.js";
 
@@ -89,61 +83,6 @@ const ApiTokenSettings = (): ReactElement => {
   );
 };
 
-/** バッチログタブのコンテンツ（#75）。 */
-const BatchLogs = (): ReactElement => {
-  const { data: logs = [] } = useBatchLogs();
-  const refresh = useRefreshBatchLogs();
-
-  return (
-    <Box>
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
-        <Typography variant="body2" color="text.secondary">
-          直近 50 件のバッチ実行ログを表示します。
-        </Typography>
-        <Button size="small" onClick={refresh} variant="outlined">
-          更新
-        </Button>
-      </Box>
-      {logs.length === 0 ? (
-        <Typography variant="body2" color="text.secondary">
-          ログがありません。
-        </Typography>
-      ) : (
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell>実行日時</TableCell>
-              <TableCell>ステータス</TableCell>
-              <TableCell>メッセージ数</TableCell>
-              <TableCell>エラー内容</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {logs.map((log) => (
-              <TableRow key={log.id}>
-                <TableCell>{new Date(log.executedAt).toLocaleString("ja-JP")}</TableCell>
-                <TableCell>
-                  <Chip
-                    label={log.status === "success" ? "成功" : "失敗"}
-                    color={log.status === "success" ? "success" : "error"}
-                    size="small"
-                  />
-                </TableCell>
-                <TableCell>
-                  {log.status === "success" ? log.messageCount : "-"}
-                </TableCell>
-                <TableCell sx={{ color: log.status === "failure" ? "error.main" : "inherit" }}>
-                  {log.errorMessage ?? "-"}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
-    </Box>
-  );
-};
-
 /** 管理画面のタブ定義。配列駆動にして将来のタブ追加（会社設定・定時設定など）を妨げない。 */
 interface SettingsTab {
   label: string;
@@ -154,7 +93,7 @@ interface SettingsTab {
 const SETTINGS_TABS: readonly [SettingsTab, ...SettingsTab[]] = [
   { label: "ユーザー一覧", value: "users", content: <EmployeeTable /> },
   { label: "API トークン設定", value: "api-token", content: <ApiTokenSettings /> },
-  { label: "バッチログ", value: "batch-logs", content: <BatchLogs /> },
+  { label: "バッチログ", value: "batch-logs", content: <BatchLogTab /> },
 ];
 
 /** 管理画面（/admin）。タブ UI を持ち、ユーザー一覧タブに AI 社員をテーブル表示する（#25）。 */

@@ -15,40 +15,31 @@ export const stubMessageGenerator: MessageGenerator = () => [
 /** 定時バッチの依存。永続化と生成器を注入する。 */
 export interface RunMessageBatchDeps {
   messageRepository: MessageRepository;
-  /** バッチ実行ログの永続化（省略時はログ保存しない）。 */
-  batchRunLogRepository?: BatchRunLogRepository;
   generate?: MessageGenerator;
+  batchRunLogRepository?: BatchRunLogRepository;
 }
 
 /**
  * 定時バッチ本体。複数 message を生成して channel 紐づきで永続化し、保存結果を返す。
  * Express を一切 import しない＝API プロセスと独立に起動できる（ADR-0004 / ADR-0009）。
- * 成功・失敗は batchRunLogRepository に記録する（注入されている場合のみ）。
+ * バッチ実行結果（成功・失敗）を batchRunLogRepository に記録する（#75）。
  */
 export async function runMessageBatch(deps: RunMessageBatchDeps): Promise<MessageRecord[]> {
   const generate = deps.generate ?? stubMessageGenerator;
+  const { batchRunLogRepository } = deps;
+
   try {
     const records = await deps.messageRepository.createMany(generate());
-    await deps.batchRunLogRepository?.create({
-      status: "success",
-      messageCount: records.length,
-      errorMessage: null,
-      errorCode: null,
-    });
+    await batchRunLogRepository?.create({ status: "success", messageCount: records.length });
     return records;
   } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : String(err);
-    const errorCode = (err as { code?: string }).code ?? null;
-    try {
-      await deps.batchRunLogRepository?.create({
-        status: "failure",
-        messageCount: 0,
-        errorMessage,
-        errorCode,
-      });
-    } catch {
-      // ログ保存失敗は元のエラーを隠さない
-    }
+    const message = err instanceof Error ? err.message : String(err);
+    const code = err instanceof Error && "code" in err ? String((err as { code: unknown }).code) : undefined;
+    await batchRunLogRepository?.create({
+      status: "failure",
+      errorMessage: message,
+      errorCode: code,
+    });
     throw err;
   }
 }

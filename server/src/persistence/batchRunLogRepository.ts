@@ -1,35 +1,39 @@
-import type { BatchRunLog } from "@hatchery/common";
+import type { BatchRunLogRecord } from "@hatchery/common";
 
-/** BatchRunLog の永続化インターフェース。 */
+export interface BatchRunLogInput {
+  status: "success" | "failure";
+  messageCount?: number;
+  errorMessage?: string;
+  errorCode?: string;
+}
+
 export interface BatchRunLogRepository {
-  /** ログエントリを保存する（id / executedAt はリポジトリが付与）。 */
-  create(entry: Omit<BatchRunLog, "id" | "executedAt">): Promise<BatchRunLog>;
-  /** executedAt 降順で最大 limit 件取得する。同一時刻は挿入順（新しい順）。 */
-  findRecent(limit: number): Promise<BatchRunLog[]>;
+  create(input: BatchRunLogInput): Promise<BatchRunLogRecord>;
+  listRecent(limit: number): Promise<BatchRunLogRecord[]>;
 }
 
 export class InMemoryBatchRunLogRepository implements BatchRunLogRepository {
-  private readonly logs: BatchRunLog[] = [];
-  private _seq = 0;
+  private readonly records: BatchRunLogRecord[] = [];
+  private seq = 0;
 
-  async create(entry: Omit<BatchRunLog, "id" | "executedAt">): Promise<BatchRunLog> {
-    const log: BatchRunLog = {
-      id: `log-${++this._seq}`,
+  async create(input: BatchRunLogInput): Promise<BatchRunLogRecord> {
+    this.seq += 1;
+    const record: BatchRunLogRecord = {
+      id: `mem-log-${this.seq}`,
       executedAt: new Date(),
-      ...entry,
+      status: input.status,
+      messageCount: input.messageCount ?? null,
+      errorMessage: input.errorMessage ?? null,
+      errorCode: input.errorCode ?? null,
     };
-    this.logs.push(log);
-    return { ...log };
+    this.records.push(record);
+    return { ...record };
   }
 
-  async findRecent(limit: number): Promise<BatchRunLog[]> {
-    return [...this.logs]
-      .map((log, index) => ({ log, index }))
-      .sort((a, b) => {
-        const diff = b.log.executedAt.getTime() - a.log.executedAt.getTime();
-        return diff !== 0 ? diff : b.index - a.index;
-      })
+  async listRecent(limit: number): Promise<BatchRunLogRecord[]> {
+    return [...this.records]
+      .reverse()
       .slice(0, limit)
-      .map(({ log }) => ({ ...log }));
+      .map((r) => ({ ...r }));
   }
 }

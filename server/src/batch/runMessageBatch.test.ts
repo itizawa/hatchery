@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { InMemoryMessageRepository } from "../persistence/messageRepository.js";
 import { InMemoryBatchRunLogRepository } from "../persistence/batchRunLogRepository.js";
+import { InMemoryMessageRepository } from "../persistence/messageRepository.js";
 
 import { runMessageBatch, stubMessageGenerator } from "./runMessageBatch.js";
 
@@ -36,41 +36,49 @@ describe("runMessageBatch — Express 非依存の定時バッチ", () => {
       expect(typeof m.text).toBe("string");
     });
   });
+});
 
-  it("成功時に BatchRunLogRepository に success ログを保存する", async () => {
+describe("runMessageBatch — BatchRunLogRepository 連携", () => {
+  it("成功時に status=success・messageCount のログを保存する", async () => {
     const messageRepo = new InMemoryMessageRepository();
     const logRepo = new InMemoryBatchRunLogRepository();
     const records = await runMessageBatch({
       messageRepository: messageRepo,
       batchRunLogRepository: logRepo,
+      generate: () => [
+        { speaker: "e1", channel: "zatsudan", text: "hello" },
+        { speaker: "e2", channel: "zatsudan", text: "world" },
+      ],
     });
-    const logs = await logRepo.findRecent(10);
+    const logs = await logRepo.listRecent(10);
     expect(logs).toHaveLength(1);
-    expect(logs[0]?.status).toBe("success");
-    expect(logs[0]?.messageCount).toBe(records.length);
-    expect(logs[0]?.errorMessage).toBeNull();
-    expect(logs[0]?.errorCode).toBeNull();
+    expect(logs[0]!.status).toBe("success");
+    expect(logs[0]!.messageCount).toBe(records.length);
+    expect(logs[0]!.errorMessage).toBeNull();
   });
 
-  it("失敗時に BatchRunLogRepository に failure ログを保存しエラーを再スローする", async () => {
+  it("失敗時に status=failure・errorMessage のログを保存し、エラーを再スローする", async () => {
     const messageRepo = new InMemoryMessageRepository();
     const logRepo = new InMemoryBatchRunLogRepository();
-    const error = new Error("generate failed");
+
     await expect(
       runMessageBatch({
         messageRepository: messageRepo,
         batchRunLogRepository: logRepo,
-        generate: () => { throw error; },
-      })
-    ).rejects.toThrow("generate failed");
-    const logs = await logRepo.findRecent(10);
+        generate: () => {
+          throw new Error("LLM timeout");
+        },
+      }),
+    ).rejects.toThrow("LLM timeout");
+
+    const logs = await logRepo.listRecent(10);
     expect(logs).toHaveLength(1);
-    expect(logs[0]?.status).toBe("failure");
-    expect(logs[0]?.messageCount).toBe(0);
-    expect(logs[0]?.errorMessage).toBe("generate failed");
+    expect(logs[0]!.status).toBe("failure");
+    expect(logs[0]!.errorMessage).toBe("LLM timeout");
+    expect(logs[0]!.messageCount).toBeNull();
   });
 
-  it("batchRunLogRepository 未注入時はログ保存せず既存動作のまま", async () => {
+  it("batchRunLogRepository が省略された場合もエラーなく動作する", async () => {
     const messageRepo = new InMemoryMessageRepository();
     const records = await runMessageBatch({ messageRepository: messageRepo });
     expect(records.length).toBeGreaterThan(0);

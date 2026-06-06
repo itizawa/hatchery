@@ -1,42 +1,47 @@
-import type { BatchRunLog } from "@hatchery/common";
+import type { BatchRunLogRecord } from "@hatchery/common";
 import type { PrismaClient } from "@prisma/client";
 
-import type { BatchRunLogRepository } from "./batchRunLogRepository.js";
+import type { BatchRunLogInput, BatchRunLogRepository } from "./batchRunLogRepository.js";
 
+function toRecord(row: {
+  id: string;
+  executedAt: Date;
+  status: string;
+  messageCount: number | null;
+  errorMessage: string | null;
+  errorCode: string | null;
+}): BatchRunLogRecord {
+  return {
+    id: row.id,
+    executedAt: row.executedAt,
+    status: row.status as "success" | "failure",
+    messageCount: row.messageCount,
+    errorMessage: row.errorMessage,
+    errorCode: row.errorCode,
+  };
+}
+
+/** BatchRunLogRepository の Prisma / PostgreSQL 実装（#75）。 */
 export class PrismaBatchRunLogRepository implements BatchRunLogRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  async create(entry: Omit<BatchRunLog, "id" | "executedAt">): Promise<BatchRunLog> {
-    const record = await this.prisma.batchRunLog.create({
+  async create(input: BatchRunLogInput): Promise<BatchRunLogRecord> {
+    const row = await this.prisma.batchRunLog.create({
       data: {
-        status: entry.status,
-        messageCount: entry.messageCount,
-        errorMessage: entry.errorMessage,
-        errorCode: entry.errorCode,
+        status: input.status,
+        messageCount: input.messageCount ?? null,
+        errorMessage: input.errorMessage ?? null,
+        errorCode: input.errorCode ?? null,
       },
     });
-    return {
-      id: record.id,
-      executedAt: record.executedAt,
-      status: record.status,
-      messageCount: record.messageCount,
-      errorMessage: record.errorMessage,
-      errorCode: record.errorCode,
-    };
+    return toRecord(row);
   }
 
-  async findRecent(limit: number): Promise<BatchRunLog[]> {
-    const records = await this.prisma.batchRunLog.findMany({
+  async listRecent(limit: number): Promise<BatchRunLogRecord[]> {
+    const rows = await this.prisma.batchRunLog.findMany({
       orderBy: { executedAt: "desc" },
       take: limit,
     });
-    return records.map((r) => ({
-      id: r.id,
-      executedAt: r.executedAt,
-      status: r.status,
-      messageCount: r.messageCount,
-      errorMessage: r.errorMessage,
-      errorCode: r.errorCode,
-    }));
+    return rows.map(toRecord);
   }
 }

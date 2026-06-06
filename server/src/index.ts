@@ -28,3 +28,9 @@ export {
   type RunMessageBatchDeps,
   type MessageGenerator,
 } from "./batch/runMessageBatch.js";
+export {
+  InMemoryBatchRunLogRepository,
+  type BatchRunLogRepository,
+  type BatchRunLogInput,
+} from "./persistence/batchRunLogRepository.js";
+export { PrismaBatchRunLogRepository } from "./persistence/prismaBatchRunLogRepository.js";

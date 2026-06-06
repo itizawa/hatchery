@@ -12,8 +12,12 @@ export type { AppSettingResponse };
  * 生の相対 fetch はクロスオリジン配信（#78）で baseUrl が前置されず壊れるため openApiClient に統一。
  */
 export async function fetchSettings(): Promise<AppSettingResponse[]> {
-  const { data, error } = await openApiClient.GET("/admin/settings", { credentials: "include" });
-  if (error) throw new Error(`GET /admin/settings failed: ${JSON.stringify(error)}`);
+  const { data, error, response } = await openApiClient.GET("/admin/settings", {
+    credentials: "include",
+  });
+  // openapi-fetch は非2xx + 空ボディ（Content-Length: 0）で error=undefined を返すため、
+  // error だけでなく response.ok も見て元コード（!res.ok throw）の確実性を保つ。
+  if (error || !response.ok) throw new Error(`GET /admin/settings failed: ${response.status}`);
   return data ?? [];
 }
 

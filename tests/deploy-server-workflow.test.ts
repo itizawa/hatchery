@@ -111,3 +111,34 @@ describe("Dockerfile の存在 (受け入れ条件 #6)", () => {
     expect(content).toMatch(/FROM node:26/);
   });
 });
+
+describe("Prisma マイグレーション (受け入れ条件 #1-#3)", () => {
+  it("マイグレーション実行ステップが存在する", () => {
+    const steps = allSteps(loadWorkflow());
+    const migrateStep = steps.find((s) =>
+      /db:migrate|prisma migrate deploy/.test(s.run ?? ""),
+    );
+    expect(migrateStep, "prisma migrate deploy ステップが存在する").toBeDefined();
+  });
+
+  it("マイグレーションステップが gcloud run deploy より前に位置する", () => {
+    const steps = allSteps(loadWorkflow());
+    const migrateIndex = steps.findIndex((s) =>
+      /db:migrate|prisma migrate deploy/.test(s.run ?? ""),
+    );
+    const deployIndex = steps.findIndex((s) => /gcloud run deploy/.test(s.run ?? ""));
+    expect(migrateIndex, "マイグレーションステップが存在する").toBeGreaterThanOrEqual(0);
+    expect(deployIndex, "Cloud Run デプロイステップが存在する").toBeGreaterThanOrEqual(0);
+    expect(migrateIndex, "マイグレーションはデプロイより前").toBeLessThan(deployIndex);
+  });
+
+  it("DATABASE_URL を secrets 経由で参照する", () => {
+    const steps = allSteps(loadWorkflow());
+    const migrateStep = steps.find((s) =>
+      /db:migrate|prisma migrate deploy/.test(s.run ?? ""),
+    );
+    expect(migrateStep, "マイグレーションステップが存在する").toBeDefined();
+    const envValue = (migrateStep?.env?.DATABASE_URL as string) ?? "";
+    expect(envValue, "DATABASE_URL は secrets 経由").toContain("secrets.DATABASE_URL");
+  });
+});

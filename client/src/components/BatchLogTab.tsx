@@ -36,7 +36,7 @@ export const BatchLogTab = (): ReactElement => {
   return (
     <Box>
       <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 1 }}>
-        <Button size="small" variant="outlined" onClick={refetch}>
+        <Button size="small" variant="outlined" onClick={() => { void refetch(); }}>
           更新
         </Button>
       </Box>

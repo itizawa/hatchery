@@ -1,4 +1,4 @@
-import type { BatchRunLogRecord } from "@hatchery/common";
+import { BatchRunLogStatusSchema, type BatchRunLogRecord } from "@hatchery/common";
 import type { PrismaClient } from "@prisma/client";
 
 import type { BatchRunLogInput, BatchRunLogRepository } from "./batchRunLogRepository.js";
@@ -14,7 +14,7 @@ function toRecord(row: {
   return {
     id: row.id,
     executedAt: row.executedAt,
-    status: row.status as "success" | "failure",
+    status: BatchRunLogStatusSchema.parse(row.status),
     messageCount: row.messageCount,
     errorMessage: row.errorMessage,
     errorCode: row.errorCode,

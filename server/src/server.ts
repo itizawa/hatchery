@@ -1,13 +1,12 @@
 import { createApp } from "./app.js";
 import { loadEnv } from "./config/env.js";
-import { PrismaAppSettingRepository } from "./persistence/prismaAppSettingRepository.js";
 import { PrismaChannelMembershipRepository } from "./persistence/prismaChannelMembershipRepository.js";
 import { PrismaChannelRepository } from "./persistence/prismaChannelRepository.js";
 import { prisma } from "./persistence/prismaClient.js";
+import { PrismaBatchRunLogRepository } from "./persistence/prismaBatchRunLogRepository.js";
 import { PrismaEmployeeRepository } from "./persistence/prismaEmployeeRepository.js";
 import { PrismaMessageRepository } from "./persistence/prismaMessageRepository.js";
 import { PrismaUserRepository } from "./persistence/prismaUserRepository.js";
-import { PrismaInvitationLinkRepository } from "./persistence/prismaInvitationLinkRepository.js";
 
 /** API プロセスの起動エントリ。createApp に Prisma 実装を注入して listen する。 */
 const env = loadEnv();
@@ -17,8 +16,7 @@ const app = createApp({
   channelMembershipRepository: new PrismaChannelMembershipRepository(prisma),
   channelRepository: new PrismaChannelRepository(prisma),
   employeeRepository: new PrismaEmployeeRepository(prisma),
-  appSettingRepository: new PrismaAppSettingRepository(prisma),
-  invitationLinkRepository: new PrismaInvitationLinkRepository(prisma),
+  batchRunLogRepository: new PrismaBatchRunLogRepository(prisma),
   security: {
     rateLimitWindowMs: env.rateLimitWindowMs,
     rateLimitMax: env.rateLimitMax,
@@ -27,9 +25,6 @@ const app = createApp({
     corsAllowedOrigins: env.corsAllowedOrigins,
     // HSTS は HTTPS 前提のため本番でのみ有効化する（session cookie の secure と同じ判定）。
     enableHsts: process.env.NODE_ENV === "production",
-    // フロント（Cloudflare Pages）と API（Cloud Run）が別ドメインの本番/dev では、
-    // セッション cookie を SameSite=None + Secure にしないとログインが維持できない（#78）。
-    crossSiteCookie: process.env.NODE_ENV === "production",
   },
 });
 

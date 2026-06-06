@@ -30,16 +30,24 @@ export async function runMessageBatch(deps: RunMessageBatchDeps): Promise<Messag
 
   try {
     const records = await deps.messageRepository.createMany(generate());
-    await batchRunLogRepository?.create({ status: "success", messageCount: records.length });
+    try {
+      await batchRunLogRepository?.create({ status: "success", messageCount: records.length });
+    } catch {
+      // log-write failure must not mask successful batch execution
+    }
     return records;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     const code = err instanceof Error && "code" in err ? String((err as { code: unknown }).code) : undefined;
-    await batchRunLogRepository?.create({
-      status: "failure",
-      errorMessage: message,
-      errorCode: code,
-    });
+    try {
+      await batchRunLogRepository?.create({
+        status: "failure",
+        errorMessage: message,
+        errorCode: code,
+      });
+    } catch {
+      // log-write failure must not mask the original batch error
+    }
     throw err;
   }
 }

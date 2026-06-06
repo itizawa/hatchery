@@ -5,7 +5,7 @@ export type BatchRunLogStatus = z.infer<typeof BatchRunLogStatusSchema>;
 
 export const BatchRunLogRecordSchema = z.object({
   id: z.string().min(1),
-  executedAt: z.date(),
+  executedAt: z.coerce.date(),
   status: BatchRunLogStatusSchema,
   messageCount: z.number().int().nonnegative().nullable(),
   errorMessage: z.string().nullable(),

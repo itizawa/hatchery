@@ -3,12 +3,17 @@ import { useParams } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 
 import { useAuth } from "../api/auth.js";
-import { useChannelMessages, usePostChannelMessage } from "../api/channels.js";
+import { useChannelMessages, useChannels, usePostChannelMessage } from "../api/channels.js";
 import { ChannelView } from "../components/ChannelView.js";
 import { MessageInput } from "../components/MessageInput.js";
 
-/** channelId から既定チャンネルを解決する。未知 ID は `#${id}` ラベルでフォールバックする。 */
-const resolveChannel = (channelId: string): Channel =>
+/**
+ * channelId から Channel を解決する。API のチャンネル一覧（GET /channels）を単一情報源とし
+ * （ADR-0006・サイドバーと同源）、見つからなければ common の既定チャンネル、
+ * それも無ければ `#${id}` ラベルでフォールバックする。
+ */
+const resolveChannel = (channels: readonly Channel[], channelId: string): Channel =>
+  channels.find((c) => c.id === channelId) ??
   findChannelById(channelId) ?? { id: channelId, label: `#${channelId}`, type: "zatsudan" };
 
 /**
@@ -19,7 +24,8 @@ const resolveChannel = (channelId: string): Channel =>
 export const ChannelScene = (): ReactElement => {
   const { channelId } = useParams({ strict: false });
   const id = channelId ?? "";
-  const channel = resolveChannel(id);
+  const { data: channels } = useChannels();
+  const channel = resolveChannel(channels, id);
 
   const { data: messages } = useChannelMessages(id);
   const { data: authUser } = useAuth();

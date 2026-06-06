@@ -50,4 +50,23 @@ describe("InMemoryEmployeeRepository (#38)", () => {
       expect(e?.personality).toBe("慎重派");
     });
   });
+
+  describe("listByIds (#53)", () => {
+    it("指定 id の Employee を入力順で返す", async () => {
+      const repo = new InMemoryEmployeeRepository(seed);
+      const list = await repo.listByIds(["ken", "haru"]);
+      expect(list.map((e) => e.id)).toEqual(["ken", "haru"]);
+    });
+
+    it("存在しない id は除外する", async () => {
+      const repo = new InMemoryEmployeeRepository(seed);
+      const list = await repo.listByIds(["haru", "unknown"]);
+      expect(list.map((e) => e.id)).toEqual(["haru"]);
+    });
+
+    it("空配列なら空配列を返す", async () => {
+      const repo = new InMemoryEmployeeRepository(seed);
+      expect(await repo.listByIds([])).toEqual([]);
+    });
+  });
 });

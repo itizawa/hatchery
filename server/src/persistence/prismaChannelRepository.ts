@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import type { Channel, CreateChannelInput, UpdateChannelInput } from "@hatchery/common";
 import { Prisma, type PrismaClient } from "@prisma/client";
 
-import type { ChannelRepository } from "./channelRepository.js";
+import type { ChannelRepository, ChannelSummary } from "./channelRepository.js";
 
 /** ChannelRepository の Prisma / PostgreSQL 実装（一覧・作成・更新 / #37 / #47 / #54）。 */
 export class PrismaChannelRepository implements ChannelRepository {
@@ -51,5 +51,20 @@ export class PrismaChannelRepository implements ChannelRepository {
       select: { id: true, label: true, type: true },
     });
     return row ? { id: row.id, label: row.label, type: row.type } : null;
+  }
+
+  async getSummary(channelId: string): Promise<ChannelSummary | null> {
+    const row = await this.prisma.channel.findUnique({
+      where: { id: channelId },
+      select: { summary: true, summaryUpdatedAt: true },
+    });
+    return row ? { summary: row.summary, summaryUpdatedAt: row.summaryUpdatedAt } : null;
+  }
+
+  async updateSummary(channelId: string, summary: string): Promise<void> {
+    await this.prisma.channel.update({
+      where: { id: channelId },
+      data: { summary, summaryUpdatedAt: new Date() },
+    });
   }
 }

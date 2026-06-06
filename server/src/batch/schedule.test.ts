@@ -5,10 +5,44 @@ import { InMemoryMessageRepository } from "../persistence/messageRepository.js";
 import { runMessageBatch } from "./runMessageBatch.js";
 import {
   DEFAULT_BATCH_HOURS,
+  MAX_BATCH_RUNS_PER_DAY,
   msUntilNext,
+  resolveBatchHours,
   startMessageBatchScheduler,
   type SchedulerPort,
 } from "./schedule.js";
+
+describe("resolveBatchHours — BATCH_SCHEDULE の解決（#53・1日4回まで）", () => {
+  it("未設定なら DEFAULT_BATCH_HOURS を返す", () => {
+    expect(resolveBatchHours(undefined)).toEqual([...DEFAULT_BATCH_HOURS]);
+  });
+
+  it("空文字なら DEFAULT_BATCH_HOURS を返す", () => {
+    expect(resolveBatchHours("")).toEqual([...DEFAULT_BATCH_HOURS]);
+  });
+
+  it("カンマ区切りの時をパースする", () => {
+    expect(resolveBatchHours("8,13,20")).toEqual([8, 13, 20]);
+  });
+
+  it("最大 4 件（MAX_BATCH_RUNS_PER_DAY）に制限する", () => {
+    expect(resolveBatchHours("1,2,3,4,5,6")).toEqual([1, 2, 3, 4]);
+    expect(MAX_BATCH_RUNS_PER_DAY).toBe(4);
+  });
+
+  it("0-23 範囲外・非数値を除外する", () => {
+    expect(resolveBatchHours("9, 25, foo, 12")).toEqual([9, 12]);
+  });
+
+  it("空セグメント（二重カンマ・末尾カンマ）は 0 にせず除外する", () => {
+    expect(resolveBatchHours("9,,12")).toEqual([9, 12]);
+    expect(resolveBatchHours("9,12,")).toEqual([9, 12]);
+  });
+
+  it("有効な時が無ければ DEFAULT_BATCH_HOURS にフォールバックする", () => {
+    expect(resolveBatchHours("99,abc")).toEqual([...DEFAULT_BATCH_HOURS]);
+  });
+});
 
 describe("msUntilNext — 次の発火までの待ち時間（#32, ローカル時刻基準）", () => {
   it("当日のまだ来ていない時刻なら当日までの正の ms を返す", () => {

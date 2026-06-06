@@ -5,8 +5,31 @@
  * 外部スケジューラ依存（node-schedule 等）を持たず、setTimeout ベースの SystemScheduler を既定とする。
  */
 
-/** MVP の既定の定時（ローカル時刻の時）。1 日 4 回（#53 で cron 頻度を再調整する前提）。 */
+/** MVP の既定の定時（ローカル時刻の時）。1 日 4 回。 */
 export const DEFAULT_BATCH_HOURS = [9, 12, 15, 18] as const;
+
+/** 定時バッチの 1 日あたり最大実行回数（#53）。これを超える設定は切り捨てる。 */
+export const MAX_BATCH_RUNS_PER_DAY = 4;
+
+/**
+ * 環境変数 BATCH_SCHEDULE（カンマ区切りの時。例 "9,12,15,18"）から定時の時配列を解決する（#53）。
+ * - 0–23 の整数のみ採用し、それ以外（範囲外・非数値）は除外する。
+ * - 有効な時を最大 MAX_BATCH_RUNS_PER_DAY（=4）件に制限する（1 日 4 回まで）。
+ * - 未設定・空・有効な時が 1 件も無い場合は DEFAULT_BATCH_HOURS にフォールバックする。
+ * 実運用ではこの値を外部 cron（Cloud Run / GitHub Actions）の起動時刻に反映させる想定。
+ */
+export function resolveBatchHours(envValue?: string): number[] {
+  if (!envValue) return [...DEFAULT_BATCH_HOURS];
+  const parsed = envValue
+    .split(",")
+    .map((part) => part.trim())
+    // 空セグメント（"9,,12" や "9,12," 等のタイポ）は除外する。Number("") は 0 になり 0:00 を誤って混入させるため。
+    .filter((part) => part !== "")
+    .map((part) => Number(part))
+    .filter((n) => Number.isInteger(n) && n >= 0 && n <= 23);
+  if (parsed.length === 0) return [...DEFAULT_BATCH_HOURS];
+  return parsed.slice(0, MAX_BATCH_RUNS_PER_DAY);
+}
 
 /**
  * now（ローカル時刻基準）から、次に hour:minute が訪れるまでの ms を返す。

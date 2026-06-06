@@ -44,4 +44,52 @@ describe("InMemoryMessageRepository", () => {
     });
     expect(await repo.list()).toHaveLength(0);
   });
+
+  describe("listRecentByChannel (#53)", () => {
+    it("指定チャンネルの直近 limit 件を新しい順（order 降順）で返す", async () => {
+      const repo = new InMemoryMessageRepository();
+      await repo.createMany([
+        { speaker: "a", channel: "zatsudan", text: "1" },
+        { speaker: "a", channel: "zatsudan", text: "2" },
+        { speaker: "a", channel: "zatsudan", text: "3" },
+        { speaker: "a", channel: "shigoto", text: "x" },
+      ]);
+      const recent = await repo.listRecentByChannel("zatsudan", 2);
+      expect(recent.map((m) => m.text)).toEqual(["3", "2"]);
+    });
+
+    it("limit が件数より大きければ全件を返す", async () => {
+      const repo = new InMemoryMessageRepository();
+      await repo.createMany([
+        { speaker: "a", channel: "zatsudan", text: "1" },
+        { speaker: "a", channel: "zatsudan", text: "2" },
+      ]);
+      expect(await repo.listRecentByChannel("zatsudan", 30)).toHaveLength(2);
+    });
+
+    it("該当チャンネルが無ければ空配列を返す", async () => {
+      const repo = new InMemoryMessageRepository();
+      expect(await repo.listRecentByChannel("none", 30)).toEqual([]);
+    });
+  });
+
+  describe("listByChannelSince (#53)", () => {
+    it("since 以降（createdAt >= since）のメッセージのみ返す", async () => {
+      const repo = new InMemoryMessageRepository();
+      // InMemory の createMany は createdAt を epoch(0) で採番する。
+      await repo.createMany([{ speaker: "a", channel: "zatsudan", text: "1" }]);
+      expect(await repo.listByChannelSince("zatsudan", new Date(0))).toHaveLength(1);
+      expect(await repo.listByChannelSince("zatsudan", new Date(1))).toHaveLength(0);
+    });
+
+    it("別チャンネルは含めない", async () => {
+      const repo = new InMemoryMessageRepository();
+      await repo.createMany([
+        { speaker: "a", channel: "zatsudan", text: "1" },
+        { speaker: "a", channel: "shigoto", text: "2" },
+      ]);
+      const res = await repo.listByChannelSince("zatsudan", new Date(0));
+      expect(res.map((m) => m.channel)).toEqual(["zatsudan"]);
+    });
+  });
 });

@@ -66,6 +66,23 @@ export class PrismaMessageRepository implements MessageRepository {
     return rows.map(toMessageRecord);
   }
 
+  async listRecentByChannel(channelId: string, limit: number): Promise<MessageRecord[]> {
+    const rows = await this.prisma.message.findMany({
+      where: { channel: channelId },
+      orderBy: [{ createdAt: "desc" }, { order: "desc" }],
+      take: Math.max(0, limit),
+    });
+    return rows.map(toMessageRecord);
+  }
+
+  async listByChannelSince(channelId: string, since: Date): Promise<MessageRecord[]> {
+    const rows = await this.prisma.message.findMany({
+      where: { channel: channelId, createdAt: { gte: since } },
+      orderBy: [{ createdAt: "asc" }, { order: "asc" }],
+    });
+    return rows.map(toMessageRecord);
+  }
+
   async createPlanningMessage(input: PlanningMessageInput): Promise<MessageRecord> {
     const lastInChannel = await this.prisma.message.findFirst({
       where: { channel: input.channel },

@@ -17,3 +17,6 @@ export * from "./errors/index.js";
 export * from "./logic/buildRosterMessages.js";
 export * from "./logic/formatRecentLog.js";
 export * from "./logic/selectAppearingMembers.js";
+export * from "./logic/buildChannelConversationPrompt.js";
+export * from "./logic/parseConversationMessages.js";
+export * from "./logic/summarizeChannel.js";

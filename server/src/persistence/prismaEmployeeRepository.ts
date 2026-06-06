@@ -45,4 +45,21 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
       throw err;
     }
   }
+
+  async listByIds(ids: string[]): Promise<EmployeeRecord[]> {
+    if (ids.length === 0) return [];
+    const rows = await this.prisma.employee.findMany({ where: { id: { in: ids } } });
+    const byId = new Map(rows.map((row) => [row.id, row]));
+    // 入力 id の順序を保って返す（存在しない id は除外）。
+    return ids
+      .map((id) => byId.get(id))
+      .filter((row): row is NonNullable<typeof row> => row != null)
+      .map((row) => ({
+        id: row.id,
+        displayName: row.displayName,
+        role: row.role,
+        isBot: row.isBot,
+        personality: row.personality,
+      }));
+  }
 }

@@ -11,6 +11,8 @@ export interface EmployeeRecord {
 export interface EmployeeRepository {
   findById(id: string): Promise<EmployeeRecord | null>;
   update(id: string, input: UpdateEmployeeInput): Promise<EmployeeRecord | null>;
+  /** 複数 id の Employee をまとめて取得する。存在しない id は除外する（#53・定時バッチの発言者解決）。 */
+  listByIds(ids: string[]): Promise<EmployeeRecord[]>;
 }
 
 export class InMemoryEmployeeRepository implements EmployeeRepository {
@@ -32,5 +34,12 @@ export class InMemoryEmployeeRepository implements EmployeeRepository {
     if (input.role !== undefined) employee.role = input.role;
     if (input.personality !== undefined) employee.personality = input.personality;
     return { ...employee };
+  }
+
+  async listByIds(ids: string[]): Promise<EmployeeRecord[]> {
+    return ids
+      .map((id) => this.employees.find((e) => e.id === id))
+      .filter((e): e is EmployeeRecord => e !== undefined)
+      .map((e) => ({ ...e }));
   }
 }

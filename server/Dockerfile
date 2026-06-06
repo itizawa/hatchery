@@ -1,6 +1,8 @@
 FROM node:26-alpine AS builder
 
-RUN corepack enable
+# node:26-alpine は pnpm 管理ツールを同梱しないため、pnpm を npm でバージョン固定導入する（#162）。
+# バージョンはルート package.json の packageManager と一致させる。
+RUN npm install -g pnpm@10.34.1
 
 WORKDIR /app
 
@@ -26,7 +28,7 @@ RUN pnpm --filter @hatchery/server build
 # --- 本番ステージ ---
 FROM node:26-alpine
 
-RUN corepack enable && \
+RUN npm install -g pnpm@10.34.1 && \
     addgroup -S app && adduser -S app -G app
 
 WORKDIR /app

@@ -27,15 +27,17 @@ describe("server/Dockerfile の pnpm 取得 (Issue #162)", () => {
     expect(offending, `corepack を含む行が残っている: ${offending.join(" / ")}`).toHaveLength(0);
   });
 
-  it("pnpm をバージョン固定で両ステージにグローバル導入する (受け入れ条件 #2)", () => {
+  it("pnpm をバージョン固定でグローバル導入する (受け入れ条件 #2)", () => {
+    // 本番ステージは builder 成果物を丸ごと再利用し pnpm を入れない場合があるため、
+    // 「pnpm を実行するステージ（= builder）で 1 回以上」固定導入されていれば良い（#164）。
     const version = pnpmVersionFromPackageManager();
     const escaped = version.replace(/[.+?^${}()|[\]\\]/g, "\\$&");
     const re = new RegExp(`npm install -g pnpm@${escaped}(?![\\w.-])`, "g");
     const matches = dockerfile().match(re) ?? [];
     expect(
       matches.length,
-      `npm install -g pnpm@${version} が builder/本番の両ステージに必要（検出: ${matches.length}）`,
-    ).toBe(2);
+      `npm install -g pnpm@${version} が 1 回以上必要（検出: ${matches.length}）`,
+    ).toBeGreaterThanOrEqual(1);
   });
 
   it("導入する pnpm バージョンが package.json の packageManager と一致する (受け入れ条件 #2/#3)", () => {

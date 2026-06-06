@@ -170,17 +170,17 @@ export function createApp(deps: AppDeps): Express {
   app.use(passportInstance.session());
 
   app.use("/health", healthRouter);
-  app.use("/auth", createAuthRouter(passportInstance, userRepository));
-  app.use("/messages", createMessagesRouter(deps.messageRepository));
+  app.use("/api/auth", createAuthRouter(passportInstance, userRepository));
+  app.use("/api/messages", createMessagesRouter(deps.messageRepository));
   app.use(
-    "/channels",
+    "/api/channels",
     createChannelsRouter(channelMembershipRepository, channelRepository, deps.messageRepository),
   );
-  app.use("/employees", createEmployeesRouter(employeeRepository));
-  app.use("/admin/batch-logs", createBatchLogsRouter(batchRunLogRepository));
-  app.use("/admin", createAdminRouter(appSettingRepository, invitationLinkRepository));
-  app.use("/invitations", createInvitationsRouter(invitationLinkRepository, userRepository));
-  app.use("/channels", createPlanningIssuesRouter(deps.messageRepository));
+  app.use("/api/employees", createEmployeesRouter(employeeRepository));
+  app.use("/api/admin/batch-logs", createBatchLogsRouter(batchRunLogRepository));
+  app.use("/api/admin", createAdminRouter(appSettingRepository, invitationLinkRepository));
+  app.use("/api/invitations", createInvitationsRouter(invitationLinkRepository, userRepository));
+  app.use("/api/channels", createPlanningIssuesRouter(deps.messageRepository));
   app.use(errorHandler);
   return app;
 }

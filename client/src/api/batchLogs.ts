@@ -13,7 +13,7 @@ export const BATCH_LOGS_QUERY_KEY = ["admin", "batch-logs"] as const;
  * 現行どおり BatchRunLogSchema でランタイム検証し executedAt を Date 化する（挙動維持）。
  */
 export async function fetchBatchLogs(): Promise<BatchRunLog[]> {
-  const { data, error, response } = await openApiClient.GET("/admin/batch-logs", {
+  const { data, error, response } = await openApiClient.GET("/api/admin/batch-logs", {
     credentials: "include",
   });
   // openapi-fetch は非2xx + 空ボディ（Content-Length: 0）で error=undefined を返すため、

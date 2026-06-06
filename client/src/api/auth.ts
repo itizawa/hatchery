@@ -10,7 +10,7 @@ export const AUTH_ME_QUERY_KEY = ["auth", "me"] as const;
  * ADR-0006: openapi.json 由来の型で server → client の型が end-to-end に流れる（#41）。
  */
 export async function fetchMe(): Promise<AuthUser | null> {
-  const { data, response } = await openApiClient.GET("/auth/me", { credentials: "include" });
+  const { data, response } = await openApiClient.GET("/api/auth/me", { credentials: "include" });
   if (response.status === 401) return null;
   if (!response.ok) throw new Error(`GET /auth/me failed: ${response.status}`);
   return data ?? null;
@@ -22,7 +22,7 @@ export async function fetchMe(): Promise<AuthUser | null> {
  * クロスオリジン配信（#78: Cloudflare Pages × Cloud Run）で Pages 側へ POST して 405 になる。
  */
 export async function login(body: LoginRequest): Promise<AuthUser> {
-  const { data, response } = await openApiClient.POST("/auth/login", {
+  const { data, response } = await openApiClient.POST("/api/auth/login", {
     body,
     credentials: "include",
   });
@@ -32,7 +32,7 @@ export async function login(body: LoginRequest): Promise<AuthUser> {
 
 /** POST /auth/logout を呼び出す。openApiClient 経由で baseUrl を解決する（login と同様）。 */
 export async function logout(): Promise<void> {
-  const { response } = await openApiClient.POST("/auth/logout", { credentials: "include" });
+  const { response } = await openApiClient.POST("/api/auth/logout", { credentials: "include" });
   if (!response.ok) throw new Error(`POST /auth/logout failed: ${response.status}`);
 }
 
@@ -66,7 +66,7 @@ export function useLogout() {
 
 /** PATCH /auth/me を呼び出す。成功時は更新後の AuthUser を返す。openApiClient 経由で baseUrl を解決する。 */
 export async function updateProfile(body: UpdateProfile): Promise<AuthUser> {
-  const { data, response } = await openApiClient.PATCH("/auth/me", {
+  const { data, response } = await openApiClient.PATCH("/api/auth/me", {
     body,
     credentials: "include",
   });

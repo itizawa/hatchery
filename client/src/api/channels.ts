@@ -16,7 +16,7 @@ export function useChannels() {
   return useSuspenseQuery({
     queryKey: CHANNELS_QUERY_KEY,
     queryFn: async (): Promise<Channel[]> => {
-      const { data, error } = await openApiClient.GET("/channels");
+      const { data, error } = await openApiClient.GET("/api/channels");
       if (error) throw new Error(JSON.stringify(error));
       return data ?? [];
     },
@@ -31,7 +31,7 @@ export function useCreateChannel() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: { label: string; type?: ChannelType }): Promise<Channel> => {
-      const { data, error } = await openApiClient.POST("/channels", {
+      const { data, error } = await openApiClient.POST("/api/channels", {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         body: input as any,
         credentials: "include",
@@ -51,7 +51,7 @@ export function useChannelMessages(channelId: string) {
   return useSuspenseQuery({
     queryKey: channelMessagesQueryKey(channelId),
     queryFn: async (): Promise<MessageRecord[]> => {
-      const { data, error } = await openApiClient.GET("/channels/{channelId}/messages", {
+      const { data, error } = await openApiClient.GET("/api/channels/{channelId}/messages", {
         params: { path: { channelId } },
       });
       if (error) throw new Error(JSON.stringify(error));
@@ -68,7 +68,7 @@ export function usePostChannelMessage(channelId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (text: string): Promise<MessageRecord> => {
-      const { data, error } = await openApiClient.POST("/channels/{channelId}/messages", {
+      const { data, error } = await openApiClient.POST("/api/channels/{channelId}/messages", {
         params: { path: { channelId } },
         body: { text },
         credentials: "include",

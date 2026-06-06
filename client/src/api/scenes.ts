@@ -7,7 +7,7 @@ export function useMessages() {
   return useQuery({
     queryKey: ["messages"],
     queryFn: async () => {
-      const { data, error } = await openApiClient.GET("/messages");
+      const { data, error } = await openApiClient.GET("/api/messages");
       if (error) throw new Error(JSON.stringify(error));
       return data ?? [];
     },

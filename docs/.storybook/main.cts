@@ -26,8 +26,9 @@ const config: StorybookConfig = {
     // 本番ビルドのみ Vite の base をそのサブパスに合わせ、プレビュー iframe のアセットが
     // ルート絶対パス（/assets/...）で参照されて 404 になるのを防ぐ（Issue #46）。
     // STORYBOOK_BASE_PATH で上書き可（リポジトリ名変更・フォーク対応）。storybook dev は / のまま。
+    // 既定値は実リポジトリ名（itizawa/hatchery）のサブパス。リネーム前の /ai-workspace/ は 404 になる（Issue #166）。
     if (configType === "PRODUCTION") {
-      config.base = process.env.STORYBOOK_BASE_PATH ?? "/ai-workspace/";
+      config.base = process.env.STORYBOOK_BASE_PATH ?? "/hatchery/";
     }
     return config;
   },

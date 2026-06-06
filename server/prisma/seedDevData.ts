@@ -10,8 +10,8 @@ export interface SeedPrisma {
   user: {
     upsert(args: {
       where: { id: string };
-      update: Record<string, never>;
-      create: { id: string; displayName: string; passwordHash: string };
+      update: { role?: "admin" | "member" };
+      create: { id: string; displayName: string; passwordHash: string; role?: "admin" | "member" };
     }): Promise<unknown>;
   };
   employee: {
@@ -30,8 +30,8 @@ export interface SeedPrisma {
   channel: {
     upsert(args: {
       where: { id: string };
-      update: { type: "zatsudan" | "task" };
-      create: { id: string; label: string; type: "zatsudan" | "task" };
+      update: { type: "zatsudan" | "task" | "planning" };
+      create: { id: string; label: string; type: "zatsudan" | "task" | "planning" };
     }): Promise<unknown>;
   };
   channelEmployee: {
@@ -70,8 +70,8 @@ export async function seedDevData(prisma: SeedPrisma): Promise<SeedResult> {
   const passwordHash = await bcrypt.hash(DEV_USER.password, 10);
   await prisma.user.upsert({
     where: { id: DEV_USER.id },
-    update: {},
-    create: { id: DEV_USER.id, displayName: DEV_USER.displayName, passwordHash },
+    update: { role: "admin" },
+    create: { id: DEV_USER.id, displayName: DEV_USER.displayName, passwordHash, role: "admin" },
   });
 
   // AI 社員（既定 3 名）は isBot=true / userId は紐付けない（#49）。

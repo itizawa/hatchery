@@ -1,9 +1,14 @@
-import React from "react";
+import React, { Suspense } from "react";
 import type { Preview } from "@storybook/react";
 import CssBaseline from "@mui/material/CssBaseline";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { QueryClientProvider } from "@tanstack/react-query";
+import { initialize, mswLoader } from "msw-storybook-addon";
 import { createQueryClient } from "@hatchery/client/queryClient";
+import { handlers } from "@hatchery/client/mocks";
+
+// MSW を初期化する（Storybook 起動時にサービスワーカーを登録。Issue #108）
+initialize({ onUnhandledRequest: "warn" });
 
 // Slack 風ライトテーマ（client/src/theme.ts の slackTheme と同値・Issue #31）
 // preview.tsx は Storybook 専用のエントリで client/index.ts の "UI 不可" バレルを経由しないため、
@@ -22,7 +27,9 @@ const preview: Preview = {
       const queryClientRef = React.useRef(createQueryClient());
       return (
         <QueryClientProvider client={queryClientRef.current}>
-          <Story />
+          <Suspense fallback={null}>
+            <Story />
+          </Suspense>
         </QueryClientProvider>
       );
     },
@@ -33,7 +40,11 @@ const preview: Preview = {
       </ThemeProvider>
     ),
   ],
+  loaders: [mswLoader],
   parameters: {
+    msw: {
+      handlers,
+    },
     controls: {
       matchers: {
         color: /(background|color)$/i,

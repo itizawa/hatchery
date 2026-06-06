@@ -1,19 +1,22 @@
 import { z } from "zod";
 
-/** MVP のチャンネル ID（#雑談 / #仕事）。既知 ID 群との突き合わせに用いる。 */
-export const CHANNEL_IDS = ["zatsudan", "shigoto"] as const;
+/** MVP のチャンネル ID（#雑談 / #仕事 / #企画）。既知 ID 群との突き合わせに用いる。 */
+export const CHANNEL_IDS = ["zatsudan", "shigoto", "kikaku"] as const;
 
 export type ChannelId = (typeof CHANNEL_IDS)[number];
 
-/** チャンネルのタイプ（#54）。zatsudan=雑談チャンネル / task=仕事チャンネル。 */
-export const ChannelTypeSchema = z.enum(["zatsudan", "task"]);
+/** チャンネルのタイプ（#54 / #76）。zatsudan=雑談 / task=仕事 / planning=企画。 */
+export const ChannelTypeSchema = z.enum(["zatsudan", "task", "planning"]);
 
 export type ChannelType = z.infer<typeof ChannelTypeSchema>;
+
+/** チャンネル名（label）の最大文字数（#91）。スキーマと UI で共有する単一情報源。 */
+export const CHANNEL_LABEL_MAX_LENGTH = 50;
 
 /** 話題の入れ物。id（チャンネル ID）・表示ラベル・タイプを持つ。 */
 export const ChannelSchema = z.object({
   id: z.string().min(1),
-  label: z.string().min(1),
+  label: z.string().min(1).max(CHANNEL_LABEL_MAX_LENGTH),
   type: ChannelTypeSchema,
 });
 
@@ -28,6 +31,7 @@ export type Channel = z.infer<typeof ChannelSchema>;
 export const DEFAULT_CHANNELS: readonly Channel[] = [
   { id: "zatsudan", label: "#雑談", type: "zatsudan" },
   { id: "shigoto", label: "#仕事", type: "task" },
+  { id: "kikaku", label: "#企画", type: "planning" },
 ];
 
 /**
@@ -42,7 +46,7 @@ export const findChannelById = (channelId: string): Channel | undefined =>
  * label / type のどちらか一方は必須。 */
 export const UpdateChannelSchema = z
   .object({
-    label: z.string().min(1).optional(),
+    label: z.string().min(1).max(CHANNEL_LABEL_MAX_LENGTH).optional(),
     type: ChannelTypeSchema.optional(),
   })
   .refine((data) => data.label !== undefined || data.type !== undefined, {
@@ -53,7 +57,7 @@ export type UpdateChannelInput = z.infer<typeof UpdateChannelSchema>;
 
 /** チャンネル作成リクエストのボディ検証スキーマ（POST /channels・#47・#54）。type 省略時は zatsudan。 */
 export const CreateChannelSchema = z.object({
-  label: z.string().min(1),
+  label: z.string().min(1).max(CHANNEL_LABEL_MAX_LENGTH),
   type: ChannelTypeSchema.optional().default("zatsudan"),
 });
 

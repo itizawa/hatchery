@@ -11,12 +11,12 @@ import { TaskSchema } from "./task/index.js";
 describe("domain フォルダ構成（#24）", () => {
   it("auth フォルダの index からスキーマを参照できる", () => {
     expect(LoginRequestSchema.safeParse({ id: "u", password: "p" }).success).toBe(true);
-    expect(AuthUserSchema.safeParse({ id: "u", displayName: "U" }).success).toBe(true);
+    expect(AuthUserSchema.safeParse({ id: "u", displayName: "U", role: "admin" }).success).toBe(true);
   });
 
   it("channel フォルダの index から定義を参照できる", () => {
-    expect(CHANNEL_IDS).toEqual(["zatsudan", "shigoto"]);
-    expect(DEFAULT_CHANNELS).toHaveLength(2);
+    expect(CHANNEL_IDS).toEqual(["zatsudan", "shigoto", "kikaku"]);
+    expect(DEFAULT_CHANNELS).toHaveLength(3);
     expect(ChannelSchema.safeParse({ id: "zatsudan", label: "#雑談", type: "zatsudan" }).success).toBe(true);
   });
 

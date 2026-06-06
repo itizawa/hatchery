@@ -55,4 +55,11 @@ describe("loadEnv", () => {
     });
     expect(env.corsAllowedOrigins).toEqual(["https://a.example.com", "https://b.example.com"]);
   });
+
+  it("DATABASE_URL に接続タイムアウトパラメータを含む URL がそのまま通過する", () => {
+    const urlWithTimeout =
+      "postgresql://hatchery:hatchery@localhost:5432/hatchery?schema=public&connect_timeout=10&pool_timeout=10";
+    const env = loadEnv({ DATABASE_URL: urlWithTimeout });
+    expect(env.databaseUrl).toBe(urlWithTimeout);
+  });
 });

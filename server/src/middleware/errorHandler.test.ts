@@ -1,3 +1,9 @@
+import {
+  BadRequestError,
+  ForbiddenError,
+  NotFoundError,
+  UnauthorizedError,
+} from "@hatchery/common";
 import express, { type Express, type RequestHandler } from "express";
 import request from "supertest";
 import { describe, expect, it } from "vitest";
@@ -13,6 +19,46 @@ function appThrowing(thrower: RequestHandler): Express {
 }
 
 describe("errorHandler", () => {
+  it("NotFoundError は 404 と error メッセージを返す", async () => {
+    const res = await request(
+      appThrowing((_req, _res, next) => {
+        next(new NotFoundError("ChannelNotFound"));
+      }),
+    ).get("/t");
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe("ChannelNotFound");
+  });
+
+  it("BadRequestError は 400 と error メッセージを返す", async () => {
+    const res = await request(
+      appThrowing((_req, _res, next) => {
+        next(new BadRequestError("EmployeeNotLinked"));
+      }),
+    ).get("/t");
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("EmployeeNotLinked");
+  });
+
+  it("UnauthorizedError は 401 と error メッセージを返す", async () => {
+    const res = await request(
+      appThrowing((_req, _res, next) => {
+        next(new UnauthorizedError("Unauthorized"));
+      }),
+    ).get("/t");
+    expect(res.status).toBe(401);
+    expect(res.body.error).toBe("Unauthorized");
+  });
+
+  it("ForbiddenError は 403 と error メッセージを返す", async () => {
+    const res = await request(
+      appThrowing((_req, _res, next) => {
+        next(new ForbiddenError("Forbidden"));
+      }),
+    ).get("/t");
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBe("Forbidden");
+  });
+
   it("status 413 を持つエラーは 413 PayloadTooLarge に変換する", async () => {
     const res = await request(
       appThrowing((_req, _res, next) => {

@@ -32,7 +32,7 @@ describe("管理画面ガード", () => {
   });
 
   it("ログイン済み状態で /admin にアクセスすると管理画面が表示される", async () => {
-    vi.spyOn(authApi, "fetchMe").mockResolvedValue({ id: "user1", displayName: "Alice" });
+    vi.spyOn(authApi, "fetchMe").mockResolvedValue({ id: "user1", displayName: "Alice", role: "admin" });
     renderApp("/admin");
     expect(await screen.findByRole("heading", { name: /管理画面/ })).toBeInTheDocument();
   });
@@ -51,5 +51,24 @@ describe("ログインフォーム", () => {
     await userEvent.type(screen.getByLabelText(/パスワード/), "pass1");
     await userEvent.click(screen.getByRole("button", { name: /ログイン/ }));
     await waitFor(() => expect(loginSpy).toHaveBeenCalledWith({ id: "user1", password: "pass1" }));
+  });
+
+  it("ID フィールドが空の場合、送信しても login API が呼ばれない", async () => {
+    vi.spyOn(authApi, "fetchMe").mockResolvedValue(null);
+    const loginSpy = vi.spyOn(authApi, "login").mockResolvedValue({ id: "user1", displayName: "Alice" });
+    renderApp("/login");
+    await screen.findByLabelText(/ID/);
+    await userEvent.type(screen.getByLabelText(/パスワード/), "pass1");
+    await userEvent.click(screen.getByRole("button", { name: /ログイン/ }));
+    await waitFor(() => expect(loginSpy).not.toHaveBeenCalled());
+  });
+
+  it("パスワードフィールドが空の場合、送信しても login API が呼ばれない", async () => {
+    vi.spyOn(authApi, "fetchMe").mockResolvedValue(null);
+    const loginSpy = vi.spyOn(authApi, "login").mockResolvedValue({ id: "user1", displayName: "Alice" });
+    renderApp("/login");
+    await userEvent.type(await screen.findByLabelText(/ID/), "user1");
+    await userEvent.click(screen.getByRole("button", { name: /ログイン/ }));
+    await waitFor(() => expect(loginSpy).not.toHaveBeenCalled());
   });
 });

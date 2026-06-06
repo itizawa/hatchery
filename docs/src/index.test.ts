@@ -4,6 +4,6 @@ import { docsChannelCount } from "./index.js";
 
 describe("@hatchery/docs", () => {
   it("client の channelCount を再利用する (docs → client)", () => {
-    expect(docsChannelCount()).toBe(2);
+    expect(docsChannelCount()).toBe(3);
   });
 });

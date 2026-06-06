@@ -6,7 +6,8 @@ import {
   useLocation,
   type RouterHistory,
 } from "@tanstack/react-router";
-import type { ReactElement } from "react";
+import { isAdmin } from "@hatchery/common";
+import { Suspense, type ReactElement } from "react";
 
 import { fetchMe } from "./api/auth.js";
 import {
@@ -22,10 +23,11 @@ import { HomeScene } from "./routes/HomeScene";
 import { LoginScene } from "./routes/LoginScene";
 import { RootLayout } from "./routes/RootLayout";
 import { SettingsScene } from "./routes/SettingsScene";
+import { ChannelViewSkeleton } from "./components/ChannelViewSkeleton";
 
 /**
  * 認証ガード: 未ログイン（fetchMe が null を返す）またはネットワークエラーの場合に /login へリダイレクト。
- * adminRoute・accountRoute の beforeLoad で共有する。
+ * accountRoute の beforeLoad で使う。
  */
 async function requireAuth(): Promise<void> {
   let user: Awaited<ReturnType<typeof fetchMe>>;
@@ -35,6 +37,21 @@ async function requireAuth(): Promise<void> {
     throw redirect({ to: "/login" });
   }
   if (!user) throw redirect({ to: "/login" });
+}
+
+/**
+ * admin ロール専用ガード（#136）: 未ログインなら /login、非 admin なら / へリダイレクト。
+ * adminRoute の beforeLoad で使う。
+ */
+async function requireAdminRoute(): Promise<void> {
+  let user: Awaited<ReturnType<typeof fetchMe>>;
+  try {
+    user = await fetchMe();
+  } catch {
+    throw redirect({ to: "/login" });
+  }
+  if (!user) throw redirect({ to: "/login" });
+  if (!isAdmin(user)) throw redirect({ to: "/" });
 }
 
 /**
@@ -73,7 +90,11 @@ const indexRoute = createRoute({
 const channelRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/channels/$channelId",
-  component: ChannelScene,
+  component: () => (
+    <Suspense fallback={<ChannelViewSkeleton />}>
+      <ChannelScene />
+    </Suspense>
+  ),
 });
 
 /** ログイン画面（/login）。サイドバーなしの AuthLayout 経由で描画する。 */
@@ -83,12 +104,12 @@ const loginRoute = createRoute({
   component: LoginScene,
 });
 
-/** 管理画面（/admin）。未ログインまたはネットワークエラーの場合は /login へリダイレクト。 */
+/** 管理画面（/admin）。未ログインなら /login、非 admin なら / へリダイレクト（#136）。 */
 const adminRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/admin",
   component: SettingsScene,
-  beforeLoad: requireAuth,
+  beforeLoad: requireAdminRoute,
   validateSearch: (search: Record<string, unknown>): { tab: SettingsTabValue } => {
     const tab = search.tab;
     if (

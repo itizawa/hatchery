@@ -8,8 +8,8 @@ import { InMemoryUserRepository } from "../persistence/userRepository.js";
 import { getApiKey } from "./admin.js";
 import { encrypt } from "../utils/crypto.js";
 
-async function makeApp(appSettingRepo = new InMemoryAppSettingRepository()) {
-  const userRepo = await InMemoryUserRepository.createWithTestUser();
+async function makeApp(appSettingRepo = new InMemoryAppSettingRepository(), role: "admin" | "member" = "admin") {
+  const userRepo = await InMemoryUserRepository.createWithTestUser(null, role);
   return createApp({
     messageRepository: new InMemoryMessageRepository(),
     userRepository: userRepo,
@@ -30,12 +30,19 @@ describe("GET /admin/settings", () => {
     expect(res.status).toBe(401);
   });
 
-  it("認証済みの場合は 200 と設定一覧を返す（設定未登録時は空配列）", async () => {
+  it("admin ユーザーは 200 と設定一覧を返す（設定未登録時は空配列）", async () => {
     const app = await makeApp();
     const agent = await loginAgent(app);
     const res = await agent.get("/admin/settings");
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
+  });
+
+  it("member ユーザーは 403 を返す (#136)", async () => {
+    const app = await makeApp(new InMemoryAppSettingRepository(), "member");
+    const agent = await loginAgent(app);
+    const res = await agent.get("/admin/settings");
+    expect(res.status).toBe(403);
   });
 
   it("CLAUDE_API_KEY が設定済みの場合はマスク表示で返す", async () => {
@@ -65,6 +72,13 @@ describe("PATCH /admin/settings", () => {
       .patch("/admin/settings")
       .send({ key: "CLAUDE_API_KEY", value: "sk-ant-test" });
     expect(res.status).toBe(401);
+  });
+
+  it("member ユーザーは 403 を返す (#136)", async () => {
+    const memberApp = await makeApp(new InMemoryAppSettingRepository(), "member");
+    const memberAgent = await loginAgent(memberApp);
+    const res = await memberAgent.patch("/admin/settings").send({ key: "CLAUDE_API_KEY", value: "sk-ant-test" });
+    expect(res.status).toBe(403);
   });
 
   it("key が空の場合は 400 を返す", async () => {

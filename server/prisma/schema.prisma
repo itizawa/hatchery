@@ -12,6 +12,12 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+/// ユーザー権限ロール（#136）。admin=管理者 / member=一般メンバー。
+enum UserRole {
+  admin
+  member
+}
+
 /// 認証ユーザー（Issue #26 / ADR-0009）。パスワードは bcrypt ハッシュで保存する。
 model User {
   id           String    @id
@@ -19,6 +25,8 @@ model User {
   passwordHash String
   /// プロフィール画像 URL（#51）。nullable。
   avatarUrl    String?
+  /// 権限ロール（#136）。既定は member。新規登録（招待受諾）は member として登録される。
+  role         UserRole  @default(member)
   /// 1 ユーザー = 1 Employee の任意リレーション（#49）。
   employee     Employee?
 }
@@ -39,10 +47,11 @@ model Employee {
   personality String?
 }
 
-/// チャンネルのタイプ（#54）。zatsudan=雑談 / task=仕事。
+/// チャンネルのタイプ（#54 / #76）。zatsudan=雑談 / task=仕事 / planning=企画。
 enum ChannelType {
   zatsudan
   task
+  planning
 }
 
 /// 話題の入れ物。common の ChannelSchema に対応（id / label / type）。
@@ -67,13 +76,20 @@ model ChannelEmployee {
 
 /// channel に直接紐づく 1 発言（ADR-0009: Scene 廃止）。
 /// createdAt でバッチ間の時系列順を保ち、order でバッチ内の発言順を保つ。
+/// proposalTitle / proposalReason / proposalTargetUrl / issueNumber / issueUrl は
+/// #企画 チャンネルの UX 提案メッセージ専用 optional フィールド（#76）。
 model Message {
-  id        String   @id @default(cuid())
-  speaker   String
-  channel   String
-  text      String
-  createdAt DateTime @default(now())
-  order     Int
+  id                String   @id @default(cuid())
+  speaker           String
+  channel           String
+  text              String
+  createdAt         DateTime @default(now())
+  order             Int
+  proposalTitle     String?
+  proposalReason    String?
+  proposalTargetUrl String?
+  issueNumber       Int?
+  issueUrl          String?
 
   @@index([channel, createdAt])
 }
@@ -98,4 +114,43 @@ model AppSetting {
   key       String   @id
   value     String
   updatedAt DateTime @updatedAt
+}
+
+/// バッチ実行ログ（#75）。定時バッチの成功・失敗を記録する。
+model BatchRunLog {
+  id           String            @id @default(cuid())
+  executedAt   DateTime          @default(now())
+  status       BatchRunLogStatus
+  messageCount Int               @default(0)
+  errorMessage String?
+  errorCode    String?
+
+  @@index([executedAt])
+}
+
+/// バッチ実行ステータス（#75）。
+enum BatchRunLogStatus {
+  success
+  failure
+}
+
+/// 招待リンク（#131）。管理者が発行し、期限 + single-use で新規ユーザーを招待する。
+model InvitationLink {
+  id              String    @id @default(cuid())
+  /// URL に載せる招待トークン。推測困難な乱数（base64url）。平文保存（再コピー可・期限+single-use でリスク軽減）。
+  token           String    @unique
+  expiresAt       DateTime
+  /// 受諾された日時。null=未使用。ここが入ると single-use 失効（#132 で書き込み）。
+  usedAt          DateTime?
+  /// 受諾で作成された User の id（監査用）。#132 で書き込み。
+  usedByUserId    String?
+  /// 管理者が手動失効した日時。null=未失効。
+  revokedAt       DateTime?
+  /// 発行した管理者の User.id。
+  createdByUserId String
+  /// 管理者用メモ（任意・200 文字以内）。
+  memo            String?
+  createdAt       DateTime  @default(now())
+
+  @@index([createdAt])
 }

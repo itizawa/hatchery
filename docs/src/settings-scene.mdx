@@ -1,0 +1,57 @@
+import { Meta } from "@storybook/blocks";
+import * as SettingsSceneStories from "../../client/src/routes/SettingsScene.stories";
+
+<Meta of={SettingsSceneStories} />
+
+# 画面設計書: 管理画面（SettingsScene）
+
+> 関連: Issue #108 / ADR-0003（client）・ADR-0007Ｈdocs）
+
+## 目的
+
+管理者専用画面（`/admin`）。ユーザー一覧・API トークン設定・バッチログの 3 タブで構成される。
+`beforeLoad` の `requireAdminRoute` が `/auth/me` を呼び出し、admin でない場合は `/login` へリダイレクトする。
+
+## URL / ルート
+
+| URL | 画面 | 認証 |
+|-----|------|------|
+| `/admin?tab=users` | SettingsScene（ユーザー一覧タブ） | 必要（admin のみ） |
+| `/admin?tab=api-token` | SettingsScene（API トークン設定タブ） | 必要（admin のみ） |
+| `/admin?tab=batch-logs` | SettingsScene（バッチログタブ） | 必要（admin のみ） |
+
+参照: [`docs/design/url-list.md`](./url-list.md)
+
+## 認証要否
+
+admin 権限が必要。`requireAdminRoute`（`beforeLoad`）が認証・権限チェックを行う。
+未認証または非 admin の場合は `/login` へリダイレクトする。
+
+## 状態一覧
+
+| 状態 | 説明 | ストーリー |
+|------|------|----------|
+| ユーザー一覧タブ | 登録ユーザーの一覧を表示 | `UsersTab` |
+| API トークン設定タブ | API トークンの確認・更新フォーム | `ApiTokenTab` |
+| バッチログタブ | 定時バッチの実行履歴一覧 | `BatchLogsTab` |
+| 未認証リダイレクト | `/auth/me` が 401 → `/login` へ遷移 | `RedirectsToLoginWhenUnauthenticated` |
+
+## データ契約
+
+- `GET /auth/me` → `AuthUser`（admin チェック。MSW でモック）
+- `GET /admin/settings` → `AppSettingResponse[]`（API トークン設定タブ）
+- `GET /admin/batch-logs` → `BatchRunLog[]`（バッチログタブ）
+- `useSearch({ from: "/admin" })` で現在のタブを取得（TanStack Router）
+- `useNavigate({ from: "/admin" })` でタブ遷移
+
+## RouterProvider が必要な理由
+
+`useSearch({ from: "/admin" })` と `useNavigate({ from: "/admin" })` は TanStack Router の strict モードの hook で、
+RouterProvider（memory history）内でのみ正しく描画できる。
+`renderWithRouter("/admin?tab=users")` ユーティリティを使い、各ストーリーをルーター内でレンダリングする。
+
+## 関連 ADR / Issue
+
+- ADR-0003: client スタック（TanStack Query / Router）
+- ADR-0006: OpenAPI 型共有
+- Issue #108（本 Story の整備）

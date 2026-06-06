@@ -1,0 +1,48 @@
+name: Deploy Client (dev)
+
+# develop マージをトリガーに client（Vite SPA）を Cloudflare Pages（dev 環境）へ自動デプロイする。
+# VITE_API_BASE_URL は GitHub Actions の Repository Variable（CLOUD_RUN_DEV_URL）から渡す。
+# ゲート1: develop への push のみトリガー。main への push は含まない。
+on:
+  push:
+    branches: [develop]
+
+concurrency:
+  group: deploy-client-dev
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build client
+        env:
+          VITE_API_BASE_URL: ${{ vars.CLOUD_RUN_DEV_URL }}
+        run: pnpm turbo run build --filter=@hatchery/client
+
+      # 公式の wrangler GitHub Action は wrangler 未検出時に `pnpm add` で動的インストールを試み、
+      # pnpm workspace ルートへの追加が ERR_PNPM_ADDING_TO_ROOT で失敗する（#141）。
+      # client の devDependency に固定した wrangler を pnpm exec で直接実行し、動的インストールを排除する。
+      # 認証情報は wrangler が読む CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID を env で渡す。
+      - name: Deploy to Cloudflare Pages
+        working-directory: client
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: pnpm exec wrangler pages deploy dist/web --project-name=hatchery

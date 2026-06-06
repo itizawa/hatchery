@@ -1,0 +1,33 @@
+# ビルドに不要なファイルを除外して Docker イメージを軽量化する
+# docker build -f server/Dockerfile . のビルドコンテキストはリポジトリルートなので、
+# .dockerignore もリポジトリルートに配置する必要がある。
+
+# git 管理ファイル
+.git
+.gitignore
+
+# 開発・ドキュメント
+.claude
+client
+!client/package.json
+docs
+!docs/package.json
+*.md
+
+# テスト・設定
+tests
+node_modules
+*/node_modules
+
+# ビルド成果物（builder ステージでコピーするのでルートレベルは除外）
+dist
+*/dist
+coverage
+*/coverage
+
+# 環境変数
+.env
+.env.*
+
+# Storybook
+storybook-static

@@ -37,20 +37,30 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # ADR-0013: サプライチェーン対策。prod 依存のみ監査し high/critical を fail にする。
+      # --prod: devDeps（vitest・wrangler等のツール）のトランジティブ脆弱性を除外し、本番コードのみを対象にする。
+      - name: Dependency audit
+        run: pnpm audit --audit-level=high --prod
+
       # ADR-0002 のタスク定義をそのまま回す。Turborepo が依存順と並列を解決する。
       - name: Lint / Test / Build
         run: pnpm turbo run lint test build
 
-      # 各ワークスペースのカバレッジを生成する（--coverage で vitest に渡す）。
+      # 各ワークスペースのカバレッジを生成する。
+      # pnpm 10 では `pnpm run script -- --flag` が `script -- --flag` として実行され
+      # vitest が --flag をファイルパターンとして解釈するため、pnpm exec で直接起動する。
       # DATABASE_URL が無い CI 環境では .int.test.ts は skipIf で自動スキップされる。
       - name: Test with coverage (common)
-        run: pnpm --filter @hatchery/common test -- --coverage
+        working-directory: common
+        run: pnpm exec vitest run --coverage
 
       - name: Test with coverage (server)
-        run: pnpm --filter @hatchery/server test -- --coverage
+        working-directory: server
+        run: pnpm exec vitest run --coverage
 
       - name: Test with coverage (client)
-        run: pnpm --filter @hatchery/client test -- --coverage
+        working-directory: client
+        run: pnpm exec vitest run --coverage
 
       - name: Upload coverage (common)
         uses: actions/upload-artifact@v4

@@ -1,0 +1,9 @@
+name = "hatchery"
+compatibility_date = "2025-01-01"
+
+# Vite のビルド出力（vite.config.ts の build.outDir）に合わせて dist/web を指定する。
+# wrangler は client/ を作業ディレクトリとして実行する場合に参照される（CLI 引数が優先）。
+pages_build_output_dir = "dist/web"
+
+# VITE_API_BASE_URL 等のビルド変数は GitHub Actions ワークフローで
+# ビルド時に渡す（deploy-client-dev.yml 参照）。

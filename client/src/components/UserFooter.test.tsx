@@ -105,15 +105,21 @@ describe("UserFooter", () => {
     stubFetch(false);
     renderApp("/");
 
-    await screen.findByRole("link", { name: "管理画面" });
-    expect(screen.queryByText("Alice")).not.toBeInTheDocument();
+    // #136 で「管理画面」リンクが admin 専用になり安定指標として使えなくなった。
+    // UserFooter は user=null のとき null を返すため "Alice" は表示されない。
+    await waitFor(() => {
+      expect(screen.queryByText("Alice")).not.toBeInTheDocument();
+    });
   });
 
   it("未ログイン時はログアウトボタンが表示されない", async () => {
     stubFetch(false);
     renderApp("/");
 
-    await screen.findByRole("link", { name: "管理画面" });
-    expect(screen.queryByRole("button", { name: /ログアウト/ })).not.toBeInTheDocument();
+    // #136 で「管理画面」リンクが admin 専用になり安定指標として使えなくなった。
+    // UserFooter は user=null のとき null を返すためログアウトボタンは表示されない。
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: /ログアウト/ })).not.toBeInTheDocument();
+    });
   });
 });

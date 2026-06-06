@@ -1,7 +1,7 @@
 import type { Message } from "@hatchery/common";
 import type { PrismaClient } from "@prisma/client";
 
-import type { MessageRecord, MessageRepository } from "./messageRepository.js";
+import type { MessageRecord, MessageRepository, PlanningMessageInput } from "./messageRepository.js";
 
 function toMessageRecord(row: {
   id: string;
@@ -10,6 +10,11 @@ function toMessageRecord(row: {
   text: string;
   createdAt: Date;
   order: number;
+  proposalTitle: string | null;
+  proposalReason: string | null;
+  proposalTargetUrl: string | null;
+  issueNumber: number | null;
+  issueUrl: string | null;
 }): MessageRecord {
   return {
     id: row.id,
@@ -18,6 +23,11 @@ function toMessageRecord(row: {
     text: row.text,
     createdAt: row.createdAt,
     order: row.order,
+    ...(row.proposalTitle != null && { proposalTitle: row.proposalTitle }),
+    ...(row.proposalReason != null && { proposalReason: row.proposalReason }),
+    ...(row.proposalTargetUrl != null && { proposalTargetUrl: row.proposalTargetUrl }),
+    ...(row.issueNumber != null && { issueNumber: row.issueNumber }),
+    ...(row.issueUrl != null && { issueUrl: row.issueUrl }),
   };
 }
 
@@ -54,5 +64,37 @@ export class PrismaMessageRepository implements MessageRepository {
       orderBy: [{ createdAt: "asc" }, { order: "asc" }],
     });
     return rows.map(toMessageRecord);
+  }
+
+  async createPlanningMessage(input: PlanningMessageInput): Promise<MessageRecord> {
+    const lastInChannel = await this.prisma.message.findFirst({
+      where: { channel: input.channel },
+      orderBy: { order: "desc" },
+    });
+    const nextOrder = (lastInChannel?.order ?? -1) + 1;
+    const row = await this.prisma.message.create({
+      data: {
+        speaker: input.speaker,
+        channel: input.channel,
+        text: input.text,
+        order: nextOrder,
+        proposalTitle: input.proposalTitle,
+        proposalReason: input.proposalReason,
+        proposalTargetUrl: input.proposalTargetUrl,
+      },
+    });
+    return toMessageRecord(row);
+  }
+
+  async updateIssueRef(id: string, issueNumber: number, issueUrl: string): Promise<MessageRecord | null> {
+    try {
+      const row = await this.prisma.message.update({
+        where: { id },
+        data: { issueNumber, issueUrl },
+      });
+      return toMessageRecord(row);
+    } catch {
+      return null;
+    }
   }
 }

@@ -3,6 +3,8 @@ import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
 import { useState, type FormEvent, type ReactElement } from "react";
 
+import { MAX_MESSAGE_LENGTH } from "@hatchery/common";
+
 export interface MessageInputProps {
   /** 送信時に呼ばれるコールバック（text は空でないことが保証される）。 */
   onSubmit: (text: string) => void;
@@ -30,7 +32,7 @@ export const MessageInput = ({ onSubmit, disabled }: MessageInputProps): ReactEl
         size="small"
         disabled={disabled}
         fullWidth
-        inputProps={{ "aria-label": "メッセージ入力" }}
+        inputProps={{ "aria-label": "メッセージ入力", maxLength: MAX_MESSAGE_LENGTH }}
       />
       <Button
         type="submit"

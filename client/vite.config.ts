@@ -10,10 +10,15 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   plugins: [react()],
   server: {
-    proxy: {
-      "/auth": "http://localhost:3000",
-      "/api": "http://localhost:3000",
-    },
+    // dev では SPA(5173) から API(3000) へプロキシする。サーバ側の app.ts は各ルータを
+    // `/api` プレフィックスなしでトップレベルにマウントしているため、ここも実マウントの
+    // トップレベルパスを列挙する（漏れると Vite が index.html を返し JSON parse で落ちる）。
+    // ルータを追加したら同じトップレベルパスをここにも追加すること。
+    proxy: Object.fromEntries(
+      ["/auth", "/health", "/messages", "/channels", "/employees", "/admin", "/invitations"].map(
+        (path) => [path, "http://localhost:3000"],
+      ),
+    ),
   },
   build: {
     outDir: "dist/web",
@@ -23,7 +28,7 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
-    include: ["src/**/*.test.{ts,tsx}"],
+    include: ["src/**/*.test.{ts,tsx}", "functions/**/*.test.ts"],
     css: false,
     coverage: {
       provider: "v8",

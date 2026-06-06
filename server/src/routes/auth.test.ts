@@ -104,6 +104,16 @@ describe("GET /auth/me", () => {
     expect(res.status).toBe(200);
     expect(res.body).not.toHaveProperty("passwordHash");
   });
+
+  it("レスポンスに role が含まれる (#136)", async () => {
+    const app = await buildApp();
+    const agent = request.agent(app);
+    await agent.post("/auth/login").send({ id: "testuser", password: "testpass" });
+    const res = await agent.get("/auth/me");
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty("role");
+    expect(["admin", "member"]).toContain(res.body.role);
+  });
 });
 
 describe("POST /auth/logout", () => {
@@ -200,5 +210,16 @@ describe("PATCH /auth/me (#51)", () => {
     const res = await agent.get("/auth/me");
     expect(res.status).toBe(200);
     expect(res.body.displayName).toBe("Changed Name");
+  });
+
+  it("role を送っても無視される（自己昇格防止 #136）", async () => {
+    const app = await buildApp();
+    const agent = request.agent(app);
+    await agent.post("/auth/login").send({ id: "testuser", password: "testpass" });
+    const before = await agent.get("/auth/me");
+    const originalRole = before.body.role;
+    const res = await agent.patch("/auth/me").send({ displayName: "Alice", role: "member" });
+    expect(res.status).toBe(200);
+    expect(res.body.role).toBe(originalRole);
   });
 });

@@ -75,9 +75,11 @@ describe("アカウント設定画面（#50）", () => {
     stubFetch(false);
     renderApp("/");
 
-    // 「管理画面」リンクが描画されるまで待機（auth クエリが解決するまでの安定指標）
-    await screen.findByRole("link", { name: "管理画面" });
-    expect(screen.queryByRole("link", { name: "アカウント設定" })).not.toBeInTheDocument();
+    // #136 で「管理画面」リンクが admin 専用になったため、非ログイン時の安定指標として使えなくなった。
+    // UserFooter は user が null/undefined のとき null を返すため「アカウント設定」は表示されない。
+    await waitFor(() => {
+      expect(screen.queryByRole("link", { name: "アカウント設定" })).not.toBeInTheDocument();
+    });
   });
 });
 

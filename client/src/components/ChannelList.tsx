@@ -12,6 +12,7 @@ import { SLACK_COLORS } from "../theme.js";
 const CHANNEL_TYPE_SYMBOLS: Record<ChannelType, string> = {
   zatsudan: "#",
   task: "✓",
+  planning: "💡",
 };
 
 function ChannelTypeIcon({ type }: { type: ChannelType }): ReactElement {
@@ -33,7 +34,7 @@ function ChannelTypeIcon({ type }: { type: ChannelType }): ReactElement {
  * タイプ（zatsudan / task）に応じてアイコンを表示する（#54）。
  */
 export const ChannelList = (): ReactElement => {
-  const { data: channels = [] } = useChannels();
+  const { data: channels } = useChannels();
 
   return (
     <List dense aria-label="チャンネル一覧">

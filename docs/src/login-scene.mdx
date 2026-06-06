@@ -1,0 +1,44 @@
+import { Meta } from "@storybook/blocks";
+import * as LoginSceneStories from "../../client/src/routes/LoginScene.stories";
+
+<Meta of={LoginSceneStories} />
+
+# 画面設計書: ログイン画面（LoginScene）
+
+> 関連: Issue #26 / Issue #70 / Issue #108
+> ADR-0003（client）・ADR-0007（docs）
+
+## 目的
+
+ログイン画面（`/login`）。ID とパスワードを入力して認証を行い、成功すれば `GET /auth/me`
+キャッシュを invalidate して `/` へ遷移する。未認証のエントリーポイント。
+
+## URL / ルート
+
+| URL | 画面 | 認証 |
+|-----|------|------|
+| `/login` | LoginScene | 不要 |
+
+参照: [`docs/design/url-list.md`](./url-list.md)
+
+## 認証要否
+
+認証不要。`AuthLayout`（サイドバーなし）を使用する（Issue #70）。
+
+## 状態一覧
+
+| 状態 | 説明 | ストーリー |
+|------|------|----------|
+| 初期 | フォーム空、未送信 | `Default` |
+| ログイン後リダイレクト | auth が admin を返す → `/` へ遷移（ナビゲーション再現） | `AfterLoginRedirect` |
+
+## データ契約
+
+- `POST /auth/login` → `AuthUser`（成功）/ エラー（401 等）
+- `GET /auth/me` → invalidate 後に再取得
+- `useNavigate` で `/` へ遷移（TanStack Router）
+
+## 関連 ADR / Issue
+
+- ADR-0003: client スタック（TanStack Form / TanStack Router）
+- Issue #26（認証ガード）/ #70（AuthLayout）/ #74（TanStack Form 導入）/ #108（本 Story の整備）

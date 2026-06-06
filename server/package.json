@@ -29,12 +29,17 @@
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.100.1",
     "@asteasolutions/zod-to-openapi": "^7.3.4",
     "@hatchery/common": "workspace:*",
+    "@octokit/rest": "^22.0.1",
     "@prisma/client": "^6",
     "bcrypt": "^6.0.0",
+    "cheerio": "^1.2.0",
     "express": "^5.0.0",
+    "express-rate-limit": "^7.5.0",
     "express-session": "^1.19.0",
+    "morgan": "^1.11.0",
     "passport": "^0.7.0",
     "passport-local": "^1.0.0",
     "zod": "^3.24.1"
@@ -43,6 +48,7 @@
     "@types/bcrypt": "^6.0.0",
     "@types/express": "^5",
     "@types/express-session": "^1.19.0",
+    "@types/morgan": "^1.9.10",
     "@types/passport": "^1.0.17",
     "@types/passport-local": "^1.0.38",
     "@types/supertest": "^6",

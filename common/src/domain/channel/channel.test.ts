@@ -11,10 +11,11 @@ import {
 } from "./channel.js";
 
 describe("Channel / CHANNEL_IDS (A-7)", () => {
-  it("CHANNEL_IDS は MVP の 2 チャンネル zatsudan / shigoto を含む", () => {
+  it("CHANNEL_IDS は MVP の 3 チャンネル zatsudan / shigoto / kikaku を含む", () => {
     expect(CHANNEL_IDS).toContain("zatsudan");
     expect(CHANNEL_IDS).toContain("shigoto");
-    expect(CHANNEL_IDS).toHaveLength(2);
+    expect(CHANNEL_IDS).toContain("kikaku");
+    expect(CHANNEL_IDS).toHaveLength(3);
   });
 
   it("Channel は id / label / type を持ち parse 成功する", () => {
@@ -27,11 +28,17 @@ describe("Channel / CHANNEL_IDS (A-7)", () => {
     expect(ChannelSchema.safeParse({ id: "zatsudan", label: "", type: "zatsudan" }).success).toBe(false);
   });
 
+  it("label が 51 文字以上なら parse に失敗する（#91）", () => {
+    expect(
+      ChannelSchema.safeParse({ id: "zatsudan", label: "a".repeat(51), type: "zatsudan" }).success,
+    ).toBe(false);
+  });
+
   it("type が無いと parse に失敗する", () => {
     expect(ChannelSchema.safeParse({ id: "zatsudan", label: "#雑談" }).success).toBe(false);
   });
 
-  it("DEFAULT_CHANNELS は CHANNEL_IDS の 2 チャンネルを表現する", () => {
+  it("DEFAULT_CHANNELS は CHANNEL_IDS の 3 チャンネルを表現する", () => {
     expect(DEFAULT_CHANNELS.map((c) => c.id)).toEqual([...CHANNEL_IDS]);
     for (const ch of DEFAULT_CHANNELS) {
       expect(ChannelSchema.safeParse(ch).success).toBe(true);
@@ -47,9 +54,16 @@ describe("Channel / CHANNEL_IDS (A-7)", () => {
     const shigoto = DEFAULT_CHANNELS.find((c) => c.id === "shigoto");
     expect(shigoto?.type).toBe("task");
   });
+
+  it("DEFAULT_CHANNELS に kikaku チャンネルが type='planning' で含まれる (#76)", () => {
+    const kikaku = DEFAULT_CHANNELS.find((c) => c.id === "kikaku");
+    expect(kikaku).toBeDefined();
+    expect(kikaku?.label).toBe("#企画");
+    expect(kikaku?.type).toBe("planning");
+  });
 });
 
-describe("ChannelTypeSchema（#54）", () => {
+describe("ChannelTypeSchema（#54 / #76）", () => {
   it("'zatsudan' は valid", () => {
     expect(ChannelTypeSchema.parse("zatsudan")).toBe("zatsudan");
   });
@@ -58,9 +72,12 @@ describe("ChannelTypeSchema（#54）", () => {
     expect(ChannelTypeSchema.parse("task")).toBe("task");
   });
 
+  it("'planning' は valid (#76)", () => {
+    expect(ChannelTypeSchema.parse("planning")).toBe("planning");
+  });
+
   it("不正な値は invalid", () => {
     expect(ChannelTypeSchema.safeParse("invalid").success).toBe(false);
-    expect(ChannelTypeSchema.safeParse("planning").success).toBe(false);
     expect(ChannelTypeSchema.safeParse("").success).toBe(false);
   });
 });
@@ -80,6 +97,10 @@ describe("CreateChannelSchema（POST /channels ボディ・#47 / #54）", () => 
 
   it("label が無いと parse に失敗する", () => {
     expect(CreateChannelSchema.safeParse({}).success).toBe(false);
+  });
+
+  it("label が 51 文字以上なら parse に失敗する（#91）", () => {
+    expect(CreateChannelSchema.safeParse({ label: "a".repeat(51) }).success).toBe(false);
   });
 });
 
@@ -105,6 +126,14 @@ describe("UpdateChannelSchema（PATCH /channels/:id ボディ・#54）", () => {
 
   it("label が空文字なら parse に失敗する", () => {
     expect(UpdateChannelSchema.safeParse({ label: "" }).success).toBe(false);
+  });
+
+  it("label が 50 文字ちょうどなら parse 成功する（#91）", () => {
+    expect(UpdateChannelSchema.safeParse({ label: "a".repeat(50) }).success).toBe(true);
+  });
+
+  it("label が 51 文字以上なら parse に失敗する（#91）", () => {
+    expect(UpdateChannelSchema.safeParse({ label: "a".repeat(51) }).success).toBe(false);
   });
 });
 

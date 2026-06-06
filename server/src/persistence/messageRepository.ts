@@ -6,6 +6,16 @@ import type { Message, MessageRecord } from "@hatchery/common";
  */
 export type { MessageRecord };
 
+/** #企画 チャンネルの UX 提案メッセージ作成入力（#76）。 */
+export interface PlanningMessageInput {
+  speaker: string;
+  channel: string;
+  text: string;
+  proposalTitle: string;
+  proposalReason: string;
+  proposalTargetUrl: string;
+}
+
 function cloneRecord(record: MessageRecord): MessageRecord {
   return { ...record };
 }
@@ -19,6 +29,10 @@ export interface MessageRepository {
   createMany(input: Message[]): Promise<MessageRecord[]>;
   /** channelId でフィルタリングしたメッセージ一覧を返す（#48）。 */
   listByChannel(channelId: string): Promise<MessageRecord[]>;
+  /** UX 提案メッセージを 1 件作成する（#76）。 */
+  createPlanningMessage(input: PlanningMessageInput): Promise<MessageRecord>;
+  /** GitHub Issue 起票後にメッセージの issueNumber / issueUrl を更新する（#76）。 */
+  updateIssueRef(id: string, issueNumber: number, issueUrl: string): Promise<MessageRecord | null>;
 }
 
 /** DB 非依存のインメモリ実装。ユースケース/ルートのテストで注入する。 */
@@ -51,5 +65,32 @@ export class InMemoryMessageRepository implements MessageRepository {
     return Promise.resolve(
       this.records.filter((r) => r.channel === channelId).map(cloneRecord),
     );
+  }
+
+  createPlanningMessage(input: PlanningMessageInput): Promise<MessageRecord> {
+    this.seq += 1;
+    const record: MessageRecord = {
+      id: `mem-${this.seq}`,
+      speaker: input.speaker,
+      channel: input.channel,
+      text: input.text,
+      createdAt: new Date(0),
+      order: 0,
+      proposalTitle: input.proposalTitle,
+      proposalReason: input.proposalReason,
+      proposalTargetUrl: input.proposalTargetUrl,
+    };
+    this.records.push(record);
+    return Promise.resolve(cloneRecord(record));
+  }
+
+  updateIssueRef(id: string, issueNumber: number, issueUrl: string): Promise<MessageRecord | null> {
+    const record = this.records.find((r) => r.id === id);
+    if (!record) {
+      return Promise.resolve(null);
+    }
+    record.issueNumber = issueNumber;
+    record.issueUrl = issueUrl;
+    return Promise.resolve(cloneRecord(record));
   }
 }

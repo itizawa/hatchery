@@ -96,4 +96,25 @@ describe("MessageRecordSchema (#40・永続化形)", () => {
     const tooLong = "あ".repeat(MAX_MESSAGE_LENGTH + 1);
     expect(MessageRecordSchema.safeParse({ ...base, text: tooLong }).success).toBe(false);
   });
+
+  it("planning 提案フィールドが全て optional で parse 成功する (#76)", () => {
+    const withProposal = {
+      ...base,
+      proposalTitle: "ログインボタンの視認性向上",
+      proposalReason: "ボタンの色がコントラスト不足",
+      proposalTargetUrl: "/login",
+      issueNumber: 99,
+      issueUrl: "https://github.com/owner/repo/issues/99",
+    };
+    const result = MessageRecordSchema.safeParse(withProposal);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.proposalTitle).toBe("ログインボタンの視認性向上");
+      expect(result.data.issueNumber).toBe(99);
+    }
+  });
+
+  it("planning 提案フィールドが無くても parse 成功する（optional）(#76)", () => {
+    expect(MessageRecordSchema.safeParse(base).success).toBe(true);
+  });
 });

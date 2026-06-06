@@ -36,11 +36,18 @@ export type CreateChannelMessage = z.infer<typeof CreateChannelMessageSchema>;
  * order は定時バッチ内での発言順（0 始まり、ADR-0009）。
  * 注: id を必須にするのは「永続化形」のみ。生成入力（MessageSchema / MessageArraySchema）には
  * id を含めない（AI 生成・リクエスト検証・OpenAPI を壊さないため）。
+ * proposalTitle / proposalReason / proposalTargetUrl / issueNumber / issueUrl は
+ * #企画 チャンネルの UX 提案メッセージ用 optional フィールド（#76）。
  */
 export const MessageRecordSchema = MessageSchema.extend({
   id: z.string().min(1),
   createdAt: z.date(),
   order: z.number().int().nonnegative(),
+  proposalTitle: z.string().optional(),
+  proposalReason: z.string().optional(),
+  proposalTargetUrl: z.string().optional(),
+  issueNumber: z.number().int().positive().optional(),
+  issueUrl: z.string().optional(),
 });
 
 export type MessageRecord = z.infer<typeof MessageRecordSchema>;

@@ -8,7 +8,7 @@ import RadioGroup from "@mui/material/RadioGroup";
 import TextField from "@mui/material/TextField";
 import { useState, type FormEvent, type ReactElement } from "react";
 
-import type { ChannelType } from "@hatchery/common";
+import { CHANNEL_LABEL_MAX_LENGTH, type ChannelType } from "@hatchery/common";
 import { useAuth } from "../api/auth.js";
 import { useCreateChannel } from "../api/channels.js";
 
@@ -44,7 +44,7 @@ export const AddChannelForm = (): ReactElement | null => {
         label="チャンネル名"
         value={label}
         onChange={(e) => setLabel(e.target.value)}
-        inputProps={{ "aria-label": "チャンネル名" }}
+        inputProps={{ "aria-label": "チャンネル名", maxLength: CHANNEL_LABEL_MAX_LENGTH }}
       />
       <FormControl>
         <FormLabel>タイプ</FormLabel>

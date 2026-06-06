@@ -18,7 +18,7 @@ describe("fetchMe (GET /auth/me e2e 型フロー)", () => {
   });
 
   it("200 のとき AuthUser を返す", async () => {
-    const user = { id: "u1", displayName: "Alice" };
+    const user = { id: "u1", displayName: "Alice", role: "member" };
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, user));
     vi.stubGlobal("fetch", fetchMock);
 

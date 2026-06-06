@@ -1,5 +1,5 @@
 import express, { type Express } from "express";
-import session from "express-session";
+import session, { type Store } from "express-session";
 
 import { createPassport } from "./auth/passport.js";
 import { SECURITY_DEFAULTS } from "./config/env.js";
@@ -109,6 +109,12 @@ export interface AppDeps {
   invitationLinkRepository?: InvitationLinkRepository;
   /** DDoS/過負荷対策の設定（#34）。省略時は既定値。 */
   security?: SecurityOptions;
+  /**
+   * express-session のセッションストア（#186）。
+   * 省略時はプロセス内 MemoryStore（開発・テスト用途のみ）。
+   * 本番（NODE_ENV=production）では必須—省略すると起動時例外。
+   */
+  sessionStore?: Store;
 }
 
 /**
@@ -133,6 +139,12 @@ export function createApp(deps: AppDeps): Express {
   const sessionSecret = process.env.SESSION_SECRET;
   if (!sessionSecret && process.env.NODE_ENV === "production") {
     throw new Error("SESSION_SECRET 環境変数が設定されていません。本番環境では必須です。");
+  }
+
+  if (!deps.sessionStore && process.env.NODE_ENV === "production") {
+    throw new Error(
+      "sessionStore が必須です。本番環境では connect-pg-simple 等の永続ストアを AppDeps.sessionStore に渡してください（#186）。",
+    );
   }
 
   // セキュアヘッダ／CORS（#35）は最前段に置き、エラー応答も含む全レスポンスに効かせる。
@@ -162,6 +174,7 @@ export function createApp(deps: AppDeps): Express {
       resave: false,
       saveUninitialized: false,
       cookie: buildSessionCookieOptions(security.crossSiteCookie),
+      ...(deps.sessionStore ? { store: deps.sessionStore } : {}),
     }),
   );
 

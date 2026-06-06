@@ -8,9 +8,13 @@ import { PrismaEmployeeRepository } from "./persistence/prismaEmployeeRepository
 import { PrismaMessageRepository } from "./persistence/prismaMessageRepository.js";
 import { PrismaUserRepository } from "./persistence/prismaUserRepository.js";
 import { PrismaInvitationLinkRepository } from "./persistence/prismaInvitationLinkRepository.js";
+import { createPgSessionStore } from "./persistence/pgSessionStore.js";
 
 /** API プロセスの起動エントリ。createApp に Prisma 実装を注入して listen する。 */
 const env = loadEnv();
+
+const sessionStore = env.databaseUrl ? createPgSessionStore(env.databaseUrl) : undefined;
+
 const app = createApp({
   messageRepository: new PrismaMessageRepository(prisma),
   userRepository: new PrismaUserRepository(prisma),
@@ -19,6 +23,7 @@ const app = createApp({
   employeeRepository: new PrismaEmployeeRepository(prisma),
   appSettingRepository: new PrismaAppSettingRepository(prisma),
   invitationLinkRepository: new PrismaInvitationLinkRepository(prisma),
+  sessionStore,
   security: {
     rateLimitWindowMs: env.rateLimitWindowMs,
     rateLimitMax: env.rateLimitMax,

@@ -1,8 +1,45 @@
+import session from "express-session";
 import request from "supertest";
 import { describe, expect, it } from "vitest";
 
 import { buildSessionCookieOptions, createApp } from "./app.js";
 import { InMemoryMessageRepository } from "./persistence/messageRepository.js";
+
+describe("createApp: sessionStore の本番ガード（#186）", () => {
+  it("NODE_ENV=production かつ sessionStore 未注入のとき起動時例外を投げる", () => {
+    const original = process.env.NODE_ENV;
+    process.env.NODE_ENV = "production";
+    try {
+      expect(() =>
+        createApp({ messageRepository: new InMemoryMessageRepository() }),
+      ).toThrow();
+    } finally {
+      process.env.NODE_ENV = original;
+    }
+  });
+
+  it("NODE_ENV=production でも sessionStore を注入すれば起動時例外を投げない", () => {
+    const originalEnv = process.env.NODE_ENV;
+    const originalSecret = process.env.SESSION_SECRET;
+    process.env.NODE_ENV = "production";
+    process.env.SESSION_SECRET = "test-secret-for-production-guard-test";
+    try {
+      expect(() =>
+        createApp({
+          messageRepository: new InMemoryMessageRepository(),
+          sessionStore: new session.MemoryStore(),
+        }),
+      ).not.toThrow();
+    } finally {
+      process.env.NODE_ENV = originalEnv;
+      if (originalSecret === undefined) {
+        delete process.env.SESSION_SECRET;
+      } else {
+        process.env.SESSION_SECRET = originalSecret;
+      }
+    }
+  });
+});
 
 describe("buildSessionCookieOptions（別ドメイン配信のクロスサイト cookie）", () => {
   it("crossSiteCookie=true で SameSite=None + Secure（クロスサイトでも cookie を送信できる）", () => {

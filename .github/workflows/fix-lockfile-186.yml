@@ -1,0 +1,39 @@
+name: Fix pnpm-lock.yaml for issue-186
+
+# feature/issue-186 ブランチの pnpm-lock.yaml を再生成して commit するための一時ワークフロー。
+# 実行後はこのファイルごと削除すること。
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix-lockfile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: feature/issue-186
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+
+      - name: Regenerate pnpm-lock.yaml
+        run: pnpm install --lockfile-only --no-frozen-lockfile --engine-strict=false
+
+      - name: Commit updated pnpm-lock.yaml
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add pnpm-lock.yaml
+          git diff --staged --quiet || git commit -m "fix: pnpm-lock.yaml を connect-pg-simple / pg 追加後の状態に更新する (#186)"
+          git push origin feature/issue-186

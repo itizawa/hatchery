@@ -37,7 +37,7 @@ export type CreateChannelMessage = z.infer<typeof CreateChannelMessageSchema>;
  * 注: id を必須にするのは「永続化形」のみ。生成入力（MessageSchema / MessageArraySchema）には
  * id を含めない（AI 生成・リクエスト検証・OpenAPI を壊さないため）。
  * proposalTitle / proposalReason / proposalTargetUrl / issueNumber / issueUrl は
- * #企画 チャンネルの UX 提案メッセージ用 optional フィールド（#76）。
+ * 企画 チャンネルの UX 提案メッセージ用 optional フィールド（#76）。
  */
 export const MessageRecordSchema = MessageSchema.extend({
   id: z.string().min(1),

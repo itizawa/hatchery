@@ -9,7 +9,7 @@ import type { MessageRepository } from "../persistence/messageRepository.js";
 /**
  * GitHub Issue 起票ルータ（#76）。
  * POST /channels/:channelId/messages/:messageId/create-issue
- * #企画 チャンネルのメッセージから GitHub Issue を起票し、メッセージに参照を追記する。
+ * 企画 チャンネルのメッセージから GitHub Issue を起票し、メッセージに参照を追記する。
  * 認証必須。GITHUB_TOKEN / GITHUB_OWNER / GITHUB_REPO 環境変数が必要。
  */
 export function createPlanningIssuesRouter(messageRepo: MessageRepository): Router {
@@ -46,7 +46,7 @@ export function createPlanningIssuesRouter(messageRepo: MessageRepository): Rout
         "",
         message.proposalTargetUrl ? `**対象画面**: ${message.proposalTargetUrl}` : null,
         "",
-        "_AI が #企画 チャンネルから自動起票_",
+        "_AI が 企画 チャンネルから自動起票_",
       ]
         .filter((line): line is string => line !== null)
         .join("\n");

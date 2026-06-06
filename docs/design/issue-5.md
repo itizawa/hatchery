@@ -83,7 +83,7 @@ common/src/
 
 ### 4.2 スキーマ設計（Zod / MVP 最小）
 
-- **Channel**: `{ id: string; label: string }`。MVP の既定値は `zatsudan`（#雑談）/ `shigoto`（#仕事）。`CHANNEL_IDS = ["zatsudan", "shigoto"] as const` を定義し、`MessageSchema.channel` は当面この既知 ID 群と突き合わせ可能にする（厳密な enum 強制は #8 / シーン生成側の検証で行う余地を残し、common ではまず非空 string + 既知 ID 定数の提供にとどめる）。
+- **Channel**: `{ id: string; label: string }`。MVP の既定値は `zatsudan`（雑談）/ `shigoto`（仕事）。`CHANNEL_IDS = ["zatsudan", "shigoto"] as const` を定義し、`MessageSchema.channel` は当面この既知 ID 群と突き合わせ可能にする（厳密な enum 強制は #8 / シーン生成側の検証で行う余地を残し、common ではまず非空 string + 既知 ID 定数の提供にとどめる）。
 - **Employee**: MVP に必要な最小限 — `id`（社員 ID）・`displayName`（表示名）・`role`（職種・任意）。キャラクター・バイブルの 5 層（語彙の井戸等）は Phase 1 のプロンプト設計 Issue に委ね、本 Issue では出さない（MVP スコープ厳守）。
 - **Message**: `{ speaker: string; channel: string; text: string }`。`concept.md`「フィールド型定義」に準拠。`text` は非空かつ `MAX_MESSAGE_LENGTH`（定数。例 280）で上限。
 - **Scene**: `{ scene: string; messages: Message[] }`。`messages` は `.min(1)`。`concept.md` の出力 JSON とフィールド名・構造を一致させる（後段の検証で生成 JSON をそのまま parse できる）。

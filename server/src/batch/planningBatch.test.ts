@@ -40,7 +40,7 @@ describe("runPlanningBatch (#76)", () => {
     expect(result).toHaveLength(0);
   });
 
-  it("#企画チャンネルが存在しなければメッセージ保存せず空配列を返す", async () => {
+  it("企画チャンネルが存在しなければメッセージ保存せず空配列を返す", async () => {
     process.env = { ...process.env, ANTHROPIC_API_KEY: "test-key" };
     // 空リストで初期化することで kikaku チャンネルを含まない状態を作る
     channelRepo = new InMemoryChannelRepository([]);

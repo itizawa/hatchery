@@ -6,7 +6,7 @@ import type { Message, MessageRecord } from "@hatchery/common";
  */
 export type { MessageRecord };
 
-/** #企画 チャンネルの UX 提案メッセージ作成入力（#76）。 */
+/** 企画 チャンネルの UX 提案メッセージ作成入力（#76）。 */
 export interface PlanningMessageInput {
   speaker: string;
   channel: string;

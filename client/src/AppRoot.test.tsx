@@ -1,5 +1,5 @@
 import { createMemoryHistory } from "@tanstack/react-router";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AppRoot } from "./AppRoot";
@@ -10,22 +10,31 @@ import { createAppRouter } from "./router";
 // テスト間の状態リークを避けるため memory history のルータを注入する。
 describe("AppRoot", () => {
   beforeEach(() => {
-    // URL ごとに応答を分ける: /auth/me は未ログイン(401)、GET /channels は既定チャンネル（#47）。
-    // 全 URL に配列を返すと /auth/me が truthy になり AddChannelForm が誤って表示されてしまうため。
+    // URL ごとに応答を分ける: /auth/me はログイン済み(200 AuthUser)、GET /channels は既定チャンネル（#47）。
+    // ホーム（/）はログイン必須（router の requireAuth ガード）のため、ログイン済みでないと /login へ
+    // リダイレクトされ、サイドバー＋ホーム枠が描画されない。
     vi.stubGlobal(
       "fetch",
       vi.fn((input: Request | string) => {
         const url = typeof input === "string" ? input : input.url;
         if (url.includes("/auth/me")) {
           return Promise.resolve(
-            new Response(JSON.stringify({ error: "Unauthorized" }), {
-              status: 401,
-              headers: { "Content-Type": "application/json" },
-            }),
+            new Response(
+              JSON.stringify({
+                id: "testuser",
+                displayName: "Test User",
+                role: "admin",
+                employeeId: "emp-testuser",
+              }),
+              {
+                status: 200,
+                headers: { "Content-Type": "application/json" },
+              },
+            ),
           );
         }
         return Promise.resolve(
-          new Response(JSON.stringify([{ id: "zatsudan", label: "#雑談" }]), {
+          new Response(JSON.stringify([{ id: "zatsudan", label: "雑談" }]), {
             status: 200,
             headers: { "Content-Type": "application/json" },
           }),
@@ -42,7 +51,9 @@ describe("AppRoot", () => {
       history: createMemoryHistory({ initialEntries: ["/"] }),
     });
     render(<AppRoot router={router} />);
-    expect(await screen.findByText("#雑談")).toBeInTheDocument();
+    // 「雑談」は AddChannelForm のタイプ選択ラジオにも現れるため、サイドバーのチャンネル一覧内にスコープして確認する。
+    const channelList = await screen.findByRole("list", { name: "チャンネル一覧" });
+    expect(within(channelList).getByText("雑談")).toBeInTheDocument();
     expect(await screen.findByRole("heading", { name: /タイムライン/ })).toBeInTheDocument();
   });
 });

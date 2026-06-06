@@ -29,7 +29,7 @@ describe("@hatchery/common 公開 API", () => {
 
   it("z.infer 由来の型に最小オブジェクトを代入できる（型レベルは tsc が担保）", () => {
     const employee: Employee = { id: "haru", displayName: "haru" };
-    const channel: Channel = { id: "zatsudan", label: "#雑談" };
+    const channel: Channel = { id: "zatsudan", label: "雑談" };
     const message: Message = { speaker: "haru", channel: "zatsudan", text: "やあ" };
     const task: Task = { id: "t1", text: "ロゴ案", status: "new" };
     expect([employee, channel, message, task]).toHaveLength(4);

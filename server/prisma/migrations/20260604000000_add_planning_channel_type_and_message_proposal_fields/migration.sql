@@ -1,4 +1,4 @@
--- #76: #企画チャンネル追加と UX 提案メッセージフィールドの追加。
+-- #76: 企画チャンネル追加と UX 提案メッセージフィールドの追加。
 
 -- ChannelType enum に planning を追加する。
 ALTER TYPE "ChannelType" ADD VALUE IF NOT EXISTS 'planning';

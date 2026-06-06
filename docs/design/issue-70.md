@@ -74,7 +74,7 @@ rootRoute (component なし = <Outlet /> のみ)
 |---|-----------|---------|
 | 1 | `/login` でサイドバーが表示されない | `queryByRole("navigation", { name: /サイドバー/ })` が null |
 | 2 | `/login` で「ログイン」見出しが表示される | `findByRole("heading", { name: /ログイン/ })` が存在 |
-| 3 | `/` でサイドバーが引き続き表示される（既存テストで担保） | `findByText("#雑談")` が存在 |
+| 3 | `/` でサイドバーが引き続き表示される（既存テストで担保） | `findByText("雑談")` が存在 |
 
 ## 7. リスク・未決事項
 

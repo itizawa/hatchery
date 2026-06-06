@@ -1,12 +1,11 @@
 name: Deploy Storybook to GitHub Pages
 
-# develop または main へ push されたとき、Storybook を GitHub Pages へデプロイする。
+# develop へ push（= develop マージ）されたとき、Storybook を GitHub Pages へデプロイする。
 # GitHub Pages の公開設定（Settings → Pages の Source）は人間が行う必要がある。
 on:
   push:
     branches:
       - develop
-      - main
 
 # actions/deploy-pages が必要とする権限
 permissions:

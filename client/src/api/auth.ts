@@ -16,22 +16,24 @@ export async function fetchMe(): Promise<AuthUser | null> {
   return data ?? null;
 }
 
-/** POST /auth/login を呼び出す。成功時は AuthUser を返す。失敗時は例外を投げる。 */
+/**
+ * POST /auth/login を呼び出す。成功時は AuthUser を返す。失敗時は例外を投げる。
+ * openApiClient 経由で baseUrl（VITE_API_BASE_URL = Cloud Run）を解決する。生の相対 fetch だと
+ * クロスオリジン配信（#78: Cloudflare Pages × Cloud Run）で Pages 側へ POST して 405 になる。
+ */
 export async function login(body: LoginRequest): Promise<AuthUser> {
-  const res = await fetch("/auth/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+  const { data, response } = await openApiClient.POST("/auth/login", {
+    body,
     credentials: "include",
   });
-  if (!res.ok) throw new Error(`POST /auth/login failed: ${res.status}`);
-  return res.json() as Promise<AuthUser>;
+  if (!response.ok || !data) throw new Error(`POST /auth/login failed: ${response.status}`);
+  return data;
 }
 
-/** POST /auth/logout を呼び出す。 */
+/** POST /auth/logout を呼び出す。openApiClient 経由で baseUrl を解決する（login と同様）。 */
 export async function logout(): Promise<void> {
-  const res = await fetch("/auth/logout", { method: "POST", credentials: "include" });
-  if (!res.ok) throw new Error(`POST /auth/logout failed: ${res.status}`);
+  const { response } = await openApiClient.POST("/auth/logout", { credentials: "include" });
+  if (!response.ok) throw new Error(`POST /auth/logout failed: ${response.status}`);
 }
 
 /** 現在の認証状態を TanStack Query で取得するフック。 */
@@ -62,16 +64,14 @@ export function useLogout() {
   });
 }
 
-/** PATCH /auth/me を呼び出す。成功時は更新後の AuthUser を返す。 */
+/** PATCH /auth/me を呼び出す。成功時は更新後の AuthUser を返す。openApiClient 経由で baseUrl を解決する。 */
 export async function updateProfile(body: UpdateProfile): Promise<AuthUser> {
-  const res = await fetch("/auth/me", {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+  const { data, response } = await openApiClient.PATCH("/auth/me", {
+    body,
     credentials: "include",
   });
-  if (!res.ok) throw new Error(`PATCH /auth/me failed: ${res.status}`);
-  return res.json() as Promise<AuthUser>;
+  if (!response.ok || !data) throw new Error(`PATCH /auth/me failed: ${response.status}`);
+  return data;
 }
 
 /** プロフィール更新ミューテーションフック。成功後に auth キャッシュを直接更新する（再フェッチ不要）。 */

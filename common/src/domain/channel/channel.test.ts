@@ -19,12 +19,12 @@ describe("Channel / CHANNEL_IDS (A-7)", () => {
   });
 
   it("Channel は id / label / type を持ち parse 成功する", () => {
-    const ok = ChannelSchema.parse({ id: "zatsudan", label: "#雑談", type: "zatsudan" });
-    expect(ok).toEqual({ id: "zatsudan", label: "#雑談", type: "zatsudan" });
+    const ok = ChannelSchema.parse({ id: "zatsudan", label: "雑談", type: "zatsudan" });
+    expect(ok).toEqual({ id: "zatsudan", label: "雑談", type: "zatsudan" });
   });
 
   it("id / label が空文字なら parse に失敗する", () => {
-    expect(ChannelSchema.safeParse({ id: "", label: "#雑談", type: "zatsudan" }).success).toBe(false);
+    expect(ChannelSchema.safeParse({ id: "", label: "雑談", type: "zatsudan" }).success).toBe(false);
     expect(ChannelSchema.safeParse({ id: "zatsudan", label: "", type: "zatsudan" }).success).toBe(false);
   });
 
@@ -35,7 +35,7 @@ describe("Channel / CHANNEL_IDS (A-7)", () => {
   });
 
   it("type が無いと parse に失敗する", () => {
-    expect(ChannelSchema.safeParse({ id: "zatsudan", label: "#雑談" }).success).toBe(false);
+    expect(ChannelSchema.safeParse({ id: "zatsudan", label: "雑談" }).success).toBe(false);
   });
 
   it("DEFAULT_CHANNELS は CHANNEL_IDS の 3 チャンネルを表現する", () => {
@@ -58,7 +58,7 @@ describe("Channel / CHANNEL_IDS (A-7)", () => {
   it("DEFAULT_CHANNELS に kikaku チャンネルが type='planning' で含まれる (#76)", () => {
     const kikaku = DEFAULT_CHANNELS.find((c) => c.id === "kikaku");
     expect(kikaku).toBeDefined();
-    expect(kikaku?.label).toBe("#企画");
+    expect(kikaku?.label).toBe("企画");
     expect(kikaku?.type).toBe("planning");
   });
 });
@@ -88,7 +88,7 @@ describe("CreateChannelSchema（POST /channels ボディ・#47 / #54）", () => 
   });
 
   it("type='task' を明示すると task で作成される", () => {
-    expect(CreateChannelSchema.parse({ label: "#仕事", type: "task" })).toEqual({ label: "#仕事", type: "task" });
+    expect(CreateChannelSchema.parse({ label: "仕事", type: "task" })).toEqual({ label: "仕事", type: "task" });
   });
 
   it("label が空文字なら parse に失敗する（400 の根拠）", () => {
@@ -139,7 +139,7 @@ describe("UpdateChannelSchema（PATCH /channels/:id ボディ・#54）", () => {
 
 describe("findChannelById", () => {
   it("既知のチャンネル ID から DEFAULT_CHANNELS の Channel を返す", () => {
-    expect(findChannelById("zatsudan")).toEqual({ id: "zatsudan", label: "#雑談", type: "zatsudan" });
+    expect(findChannelById("zatsudan")).toEqual({ id: "zatsudan", label: "雑談", type: "zatsudan" });
   });
 
   it("未知のチャンネル ID では undefined を返す", () => {

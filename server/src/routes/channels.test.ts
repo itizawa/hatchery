@@ -168,9 +168,9 @@ describe("GET /channels（一覧・認証不要・#47 / #54）", () => {
     const res = await request(app).get("/channels");
     expect(res.status).toBe(200);
     expect(res.body).toEqual([
-      { id: "zatsudan", label: "#雑談", type: "zatsudan" },
-      { id: "shigoto", label: "#仕事", type: "task" },
-      { id: "kikaku", label: "#企画", type: "planning" },
+      { id: "zatsudan", label: "雑談", type: "zatsudan" },
+      { id: "shigoto", label: "仕事", type: "task" },
+      { id: "kikaku", label: "企画", type: "planning" },
     ]);
   });
 });
@@ -196,9 +196,9 @@ describe("POST /channels（作成・認証必須・#47 / #54）", () => {
   it("type='task' を指定して作成できる（#54）", async () => {
     const { app } = await buildApp();
     const agent = await login(app);
-    const res = await agent.post("/channels").send({ label: "#仕事2", type: "task" });
+    const res = await agent.post("/channels").send({ label: "仕事2", type: "task" });
     expect(res.status).toBe(201);
-    expect(res.body.label).toBe("#仕事2");
+    expect(res.body.label).toBe("仕事2");
     expect(res.body.type).toBe("task");
   });
 
@@ -212,9 +212,9 @@ describe("POST /channels（作成・認証必須・#47 / #54）", () => {
   it("作成したチャンネルは GET /channels の一覧に含まれる", async () => {
     const { app } = await buildApp();
     const agent = await login(app);
-    const created = await agent.post("/channels").send({ label: "#企画" });
+    const created = await agent.post("/channels").send({ label: "企画" });
     const list = await request(app).get("/channels");
-    expect(list.body).toContainEqual({ id: created.body.id, label: "#企画", type: "zatsudan" });
+    expect(list.body).toContainEqual({ id: created.body.id, label: "企画", type: "zatsudan" });
   });
 });
 

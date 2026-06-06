@@ -6,7 +6,7 @@ import { ChannelView } from "./ChannelView";
 
 // 受け入れ条件（#30）: channel に属する message[] を発言者名 + 本文の
 // フラット一覧として表示する presentational コンポーネント。
-const channel: Channel = { id: "zatsudan", label: "#雑談" };
+const channel: Channel = { id: "zatsudan", label: "雑談" };
 
 const employees: readonly Employee[] = [
   { id: "haru", displayName: "ハル" },
@@ -21,7 +21,7 @@ const messages: readonly Message[] = [
 describe("ChannelView", () => {
   it("チャンネルラベルを見出しとして表示する", () => {
     render(<ChannelView channel={channel} messages={messages} employees={employees} />);
-    expect(screen.getByRole("heading", { name: "#雑談" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "雑談" })).toBeInTheDocument();
   });
 
   it("各メッセージの本文を表示する", () => {

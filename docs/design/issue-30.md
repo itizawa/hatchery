@@ -35,7 +35,7 @@
 
 1. `ChannelView` は `channel: Channel` / `messages: readonly Message[]` / `employees?: readonly Employee[]`
    を props で受け取り、API・ルータ・グローバル状態に依存しない（fixture 描画できる）。
-2. チャンネルヘッダとして `channel.label`（例 `#雑談`）を見出しとして表示する。
+2. チャンネルヘッダとして `channel.label`（例 `雑談`）を見出しとして表示する。
 3. `messages` を Slack 風フラット一覧として表示し、各行に「発言者名 + 本文」を出す。
 4. 発言者名は `speaker`（ID）→ `employees` の `displayName` に解決する。解決できない ID は ID をそのまま表示する。
 5. `messages` が空のとき、空状態メッセージを表示する（一覧は描画しない）。

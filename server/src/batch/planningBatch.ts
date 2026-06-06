@@ -13,7 +13,7 @@ export interface UxProposal {
   targetUrl: string;
 }
 
-/** #企画 チャンネルの ID（DEFAULT_CHANNELS の kikaku エントリと一致）。 */
+/** 企画 チャンネルの ID（DEFAULT_CHANNELS の kikaku エントリと一致）。 */
 const PLANNING_CHANNEL_ID = "kikaku";
 
 /** バッチが巡回するデフォルトパス一覧。 */
@@ -97,8 +97,8 @@ ${pagesDescription}
 /**
  * UX 提案バッチ本体（#76）。
  * - ANTHROPIC_API_KEY が未設定ならスキップ
- * - #企画 チャンネルが存在しなければスキップ
- * - CLIENT_URL のページを巡回して UX 提案を生成し、#企画 チャンネルへ保存する
+ * - 企画 チャンネルが存在しなければスキップ
+ * - CLIENT_URL のページを巡回して UX 提案を生成し、企画 チャンネルへ保存する
  */
 export async function runPlanningBatch(deps: RunPlanningBatchDeps): Promise<MessageRecord[]> {
   const apiKey = await getApiKey(deps.appSettingRepo);
@@ -109,7 +109,7 @@ export async function runPlanningBatch(deps: RunPlanningBatchDeps): Promise<Mess
 
   const channel = await deps.channelRepo.findById(PLANNING_CHANNEL_ID);
   if (!channel) {
-    console.error(`[planningBatch] #企画 チャンネル (${PLANNING_CHANNEL_ID}) が存在しないためスキップします`);
+    console.error(`[planningBatch] 企画 チャンネル (${PLANNING_CHANNEL_ID}) が存在しないためスキップします`);
     return [];
   }
 

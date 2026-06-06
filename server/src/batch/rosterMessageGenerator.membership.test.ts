@@ -4,8 +4,8 @@ import { describe, expect, it } from "vitest";
 import { createRosterMessageGenerator } from "./rosterMessageGenerator.js";
 
 const CHANNELS: Channel[] = [
-  { id: "zatsudan", label: "#雑談" },
-  { id: "shigoto", label: "#仕事" },
+  { id: "zatsudan", label: "雑談" },
+  { id: "shigoto", label: "仕事" },
 ];
 
 describe("createRosterMessageGenerator — 所属 Employee のみ発言（#33）", () => {

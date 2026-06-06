@@ -34,43 +34,43 @@ describe("ChannelList（GET /channels 駆動・#47）", () => {
       "fetch",
       vi.fn().mockResolvedValue(
         jsonResponse(200, [
-          { id: "zatsudan", label: "#雑談", type: "zatsudan" },
-          { id: "shigoto", label: "#仕事", type: "task" },
+          { id: "zatsudan", label: "雑談", type: "zatsudan" },
+          { id: "shigoto", label: "仕事", type: "task" },
         ]),
       ),
     );
 
     renderWithClient(<ChannelList />);
 
-    expect(await screen.findByText("#雑談")).toBeInTheDocument();
-    expect(await screen.findByText("#仕事")).toBeInTheDocument();
+    expect(await screen.findByText("雑談")).toBeInTheDocument();
+    expect(await screen.findByText("仕事")).toBeInTheDocument();
   });
 
   it("API が返したチャンネルだけを描画する（ハードコードに依存しない）", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(
-        jsonResponse(200, [{ id: "kikaku", label: "#企画", type: "zatsudan" }]),
+        jsonResponse(200, [{ id: "kikaku", label: "企画", type: "zatsudan" }]),
       ),
     );
 
     renderWithClient(<ChannelList />);
 
-    expect(await screen.findByText("#企画")).toBeInTheDocument();
-    expect(screen.queryByText("#雑談")).not.toBeInTheDocument();
+    expect(await screen.findByText("企画")).toBeInTheDocument();
+    expect(screen.queryByText("雑談")).not.toBeInTheDocument();
   });
 
   it("zatsudan タイプのチャンネルにはタグアイコンが表示される（#54）", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(
-        jsonResponse(200, [{ id: "zatsudan", label: "#雑談", type: "zatsudan" }]),
+        jsonResponse(200, [{ id: "zatsudan", label: "雑談", type: "zatsudan" }]),
       ),
     );
 
     renderWithClient(<ChannelList />);
 
-    await screen.findByText("#雑談");
+    await screen.findByText("雑談");
     expect(screen.getByTestId("channel-type-icon-zatsudan")).toBeInTheDocument();
   });
 
@@ -78,13 +78,13 @@ describe("ChannelList（GET /channels 駆動・#47）", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(
-        jsonResponse(200, [{ id: "shigoto", label: "#仕事", type: "task" }]),
+        jsonResponse(200, [{ id: "shigoto", label: "仕事", type: "task" }]),
       ),
     );
 
     renderWithClient(<ChannelList />);
 
-    await screen.findByText("#仕事");
+    await screen.findByText("仕事");
     expect(screen.getByTestId("channel-type-icon-task")).toBeInTheDocument();
   });
 });

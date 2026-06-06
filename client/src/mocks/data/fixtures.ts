@@ -23,9 +23,9 @@ export const mockMemberUser: AuthUser = {
 };
 
 export const mockChannels: Channel[] = [
-  { id: "zatsudan", label: "#雑談", type: "zatsudan" },
-  { id: "shigoto", label: "#仕事", type: "task" },
-  { id: "kikaku", label: "#企画", type: "planning" },
+  { id: "zatsudan", label: "雑談", type: "zatsudan" },
+  { id: "shigoto", label: "仕事", type: "task" },
+  { id: "kikaku", label: "企画", type: "planning" },
 ];
 
 export const mockMessages: MessageRecord[] = [

@@ -1,26 +1,41 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider, createMemoryHistory } from "@tanstack/react-router";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createAppRouter, type AppRouter } from "./router";
 
 const CHANNELS_DATA = [
-  { id: "zatsudan", label: "#雑談", type: "zatsudan" },
-  { id: "shigoto", label: "#仕事", type: "task" },
+  { id: "zatsudan", label: "雑談", type: "zatsudan" },
+  { id: "shigoto", label: "仕事", type: "task" },
 ];
+
+/** ログイン済みを表す /auth/me のレスポンスボディ（AuthUser）。 */
+const AUTH_USER = {
+  id: "testuser",
+  displayName: "Test User",
+  role: "admin",
+  employeeId: "emp-testuser",
+};
 
 /** サイドバー（ChannelList）・ChannelScene が呼ぶ fetch を応答する。
  * mockImplementation で毎回新しい Response を生成する（useSuspenseQuery は複数回 fetch するため）。
- * /auth/me → 401（未ログイン）、/messages → []、その他 → CHANNELS_DATA */
-function stubChannelsFetch() {
+ * authenticated=true なら /auth/me → 200 AUTH_USER、false なら 401。/messages → []、その他 → CHANNELS_DATA */
+function stubChannelsFetch({ authenticated }: { authenticated: boolean }) {
   vi.stubGlobal(
     "fetch",
     vi.fn().mockImplementation((input: string | URL | Request) => {
       const urlStr = input instanceof Request ? input.url : String(input);
       if (urlStr.includes("/auth/me")) {
-        return Promise.resolve(new Response(null, { status: 401 }));
+        return authenticated
+          ? Promise.resolve(
+              new Response(JSON.stringify(AUTH_USER), {
+                status: 200,
+                headers: { "Content-Type": "application/json" },
+              }),
+            )
+          : Promise.resolve(new Response(null, { status: 401 }));
       }
       const body = urlStr.includes("/messages") ? JSON.stringify([]) : JSON.stringify(CHANNELS_DATA);
       return Promise.resolve(
@@ -58,7 +73,7 @@ describe("AuthLayout（ログインページ専用レイアウト）", () => {
 // 受け入れ条件 #4: コードベース定義の最小ルート。ホーム（/）でタイムライン表示の枠が描画される。
 describe("createAppRouter", () => {
   beforeEach(() => {
-    stubChannelsFetch();
+    stubChannelsFetch({ authenticated: true });
   });
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -72,12 +87,14 @@ describe("createAppRouter", () => {
     expect(await screen.findByRole("heading", { name: /タイムライン/ })).toBeInTheDocument();
   });
 
-  it("サイドバーにチャンネル一覧（#雑談）を描画する", async () => {
+  it("サイドバーにチャンネル一覧（雑談）を描画する", async () => {
     const router = createAppRouter({
       history: createMemoryHistory({ initialEntries: ["/"] }),
     });
     render(renderRouter(router));
-    expect(await screen.findByText("#雑談")).toBeInTheDocument();
+    // 「雑談」は AddChannelForm のタイプ選択ラジオにも現れるため、サイドバーのチャンネル一覧内にスコープして確認する。
+    const channelList = await screen.findByRole("list", { name: "チャンネル一覧" });
+    expect(within(channelList).getByText("雑談")).toBeInTheDocument();
   });
 
   it("チャンネルルート（/channels/$channelId）で選択中チャンネルの詳細（ヘッダ）を描画する", async () => {
@@ -86,6 +103,34 @@ describe("createAppRouter", () => {
     });
     render(renderRouter(router));
     // ChannelView のヘッダ（見出し）として channel.label を描画する（サイドバーの一覧は heading ではない）。
-    expect(await screen.findByRole("heading", { name: "#雑談" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "雑談" })).toBeInTheDocument();
+  });
+});
+
+// 認証ガード: 未ログインで保護ルートを開くと /login へリダイレクトする。
+describe("認証ガード（未ログイン時のリダイレクト）", () => {
+  beforeEach(() => {
+    stubChannelsFetch({ authenticated: false });
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("未ログインでホーム（/）を開くと /login へリダイレクトする", async () => {
+    const router = createAppRouter({
+      history: createMemoryHistory({ initialEntries: ["/"] }),
+    });
+    render(renderRouter(router));
+    expect(await screen.findByRole("heading", { name: /ログイン/ })).toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: /サイドバー/ })).not.toBeInTheDocument();
+  });
+
+  it("未ログインでチャンネル（/channels/$channelId）を開くと /login へリダイレクトする", async () => {
+    const router = createAppRouter({
+      history: createMemoryHistory({ initialEntries: ["/channels/zatsudan"] }),
+    });
+    render(renderRouter(router));
+    expect(await screen.findByRole("heading", { name: /ログイン/ })).toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: /サイドバー/ })).not.toBeInTheDocument();
   });
 });

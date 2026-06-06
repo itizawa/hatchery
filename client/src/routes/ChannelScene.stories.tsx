@@ -18,12 +18,12 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** チャンネル詳細（#雑談）: メッセージあり。 */
+/** チャンネル詳細（雑談）: メッセージあり。 */
 export const WithMessages: Story = {
   render: () => renderWithRouter("/channels/zatsudan"),
 };
 
-/** チャンネル詳細（#雑談）: メッセージ空。 */
+/** チャンネル詳細（雑談）: メッセージ空。 */
 export const Empty: Story = {
   render: () => renderWithRouter("/channels/zatsudan"),
   parameters: {

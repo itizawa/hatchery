@@ -79,14 +79,15 @@ const rootRoute = createRootRoute({
   component: AppShell,
 });
 
-/** ホーム（/）= 本日のシーン表示の枠。 */
+/** ホーム（/）= 本日のシーン表示の枠。未ログインまたはネットワークエラーの場合は /login へリダイレクト。 */
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
   component: HomeScene,
+  beforeLoad: requireAuth,
 });
 
-/** チャンネル別ビューの枠（/channels/$channelId）。本実装は MVP 機能 Issue で行う。 */
+/** チャンネル別ビューの枠（/channels/$channelId）。未ログインまたはネットワークエラーの場合は /login へリダイレクト。 */
 const channelRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/channels/$channelId",
@@ -95,6 +96,7 @@ const channelRoute = createRoute({
       <ChannelScene />
     </Suspense>
   ),
+  beforeLoad: requireAuth,
 });
 
 /** ログイン画面（/login）。サイドバーなしの AuthLayout 経由で描画する。 */

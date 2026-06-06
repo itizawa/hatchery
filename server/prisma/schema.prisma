@@ -77,7 +77,7 @@ model ChannelEmployee {
 /// channel に直接紐づく 1 発言（ADR-0009: Scene 廃止）。
 /// createdAt でバッチ間の時系列順を保ち、order でバッチ内の発言順を保つ。
 /// proposalTitle / proposalReason / proposalTargetUrl / issueNumber / issueUrl は
-/// #企画 チャンネルの UX 提案メッセージ専用 optional フィールド（#76）。
+/// 企画 チャンネルの UX 提案メッセージ専用 optional フィールド（#76）。
 model Message {
   id                String   @id @default(cuid())
   speaker           String

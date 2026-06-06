@@ -450,7 +450,7 @@ registry.registerPath({
 registry.registerPath({
   method: "post",
   path: "/channels/{channelId}/messages/{messageId}/create-issue",
-  summary: "#企画 チャンネルのメッセージから GitHub Issue を起票（認証必須・#76）",
+  summary: "企画 チャンネルのメッセージから GitHub Issue を起票（認証必須・#76）",
   request: {
     params: z.object({
       channelId: z.string().openapi({ description: "チャンネル ID" }),

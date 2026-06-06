@@ -1,3 +1,4 @@
+import session from "express-session";
 import request from "supertest";
 import { describe, expect, it } from "vitest";
 
@@ -113,6 +114,65 @@ describe("GET /api/auth/me", () => {
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty("role");
     expect(["admin", "member"]).toContain(res.body.role);
+  });
+});
+
+describe("セッション永続化（#186）: 同一ストアを共有する別インスタンスでセッションが維持される", () => {
+  it("ログイン後、同じストアを持つ別アプリインスタンスで GET /api/auth/me が 200 を返す（サーバ再起動模擬）", async () => {
+    const sharedStore = new session.MemoryStore();
+    const repo = await InMemoryUserRepository.createWithTestUser();
+
+    // app1 でログイン
+    const app1 = createApp({
+      messageRepository: new InMemoryMessageRepository(),
+      userRepository: repo,
+      sessionStore: sharedStore,
+    });
+    const loginRes = await request(app1)
+      .post("/api/auth/login")
+      .send({ id: "testuser", password: "testpass" });
+    expect(loginRes.status).toBe(200);
+    const cookies = loginRes.headers["set-cookie"] as string[];
+    expect(cookies).toBeDefined();
+
+    // app2: 同じストアを共有するが別インスタンス（サーバ再起動後を模擬）
+    const app2 = createApp({
+      messageRepository: new InMemoryMessageRepository(),
+      userRepository: repo,
+      sessionStore: sharedStore,
+    });
+    const meRes = await request(app2)
+      .get("/api/auth/me")
+      .set("Cookie", cookies.join("; "));
+    expect(meRes.status).toBe(200);
+    expect(meRes.body).toMatchObject({ id: "testuser" });
+  });
+
+  it("ストアが異なる別アプリインスタンスではセッションが引き継がれず 401 になる", async () => {
+    const repo = await InMemoryUserRepository.createWithTestUser();
+
+    // app1 でログイン（独立したストア）
+    const app1 = createApp({
+      messageRepository: new InMemoryMessageRepository(),
+      userRepository: repo,
+      sessionStore: new session.MemoryStore(),
+    });
+    const loginRes = await request(app1)
+      .post("/api/auth/login")
+      .send({ id: "testuser", password: "testpass" });
+    expect(loginRes.status).toBe(200);
+    const cookies = loginRes.headers["set-cookie"] as string[];
+
+    // app2: 別のストアを持つインスタンス（セッション情報なし）
+    const app2 = createApp({
+      messageRepository: new InMemoryMessageRepository(),
+      userRepository: repo,
+      sessionStore: new session.MemoryStore(),
+    });
+    const meRes = await request(app2)
+      .get("/api/auth/me")
+      .set("Cookie", cookies.join("; "));
+    expect(meRes.status).toBe(401);
   });
 });
 

@@ -16,6 +16,7 @@ import {
 } from "./routes/settingsTabValues.js";
 
 export { SETTINGS_TAB_VALUES, type SettingsTabValue } from "./routes/settingsTabValues.js";
+import { AcceptInvitationScene } from "./routes/AcceptInvitationScene";
 import { AccountScene } from "./routes/AccountScene";
 import { AuthLayout } from "./routes/AuthLayout";
 import { ChannelScene } from "./routes/ChannelScene";
@@ -55,20 +56,23 @@ async function requireAdminRoute(): Promise<void> {
 }
 
 /**
- * サイドバーなしで描画する auth ルートのパス一覧。
- * 新しい auth ルート（/signup 等）を追加した場合はここにも追記すること。
+ * サイドバーなしで描画する auth ルートかどうかを判定する。
+ * 動的セグメントを含むルート（/invite/:token 等）はプレフィックスで前方一致する。
+ * 新しい auth ルートを追加した場合はここに条件を追加すること。
  */
-const AUTH_PATHS = ["/login"] as const satisfies readonly string[];
+function isAuthPath(pathname: string): boolean {
+  return pathname === "/login" || pathname.startsWith("/invite/");
+}
 
 /**
  * アプリ全体のシェル。現在のパスに応じて
- * - auth 系ルート（/login 等）→ AuthLayout（サイドバーなし）
+ * - auth 系ルート（/login, /invite/:token 等）→ AuthLayout（サイドバーなし）
  * - その他 → RootLayout（サイドバーあり）
  * を切り替える。ルートの ID を変えない方式のため、既存の useSearch 等への影響がない。
  */
 function AppShell(): ReactElement {
   const { pathname } = useLocation();
-  if (AUTH_PATHS.some((p) => p === pathname)) {
+  if (isAuthPath(pathname)) {
     return <AuthLayout />;
   }
   return <RootLayout />;
@@ -132,12 +136,20 @@ const accountRoute = createRoute({
   beforeLoad: requireAuth,
 });
 
+/** 招待リンク受諾画面（/invite/$token）。認証不要・AuthLayout（サイドバーなし）。 */
+const inviteRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/invite/$token",
+  component: AcceptInvitationScene,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   channelRoute,
   loginRoute,
   adminRoute,
   accountRoute,
+  inviteRoute,
 ]);
 
 export interface CreateAppRouterOptions {

@@ -48,19 +48,14 @@ export async function fetchInvitation(token: string): Promise<InvitationPublic |
 }
 
 export async function acceptInvitation(token: string, body: AcceptInvitation): Promise<void> {
-  const { response } = await openApiClient.POST("/api/invitations/{token}/accept", {
+  const { error, response } = await openApiClient.POST("/api/invitations/{token}/accept", {
     params: { path: { token } },
     body,
     credentials: "include",
   });
   if (!response.ok) {
-    let message = `POST /api/invitations/${token}/accept failed: ${response.status}`;
-    try {
-      const json = (await response.json()) as { error?: string };
-      if (json.error) message = json.error;
-    } catch {
-      // ignore parse error
-    }
+    const serverError = error as { error?: string } | undefined;
+    const message = serverError?.error ?? `POST /api/invitations/${token}/accept failed: ${response.status}`;
     throw Object.assign(new Error(message), { status: response.status });
   }
 }

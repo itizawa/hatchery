@@ -10,18 +10,27 @@ import { createAppRouter } from "./router";
 // テスト間の状態リークを避けるため memory history のルータを注入する。
 describe("AppRoot", () => {
   beforeEach(() => {
-    // URL ごとに応答を分ける: /auth/me は未ログイン(401)、GET /channels は既定チャンネル（#47）。
-    // 全 URL に配列を返すと /auth/me が truthy になり AddChannelForm が誤って表示されてしまうため。
+    // URL ごとに応答を分ける: /auth/me はログイン済み(200 AuthUser)、GET /channels は既定チャンネル（#47）。
+    // ホーム（/）はログイン必須（router の requireAuth ガード）のため、ログイン済みでないと /login へ
+    // リダイレクトされ、サイドバー＋ホーム枠が描画されない。
     vi.stubGlobal(
       "fetch",
       vi.fn((input: Request | string) => {
         const url = typeof input === "string" ? input : input.url;
         if (url.includes("/auth/me")) {
           return Promise.resolve(
-            new Response(JSON.stringify({ error: "Unauthorized" }), {
-              status: 401,
-              headers: { "Content-Type": "application/json" },
-            }),
+            new Response(
+              JSON.stringify({
+                id: "testuser",
+                displayName: "Test User",
+                role: "admin",
+                employeeId: "emp-testuser",
+              }),
+              {
+                status: 200,
+                headers: { "Content-Type": "application/json" },
+              },
+            ),
           );
         }
         return Promise.resolve(

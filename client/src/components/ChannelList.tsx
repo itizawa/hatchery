@@ -3,6 +3,7 @@ import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemButton from "@mui/material/ListItemButton";
 import ListItemText from "@mui/material/ListItemText";
+import { Link as RouterLink } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 
 import type { ChannelType } from "@hatchery/common";
@@ -32,6 +33,7 @@ function ChannelTypeIcon({ type }: { type: ChannelType }): ReactElement {
  * サイドバーのチャンネル一覧。GET /channels（TanStack Query）を単一情報源として描画する（#47・#54）。
  * DEFAULT_CHANNELS のハードコード参照は廃止し、DB から取得した一覧を表示する。
  * タイプ（zatsudan / task）に応じてアイコンを表示する（#54）。
+ * 各チャンネル項目は /channels/$channelId へのリンクになっている（#182）。
  */
 export const ChannelList = (): ReactElement => {
   const { data: channels } = useChannels();
@@ -40,7 +42,11 @@ export const ChannelList = (): ReactElement => {
     <List dense aria-label="チャンネル一覧">
       {channels.map((channel) => (
         <ListItem key={channel.id} disablePadding>
-          <ListItemButton sx={{ color: SLACK_COLORS.sidebarText }}>
+          <ListItemButton
+            component={RouterLink}
+            to={`/channels/${channel.id}`}
+            sx={{ color: SLACK_COLORS.sidebarText, textDecoration: "none" }}
+          >
             <ChannelTypeIcon type={channel.type} />
             <ListItemText primary={channel.label} />
           </ListItemButton>

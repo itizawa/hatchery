@@ -19,21 +19,21 @@ async function makeApp(appSettingRepo = new InMemoryAppSettingRepository(), role
 
 async function loginAgent(app: ReturnType<typeof createApp>) {
   const agent = request.agent(app);
-  await agent.post("/auth/login").send({ id: "testuser", password: "testpass" });
+  await agent.post("/api/auth/login").send({ id: "testuser", password: "testpass" });
   return agent;
 }
 
-describe("GET /admin/settings", () => {
+describe("GET /api/admin/settings", () => {
   it("未認証の場合は 401 を返す", async () => {
     const app = await makeApp();
-    const res = await request(app).get("/admin/settings");
+    const res = await request(app).get("/api/admin/settings");
     expect(res.status).toBe(401);
   });
 
   it("admin ユーザーは 200 と設定一覧を返す（設定未登録時は空配列）", async () => {
     const app = await makeApp();
     const agent = await loginAgent(app);
-    const res = await agent.get("/admin/settings");
+    const res = await agent.get("/api/admin/settings");
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
   });
@@ -41,7 +41,7 @@ describe("GET /admin/settings", () => {
   it("member ユーザーは 403 を返す (#136)", async () => {
     const app = await makeApp(new InMemoryAppSettingRepository(), "member");
     const agent = await loginAgent(app);
-    const res = await agent.get("/admin/settings");
+    const res = await agent.get("/api/admin/settings");
     expect(res.status).toBe(403);
   });
 
@@ -51,7 +51,7 @@ describe("GET /admin/settings", () => {
     ]);
     const app = await makeApp(appSettingRepo);
     const agent = await loginAgent(app);
-    const res = await agent.get("/admin/settings");
+    const res = await agent.get("/api/admin/settings");
     expect(res.status).toBe(200);
     const claudeKey = (res.body as Array<{ key: string; maskedValue: string | null }>).find(
       (s) => s.key === "CLAUDE_API_KEY",
@@ -60,7 +60,7 @@ describe("GET /admin/settings", () => {
   });
 });
 
-describe("PATCH /admin/settings", () => {
+describe("PATCH /api/admin/settings", () => {
   let app: ReturnType<typeof createApp>;
 
   beforeEach(async () => {
@@ -69,7 +69,7 @@ describe("PATCH /admin/settings", () => {
 
   it("未認証の場合は 401 を返す", async () => {
     const res = await request(app)
-      .patch("/admin/settings")
+      .patch("/api/admin/settings")
       .send({ key: "CLAUDE_API_KEY", value: "sk-ant-test" });
     expect(res.status).toBe(401);
   });
@@ -77,20 +77,20 @@ describe("PATCH /admin/settings", () => {
   it("member ユーザーは 403 を返す (#136)", async () => {
     const memberApp = await makeApp(new InMemoryAppSettingRepository(), "member");
     const memberAgent = await loginAgent(memberApp);
-    const res = await memberAgent.patch("/admin/settings").send({ key: "CLAUDE_API_KEY", value: "sk-ant-test" });
+    const res = await memberAgent.patch("/api/admin/settings").send({ key: "CLAUDE_API_KEY", value: "sk-ant-test" });
     expect(res.status).toBe(403);
   });
 
   it("key が空の場合は 400 を返す", async () => {
     const agent = await loginAgent(app);
-    const res = await agent.patch("/admin/settings").send({ key: "", value: "sk-ant-test" });
+    const res = await agent.patch("/api/admin/settings").send({ key: "", value: "sk-ant-test" });
     expect(res.status).toBe(400);
   });
 
   it("CLAUDE_API_KEY を設定すると 200 とマスク表示の設定を返す", async () => {
     const agent = await loginAgent(app);
     const res = await agent
-      .patch("/admin/settings")
+      .patch("/api/admin/settings")
       .send({ key: "CLAUDE_API_KEY", value: "sk-ant-api03-test-key" });
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({
@@ -101,7 +101,7 @@ describe("PATCH /admin/settings", () => {
 
   it("value が空文字列でも 200 を返す（キーのリセット）", async () => {
     const agent = await loginAgent(app);
-    const res = await agent.patch("/admin/settings").send({ key: "CLAUDE_API_KEY", value: "" });
+    const res = await agent.patch("/api/admin/settings").send({ key: "CLAUDE_API_KEY", value: "" });
     expect(res.status).toBe(200);
   });
 });

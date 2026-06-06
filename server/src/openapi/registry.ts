@@ -96,7 +96,7 @@ const errorJson = { content: { "application/json": { schema: ErrorComponent } } 
 
 registry.registerPath({
   method: "get",
-  path: "/messages",
+  path: "/api/messages",
   summary: "メッセージ一覧を取得",
   responses: {
     200: {
@@ -112,7 +112,7 @@ registry.registerPath({
 
 registry.registerPath({
   method: "post",
-  path: "/messages",
+  path: "/api/messages",
   summary: "メッセージを一括作成",
   request: {
     body: {
@@ -150,7 +150,7 @@ const employeePathIdParam = z.string().openapi({ param: { name: "id", in: "path"
 
 registry.registerPath({
   method: "patch",
-  path: "/employees/{id}",
+  path: "/api/employees/{id}",
   summary: "自分の Employee を更新（認証必須・本人のみ）",
   request: {
     params: z.object({ id: employeePathIdParam }),
@@ -175,7 +175,7 @@ const channelPathIdParam = z.string().openapi({ param: { name: "id", in: "path" 
 
 registry.registerPath({
   method: "get",
-  path: "/channels",
+  path: "/api/channels",
   summary: "チャンネル一覧を取得（認証不要・#47）",
   responses: {
     200: {
@@ -187,7 +187,7 @@ registry.registerPath({
 
 registry.registerPath({
   method: "post",
-  path: "/channels",
+  path: "/api/channels",
   summary: "チャンネルを作成（認証必須・#47）",
   request: {
     body: { content: { "application/json": { schema: CreateChannelComponent } } },
@@ -204,7 +204,7 @@ registry.registerPath({
 
 registry.registerPath({
   method: "patch",
-  path: "/channels/{id}",
+  path: "/api/channels/{id}",
   summary: "チャンネル名を更新（認証必須）",
   request: {
     params: z.object({ id: channelPathIdParam }),
@@ -226,7 +226,7 @@ registry.registerPath({
 // チャンネル別メッセージ（#48）。
 registry.registerPath({
   method: "get",
-  path: "/channels/{channelId}/messages",
+  path: "/api/channels/{channelId}/messages",
   summary: "チャンネル別メッセージ一覧を取得（認証不要・#48）",
   request: { params: z.object({ channelId: channelIdParam }) },
   responses: {
@@ -239,7 +239,7 @@ registry.registerPath({
 
 registry.registerPath({
   method: "post",
-  path: "/channels/{channelId}/messages",
+  path: "/api/channels/{channelId}/messages",
   summary: "チャンネルにメッセージを投稿（認証必須・#48）",
   request: {
     params: z.object({ channelId: channelIdParam }),
@@ -258,7 +258,7 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
-  path: "/channels/{channelId}/employees",
+  path: "/api/channels/{channelId}/employees",
   summary: "チャンネルに所属する Employee の id 一覧を取得",
   request: { params: z.object({ channelId: channelIdParam }) },
   responses: {
@@ -271,7 +271,7 @@ registry.registerPath({
 
 registry.registerPath({
   method: "post",
-  path: "/channels/{channelId}/employees",
+  path: "/api/channels/{channelId}/employees",
   summary: "チャンネルに Employee を追加（認証必須）",
   request: {
     params: z.object({ channelId: channelIdParam }),
@@ -295,7 +295,7 @@ registry.registerPath({
 
 registry.registerPath({
   method: "delete",
-  path: "/channels/{channelId}/employees/{employeeId}",
+  path: "/api/channels/{channelId}/employees/{employeeId}",
   summary: "チャンネルから Employee を除外（認証必須）",
   request: {
     params: z.object({ channelId: channelIdParam, employeeId: employeeIdParam }),
@@ -309,7 +309,7 @@ registry.registerPath({
 // 認証（#26 / routes/auth.ts。createApp は /auth プレフィックスでマウント）。
 registry.registerPath({
   method: "post",
-  path: "/auth/login",
+  path: "/api/auth/login",
   summary: "ID / パスワードでログイン（passport-local）",
   request: {
     body: { content: { "application/json": { schema: LoginRequestComponent } } },
@@ -326,7 +326,7 @@ registry.registerPath({
 
 registry.registerPath({
   method: "post",
-  path: "/auth/logout",
+  path: "/api/auth/logout",
   summary: "ログアウト（セッション破棄）",
   responses: {
     200: {
@@ -338,7 +338,7 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
-  path: "/auth/me",
+  path: "/api/auth/me",
   summary: "現在の認証済みユーザーを取得（認証必須）",
   responses: {
     200: {
@@ -356,7 +356,7 @@ const UpdateProfileComponent = registry.register(
 
 registry.registerPath({
   method: "patch",
-  path: "/auth/me",
+  path: "/api/auth/me",
   summary: "自分自身のプロフィールを更新（認証必須・#51）",
   request: {
     body: { content: { "application/json": { schema: UpdateProfileComponent } } },
@@ -386,7 +386,7 @@ const UpdateAppSettingComponent = registry.register(
 
 registry.registerPath({
   method: "get",
-  path: "/admin/settings",
+  path: "/api/admin/settings",
   summary: "アプリ設定一覧を取得（認証必須・#52）",
   responses: {
     200: {
@@ -399,7 +399,7 @@ registry.registerPath({
 
 registry.registerPath({
   method: "patch",
-  path: "/admin/settings",
+  path: "/api/admin/settings",
   summary: "アプリ設定を更新（認証必須・#52）",
   request: {
     body: { content: { "application/json": { schema: UpdateAppSettingComponent } } },
@@ -422,7 +422,7 @@ const BatchRunLogComponent = registry.register(
 
 registry.registerPath({
   method: "get",
-  path: "/admin/batch-logs",
+  path: "/api/admin/batch-logs",
   summary: "バッチ実行ログ一覧を取得（認証必須・直近 50 件・executedAt 降順）（#75）",
   responses: {
     200: {
@@ -449,7 +449,7 @@ registry.registerPath({
 // GitHub Issue 起票（#76）。認証必須。
 registry.registerPath({
   method: "post",
-  path: "/channels/{channelId}/messages/{messageId}/create-issue",
+  path: "/api/channels/{channelId}/messages/{messageId}/create-issue",
   summary: "企画 チャンネルのメッセージから GitHub Issue を起票（認証必須・#76）",
   request: {
     params: z.object({
@@ -492,7 +492,7 @@ const invitationIdParam = z.string().openapi({ param: { name: "id", in: "path" }
 
 registry.registerPath({
   method: "post",
-  path: "/admin/invitations",
+  path: "/api/admin/invitations",
   summary: "招待リンクを発行（認証必須・admin ロール・#131）",
   request: {
     body: { content: { "application/json": { schema: CreateInvitationComponent } } },
@@ -510,7 +510,7 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
-  path: "/admin/invitations",
+  path: "/api/admin/invitations",
   summary: "招待リンク一覧を取得（認証必須・admin ロール・#131）",
   responses: {
     200: {
@@ -524,7 +524,7 @@ registry.registerPath({
 
 registry.registerPath({
   method: "post",
-  path: "/admin/invitations/{id}/revoke",
+  path: "/api/admin/invitations/{id}/revoke",
   summary: "招待リンクを手動失効（認証必須・admin ロール・#131）",
   request: {
     params: z.object({ id: invitationIdParam }),
@@ -555,7 +555,7 @@ const invitationTokenParam = z.string().openapi({ param: { name: "token", in: "p
 
 registry.registerPath({
   method: "get",
-  path: "/invitations/{token}",
+  path: "/api/invitations/{token}",
   summary: "招待トークンを検証（公開・認証不要・#132）",
   request: {
     params: z.object({ token: invitationTokenParam }),
@@ -571,7 +571,7 @@ registry.registerPath({
 
 registry.registerPath({
   method: "post",
-  path: "/invitations/{token}/accept",
+  path: "/api/invitations/{token}/accept",
   summary: "招待を受諾して新規ユーザーを登録（公開・認証不要・#132）",
   request: {
     params: z.object({ token: invitationTokenParam }),

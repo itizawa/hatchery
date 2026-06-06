@@ -25,15 +25,15 @@ async function buildApp(
 
 async function login(app: ReturnType<typeof createApp>) {
   const agent = request.agent(app);
-  await agent.post("/auth/login").send({ id: "testuser", password: "testpass" });
+  await agent.post("/api/auth/login").send({ id: "testuser", password: "testpass" });
   return agent;
 }
 
-describe("POST /channels/:channelId/employees（追加・認証必須）", () => {
+describe("POST /api/channels/:channelId/employees（追加・認証必須）", () => {
   it("未ログインだと 401 を返す", async () => {
     const { app } = await buildApp();
     const res = await request(app)
-      .post("/channels/zatsudan/employees")
+      .post("/api/channels/zatsudan/employees")
       .send({ employeeId: "haru" });
     expect(res.status).toBe(401);
   });
@@ -41,9 +41,9 @@ describe("POST /channels/:channelId/employees（追加・認証必須）", () =>
   it("認証済みなら 201 で追加され、GET に反映される", async () => {
     const { app } = await buildApp();
     const agent = await login(app);
-    const res = await agent.post("/channels/zatsudan/employees").send({ employeeId: "haru" });
+    const res = await agent.post("/api/channels/zatsudan/employees").send({ employeeId: "haru" });
     expect(res.status).toBe(201);
-    const list = await agent.get("/channels/zatsudan/employees");
+    const list = await agent.get("/api/channels/zatsudan/employees");
     expect(list.status).toBe(200);
     expect(list.body).toContain("haru");
   });
@@ -51,60 +51,60 @@ describe("POST /channels/:channelId/employees（追加・認証必須）", () =>
   it("employeeId が空なら 400 を返す（Zod 検証）", async () => {
     const { app } = await buildApp();
     const agent = await login(app);
-    const res = await agent.post("/channels/zatsudan/employees").send({ employeeId: "" });
+    const res = await agent.post("/api/channels/zatsudan/employees").send({ employeeId: "" });
     expect(res.status).toBe(400);
   });
 
   it("1 人の Employee を複数チャンネルに追加できる（多対多）", async () => {
     const { app } = await buildApp();
     const agent = await login(app);
-    await agent.post("/channels/zatsudan/employees").send({ employeeId: "haru" });
-    await agent.post("/channels/shigoto/employees").send({ employeeId: "haru" });
-    const z = await agent.get("/channels/zatsudan/employees");
-    const s = await agent.get("/channels/shigoto/employees");
+    await agent.post("/api/channels/zatsudan/employees").send({ employeeId: "haru" });
+    await agent.post("/api/channels/shigoto/employees").send({ employeeId: "haru" });
+    const z = await agent.get("/api/channels/zatsudan/employees");
+    const s = await agent.get("/api/channels/shigoto/employees");
     expect(z.body).toContain("haru");
     expect(s.body).toContain("haru");
   });
 });
 
-describe("DELETE /channels/:channelId/employees/:employeeId（除外・認証必須）", () => {
+describe("DELETE /api/channels/:channelId/employees/:employeeId（除外・認証必須）", () => {
   it("未ログインだと 401 を返す", async () => {
     const { app } = await buildApp();
-    const res = await request(app).delete("/channels/zatsudan/employees/haru");
+    const res = await request(app).delete("/api/channels/zatsudan/employees/haru");
     expect(res.status).toBe(401);
   });
 
   it("認証済みなら 204 で除外され、GET から消える", async () => {
     const { app } = await buildApp();
     const agent = await login(app);
-    await agent.post("/channels/zatsudan/employees").send({ employeeId: "haru" });
-    const res = await agent.delete("/channels/zatsudan/employees/haru");
+    await agent.post("/api/channels/zatsudan/employees").send({ employeeId: "haru" });
+    const res = await agent.delete("/api/channels/zatsudan/employees/haru");
     expect(res.status).toBe(204);
-    const list = await agent.get("/channels/zatsudan/employees");
+    const list = await agent.get("/api/channels/zatsudan/employees");
     expect(list.body).not.toContain("haru");
   });
 });
 
-describe("GET /channels/:channelId/employees（一覧・認証不要）", () => {
+describe("GET /api/channels/:channelId/employees（一覧・認証不要）", () => {
   it("所属が無ければ空配列を返す", async () => {
     const { app } = await buildApp();
-    const res = await request(app).get("/channels/zatsudan/employees");
+    const res = await request(app).get("/api/channels/zatsudan/employees");
     expect(res.status).toBe(200);
     expect(res.body).toEqual([]);
   });
 });
 
-describe("PATCH /channels/:id（チャンネル更新・認証必須・#54）", () => {
+describe("PATCH /api/channels/:id（チャンネル更新・認証必須・#54）", () => {
   it("未ログインだと 401 を返す", async () => {
     const { app } = await buildApp();
-    const res = await request(app).patch("/channels/zatsudan").send({ label: "新しい名前" });
+    const res = await request(app).patch("/api/channels/zatsudan").send({ label: "新しい名前" });
     expect(res.status).toBe(401);
   });
 
   it("ログイン済みで有効な label なら 200 と更新後チャンネルを返す", async () => {
     const { app } = await buildApp();
     const agent = await login(app);
-    const res = await agent.patch("/channels/zatsudan").send({ label: "更新後ラベル" });
+    const res = await agent.patch("/api/channels/zatsudan").send({ label: "更新後ラベル" });
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({ id: "zatsudan", label: "更新後ラベル" });
   });
@@ -112,21 +112,21 @@ describe("PATCH /channels/:id（チャンネル更新・認証必須・#54）", 
   it("label が空文字なら 400 を返す", async () => {
     const { app } = await buildApp();
     const agent = await login(app);
-    const res = await agent.patch("/channels/zatsudan").send({ label: "" });
+    const res = await agent.patch("/api/channels/zatsudan").send({ label: "" });
     expect(res.status).toBe(400);
   });
 
   it("存在しないチャンネル ID なら 404 を返す", async () => {
     const { app } = await buildApp();
     const agent = await login(app);
-    const res = await agent.patch("/channels/nonexistent").send({ label: "何か" });
+    const res = await agent.patch("/api/channels/nonexistent").send({ label: "何か" });
     expect(res.status).toBe(404);
   });
 
   it("type のみを指定してタイプを更新できる（#54）", async () => {
     const { app } = await buildApp();
     const agent = await login(app);
-    const res = await agent.patch("/channels/zatsudan").send({ type: "task" });
+    const res = await agent.patch("/api/channels/zatsudan").send({ type: "task" });
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({ id: "zatsudan", type: "task" });
   });
@@ -134,7 +134,7 @@ describe("PATCH /channels/:id（チャンネル更新・認証必須・#54）", 
   it("label と type の両方を指定して更新できる（#54）", async () => {
     const { app } = await buildApp();
     const agent = await login(app);
-    const res = await agent.patch("/channels/zatsudan").send({ label: "新名前", type: "task" });
+    const res = await agent.patch("/api/channels/zatsudan").send({ label: "新名前", type: "task" });
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({ id: "zatsudan", label: "新名前", type: "task" });
   });
@@ -142,21 +142,21 @@ describe("PATCH /channels/:id（チャンネル更新・認証必須・#54）", 
   it("label も type も指定しないと 400 を返す（#54）", async () => {
     const { app } = await buildApp();
     const agent = await login(app);
-    const res = await agent.patch("/channels/zatsudan").send({});
+    const res = await agent.patch("/api/channels/zatsudan").send({});
     expect(res.status).toBe(400);
   });
 
   it("label が 51 文字以上なら 400 を返す（#91）", async () => {
     const { app } = await buildApp();
     const agent = await login(app);
-    const res = await agent.patch("/channels/zatsudan").send({ label: "a".repeat(51) });
+    const res = await agent.patch("/api/channels/zatsudan").send({ label: "a".repeat(51) });
     expect(res.status).toBe(400);
   });
 
   it("label が 50 文字ちょうどなら 200 を返す（#91）", async () => {
     const { app } = await buildApp();
     const agent = await login(app);
-    const res = await agent.patch("/channels/zatsudan").send({ label: "a".repeat(50) });
+    const res = await agent.patch("/api/channels/zatsudan").send({ label: "a".repeat(50) });
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({ id: "zatsudan", label: "a".repeat(50) });
   });
@@ -165,7 +165,7 @@ describe("PATCH /channels/:id（チャンネル更新・認証必須・#54）", 
 describe("GET /channels（一覧・認証不要・#47 / #54）", () => {
   it("認証不要で 200 と既定チャンネル配列を返す（type フィールド含む）", async () => {
     const { app } = await buildApp();
-    const res = await request(app).get("/channels");
+    const res = await request(app).get("/api/channels");
     expect(res.status).toBe(200);
     expect(res.body).toEqual([
       { id: "zatsudan", label: "雑談", type: "zatsudan" },
@@ -178,14 +178,14 @@ describe("GET /channels（一覧・認証不要・#47 / #54）", () => {
 describe("POST /channels（作成・認証必須・#47 / #54）", () => {
   it("未ログインだと 401 を返す", async () => {
     const { app } = await buildApp();
-    const res = await request(app).post("/channels").send({ label: "#新規" });
+    const res = await request(app).post("/api/channels").send({ label: "#新規" });
     expect(res.status).toBe(401);
   });
 
   it("ログイン済みで有効な label なら 201 と生成チャンネルを返す（type=zatsudan がデフォルト）", async () => {
     const { app } = await buildApp();
     const agent = await login(app);
-    const res = await agent.post("/channels").send({ label: "#新規" });
+    const res = await agent.post("/api/channels").send({ label: "#新規" });
     expect(res.status).toBe(201);
     expect(res.body.label).toBe("#新規");
     expect(res.body.type).toBe("zatsudan");
@@ -196,7 +196,7 @@ describe("POST /channels（作成・認証必須・#47 / #54）", () => {
   it("type='task' を指定して作成できる（#54）", async () => {
     const { app } = await buildApp();
     const agent = await login(app);
-    const res = await agent.post("/channels").send({ label: "仕事2", type: "task" });
+    const res = await agent.post("/api/channels").send({ label: "仕事2", type: "task" });
     expect(res.status).toBe(201);
     expect(res.body.label).toBe("仕事2");
     expect(res.body.type).toBe("task");
@@ -205,24 +205,24 @@ describe("POST /channels（作成・認証必須・#47 / #54）", () => {
   it("label が空文字なら 400 を返す", async () => {
     const { app } = await buildApp();
     const agent = await login(app);
-    const res = await agent.post("/channels").send({ label: "" });
+    const res = await agent.post("/api/channels").send({ label: "" });
     expect(res.status).toBe(400);
   });
 
   it("作成したチャンネルは GET /channels の一覧に含まれる", async () => {
     const { app } = await buildApp();
     const agent = await login(app);
-    const created = await agent.post("/channels").send({ label: "企画" });
-    const list = await request(app).get("/channels");
+    const created = await agent.post("/api/channels").send({ label: "企画" });
+    const list = await request(app).get("/api/channels");
     expect(list.body).toContainEqual({ id: created.body.id, label: "企画", type: "zatsudan" });
   });
 });
 
-describe("POST /channels/:channelId/messages（メッセージ投稿・認証必須・#48）", () => {
+describe("POST /api/channels/:channelId/messages（メッセージ投稿・認証必須・#48）", () => {
   it("未ログインだと 401 を返す", async () => {
     const { app } = await buildApp();
     const res = await request(app)
-      .post("/channels/zatsudan/messages")
+      .post("/api/channels/zatsudan/messages")
       .send({ text: "こんにちは" });
     expect(res.status).toBe(401);
   });
@@ -231,7 +231,7 @@ describe("POST /channels/:channelId/messages（メッセージ投稿・認証必
     const userRepository = await InMemoryUserRepository.createWithTestUser(null);
     const { app } = await buildApp(undefined, undefined, undefined, userRepository);
     const agent = await login(app);
-    const res = await agent.post("/channels/zatsudan/messages").send({ text: "こんにちは" });
+    const res = await agent.post("/api/channels/zatsudan/messages").send({ text: "こんにちは" });
     expect(res.status).toBe(400);
   });
 
@@ -240,7 +240,7 @@ describe("POST /channels/:channelId/messages（メッセージ投稿・認証必
     const userRepository = await InMemoryUserRepository.createWithTestUser("emp1");
     const { app } = await buildApp(undefined, undefined, messageRepository, userRepository);
     const agent = await login(app);
-    const res = await agent.post("/channels/zatsudan/messages").send({ text: "こんにちは！" });
+    const res = await agent.post("/api/channels/zatsudan/messages").send({ text: "こんにちは！" });
     expect(res.status).toBe(201);
     expect(res.body.text).toBe("こんにちは！");
     expect(res.body.speaker).toBe("emp1");
@@ -252,7 +252,7 @@ describe("POST /channels/:channelId/messages（メッセージ投稿・認証必
     const userRepository = await InMemoryUserRepository.createWithTestUser("emp1");
     const { app } = await buildApp(undefined, undefined, undefined, userRepository);
     const agent = await login(app);
-    const res = await agent.post("/channels/zatsudan/messages").send({ text: "" });
+    const res = await agent.post("/api/channels/zatsudan/messages").send({ text: "" });
     expect(res.status).toBe(400);
   });
 
@@ -260,15 +260,15 @@ describe("POST /channels/:channelId/messages（メッセージ投稿・認証必
     const userRepository = await InMemoryUserRepository.createWithTestUser("emp1");
     const { app } = await buildApp(undefined, undefined, undefined, userRepository);
     const agent = await login(app);
-    const res = await agent.post("/channels/nonexistent/messages").send({ text: "こんにちは" });
+    const res = await agent.post("/api/channels/nonexistent/messages").send({ text: "こんにちは" });
     expect(res.status).toBe(404);
   });
 });
 
-describe("GET /channels/:channelId/messages（メッセージ一覧・認証不要・#48）", () => {
+describe("GET /api/channels/:channelId/messages（メッセージ一覧・認証不要・#48）", () => {
   it("認証不要で 200 と空配列を返す", async () => {
     const { app } = await buildApp();
-    const res = await request(app).get("/channels/zatsudan/messages");
+    const res = await request(app).get("/api/channels/zatsudan/messages");
     expect(res.status).toBe(200);
     expect(res.body).toEqual([]);
   });
@@ -278,8 +278,8 @@ describe("GET /channels/:channelId/messages（メッセージ一覧・認証不�
     const userRepository = await InMemoryUserRepository.createWithTestUser("emp1");
     const { app } = await buildApp(undefined, undefined, messageRepository, userRepository);
     const agent = await login(app);
-    await agent.post("/channels/zatsudan/messages").send({ text: "テストメッセージ" });
-    const res = await request(app).get("/channels/zatsudan/messages");
+    await agent.post("/api/channels/zatsudan/messages").send({ text: "テストメッセージ" });
+    const res = await request(app).get("/api/channels/zatsudan/messages");
     expect(res.status).toBe(200);
     expect(res.body).toHaveLength(1);
     expect(res.body[0].text).toBe("テストメッセージ");
@@ -291,8 +291,8 @@ describe("GET /channels/:channelId/messages（メッセージ一覧・認証不�
     const userRepository = await InMemoryUserRepository.createWithTestUser("emp1");
     const { app } = await buildApp(undefined, undefined, messageRepository, userRepository);
     const agent = await login(app);
-    await agent.post("/channels/zatsudan/messages").send({ text: "雑談メッセージ" });
-    const res = await request(app).get("/channels/shigoto/messages");
+    await agent.post("/api/channels/zatsudan/messages").send({ text: "雑談メッセージ" });
+    const res = await request(app).get("/api/channels/shigoto/messages");
     expect(res.status).toBe(200);
     expect(res.body).toHaveLength(0);
   });

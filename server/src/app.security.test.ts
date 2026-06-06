@@ -46,7 +46,7 @@ describe("createApp のセキュリティ防御", () => {
       security: { bodyLimit: "1kb" },
     });
     const big = [{ speaker: "e1", channel: "shigoto", text: "x".repeat(4000) }];
-    const res = await request(app).post("/messages").send(big);
+    const res = await request(app).post("/api/messages").send(big);
     expect(res.status).toBe(413);
     expect(res.body.error).toBe("PayloadTooLarge");
   });

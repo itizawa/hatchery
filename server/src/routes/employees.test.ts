@@ -20,16 +20,16 @@ async function buildApp(employeeRepository = new InMemoryEmployeeRepository()) {
 
 async function login(app: ReturnType<typeof createApp>) {
   const agent = request.agent(app);
-  await agent.post("/auth/login").send({ id: "testuser", password: "testpass" });
+  await agent.post("/api/auth/login").send({ id: "testuser", password: "testpass" });
   return agent;
 }
 
-describe("PATCH /employees/:id（Employee 更新 / #38）", () => {
+describe("PATCH /api/employees/:id（Employee 更新 / #38）", () => {
   describe("認証", () => {
     it("未ログインだと 401 を返す", async () => {
       const { app } = await buildApp();
       const res = await request(app)
-        .patch(`/employees/${EMPLOYEE_ID}`)
+        .patch(`/api/employees/${EMPLOYEE_ID}`)
         .send({ personality: "明るい" });
       expect(res.status).toBe(401);
     });
@@ -43,7 +43,7 @@ describe("PATCH /employees/:id（Employee 更新 / #38）", () => {
         ]),
       );
       const agent = await login(app);
-      const res = await agent.patch("/employees/other-emp").send({ personality: "test" });
+      const res = await agent.patch("/api/employees/other-emp").send({ personality: "test" });
       expect(res.status).toBe(403);
     });
   });
@@ -63,7 +63,7 @@ describe("PATCH /employees/:id（Employee 更新 / #38）", () => {
       );
       const agent = await login(app);
       const res = await agent
-        .patch(`/employees/${EMPLOYEE_ID}`)
+        .patch(`/api/employees/${EMPLOYEE_ID}`)
         .send({ personality: "明るく積極的" });
       expect(res.status).toBe(200);
       expect(res.body.personality).toBe("明るく積極的");
@@ -83,7 +83,7 @@ describe("PATCH /employees/:id（Employee 更新 / #38）", () => {
         ]),
       );
       const agent = await login(app);
-      const res = await agent.patch(`/employees/${EMPLOYEE_ID}`).send({ displayName: "New Name" });
+      const res = await agent.patch(`/api/employees/${EMPLOYEE_ID}`).send({ displayName: "New Name" });
       expect(res.status).toBe(200);
       expect(res.body.displayName).toBe("New Name");
     });
@@ -101,7 +101,7 @@ describe("PATCH /employees/:id（Employee 更新 / #38）", () => {
         ]),
       );
       const agent = await login(app);
-      const res = await agent.patch(`/employees/${EMPLOYEE_ID}`).send({ role: "新役職" });
+      const res = await agent.patch(`/api/employees/${EMPLOYEE_ID}`).send({ role: "新役職" });
       expect(res.status).toBe(200);
       expect(res.body.role).toBe("新役職");
     });
@@ -122,7 +122,7 @@ describe("PATCH /employees/:id（Employee 更新 / #38）", () => {
       );
       const agent = await login(app);
       const res = await agent
-        .patch(`/employees/${EMPLOYEE_ID}`)
+        .patch(`/api/employees/${EMPLOYEE_ID}`)
         .send({ personality: "a".repeat(501) });
       expect(res.status).toBe(400);
     });
@@ -140,7 +140,7 @@ describe("PATCH /employees/:id（Employee 更新 / #38）", () => {
         ]),
       );
       const agent = await login(app);
-      const res = await agent.patch(`/employees/${EMPLOYEE_ID}`).send({ displayName: "" });
+      const res = await agent.patch(`/api/employees/${EMPLOYEE_ID}`).send({ displayName: "" });
       expect(res.status).toBe(400);
     });
   });

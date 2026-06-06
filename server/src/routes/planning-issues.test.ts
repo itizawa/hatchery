@@ -29,11 +29,11 @@ async function makeApp(messageRepo = new InMemoryMessageRepository()) {
 
 async function loginAgent(app: ReturnType<typeof createApp>) {
   const agent = request.agent(app);
-  await agent.post("/auth/login").send({ id: "testuser", password: "testpass" });
+  await agent.post("/api/auth/login").send({ id: "testuser", password: "testpass" });
   return agent;
 }
 
-describe("POST /channels/:channelId/messages/:messageId/create-issue (#76)", () => {
+describe("POST /api/channels/:channelId/messages/:messageId/create-issue (#76)", () => {
   const originalEnv = process.env;
 
   afterEach(() => {
@@ -43,7 +43,7 @@ describe("POST /channels/:channelId/messages/:messageId/create-issue (#76)", () 
   it("未認証の場合は 401 を返す", async () => {
     const app = await makeApp();
     const res = await request(app)
-      .post("/channels/kikaku/messages/msg-1/create-issue")
+      .post("/api/channels/kikaku/messages/msg-1/create-issue")
       .send({});
     expect(res.status).toBe(401);
   });
@@ -56,7 +56,7 @@ describe("POST /channels/:channelId/messages/:messageId/create-issue (#76)", () 
     const app = await makeApp();
     const agent = await loginAgent(app);
     const res = await agent
-      .post("/channels/kikaku/messages/msg-1/create-issue")
+      .post("/api/channels/kikaku/messages/msg-1/create-issue")
       .send({});
     expect(res.status).toBe(500);
   });
@@ -72,7 +72,7 @@ describe("POST /channels/:channelId/messages/:messageId/create-issue (#76)", () 
     const app = await makeApp();
     const agent = await loginAgent(app);
     const res = await agent
-      .post("/channels/kikaku/messages/non-existent-id/create-issue")
+      .post("/api/channels/kikaku/messages/non-existent-id/create-issue")
       .send({});
     expect(res.status).toBe(404);
   });
@@ -98,7 +98,7 @@ describe("POST /channels/:channelId/messages/:messageId/create-issue (#76)", () 
     const app = await makeApp(messageRepo);
     const agent = await loginAgent(app);
     const res = await agent
-      .post(`/channels/kikaku/messages/${created.id}/create-issue`)
+      .post(`/api/channels/kikaku/messages/${created.id}/create-issue`)
       .send({});
 
     expect(res.status).toBe(201);
@@ -127,7 +127,7 @@ describe("POST /channels/:channelId/messages/:messageId/create-issue (#76)", () 
     const app = await makeApp(messageRepo);
     const agent = await loginAgent(app);
     await agent
-      .post(`/channels/kikaku/messages/${created.id}/create-issue`)
+      .post(`/api/channels/kikaku/messages/${created.id}/create-issue`)
       .send({});
 
     const messages = await messageRepo.listByChannel("kikaku");

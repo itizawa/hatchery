@@ -2,7 +2,7 @@ name: Deploy Server (dev)
 
 # develop マージをトリガーに server を Cloud Run（dev 環境）へ自動デプロイする。
 # 認証は Workload Identity Federation（サービスアカウントキー不要）。
-# ゲート1: develop への push のみトリガー。main への push は含まない。
+# ゲート1: develop への push のみトリガー。main への push は含めない。
 on:
   push:
     branches: [develop]
@@ -36,6 +36,27 @@ jobs:
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Cloud Run デプロイより前にマイグレーションを完了させる（受け入れ条件 #1）。
+      # 失敗時はここでワークフローが止まり、デプロイに進まない。
+      # 注意: migrate 成功後に docker build/push が失敗した場合、DB スキーマのみ進んだ状態になる。
+      # これはコードと DB の forward-compatible な設計（expand-contract）で吸収する。
+      - name: Run Prisma migration
+        run: pnpm --filter @hatchery/server db:migrate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
       - name: Configure Docker for Artifact Registry
         run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet

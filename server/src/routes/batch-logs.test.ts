@@ -20,28 +20,28 @@ async function makeApp(
 
 async function loginAgent(app: ReturnType<typeof createApp>) {
   const agent = request.agent(app);
-  await agent.post("/auth/login").send({ id: "testuser", password: "testpass" });
+  await agent.post("/api/auth/login").send({ id: "testuser", password: "testpass" });
   return agent;
 }
 
-describe("GET /admin/batch-logs", () => {
+describe("GET /api/admin/batch-logs", () => {
   it("未認証の場合は 401 を返す", async () => {
     const app = await makeApp();
-    const res = await request(app).get("/admin/batch-logs");
+    const res = await request(app).get("/api/admin/batch-logs");
     expect(res.status).toBe(401);
   });
 
   it("member ロールの場合は 403 を返す（#136）", async () => {
     const app = await makeApp(new InMemoryBatchRunLogRepository(), "member");
     const agent = await loginAgent(app);
-    const res = await agent.get("/admin/batch-logs");
+    const res = await agent.get("/api/admin/batch-logs");
     expect(res.status).toBe(403);
   });
 
   it("認証済みの場合は 200 と空配列を返す（ログ未登録時）", async () => {
     const app = await makeApp();
     const agent = await loginAgent(app);
-    const res = await agent.get("/admin/batch-logs");
+    const res = await agent.get("/api/admin/batch-logs");
     expect(res.status).toBe(200);
     expect(res.body).toEqual([]);
   });
@@ -52,7 +52,7 @@ describe("GET /admin/batch-logs", () => {
     await logRepo.create({ status: "failure", messageCount: 0, errorMessage: "API error", errorCode: "ERR_API" });
     const app = await makeApp(logRepo);
     const agent = await loginAgent(app);
-    const res = await agent.get("/admin/batch-logs");
+    const res = await agent.get("/api/admin/batch-logs");
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
     expect((res.body as unknown[]).length).toBe(2);

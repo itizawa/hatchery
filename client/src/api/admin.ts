@@ -12,22 +12,22 @@ export type { AppSettingResponse };
  * 生の相対 fetch はクロスオリジン配信（#78）で baseUrl が前置されず壊れるため openApiClient に統一。
  */
 export async function fetchSettings(): Promise<AppSettingResponse[]> {
-  const { data, error, response } = await openApiClient.GET("/admin/settings", {
+  const { data, error, response } = await openApiClient.GET("/api/admin/settings", {
     credentials: "include",
   });
   // openapi-fetch は非2xx + 空ボディ（Content-Length: 0）で error=undefined を返すため、
   // error だけでなく response.ok も見て元コード（!res.ok throw）の確実性を保つ。
-  if (error || !response.ok) throw new Error(`GET /admin/settings failed: ${response.status}`);
+  if (error || !response.ok) throw new Error(`GET /api/admin/settings failed: ${response.status}`);
   return data ?? [];
 }
 
 /** PATCH /admin/settings を openApiClient 経由で更新する（#110）。成功時は更新後の設定を返す。 */
 export async function patchSetting(key: string, value: string): Promise<AppSettingResponse> {
-  const { data, response } = await openApiClient.PATCH("/admin/settings", {
+  const { data, response } = await openApiClient.PATCH("/api/admin/settings", {
     body: { key, value },
     credentials: "include",
   });
-  if (!response.ok || !data) throw new Error(`PATCH /admin/settings failed: ${response.status}`);
+  if (!response.ok || !data) throw new Error(`PATCH /api/admin/settings failed: ${response.status}`);
   return data;
 }
 

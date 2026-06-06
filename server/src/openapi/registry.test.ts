@@ -11,7 +11,7 @@ describe("generateOpenApiDocument", () => {
 
   it("paths に /messages が含まれる", () => {
     const doc = generateOpenApiDocument();
-    expect(doc.paths).toHaveProperty("/messages");
+    expect(doc.paths).toHaveProperty("/api/messages");
   });
 
   it("components.schemas に Message が含まれる", () => {
@@ -22,9 +22,9 @@ describe("generateOpenApiDocument", () => {
   // #41: createApp が登録する全エンドポイントが spec に含まれること。
   it("paths に auth/health のエンドポイントが含まれる", () => {
     const doc = generateOpenApiDocument();
-    expect(doc.paths).toHaveProperty("/auth/login");
-    expect(doc.paths).toHaveProperty("/auth/logout");
-    expect(doc.paths).toHaveProperty("/auth/me");
+    expect(doc.paths).toHaveProperty("/api/auth/login");
+    expect(doc.paths).toHaveProperty("/api/auth/logout");
+    expect(doc.paths).toHaveProperty("/api/auth/me");
     expect(doc.paths).toHaveProperty("/health");
   });
 
@@ -47,7 +47,7 @@ describe("generateOpenApiDocument", () => {
 
   it("/auth/login(post) は LoginRequest を受け取り 200 で AuthUser を返す", () => {
     const doc = generateOpenApiDocument();
-    const login = doc.paths?.["/auth/login"]?.post;
+    const login = doc.paths?.["/api/auth/login"]?.post;
     expect(login).toBeDefined();
     const reqRef = (login?.requestBody as { content?: Record<string, { schema?: { $ref?: string } }> })
       ?.content?.["application/json"]?.schema?.$ref;
@@ -60,7 +60,7 @@ describe("generateOpenApiDocument", () => {
 
   it("/auth/me(get) は 200 で AuthUser を返し 401 を定義する", () => {
     const doc = generateOpenApiDocument();
-    const me = doc.paths?.["/auth/me"]?.get;
+    const me = doc.paths?.["/api/auth/me"]?.get;
     expect(me).toBeDefined();
     const okRef = (
       me?.responses?.["200"] as { content?: Record<string, { schema?: { $ref?: string } }> }
@@ -72,19 +72,19 @@ describe("generateOpenApiDocument", () => {
   // #48: チャンネル別メッセージ投稿・取得エンドポイントが spec に含まれる。
   it("paths に /channels/{channelId}/messages が含まれる", () => {
     const doc = generateOpenApiDocument();
-    expect(doc.paths).toHaveProperty("/channels/{channelId}/messages");
+    expect(doc.paths).toHaveProperty("/api/channels/{channelId}/messages");
   });
 
   it("/channels/{channelId}/messages(get) は 200 でメッセージ配列を返す", () => {
     const doc = generateOpenApiDocument();
-    const get = doc.paths?.["/channels/{channelId}/messages"]?.get;
+    const get = doc.paths?.["/api/channels/{channelId}/messages"]?.get;
     expect(get).toBeDefined();
     expect(get?.responses?.["200"]).toBeDefined();
   });
 
   it("/channels/{channelId}/messages(post) は 201 を返し 400/401/404 を定義する", () => {
     const doc = generateOpenApiDocument();
-    const post = doc.paths?.["/channels/{channelId}/messages"]?.post;
+    const post = doc.paths?.["/api/channels/{channelId}/messages"]?.post;
     expect(post).toBeDefined();
     expect(post?.responses?.["201"]).toBeDefined();
     expect(post?.responses?.["400"]).toBeDefined();

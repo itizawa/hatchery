@@ -59,6 +59,12 @@ export interface SecurityOptions {
   corsAllowedOrigins?: string[];
   /** HSTS（Strict-Transport-Security）を付与するか（#35）。HTTPS（本番）でのみ true。既定 false。 */
   enableHsts?: boolean;
+  /**
+   * セッション cookie をクロスサイト（別ドメイン）でも送信できるようにするか（#78）。
+   * フロント（Cloudflare Pages）と API（Cloud Run）が別ドメインの本番/dev で true。
+   * true で SameSite=None + Secure（HTTPS 前提）。ローカル同一オリジンは false（SameSite=Lax）。既定 false。
+   */
+  crossSiteCookie?: boolean;
 }
 
 /** SecurityOptions の既定値（env.ts と共有＝単一情報源。本番は server.ts が env から渡す）。 */
@@ -66,7 +72,23 @@ const DEFAULT_SECURITY: Required<SecurityOptions> = {
   ...SECURITY_DEFAULTS,
   corsAllowedOrigins: [],
   enableHsts: false,
+  crossSiteCookie: false,
 };
+
+/**
+ * セッション cookie の属性を組み立てる（#78）。
+ * crossSiteCookie=true（別ドメイン配信）では SameSite=None + Secure とし、ブラウザが
+ * クロスサイトでも cookie を送信できるようにする（Secure は HTTPS 必須＝Cloud Run 前提）。
+ * false（ローカル同一オリジン）では SameSite=Lax + 非 Secure（http://localhost で送信可能）。
+ */
+export function buildSessionCookieOptions(crossSiteCookie: boolean) {
+  return {
+    httpOnly: true,
+    sameSite: crossSiteCookie ? ("none" as const) : ("lax" as const),
+    secure: crossSiteCookie,
+    maxAge: 24 * 60 * 60 * 1000,
+  };
+}
 
 /** createApp の依存（永続化は注入する＝Express/Prisma からドメインを独立させる）。 */
 export interface AppDeps {
@@ -127,17 +149,19 @@ export function createApp(deps: AppDeps): Express {
   app.use(createRequestTimeout(security.requestTimeoutMs));
   app.use(createJsonBodyParser(security.bodyLimit));
 
+  // クロスサイト cookie（別ドメイン配信）では Secure cookie をプロキシ（Cloud Run）背後で
+  // 発行するため trust proxy が必須。これが無いと express-session が接続を非 HTTPS と判断し、
+  // Secure cookie をセットしない（#78）。
+  if (security.crossSiteCookie) {
+    app.set("trust proxy", 1);
+  }
+
   app.use(
     session({
       secret: sessionSecret ?? "hatchery-dev-secret",
       resave: false,
       saveUninitialized: false,
-      cookie: {
-        httpOnly: true,
-        sameSite: "lax",
-        secure: process.env.NODE_ENV === "production",
-        maxAge: 24 * 60 * 60 * 1000,
-      },
+      cookie: buildSessionCookieOptions(security.crossSiteCookie),
     }),
   );
 

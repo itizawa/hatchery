@@ -1,8 +1,30 @@
 import request from "supertest";
 import { describe, expect, it } from "vitest";
 
-import { createApp } from "./app.js";
+import { buildSessionCookieOptions, createApp } from "./app.js";
 import { InMemoryMessageRepository } from "./persistence/messageRepository.js";
+
+describe("buildSessionCookieOptions（別ドメイン配信のクロスサイト cookie）", () => {
+  it("crossSiteCookie=true で SameSite=None + Secure（クロスサイトでも cookie を送信できる）", () => {
+    // フロント（Cloudflare Pages）と API（Cloud Run）が別ドメインの本番/dev では
+    // SameSite=Lax だと cookie が送られずログインが維持できない（#78 のクロスオリジン配信）。
+    expect(buildSessionCookieOptions(true)).toEqual({
+      httpOnly: true,
+      sameSite: "none",
+      secure: true,
+      maxAge: 24 * 60 * 60 * 1000,
+    });
+  });
+
+  it("crossSiteCookie=false で SameSite=Lax + secure 無効（ローカル同一オリジン）", () => {
+    expect(buildSessionCookieOptions(false)).toEqual({
+      httpOnly: true,
+      sameSite: "lax",
+      secure: false,
+      maxAge: 24 * 60 * 60 * 1000,
+    });
+  });
+});
 
 describe("createApp のセキュリティ防御", () => {
   it("レート制限の上限を超えたリクエストに 429 を返す（/health にグローバル適用）", async () => {

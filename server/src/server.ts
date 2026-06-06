@@ -27,6 +27,9 @@ const app = createApp({
     corsAllowedOrigins: env.corsAllowedOrigins,
     // HSTS は HTTPS 前提のため本番でのみ有効化する（session cookie の secure と同じ判定）。
     enableHsts: process.env.NODE_ENV === "production",
+    // フロント（Cloudflare Pages）と API（Cloud Run）が別ドメインの本番/dev では、
+    // セッション cookie を SameSite=None + Secure にしないとログインが維持できない（#78）。
+    crossSiteCookie: process.env.NODE_ENV === "production",
   },
 });
 

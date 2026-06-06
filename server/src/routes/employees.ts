@@ -25,7 +25,9 @@ export function createEmployeesRouter(employeeRepository: EmployeeRepository): R
       employeeRepository
         .update(id, input)
         .then((employee) => {
-          if (!employee) throw new NotFoundError("EmployeeNotFound");
+          if (!employee) {
+            throw new NotFoundError("EmployeeNotFound");
+          }
           res.status(200).json(employee);
         })
         .catch(next);

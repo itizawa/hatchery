@@ -53,7 +53,9 @@ export function createChannelsRouter(
     channelRepo
       .update(id, input)
       .then((channel) => {
-        if (!channel) throw new NotFoundError("ChannelNotFound");
+        if (!channel) {
+          throw new NotFoundError("ChannelNotFound");
+        }
         res.status(200).json(channel);
       })
       .catch(next);
@@ -84,7 +86,9 @@ export function createChannelsRouter(
       channelRepo
         .findById(channelId)
         .then((channel) => {
-          if (!channel) throw new NotFoundError("ChannelNotFound");
+          if (!channel) {
+            throw new NotFoundError("ChannelNotFound");
+          }
           return messageRepo
             .createMany([{ speaker: user.employeeId!, channel: channelId, text }])
             .then(([created]) => res.status(201).json(created));

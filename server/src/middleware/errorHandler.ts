@@ -3,6 +3,7 @@ import type { ErrorRequestHandler } from "express";
 
 /**
  * 集約エラーハンドラ。
+ * AppError（common 定義）は statusCode に応じた HTTP レスポンスを返す。
  * body-parser が投げる過大ペイロードエラー（status 413 / type "entity.too.large"）は
  * 413 PayloadTooLarge に変換する。AppError サブクラスは statusCode に応じてレスポンスを返す。
  * それ以外のユースケース/永続化の例外は 500 に変換する。
@@ -18,7 +19,6 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, next) => {
     res.status(err.statusCode).json({ error: err.message });
     return;
   }
-  // body-parser が投げる過大ペイロードエラー（AppError でない framework レベルのエラー）
   const e = err as { status?: number; statusCode?: number; type?: string } | null;
   if (e?.status === 413 || e?.statusCode === 413 || e?.type === "entity.too.large") {
     res.status(413).json({ error: "PayloadTooLarge" });

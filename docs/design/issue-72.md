@@ -2,87 +2,98 @@
 
 ## 1. 目的 / 背景
 
-ADR-0001（monorepo 境界）と ADR-0005（common の純粋性）に従い、HTTP エラー型を `common` に定義してサーバ全体で共有する。
-現状、ルートハンドラが `res.status(xxx).json(...)` を各所に散在させており、エラーの種類を横断的に把握・変更が困難で型安全性も低い。
+現在、サーバ側のルートハンドラで HTTP エラーを返す際に `res.status(xxx).json(...)` を各所に散在させており、エラーの種類を横断的に把握・変更しにくく型安全性も低い。`AppError` を `common` に定義してサーバ全体で `throw` 統一することで、エラー処理を一元化し型安全にする。
 
 ## 2. スコープ（やること / やらないこと）
 
 ### やること
-
-- `common/src/errors/` に HTTP エラー型の基底クラス `AppError` と具象クラスを定義する
-- `server/src/middleware/errorHandler.ts` を `AppError` に対応させる
-- 既存ルートハンドラの `res.status(xxx).json(...)` 直接書きを `throw` / `next(err)` に置き換える
-- `common/src/index.ts` からエラークラスを再エクスポートする
+- `common/src/errors/` に `AppError`（基底）と具象クラスを定義する
+- `server` の `errorHandler` が `AppError` を受け取り `statusCode` で応答するよう更新する
+- 既存ルートの `res.status(4xx).json(...)` を対応するエラークラスの `throw` に置き換える
 
 ### やらないこと
+- client 側でのエラー型の利用（将来の拡張として設計するが本 Issue では実装しない）
+- 400 バリデーションエラー（validateBody）の変更（既存動作を維持）
 
-- client 側でのエラー型利用（将来拡張として設計だけ配慮）
-- HTTP 以外のエラー型定義
+## 3. 受け入れ条件（テストに落とせる粒度）
 
-## 3. 受け入れ条件（テストに落とせる粒度で箇条書き）
+- `AppError` のサブクラスは各 `statusCode` と `message` を持つ
+  - `NotFoundError` → 404
+  - `BadRequestError` → 400
+  - `UnauthorizedError` → 401
+  - `ForbiddenError` → 403
+  - `ConflictError` → 409
+- `errorHandler` が `AppError` をキャッチし `statusCode` に応じたレスポンスを返す
+- 既存の 413・500 変換ロジックは壊れない
+- ルートの 404/400/403 エラーが `AppError` の `throw` 経由で返る（HTTP ステータスは変わらない）
+- `common` には Express 等のサーバ依存がない（純粋 TypeScript クラス）
 
-- `AppError` は `statusCode: number` と `message: string` を持つ
-- `NotFoundError(404)`・`BadRequestError(400)`・`UnauthorizedError(401)`・`ForbiddenError(403)`・`ConflictError(409)` が正しい statusCode を持つ
-- `errorHandler` が `AppError` インスタンスを catch し、`statusCode` に応じたレスポンスを返す
-- 既存の 413 / 500 変換ロジックが維持される
-- `PATCH /channels/:id` に存在しない id を指定すると 404 が返る
-- `PATCH /employees/:id` で他ユーザーの Employee を更新しようとすると 403 が返る
-- `POST /channels/:channelId/messages` で存在しない channelId を指定すると 404 が返る
-- 全テスト緑・lint 通過
+## 4. 設計方針
 
-## 4. 設計方針（アーキ・データ構造・主要モジュール）
+### エラークラス（`common/src/errors/appError.ts`）
 
-### エラークラス階層
-
+```typescript
+export class AppError extends Error {
+  constructor(readonly statusCode: number, message: string) {
+    super(message);
+    this.name = this.constructor.name;
+  }
+}
+export class NotFoundError extends AppError { constructor(message = "Not Found") { super(404, message); } }
+export class BadRequestError extends AppError { constructor(message = "Bad Request") { super(400, message); } }
+export class UnauthorizedError extends AppError { constructor(message = "Unauthorized") { super(401, message); } }
+export class ForbiddenError extends AppError { constructor(message = "Forbidden") { super(403, message); } }
+export class ConflictError extends AppError { constructor(message = "Conflict") { super(409, message); } }
 ```
-AppError (common/src/errors/AppError.ts)
-  ├── NotFoundError      (404)
-  ├── BadRequestError    (400)
-  ├── UnauthorizedError  (401)
-  ├── ForbiddenError     (403)
-  └── ConflictError      (409)
+
+`ForbiddenError`（403）は最低限セットに加えて追加する（既存 employees.ts で 403 を返している）。
+
+### errorHandler の更新
+
+`AppError` のインスタンスチェックを 413 チェックの前に追加:
+
+```typescript
+if (e instanceof AppError) {
+  res.status(e.statusCode).json({ error: e.message });
+  return;
+}
 ```
 
-- `AppError extends Error` でネイティブ Error を継承
-- `common` は Express に依存しない純粋 TypeScript クラス（ADR-0005）
-- エラーメッセージは従来の `error` レスポンスキーの値（例: `"ChannelNotFound"`）と統一
+### ルート変更方針
 
-### errorHandler の変更方針
+- `.then()` 内の `res.status(4xx).json(...)` + `return` → `throw new XxxError(msg)`（`.catch(next)` で受け取られる）
+- 同期ハンドラ内の `res.status(4xx).json(...); return;` → `next(new XxxError(msg)); return;`（Express 5 では throw も可だが、既存パターンに合わせ next を使う）
 
-既存の 413 ガードを維持しつつ、`AppError` インスタンスを `instanceof` で判定して `statusCode` に応じてレスポンスを返す。優先順位: 413判定 > AppError判定 > 500（Unknown）
+### 変更対象ファイル
 
-### ルートハンドラのリファクタ方針
-
-- Promise チェーン内の `res.status(xxx).json(...)` → `throw new XxxError(message)` に置き換え（throw が `.catch(next)` 経由で errorHandler に到達）
-- 同期ハンドラ内の直接レスポンス → `next(new XxxError(message)); return;` に置き換え（明示的に Express の next チェーンへ流す）
+| ファイル | 変更内容 |
+|---------|----------|
+| `common/src/errors/appError.ts` | 新規作成（エラークラス定義） |
+| `common/src/errors/index.ts` | 新規作成（再エクスポート） |
+| `common/src/index.ts` | `errors/index` を追加エクスポート |
+| `server/src/middleware/errorHandler.ts` | AppError キャッチを追加 |
+| `server/src/routes/channels.ts` | 404・400 を throw に変更 |
+| `server/src/routes/employees.ts` | 403・404 を throw に変更 |
 
 ## 5. 影響範囲 / 既存への変更
 
-| ファイル | 変更内容 |
-|---------|---------|
-| `common/src/errors/AppError.ts` | 新規追加（エラークラス定義） |
-| `common/src/errors/index.ts` | 新規追加（再エクスポート） |
-| `common/src/errors/AppError.test.ts` | 新規追加（ユニットテスト） |
-| `common/src/index.ts` | `errors/` を追加エクスポート |
-| `server/src/middleware/errorHandler.ts` | AppError ハンドリング追加 |
-| `server/src/middleware/errorHandler.test.ts` | AppError テスト追加 |
-| `server/src/routes/channels.ts` | 404/400 を throw に変更 |
-| `server/src/routes/employees.ts` | 403/404 を next(err) / throw に変更 |
+- `common`: `errors/` ディレクトリを新規追加
+- `server`: errorHandler・channels.ts・employees.ts を変更
+- `client`: 変更なし（common に errors が増えるが、client で使用しない）
+- 既存テストは HTTP ステータスを検証しているだけなので、エラー構造が変わっても通る
 
-## 6. テスト計画（TDD で書くテスト一覧）
+## 6. テスト計画
 
-### common/src/errors/AppError.test.ts（新規）
+### `common/src/errors/appError.test.ts`（新規）
+- 各クラスのインスタンスが `statusCode` と `message` を正しく持つ
+- `instanceof AppError` が true
+- `instanceof` で各サブクラスの判定ができる
 
-- `AppError` の statusCode と message が正しく設定される
-- 各具象クラスの statusCode が正しい（NotFoundError=404 等）
-- `instanceof AppError` チェックが正しく機能する
-
-### server/src/middleware/errorHandler.test.ts（追加）
-
-- `AppError` インスタンスを next() すると `statusCode` に応じた HTTP レスポンスが返る
-- `NotFoundError("ChannelNotFound")` が 404 で `{ error: "ChannelNotFound" }` を返す
+### `server/src/middleware/errorHandler.test.ts`（追加）
+- `AppError` を next(err) すると `statusCode` の HTTP ステータスで `{ error: message }` が返る
+- 既存の 413・500 テストは変わらず通る
 
 ## 7. リスク・未決事項
 
-- `ForbiddenError(403)` は Issue 要件の「最低限リスト」外だが、`employees.ts` の 403 を既に利用しているため追加する
-- client 側での AppError 利用は本 Issue スコープ外
+- `ForbiddenError`（403）はイシュー本文の最低限セットに含まれていないが、既存コードで使用しており追加する
+- `error` フィールドの値を `e.message` にすると既存テストが見ているフィールド名が変わる可能性あり → 既存テストはステータスコードのみ確認しているため問題なし

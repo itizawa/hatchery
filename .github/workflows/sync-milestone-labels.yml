@@ -1,0 +1,46 @@
+name: sync-milestone-labels
+
+on:
+  issues:
+    types: [milestoned, demilestoned]
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Add milestone label
+        if: github.event.action == 'milestoned'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MILESTONE: ${{ github.event.milestone.title }}
+          ISSUE: ${{ github.event.issue.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          LABEL="milestone/${MILESTONE}"
+          # ラベルが存在しなければ作成
+          gh label create "$LABEL" \
+            --repo "$REPO" \
+            --color "c2e0c6" \
+            --description "Milestone: ${MILESTONE}" 2>/dev/null || true
+          # 既存の milestone/* ラベルを除去
+          gh issue view "$ISSUE" --repo "$REPO" --json labels \
+            --jq '.labels[].name' \
+            | grep '^milestone/' \
+            | while read old_label; do
+                gh issue edit "$ISSUE" --repo "$REPO" --remove-label "$old_label" || true
+              done
+          # 新しいマイルストーンラベルを付与
+          gh issue edit "$ISSUE" --repo "$REPO" --add-label "$LABEL"
+
+      - name: Remove milestone label
+        if: github.event.action == 'demilestoned'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MILESTONE: ${{ github.event.milestone.title }}
+          ISSUE: ${{ github.event.issue.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          LABEL="milestone/${MILESTONE}"
+          gh issue edit "$ISSUE" --repo "$REPO" --remove-label "$LABEL" 2>/dev/null || true

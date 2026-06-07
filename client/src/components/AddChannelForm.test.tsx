@@ -1,9 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AddChannelForm } from "./AddChannelForm";
+
+// 静的 userEvent API を使う（@testing-library/user-event v14 の setup() は jsdom との互換問題があるため）
 
 function jsonResponse(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -12,7 +15,7 @@ function jsonResponse(status: number, body: unknown): Response {
   });
 }
 
-/** URL に応じて応答を切り替える fetch スタブ（/auth/me を主に分岐）。 */
+/** URL に応じて応答を切り替える fetch スタブ */
 function stubFetch(meStatus: number, meBody: unknown) {
   vi.stubGlobal(
     "fetch",
@@ -31,23 +34,9 @@ function renderWithClient(ui: ReactElement) {
   return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
 }
 
-// 受け入れ条件 AC7: ログイン時のみ表示されるチャンネル追加 UI。未ログインでは表示しない。
-describe("AddChannelForm（ログイン時のみ表示・#47）", () => {
+describe("AddChannelForm（アイコンボタン＋モーダル・#177）", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
-  });
-
-  it("ログイン時はチャンネル追加フォームを表示する", async () => {
-    stubFetch(200, { id: "u1", displayName: "Alice" });
-    renderWithClient(<AddChannelForm />);
-    expect(await screen.findByRole("button", { name: "追加" })).toBeInTheDocument();
-  });
-
-  it("ログイン時はタイプ選択ラジオボタンを表示する（#54）", async () => {
-    stubFetch(200, { id: "u1", displayName: "Alice" });
-    renderWithClient(<AddChannelForm />);
-    expect(await screen.findByRole("radio", { name: "雑談" })).toBeInTheDocument();
-    expect(await screen.findByRole("radio", { name: "仕事" })).toBeInTheDocument();
   });
 
   it("未ログイン（401）のときは何も表示しない", async () => {
@@ -57,9 +46,60 @@ describe("AddChannelForm（ログイン時のみ表示・#47）", () => {
     });
     vi.stubGlobal("fetch", fetchSpy);
     const { container } = renderWithClient(<AddChannelForm />);
-    // useAuth（GET /auth/me）が実際に呼ばれ 401 で解決したことを待ってから、何も描画されないことを検証する。
     await waitFor(() => expect(fetchSpy).toHaveBeenCalled());
-    expect(screen.queryByRole("button", { name: "追加" })).not.toBeInTheDocument();
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it("ログイン時はアイコンボタンを表示する（aria-label='チャンネル作成'）", async () => {
+    stubFetch(200, { id: "u1", displayName: "Alice" });
+    renderWithClient(<AddChannelForm />);
+    expect(await screen.findByRole("button", { name: "チャンネル作成" })).toBeInTheDocument();
+  });
+
+  it("ログイン時はフォームを常時表示しない（初期状態でダイアログが閉じている）", async () => {
+    stubFetch(200, { id: "u1", displayName: "Alice" });
+    renderWithClient(<AddChannelForm />);
+    await screen.findByRole("button", { name: "チャンネル作成" });
+    expect(screen.queryByRole("button", { name: "追加" })).not.toBeInTheDocument();
+  });
+
+  it("アイコンボタンをクリックするとダイアログが開く", async () => {
+    stubFetch(200, { id: "u1", displayName: "Alice" });
+    renderWithClient(<AddChannelForm />);
+    await userEvent.click(await screen.findByRole("button", { name: "チャンネル作成" }));
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "追加" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "チャンネル名" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "雑談" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "仕事" })).toBeInTheDocument();
+  });
+
+  it("キャンセルボタンでダイアログが閉じ mutation は走らない", async () => {
+    const fetchSpy = vi.fn((input: Request | string) => {
+      const url = typeof input === "string" ? input : input.url;
+      if (url.includes("/auth/me")) return Promise.resolve(jsonResponse(200, { id: "u1", displayName: "Alice" }));
+      return Promise.resolve(jsonResponse(201, { id: "new", label: "#新規", type: "zatsudan" }));
+    });
+    vi.stubGlobal("fetch", fetchSpy);
+    renderWithClient(<AddChannelForm />);
+    await userEvent.click(await screen.findByRole("button", { name: "チャンネル作成" }));
+    await screen.findByRole("dialog");
+    await userEvent.click(screen.getByRole("button", { name: "キャンセル" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    const postCalls = fetchSpy.mock.calls.filter(([input]: [Request | string]) => {
+      const url = typeof input === "string" ? input : (input as Request).url;
+      return url.includes("/channels");
+    });
+    expect(postCalls).toHaveLength(0);
+  });
+
+  it("フォーム送信で mutation が走り成功後にダイアログが閉じる", async () => {
+    stubFetch(200, { id: "u1", displayName: "Alice" });
+    renderWithClient(<AddChannelForm />);
+    await userEvent.click(await screen.findByRole("button", { name: "チャンネル作成" }));
+    await screen.findByRole("dialog");
+    await userEvent.type(screen.getByRole("textbox", { name: "チャンネル名" }), "テストチャンネル");
+    await userEvent.click(screen.getByRole("button", { name: "追加" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 });

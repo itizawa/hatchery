@@ -35,6 +35,7 @@ export const AddChannelForm = (): ReactElement | null => {
   const handleClose = (): void => {
     setOpen(false);
     setLabel("");
+    setType("zatsudan");
   };
 
   const trimmed = label.trim();

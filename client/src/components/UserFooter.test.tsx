@@ -60,19 +60,60 @@ describe("UserFooter", () => {
     expect(await screen.findByText("Alice")).toBeInTheDocument();
   });
 
-  it("ログイン済みのときログアウトボタンが表示される", async () => {
+  it("初期表示時にアカウント設定が DOM 上に存在しない（Menu は閉じている）", async () => {
     stubFetch(true);
     renderApp("/");
 
-    expect(await screen.findByRole("button", { name: /ログアウト/ })).toBeInTheDocument();
+    await screen.findByRole("button", { name: /ユーザーメニュー/ });
+
+    expect(screen.queryByRole("menuitem", { name: /アカウント設定/ })).not.toBeInTheDocument();
   });
 
-  it("ログアウトボタン押下で /auth/logout への POST リクエストが送信される", async () => {
+  it("初期表示時にログアウト menuitem が DOM 上に存在しない（Menu は閉じている）", async () => {
     stubFetch(true);
     renderApp("/");
 
-    const button = await screen.findByRole("button", { name: /ログアウト/ });
-    await userEvent.click(button);
+    await screen.findByRole("button", { name: /ユーザーメニュー/ });
+
+    expect(screen.queryByRole("menuitem", { name: /ログアウト/ })).not.toBeInTheDocument();
+  });
+
+  it("ユーザーメニュートリガーボタンが表示される", async () => {
+    stubFetch(true);
+    renderApp("/");
+
+    expect(await screen.findByRole("button", { name: /ユーザーメニュー/ })).toBeInTheDocument();
+  });
+
+  it("トリガークリック後にアカウント設定 menuitem が表示される", async () => {
+    stubFetch(true);
+    renderApp("/");
+
+    const trigger = await screen.findByRole("button", { name: /ユーザーメニュー/ });
+    await userEvent.click(trigger);
+
+    expect(await screen.findByRole("menuitem", { name: /アカウント設定/ })).toBeInTheDocument();
+  });
+
+  it("トリガークリック後にログアウト menuitem が表示される", async () => {
+    stubFetch(true);
+    renderApp("/");
+
+    const trigger = await screen.findByRole("button", { name: /ユーザーメニュー/ });
+    await userEvent.click(trigger);
+
+    expect(await screen.findByRole("menuitem", { name: /ログアウト/ })).toBeInTheDocument();
+  });
+
+  it("ログアウト menuitem クリックで /auth/logout への POST リクエストが送信される", async () => {
+    stubFetch(true);
+    renderApp("/");
+
+    const trigger = await screen.findByRole("button", { name: /ユーザーメニュー/ });
+    await userEvent.click(trigger);
+
+    const logoutItem = await screen.findByRole("menuitem", { name: /ログアウト/ });
+    await userEvent.click(logoutItem);
 
     const fetchMock = vi.mocked(global.fetch);
     await waitFor(() => {
@@ -88,38 +129,32 @@ describe("UserFooter", () => {
     stubFetch(true);
     renderApp("/");
 
-    const button = await screen.findByRole("button", { name: /ログアウト/ });
-    await userEvent.click(button);
+    const trigger = await screen.findByRole("button", { name: /ユーザーメニュー/ });
+    await userEvent.click(trigger);
+
+    const logoutItem = await screen.findByRole("menuitem", { name: /ログアウト/ });
+    await userEvent.click(logoutItem);
 
     expect(await screen.findByRole("heading", { name: /ログイン/ })).toBeInTheDocument();
-  });
-
-  it("アカウント設定リンクが存在する", async () => {
-    stubFetch(true);
-    renderApp("/");
-
-    expect(await screen.findByRole("link", { name: /アカウント設定/ })).toBeInTheDocument();
   });
 
   it("未ログイン時は displayName が表示されない", async () => {
     stubFetch(false);
     renderApp("/");
 
-    // #136 で「管理画面」リンクが admin 専用になり安定指標として使えなくなった。
     // UserFooter は user=null のとき null を返すため "Alice" は表示されない。
     await waitFor(() => {
       expect(screen.queryByText("Alice")).not.toBeInTheDocument();
     });
   });
 
-  it("未ログイン時はログアウトボタンが表示されない", async () => {
+  it("未ログイン時はユーザーメニュートリガーが表示されない", async () => {
     stubFetch(false);
     renderApp("/");
 
-    // #136 で「管理画面」リンクが admin 専用になり安定指標として使えなくなった。
-    // UserFooter は user=null のとき null を返すためログアウトボタンは表示されない。
+    // UserFooter は user=null のとき null を返すためトリガーボタンは表示されない。
     await waitFor(() => {
-      expect(screen.queryByRole("button", { name: /ログアウト/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /ユーザーメニュー/ })).not.toBeInTheDocument();
     });
   });
 });

@@ -2,6 +2,8 @@ export { default as Alert } from "@mui/material/Alert";
 export { default as Avatar } from "@mui/material/Avatar";
 export { default as Box } from "@mui/material/Box";
 export { default as Button } from "@mui/material/Button";
+export { default as ButtonBase } from "@mui/material/ButtonBase";
+export { default as Menu } from "@mui/material/Menu";
 export { default as Chip } from "@mui/material/Chip";
 export { default as CircularProgress } from "@mui/material/CircularProgress";
 export { default as FormControl } from "@mui/material/FormControl";

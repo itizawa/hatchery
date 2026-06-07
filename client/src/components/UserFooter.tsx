@@ -1,7 +1,7 @@
-import { Avatar, Box, Button, Link, Typography } from "./uiParts";
+import { Avatar, Box, ButtonBase, Menu, MenuItem, Typography } from "./uiParts";
 
 import { Link as RouterLink, useNavigate } from "@tanstack/react-router";
-import type { ReactElement } from "react";
+import { type ReactElement, useState } from "react";
 
 import { useAuth, useLogout } from "../api/auth.js";
 import { SLACK_COLORS } from "../theme.js";
@@ -10,10 +10,16 @@ export const UserFooter = (): ReactElement | null => {
   const { data: user, isLoading } = useAuth();
   const { mutate: logout } = useLogout();
   const navigate = useNavigate();
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const open = Boolean(anchorEl);
 
   if (isLoading || !user) return null;
 
+  const handleOpen = (e: React.MouseEvent<HTMLElement>) => setAnchorEl(e.currentTarget);
+  const handleClose = () => setAnchorEl(null);
+
   const handleLogout = () => {
+    handleClose();
     logout(undefined, {
       onSuccess: () => navigate({ to: "/login" }),
     });
@@ -26,13 +32,25 @@ export const UserFooter = (): ReactElement | null => {
       sx={{
         mt: "auto",
         pt: 2,
-        display: "flex",
-        flexDirection: "column",
-        gap: 1,
         borderTop: `1px solid rgba(255,255,255,0.15)`,
       }}
     >
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+      <ButtonBase
+        onClick={handleOpen}
+        aria-label="ユーザーメニュー"
+        aria-controls={open ? "user-menu" : undefined}
+        aria-haspopup="true"
+        aria-expanded={open}
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          gap: 1,
+          width: "100%",
+          borderRadius: 1,
+          p: 0.5,
+          "&:hover": { bgcolor: "rgba(255,255,255,0.1)" },
+        }}
+      >
         <Avatar sx={{ width: 32, height: 32, bgcolor: SLACK_COLORS.blue, fontSize: 14 }}>
           {initial}
         </Avatar>
@@ -42,25 +60,20 @@ export const UserFooter = (): ReactElement | null => {
         >
           {user.displayName}
         </Typography>
-      </Box>
-      <Box sx={{ display: "flex", gap: 1 }}>
-        <Link
-          component={RouterLink}
-          to="/account"
-          sx={{ color: SLACK_COLORS.sidebarText }}
-          underline="hover"
-        >
+      </ButtonBase>
+      <Menu
+        id="user-menu"
+        anchorEl={anchorEl}
+        open={open}
+        onClose={handleClose}
+        anchorOrigin={{ vertical: "top", horizontal: "left" }}
+        transformOrigin={{ vertical: "bottom", horizontal: "left" }}
+      >
+        <MenuItem component={RouterLink} to="/account" onClick={handleClose}>
           アカウント設定
-        </Link>
-        <Button
-          size="small"
-          aria-label="ログアウト"
-          onClick={handleLogout}
-          sx={{ color: SLACK_COLORS.sidebarText, textTransform: "none", p: 0, minWidth: 0 }}
-        >
-          ログアウト
-        </Button>
-      </Box>
+        </MenuItem>
+        <MenuItem onClick={handleLogout}>ログアウト</MenuItem>
+      </Menu>
     </Box>
   );
 };

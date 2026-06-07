@@ -42,8 +42,13 @@ export const RootLayout = (): ReactElement => {
           <ChannelList />
         </Suspense>
         <AddChannelForm />
+        <Box sx={{ mt: 2 }}>
+          <Link component={RouterLink} to="/office" sx={{ color: SLACK_COLORS.sidebarText }} underline="hover">
+            仮想オフィス
+          </Link>
+        </Box>
         {user && isAdmin(user) && (
-          <Box sx={{ mt: 2 }}>
+          <Box sx={{ mt: 1 }}>
             <Link component={RouterLink} to="/admin" sx={{ color: SLACK_COLORS.sidebarText }} underline="hover">
               管理画面
             </Link>

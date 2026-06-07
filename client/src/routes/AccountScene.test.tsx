@@ -64,21 +64,23 @@ describe("アカウント設定画面（#50）", () => {
     expect(await screen.findByRole("heading", { name: /ログイン/ })).toBeInTheDocument();
   });
 
-  it("ログイン済み時はサイドバーに「アカウント設定」リンクが表示される", async () => {
+  it("ログイン済み時はサイドバーのメニューに「アカウント設定」が表示される", async () => {
     stubFetch(true);
     renderApp("/");
 
-    expect(await screen.findByRole("link", { name: "アカウント設定" })).toBeInTheDocument();
+    const trigger = await screen.findByRole("button", { name: /ユーザーメニュー/ });
+    await userEvent.click(trigger);
+
+    expect(await screen.findByRole("menuitem", { name: "アカウント設定" })).toBeInTheDocument();
   });
 
-  it("未ログイン時はサイドバーに「アカウント設定」リンクが表示されない", async () => {
+  it("未ログイン時はサイドバーにユーザーメニュートリガーが表示されない", async () => {
     stubFetch(false);
     renderApp("/");
 
-    // #136 で「管理画面」リンクが admin 専用になったため、非ログイン時の安定指標として使えなくなった。
-    // UserFooter は user が null/undefined のとき null を返すため「アカウント設定」は表示されない。
+    // UserFooter は user が null/undefined のとき null を返すためトリガーもメニューも表示されない。
     await waitFor(() => {
-      expect(screen.queryByRole("link", { name: "アカウント設定" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /ユーザーメニュー/ })).not.toBeInTheDocument();
     });
   });
 });

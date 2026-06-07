@@ -18,9 +18,12 @@ enum UserRole {
   member
 }
 
-/// 認証ユーザー（Issue #26 / ADR-0009）。パスワードは bcrypt ハッシュで保存する。
+/// 認証ユーザー（Issue #26 / ADR-0009 / #185）。パスワードは bcrypt ハッシュで保存する。
+/// id はサロゲートキー（UUIDv7 自動採番）。loginId は人間可読ログイン識別子（#185）。
 model User {
-  id           String    @id
+  id           String    @id @default(uuid(7))
+  /// 人間可読なログイン識別子（#185）。認証は loginId ベースで行う。
+  loginId      String    @unique
   displayName  String
   passwordHash String
   /// プロフィール画像 URL（#51）。nullable。
@@ -33,7 +36,7 @@ model User {
 
 /// AI 社員。common の EmployeeSchema に対応（id / displayName / role? / isBot / personality?）。
 model Employee {
-  id          String            @id
+  id          String            @id @default(uuid(7))
   displayName String
   role        String?
   /// AI 社員は true、ユーザー所有社員は false（#49）。
@@ -58,7 +61,7 @@ enum ChannelType {
 /// summary / summaryUpdatedAt は定時バッチの会話生成に使うチャンネルのあらすじ（#53）。
 /// 直近 30 件より前の文脈を圧縮した要約で、API（OpenAPI）には公開しないバッチ内部の状態。
 model Channel {
-  id               String            @id
+  id               String            @id @default(uuid(7))
   label            String
   type             ChannelType       @default(zatsudan)
   summary          String?
@@ -83,7 +86,7 @@ model ChannelEmployee {
 /// proposalTitle / proposalReason / proposalTargetUrl / issueNumber / issueUrl は
 /// 企画 チャンネルの UX 提案メッセージ専用 optional フィールド（#76）。
 model Message {
-  id                String   @id @default(cuid())
+  id                String   @id @default(uuid(7))
   speaker           String
   channel           String
   text              String
@@ -106,7 +109,7 @@ enum TaskStatus {
 
 /// 社員が抱えるタスク。common の TaskSchema に対応（id / text / status）。
 model Task {
-  id         String     @id
+  id         String     @id @default(uuid(7))
   text       String
   status     TaskStatus @default(new)
   employee   Employee?  @relation(fields: [employeeId], references: [id])
@@ -122,7 +125,7 @@ model AppSetting {
 
 /// バッチ実行ログ（#75）。定時バッチの成功・失敗を記録する。
 model BatchRunLog {
-  id           String            @id @default(cuid())
+  id           String            @id @default(uuid(7))
   executedAt   DateTime          @default(now())
   status       BatchRunLogStatus
   messageCount Int               @default(0)
@@ -140,7 +143,7 @@ enum BatchRunLogStatus {
 
 /// 招待リンク（#131）。管理者が発行し、期限 + single-use で新規ユーザーを招待する。
 model InvitationLink {
-  id              String    @id @default(cuid())
+  id              String    @id @default(uuid(7))
   /// URL に載せる招待トークン。推測困難な乱数（base64url）。平文保存（再コピー可・期限+single-use でリスク軽減）。
   token           String    @unique
   expiresAt       DateTime

@@ -11,7 +11,7 @@ export interface SeedPrisma {
     upsert(args: {
       where: { id: string };
       update: { role?: "admin" | "member" };
-      create: { id: string; displayName: string; passwordHash: string; role?: "admin" | "member" };
+      create: { id: string; loginId: string; displayName: string; passwordHash: string; role?: "admin" | "member" };
     }): Promise<unknown>;
   };
   employee: {
@@ -49,7 +49,7 @@ export interface SeedResult {
 }
 
 /** 開発用テストユーザーの資格情報（既存コードベースの標準: testuser / testpass）。 */
-const DEV_USER = { id: "testuser", displayName: "Test User", password: "testpass" } as const;
+const DEV_USER = { id: "testuser", loginId: "testuser", displayName: "Test User", password: "testpass" } as const;
 
 /** ログインユーザーに紐づく Employee の id（#49）。 */
 const DEV_USER_EMPLOYEE_ID = "emp-testuser";
@@ -71,7 +71,7 @@ export async function seedDevData(prisma: SeedPrisma): Promise<SeedResult> {
   await prisma.user.upsert({
     where: { id: DEV_USER.id },
     update: { role: "admin" },
-    create: { id: DEV_USER.id, displayName: DEV_USER.displayName, passwordHash, role: "admin" },
+    create: { id: DEV_USER.id, loginId: DEV_USER.loginId, displayName: DEV_USER.displayName, passwordHash, role: "admin" },
   });
 
   // AI 社員（既定 3 名）は isBot=true / userId は紐付けない（#49）。

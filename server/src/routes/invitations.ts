@@ -5,7 +5,7 @@ import { Router } from "express";
 import { toAuthUser } from "../auth/passport.js";
 import { validateBody } from "../middleware/validateBody.js";
 import type { InvitationLinkRepository } from "../persistence/invitationLinkRepository.js";
-import { UserIdAlreadyExistsError, type UserRepository } from "../persistence/userRepository.js";
+import { LoginIdAlreadyExistsError, type UserRepository } from "../persistence/userRepository.js";
 
 const BCRYPT_SALT_ROUNDS = 10;
 
@@ -39,7 +39,7 @@ export function createInvitationsRouter(
     validateBody(AcceptInvitationSchema),
     async (req, res, next) => {
       try {
-        const { id, displayName, password } = req.body as AcceptInvitation;
+        const { loginId, displayName, password } = req.body as AcceptInvitation;
 
         const record = await invitationLinkRepository.findByToken(req.params.token as string);
         if (!record) {
@@ -60,10 +60,10 @@ export function createInvitationsRouter(
 
         let newUser;
         try {
-          newUser = await userRepository.create({ id, displayName, passwordHash });
+          newUser = await userRepository.create({ loginId, displayName, passwordHash });
         } catch (err) {
-          if (err instanceof UserIdAlreadyExistsError) {
-            res.status(409).json({ error: "User id already exists" });
+          if (err instanceof LoginIdAlreadyExistsError) {
+            res.status(409).json({ error: "Login id already exists" });
             return;
           }
           throw err;

@@ -5,9 +5,14 @@ import { Strategy as LocalStrategy } from "passport-local";
 
 import type { User, UserRepository } from "../persistence/userRepository.js";
 
-/** 認証ユーザー（DB の User）をセッションに載せる公開情報（AuthUser）へ写す（#49, #51, #136）。 */
+/** 認証ユーザー（DB の User）をセッションに載せる公開情報（AuthUser）へ写す（#49, #51, #136, #185）。 */
 export function toAuthUser(user: User): AuthUser {
-  const authUser: AuthUser = { id: user.id, displayName: user.displayName, role: user.role };
+  const authUser: AuthUser = {
+    id: user.id,
+    loginId: user.loginId,
+    displayName: user.displayName,
+    role: user.role,
+  };
   if (user.employeeId) authUser.employeeId = user.employeeId;
   if (user.avatarUrl) authUser.avatarUrl = user.avatarUrl;
   return authUser;
@@ -25,9 +30,9 @@ export function createPassport(userRepo: UserRepository): PassportInstance {
   const p = new Passport();
 
   p.use(
-    new LocalStrategy({ usernameField: "id" }, async (id, password, done) => {
+    new LocalStrategy({ usernameField: "loginId" }, async (loginId, password, done) => {
       try {
-        const user = await userRepo.findById(id);
+        const user = await userRepo.findByLoginId(loginId);
         if (!user) return done(null, false);
         const match = await bcrypt.compare(password, user.passwordHash);
         if (!match) return done(null, false);

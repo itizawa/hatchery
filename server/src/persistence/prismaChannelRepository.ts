@@ -1,5 +1,3 @@
-import { randomUUID } from "node:crypto";
-
 import type { Channel, CreateChannelInput, UpdateChannelInput } from "@hatchery/common";
 import { Prisma, type PrismaClient } from "@prisma/client";
 
@@ -18,9 +16,8 @@ export class PrismaChannelRepository implements ChannelRepository {
   }
 
   async create(input: CreateChannelInput): Promise<Channel> {
-    // Channel.id は DB 既定を持たないため、ユーザー作成チャンネルの id はここで採番する。
     const created = await this.prisma.channel.create({
-      data: { id: randomUUID(), label: input.label, type: input.type },
+      data: { label: input.label, type: input.type },
       select: { id: true, label: true, type: true },
     });
     return { id: created.id, label: created.label, type: created.type };

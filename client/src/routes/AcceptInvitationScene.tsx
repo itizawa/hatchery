@@ -7,7 +7,7 @@ import type { ReactElement } from "react";
 
 import {
   ACCEPT_INVITATION_DISPLAY_NAME_MAX_LENGTH,
-  ACCEPT_INVITATION_ID_MAX_LENGTH,
+  ACCEPT_INVITATION_LOGIN_ID_MAX_LENGTH,
   ACCEPT_INVITATION_PASSWORD_MAX_LENGTH,
   ACCEPT_INVITATION_PASSWORD_MIN_LENGTH,
 } from "@hatchery/common";
@@ -55,7 +55,7 @@ export function AcceptInvitationScene(): ReactElement {
   }, [currentUser, isAuthLoading, navigate]);
 
   const form = useForm({
-    defaultValues: { id: "", displayName: "", password: "" },
+    defaultValues: { loginId: "", displayName: "", password: "" },
     onSubmit: async ({ value }) => {
       setApiError(null);
       try {
@@ -64,7 +64,7 @@ export function AcceptInvitationScene(): ReactElement {
       } catch (err) {
         if (err instanceof ApiError && err.status === 409) {
           const errDetail = (err.body as { error?: string } | undefined)?.error?.toLowerCase() ?? "";
-          if (errDetail.includes("user id") || errDetail.includes("already exists")) {
+          if (errDetail.includes("login id") || errDetail.includes("already exists")) {
             setApiError("このIDは既に使われています");
           } else {
             setApiError("招待リンクが無効になりました");
@@ -114,7 +114,7 @@ export function AcceptInvitationScene(): ReactElement {
         </Typography>
       )}
       <form.Field
-        name="id"
+        name="loginId"
         validators={{
           onSubmit: ({ value }) => (!value ? "ログイン ID は必須です" : undefined),
         }}
@@ -123,7 +123,7 @@ export function AcceptInvitationScene(): ReactElement {
           <TextField
             label="ログイン ID"
             id="accept-id"
-            inputProps={{ "aria-label": "ログイン ID", maxLength: ACCEPT_INVITATION_ID_MAX_LENGTH }}
+            inputProps={{ "aria-label": "ログイン ID", maxLength: ACCEPT_INVITATION_LOGIN_ID_MAX_LENGTH }}
             value={field.state.value}
             onChange={(e) => field.handleChange(e.target.value)}
             onBlur={field.handleBlur}

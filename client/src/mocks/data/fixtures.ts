@@ -8,6 +8,7 @@ import type {
 
 export const mockAdminUser: AuthUser = {
   id: "admin-user",
+  loginId: "admin-user",
   displayName: "管理者ユーザー",
   role: "admin",
   avatarUrl: undefined,
@@ -16,6 +17,7 @@ export const mockAdminUser: AuthUser = {
 
 export const mockMemberUser: AuthUser = {
   id: "member-user",
+  loginId: "member-user",
   displayName: "一般ユーザー",
   role: "member",
   avatarUrl: undefined,

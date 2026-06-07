@@ -29,7 +29,7 @@ async function makeApp(messageRepo = new InMemoryMessageRepository()) {
 
 async function loginAgent(app: ReturnType<typeof createApp>) {
   const agent = request.agent(app);
-  await agent.post("/api/auth/login").send({ id: "testuser", password: "testpass" });
+  await agent.post("/api/auth/login").send({ loginId: "testuser", password: "testpass" });
   return agent;
 }
 
@@ -89,7 +89,7 @@ describe("POST /api/channels/:channelId/messages/:messageId/create-issue (#76)",
     const created = await messageRepo.createPlanningMessage({
       speaker: "ai-planner",
       channel: "kikaku",
-      text: "【UX提案】ログインボタンの色を改善する",
+      text: "「UX提案」ログインボタンの色を改善する",
       proposalTitle: "ログインボタンの色を改善する",
       proposalReason: "コントラスト比が WCAG 基準を下回っている",
       proposalTargetUrl: "/login",
@@ -118,7 +118,7 @@ describe("POST /api/channels/:channelId/messages/:messageId/create-issue (#76)",
     const created = await messageRepo.createPlanningMessage({
       speaker: "ai-planner",
       channel: "kikaku",
-      text: "【UX提案】ナビゲーションを改善する",
+      text: "「UX提案」ナビゲーションを改善する",
       proposalTitle: "ナビゲーションを改善する",
       proposalReason: "ナビゲーションが分かりにくい",
       proposalTargetUrl: "/",

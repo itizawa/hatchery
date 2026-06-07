@@ -14,11 +14,11 @@ export const LoginScene = (): ReactElement => {
   const queryClient = useQueryClient();
 
   const form = useForm({
-    defaultValues: { id: "", password: "" },
+    defaultValues: { loginId: "", password: "" },
     onSubmit: async ({ value }) => {
       setApiError(null);
       try {
-        await login({ id: value.id, password: value.password });
+        await login({ loginId: value.loginId, password: value.password });
         await queryClient.invalidateQueries({ queryKey: AUTH_ME_QUERY_KEY });
         await navigate({ to: "/" });
       } catch {
@@ -45,7 +45,7 @@ export const LoginScene = (): ReactElement => {
         </Typography>
       )}
       <form.Field
-        name="id"
+        name="loginId"
         validators={{
           onSubmit: ({ value }) => (!value ? "ID は必須です" : undefined),
         }}

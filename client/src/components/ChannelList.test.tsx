@@ -8,6 +8,7 @@ import {
   createRouter,
 } from "@tanstack/react-router";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { Suspense, type ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -175,5 +176,59 @@ describe("ChannelList のナビゲーション（#182）", () => {
 
     const shigotoLink = screen.getByRole("link", { name: /仕事/ });
     expect(shigotoLink).toHaveAttribute("href", "/channels/shigoto");
+  });
+});
+
+// 受け入れ条件 #206: 3点メニューによる編集導線
+describe("ChannelList の編集メニュー（#206）", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function stubFetch(meStatus: number, meBody: unknown) {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: Request | string) => {
+        const url = typeof input === "string" ? input : input.url;
+        if (url.includes("/auth/me")) {
+          return Promise.resolve(jsonResponse(meStatus, meBody));
+        }
+        if (url.includes("/channels/zatsudan") && (input as Request).method === "PATCH") {
+          return Promise.resolve(jsonResponse(200, { id: "zatsudan", label: "新しい名前", type: "zatsudan" }));
+        }
+        return Promise.resolve(
+          jsonResponse(200, [{ id: "zatsudan", label: "雑談", type: "zatsudan" }]),
+        );
+      }),
+    );
+  }
+
+  it("未ログイン時はチャンネルの3点メニューボタンが表示されない（AC-f）", async () => {
+    stubFetch(401, { error: "Unauthorized" });
+    renderWithClient(<ChannelList />);
+    await screen.findByText("雑談");
+    expect(screen.queryByRole("button", { name: /雑談のメニュー/ })).not.toBeInTheDocument();
+  });
+
+  it("ログイン時はチャンネル行に3点メニューボタンが表示される（AC-e）", async () => {
+    stubFetch(200, { id: "u1", displayName: "Alice" });
+    renderWithClient(<ChannelList />);
+    expect(await screen.findByRole("button", { name: "雑談のメニューを開く" })).toBeInTheDocument();
+  });
+
+  it("3点ボタンをクリックすると「名前を編集」メニュー項目が表示される（AC-e）", async () => {
+    stubFetch(200, { id: "u1", displayName: "Alice" });
+    renderWithClient(<ChannelList />);
+    await userEvent.click(await screen.findByRole("button", { name: "雑談のメニューを開く" }));
+    expect(await screen.findByRole("menuitem", { name: "名前を編集" })).toBeInTheDocument();
+  });
+
+  it("「名前を編集」をクリックするとチャンネル名編集ダイアログが開く（AC-e）", async () => {
+    stubFetch(200, { id: "u1", displayName: "Alice" });
+    renderWithClient(<ChannelList />);
+    await userEvent.click(await screen.findByRole("button", { name: "雑談のメニューを開く" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "名前を編集" }));
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "チャンネル名" })).toHaveValue("雑談");
   });
 });

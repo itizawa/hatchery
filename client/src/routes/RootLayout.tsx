@@ -1,6 +1,5 @@
-import Box from "@mui/material/Box";
-import Link from "@mui/material/Link";
-import Typography from "@mui/material/Typography";
+import { Box, Link, Typography } from "../components/uiParts";
+
 import { isAdmin } from "@hatchery/common";
 import { Link as RouterLink, Outlet } from "@tanstack/react-router";
 import { Suspense, type ReactElement } from "react";

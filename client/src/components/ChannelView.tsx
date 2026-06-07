@@ -1,3 +1,4 @@
+import { Box, List, ListItem, Stack, Typography } from "./uiParts";
 import {
   createDisplayNameResolver,
   DEFAULT_EMPLOYEES,
@@ -5,11 +6,7 @@ import {
   type Employee,
   type Message,
 } from "@hatchery/common";
-import Box from "@mui/material/Box";
-import List from "@mui/material/List";
-import ListItem from "@mui/material/ListItem";
-import Stack from "@mui/material/Stack";
-import Typography from "@mui/material/Typography";
+
 import type { ReactElement } from "react";
 
 export interface ChannelViewProps {

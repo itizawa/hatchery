@@ -1,8 +1,5 @@
-import Box from "@mui/material/Box";
-import Chip from "@mui/material/Chip";
-import Popover from "@mui/material/Popover";
-import Typography from "@mui/material/Typography";
-import useMediaQuery from "@mui/material/useMediaQuery";
+import { Box, Chip, Popover, Typography, useMediaQuery } from "./uiParts";
+
 import type { Employee } from "@hatchery/common";
 import { useEffect, useState, type ReactElement } from "react";
 

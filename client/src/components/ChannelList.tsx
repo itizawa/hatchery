@@ -1,8 +1,5 @@
-import Box from "@mui/material/Box";
-import List from "@mui/material/List";
-import ListItem from "@mui/material/ListItem";
-import ListItemButton from "@mui/material/ListItemButton";
-import ListItemText from "@mui/material/ListItemText";
+import { Box, List, ListItem, ListItemButton, ListItemText } from "./uiParts";
+
 import { Link as RouterLink } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 

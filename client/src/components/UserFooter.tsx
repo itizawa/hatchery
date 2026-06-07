@@ -1,8 +1,5 @@
-import Avatar from "@mui/material/Avatar";
-import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
-import Link from "@mui/material/Link";
-import Typography from "@mui/material/Typography";
+import { Avatar, Box, Button, Link, Typography } from "./uiParts";
+
 import { Link as RouterLink, useNavigate } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 

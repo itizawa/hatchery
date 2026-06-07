@@ -1,11 +1,5 @@
-import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
-import FormControl from "@mui/material/FormControl";
-import FormControlLabel from "@mui/material/FormControlLabel";
-import FormLabel from "@mui/material/FormLabel";
-import Radio from "@mui/material/Radio";
-import RadioGroup from "@mui/material/RadioGroup";
-import TextField from "@mui/material/TextField";
+import { Box, Button, FormControl, FormControlLabel, FormLabel, Radio, RadioGroup, TextField } from "./uiParts";
+
 import { useState, type FormEvent, type ReactElement } from "react";
 
 import { CHANNEL_LABEL_MAX_LENGTH, type ChannelType } from "@hatchery/common";

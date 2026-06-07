@@ -19,7 +19,7 @@ async function makeApp(appSettingRepo = new InMemoryAppSettingRepository(), role
 
 async function loginAgent(app: ReturnType<typeof createApp>) {
   const agent = request.agent(app);
-  await agent.post("/api/auth/login").send({ id: "testuser", password: "testpass" });
+  await agent.post("/api/auth/login").send({ loginId: "testuser", password: "testpass" });
   return agent;
 }
 
@@ -117,7 +117,7 @@ describe("getApiKey", () => {
     }
   });
 
-  it("DB 未設定・env 未設定の場合は undefined を返す", async () => {
+  it("DB 未設定ゾnv 未設定の場合は undefined を返す", async () => {
     delete process.env.ANTHROPIC_API_KEY;
     const repo = new InMemoryAppSettingRepository();
     expect(await getApiKey(repo)).toBeUndefined();
@@ -132,7 +132,7 @@ describe("getApiKey", () => {
     expect(await getApiKey(repo)).toBe(plaintext);
   });
 
-  it("DB 未設定・env 設定済みの場合は env 値を返す", async () => {
+  it("DB 未設定ゾnv 設定済みの場合は env 値を返す", async () => {
     process.env.ANTHROPIC_API_KEY = "sk-ant-env-key";
     const repo = new InMemoryAppSettingRepository();
     expect(await getApiKey(repo)).toBe("sk-ant-env-key");

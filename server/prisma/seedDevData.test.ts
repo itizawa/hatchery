@@ -6,7 +6,7 @@ import { seedDevData, type SeedPrisma } from "./seedDevData.js";
 /** upsert 呼び出しを記録するだけの fake prisma（DB 非依存）。 */
 function createFakePrisma() {
   const calls = {
-    user: [] as Array<{ id: string; displayName: string }>,
+    user: [] as Array<{ id: string; loginId: string; displayName: string }>,
     employee: [] as Array<{ id: string; isBot: boolean; userId: string | null }>,
     channel: [] as Array<{ id: string }>,
     channelEmployee: [] as Array<{ channelId: string; employeeId: string }>,
@@ -14,7 +14,7 @@ function createFakePrisma() {
   const prisma: SeedPrisma = {
     user: {
       async upsert(args) {
-        calls.user.push({ id: args.create.id, displayName: args.create.displayName });
+        calls.user.push({ id: args.create.id, loginId: args.create.loginId, displayName: args.create.displayName });
       },
     },
     employee: {
@@ -59,7 +59,7 @@ describe("seedDevData", () => {
     const result = await seedDevData(prisma);
     expect(result.skipped).toBe(false);
     expect(calls.user).toHaveLength(1);
-    expect(calls.user[0]).toEqual({ id: "testuser", displayName: "Test User" });
+    expect(calls.user[0]).toEqual({ id: "testuser", loginId: "testuser", displayName: "Test User" });
   });
 
   it("AC1: DEFAULT_EMPLOYEES 全件を isBot=true / userId=null で投入する（#49）", async () => {

@@ -25,7 +25,7 @@ async function buildApp(
 
 async function login(app: ReturnType<typeof createApp>) {
   const agent = request.agent(app);
-  await agent.post("/api/auth/login").send({ id: "testuser", password: "testpass" });
+  await agent.post("/api/auth/login").send({ loginId: "testuser", password: "testpass" });
   return agent;
 }
 

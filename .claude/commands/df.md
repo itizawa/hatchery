@@ -125,6 +125,7 @@ GitHub の Open Issue を確認し、各 Issue の `df:*` ラベルから「今 
    - `develop` についても同様（保護が無ければ CI 緑・指摘ゼロの確認は完全に本コマンドの責務）。
 4. 最新化: `git fetch --all --prune`
 5. Open Issue を一覧化（**マイルストーン情報も取得する**）:
+   > ⚠️ **必ず `gh issue list` を使う。`mcp__github__list_issues` は `milestone` フィールドを返さないため使用禁止。** マイルストーンが取得できないと STEP 1-B の自動選択が正しく動かない。
    ```
    gh issue list --state open --limit 100 \
      --json number,title,labels,milestone,createdAt,updatedAt \

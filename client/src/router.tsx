@@ -22,6 +22,7 @@ import { AuthLayout } from "./routes/AuthLayout";
 import { ChannelScene } from "./routes/ChannelScene";
 import { HomeScene } from "./routes/HomeScene";
 import { LoginScene } from "./routes/LoginScene";
+import { OfficeScene } from "./routes/OfficeScene";
 import { RootLayout } from "./routes/RootLayout";
 import { SettingsScene } from "./routes/SettingsScene";
 import { ChannelViewSkeleton } from "./components/ChannelViewSkeleton";
@@ -143,6 +144,14 @@ const inviteRoute = createRoute({
   component: AcceptInvitationScene,
 });
 
+/** 仮想オフィス画面（/office）。AI 社員のドット絵キャラがオフィスを歩き回る俯瞰ビュー（#147）。 */
+const officeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/office",
+  component: OfficeScene,
+  beforeLoad: requireAuth,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   channelRoute,
@@ -150,6 +159,7 @@ const routeTree = rootRoute.addChildren([
   adminRoute,
   accountRoute,
   inviteRoute,
+  officeRoute,
 ]);
 
 export interface CreateAppRouterOptions {

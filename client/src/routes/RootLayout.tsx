@@ -19,7 +19,7 @@ export const RootLayout = (): ReactElement => {
   const { data: user } = useAuth();
 
   return (
-    <Box sx={{ display: "flex", minHeight: "100vh" }}>
+    <Box sx={{ display: "flex", height: "100vh" }}>
       <Box
         component="nav"
         aria-label="サイドバー"
@@ -55,7 +55,7 @@ export const RootLayout = (): ReactElement => {
         )}
         <UserFooter />
       </Box>
-      <Box component="main" sx={{ flexGrow: 1, bgcolor: "background.default" }}>
+      <Box component="main" sx={{ flexGrow: 1, bgcolor: "background.default", overflow: "hidden", display: "flex", flexDirection: "column" }}>
         <Outlet />
       </Box>
     </Box>

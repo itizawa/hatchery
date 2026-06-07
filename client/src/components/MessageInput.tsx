@@ -23,7 +23,19 @@ export const MessageInput = ({ onSubmit, disabled }: MessageInputProps): ReactEl
   };
 
   return (
-    <Box component="form" onSubmit={handleSubmit} sx={{ display: "flex", gap: 1, p: 2 }}>
+    <Box
+      component="form"
+      onSubmit={handleSubmit}
+      sx={{
+        display: "flex",
+        gap: 1,
+        p: 2,
+        borderTop: 1,
+        borderColor: "divider",
+        flexShrink: 0,
+        bgcolor: "background.default",
+      }}
+    >
       <TextField
         value={text}
         onChange={(e) => setText(e.target.value)}

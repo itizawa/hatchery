@@ -4,6 +4,7 @@ import type { ReactElement } from "react";
 
 import { useAuth } from "../api/auth.js";
 import { useChannelMessages, useChannels, usePostChannelMessage } from "../api/channels.js";
+import { Box } from "../components/uiParts";
 import { ChannelView } from "../components/ChannelView.js";
 import { MessageInput } from "../components/MessageInput.js";
 
@@ -32,9 +33,11 @@ export const ChannelScene = (): ReactElement => {
   const { mutate: postMessage, isPending } = usePostChannelMessage(id);
 
   return (
-    <>
-      <ChannelView channel={channel} messages={messages} />
+    <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      <Box sx={{ flex: 1, overflow: "auto" }}>
+        <ChannelView channel={channel} messages={messages} />
+      </Box>
       {authUser && <MessageInput onSubmit={postMessage} disabled={isPending} />}
-    </>
+    </Box>
   );
 };

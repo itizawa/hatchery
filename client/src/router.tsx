@@ -22,7 +22,6 @@ import { AuthLayout } from "./routes/AuthLayout";
 import { ChannelScene } from "./routes/ChannelScene";
 import { HomeScene } from "./routes/HomeScene";
 import { LoginScene } from "./routes/LoginScene";
-import { OfficeScene } from "./routes/OfficeScene";
 import { RootLayout } from "./routes/RootLayout";
 import { SettingsScene } from "./routes/SettingsScene";
 import { ChannelViewSkeleton } from "./components/ChannelViewSkeleton";
@@ -57,11 +56,11 @@ async function requireAdminRoute(): Promise<void> {
 }
 
 /**
- * サイドバーなしで描画する auth ルートかどうかを判���する。
- * 動的セグメントを含むルート（/invite/:token 等）はプレフィックスで前方一致する。
- * 新しい auth ルートを追加した場合はここに条件を追加すること。
+ * サイドバーなしで描画する auth 系ルートかどうかを判定する。
+ * /login は完全一致、/invite/ は動的パスのためプレフィックス一致で判定する。
+ * 新しい auth ルートを追加した場合はここにも追記すること。
  */
-function isAuthPath(pathname: string): boolean {
+function isAuthLayout(pathname: string): boolean {
   return pathname === "/login" || pathname.startsWith("/invite/");
 }
 
@@ -73,7 +72,7 @@ function isAuthPath(pathname: string): boolean {
  */
 function AppShell(): ReactElement {
   const { pathname } = useLocation();
-  if (isAuthPath(pathname)) {
+  if (isAuthLayout(pathname)) {
     return <AuthLayout />;
   }
   return <RootLayout />;
@@ -84,7 +83,7 @@ const rootRoute = createRootRoute({
   component: AppShell,
 });
 
-/** ホーム（/）= 本日のシーン表示の枠。未ログインま���はネットワークエラーの場合は /login へリダイレクト。 */
+/** ホーム（/）= 本日のシーン表示の枠。未ログインまたはネットワークエラーの場合は /login へリダイレクト。 */
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
@@ -92,7 +91,7 @@ const indexRoute = createRoute({
   beforeLoad: requireAuth,
 });
 
-/** チャンネル別ビューの枠（/channels/$channelId）。��ログインまたはネットワークエラーの場合は /login へリダイレクト。 */
+/** チャンネル別ビューの枠（/channels/$channelId）。未ログインまたはネットワークエラーの場合は /login へリダイレクト。 */
 const channelRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/channels/$channelId",
@@ -137,19 +136,11 @@ const accountRoute = createRoute({
   beforeLoad: requireAuth,
 });
 
-/** 招待リンク受諾画面（/invite/$token）。認証不要・AuthLayout（サイドバーなし）�� */
+/** 招待リンク受諾画面（/invite/:token）。公開ルート（requireAuth なし・AuthLayout）。 */
 const inviteRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/invite/$token",
   component: AcceptInvitationScene,
-});
-
-/** 仮想オフィス画面（/office）。AI 社員のドット絵キャラがオフィスを歩き回る俯瞰ビュー（#147）。 */
-const officeRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/office",
-  component: OfficeScene,
-  beforeLoad: requireAuth,
 });
 
 const routeTree = rootRoute.addChildren([
@@ -159,7 +150,6 @@ const routeTree = rootRoute.addChildren([
   adminRoute,
   accountRoute,
   inviteRoute,
-  officeRoute,
 ]);
 
 export interface CreateAppRouterOptions {

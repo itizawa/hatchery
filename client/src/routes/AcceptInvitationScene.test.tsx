@@ -14,8 +14,50 @@ function jsonResponse(status: number, body?: unknown): Response {
   });
 }
 
-const activeInvitation = { status: "active", expiresAt: "2099-01-01T00:00:00Z" };
-const sampleUser = { id: "newuser", displayName: "New User" };
+const sampleAuthUser = { id: "newuser", displayName: "新ユーザー", role: "member" };
+
+function stubFetch({
+  isLoggedIn = false,
+  invitationStatus,
+  acceptResult,
+}: {
+  isLoggedIn?: boolean;
+  invitationStatus?: "active" | "used" | "expired" | "revoked" | "notfound";
+  acceptResult?: { status: number; body?: unknown };
+}) {
+  const user = isLoggedIn ? { id: "user1", displayName: "Alice", role: "member" } : null;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockImplementation((input: RequestInfo | URL) => {
+      const url = input instanceof Request ? input.url : String(input);
+
+      if (url.includes("/api/auth/me")) {
+        return Promise.resolve(jsonResponse(isLoggedIn ? 200 : 401, user ?? undefined));
+      }
+
+      if (url.includes("/accept")) {
+        if (acceptResult) {
+          return Promise.resolve(jsonResponse(acceptResult.status, acceptResult.body));
+        }
+        return Promise.resolve(jsonResponse(201, sampleAuthUser));
+      }
+
+      if (url.includes("/api/invitations/")) {
+        if (invitationStatus === "notfound") {
+          return Promise.resolve(jsonResponse(404, { error: "Not found" }));
+        }
+        return Promise.resolve(
+          jsonResponse(200, {
+            status: invitationStatus ?? "active",
+            expiresAt: "2099-12-31T00:00:00Z",
+          }),
+        );
+      }
+
+      return Promise.resolve(jsonResponse(200, {}));
+    }),
+  );
+}
 
 function renderApp(initialPath: string) {
   const queryClient = createQueryClient();
@@ -29,7 +71,7 @@ function renderApp(initialPath: string) {
   );
 }
 
-describe("AcceptInvitationScene", () => {
+describe("招待リンク受諾画面（#134）", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
@@ -38,135 +80,132 @@ describe("AcceptInvitationScene", () => {
     vi.unstubAllGlobals();
   });
 
-  it("有効なトークン（status=active）では登録フォームが表示される", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockImplementation((input: Request | string | URL) => {
-      const url = input instanceof Request ? input.url : String(input);
-      if (url.includes("/auth/me")) return Promise.resolve(jsonResponse(401, null));
-      if (url.match(/\/invitations\/[^/]+$/)) return Promise.resolve(jsonResponse(200, activeInvitation));
-      return Promise.resolve(jsonResponse(200, {}));
-    }));
+  describe("トークンが active の場合", () => {
+    it("/invite/:token に未ログインでアクセスすると登録フォームが表示される", async () => {
+      stubFetch({ isLoggedIn: false, invitationStatus: "active" });
+      renderApp("/invite/valid-token");
 
-    renderApp("/invite/valid-token");
-
-    expect(await screen.findByRole("heading", { name: /新規登録/ })).toBeInTheDocument();
-    expect(screen.getByLabelText(/ログイン ID/)).toBeInTheDocument();
-    expect(screen.getByLabelText(/表示名/)).toBeInTheDocument();
-    expect(screen.getByLabelText(/パスワード/)).toBeInTheDocument();
-  });
-
-  it("使用済みトークン（status=used）ではエラーメッセージが表示されフォームがない", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockImplementation((input: Request | string | URL) => {
-      const url = input instanceof Request ? input.url : String(input);
-      if (url.includes("/auth/me")) return Promise.resolve(jsonResponse(401, null));
-      if (url.match(/\/invitations\/[^/]+$/))
-        return Promise.resolve(jsonResponse(200, { status: "used", expiresAt: "2020-01-01T00:00:00Z" }));
-      return Promise.resolve(jsonResponse(200, {}));
-    }));
-
-    renderApp("/invite/used-token");
-
-    expect(await screen.findByText(/使用済み/)).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: /新規登録/ })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /ログインページ/ })).toBeInTheDocument();
-  });
-
-  it("期限切れトークン（status=expired）ではエラーメッセージが表示されフォームがない", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockImplementation((input: Request | string | URL) => {
-      const url = input instanceof Request ? input.url : String(input);
-      if (url.includes("/auth/me")) return Promise.resolve(jsonResponse(401, null));
-      if (url.match(/\/invitations\/[^/]+$/))
-        return Promise.resolve(jsonResponse(200, { status: "expired", expiresAt: "2020-01-01T00:00:00Z" }));
-      return Promise.resolve(jsonResponse(200, {}));
-    }));
-
-    renderApp("/invite/expired-token");
-
-    expect(await screen.findByText(/期限切れ/)).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: /新規登録/ })).not.toBeInTheDocument();
-  });
-
-  it("存在しないトークン（404）ではエラーメッセージが表示されフォームがない", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockImplementation((input: Request | string | URL) => {
-      const url = input instanceof Request ? input.url : String(input);
-      if (url.includes("/auth/me")) return Promise.resolve(jsonResponse(401, null));
-      if (url.match(/\/invitations\/[^/]+$/)) return Promise.resolve(jsonResponse(404, { error: "Not found" }));
-      return Promise.resolve(jsonResponse(200, {}));
-    }));
-
-    renderApp("/invite/nonexistent-token");
-
-    expect(await screen.findByText(/見つかりません/)).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: /新規登録/ })).not.toBeInTheDocument();
-  });
-
-  it("受諾成功時は acceptInvitation が正しい引数で呼ばれ / へ遷移する", async () => {
-    let isLoggedIn = false;
-    const fetchMock = vi.fn().mockImplementation((input: Request | string | URL) => {
-      const url = input instanceof Request ? input.url : String(input);
-      if (url.includes("/auth/me")) {
-        return Promise.resolve(isLoggedIn ? jsonResponse(200, sampleUser) : jsonResponse(401, null));
-      }
-      if (url.includes("/accept")) {
-        isLoggedIn = true;
-        return Promise.resolve(jsonResponse(201, sampleUser));
-      }
-      if (url.match(/\/invitations\/[^/]+$/)) return Promise.resolve(jsonResponse(200, activeInvitation));
-      return Promise.resolve(jsonResponse(200, []));
+      expect(await screen.findByRole("heading", { name: /ユーザー登録/ })).toBeInTheDocument();
+      expect(screen.getByLabelText(/ログイン ID/)).toBeInTheDocument();
+      expect(screen.getByLabelText(/表示名/)).toBeInTheDocument();
+      expect(screen.getByLabelText(/パスワード/)).toBeInTheDocument();
     });
-    vi.stubGlobal("fetch", fetchMock);
+  });
 
-    renderApp("/invite/valid-token");
+  describe("トークンが無効な場合（フォームを出さない）", () => {
+    it("status=used のとき「使用済み」メッセージが表示される", async () => {
+      stubFetch({ isLoggedIn: false, invitationStatus: "used" });
+      renderApp("/invite/used-token");
 
-    await userEvent.type(await screen.findByLabelText(/ログイン ID/), "newuser");
-    await userEvent.type(screen.getByLabelText(/表示名/), "New User");
-    await userEvent.type(screen.getByLabelText(/パスワード/), "password123");
-    await userEvent.click(screen.getByRole("button", { name: /登録/ }));
+      expect(await screen.findByText(/使用済み/)).toBeInTheDocument();
+      expect(screen.queryByLabelText(/ログイン ID/)).not.toBeInTheDocument();
+    });
 
-    // 受諾 API が呼ばれたことを確認
-    await waitFor(() => {
-      const acceptCall = fetchMock.mock.calls.find(([req]) => {
-        const url = req instanceof Request ? req.url : String(req);
-        return url.includes("/accept");
+    it("status=expired のとき「有効期限」メッセージが表示される", async () => {
+      stubFetch({ isLoggedIn: false, invitationStatus: "expired" });
+      renderApp("/invite/expired-token");
+
+      expect(await screen.findByText(/有効期限/)).toBeInTheDocument();
+      expect(screen.queryByLabelText(/ログイン ID/)).not.toBeInTheDocument();
+    });
+
+    it("status=revoked のとき「無効化」メッセージが表示される", async () => {
+      stubFetch({ isLoggedIn: false, invitationStatus: "revoked" });
+      renderApp("/invite/revoked-token");
+
+      expect(await screen.findByText(/無効化/)).toBeInTheDocument();
+      expect(screen.queryByLabelText(/ログイン ID/)).not.toBeInTheDocument();
+    });
+
+    it("404（存在しないトークン）のとき「無効」メッセージが表示される", async () => {
+      stubFetch({ isLoggedIn: false, invitationStatus: "notfound" });
+      renderApp("/invite/nosuchtoken");
+
+      expect(await screen.findByText(/無効/)).toBeInTheDocument();
+      expect(screen.queryByLabelText(/ログイン ID/)).not.toBeInTheDocument();
+    });
+
+    it("500 サーバーエラーのとき「サーバーエラー」メッセージが表示される（notfound とは別メッセージ）", async () => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockImplementation((input: RequestInfo | URL) => {
+          const url = input instanceof Request ? input.url : String(input);
+          if (url.includes("/api/auth/me")) return Promise.resolve(jsonResponse(401, undefined));
+          if (url.includes("/api/invitations/")) return Promise.resolve(jsonResponse(500, { error: "Server Error" }));
+          return Promise.resolve(jsonResponse(200, {}));
+        }),
+      );
+      renderApp("/invite/errtoken");
+
+      expect(await screen.findByText(/サーバーエラー/)).toBeInTheDocument();
+      expect(screen.queryByText(/無効です。招待リンクが正しいか/)).not.toBeInTheDocument();
+      expect(screen.queryByLabelText(/ログイン ID/)).not.toBeInTheDocument();
+    });
+
+    it("無効メッセージの画面にログインへのリンクが表示される", async () => {
+      stubFetch({ isLoggedIn: false, invitationStatus: "used" });
+      renderApp("/invite/used-token");
+
+      expect(await screen.findByRole("link", { name: /ログイン/ })).toBeInTheDocument();
+    });
+  });
+
+  describe("フォーム送信", () => {
+    it("フォームに入力して送信すると acceptInvitation が呼ばれる", async () => {
+      stubFetch({ isLoggedIn: false, invitationStatus: "active" });
+      renderApp("/invite/valid-token");
+
+      await userEvent.type(await screen.findByLabelText(/ログイン ID/), "newuser");
+      await userEvent.type(screen.getByLabelText(/表示名/), "新ユーザー");
+      await userEvent.type(screen.getByLabelText(/パスワード/), "password123");
+      await userEvent.click(screen.getByRole("button", { name: /登録/ }));
+
+      await waitFor(() => {
+        expect(screen.queryByRole("heading", { name: /ユーザー登録/ })).not.toBeInTheDocument();
       });
-      expect(acceptCall).toBeDefined();
     });
 
-    // / へ遷移してタイムラインが表示される
-    expect(await screen.findByRole("heading", { name: /タイムライン/ })).toBeInTheDocument();
+    it("ID 重複（409）のとき「既に使われています」エラーメッセージが表示される", async () => {
+      stubFetch({
+        isLoggedIn: false,
+        invitationStatus: "active",
+        acceptResult: { status: 409, body: { error: "User id already exists" } },
+      });
+      renderApp("/invite/valid-token");
+
+      await userEvent.type(await screen.findByLabelText(/ログイン ID/), "duplicate");
+      await userEvent.type(screen.getByLabelText(/表示名/), "テスト");
+      await userEvent.type(screen.getByLabelText(/パスワード/), "password123");
+      await userEvent.click(screen.getByRole("button", { name: /登録/ }));
+
+      expect(await screen.findByText(/既に使われています/)).toBeInTheDocument();
+    });
+
+    it("受諾中に無効化（409）のとき「招待リンクが無効」エラーメッセージが表示される", async () => {
+      stubFetch({
+        isLoggedIn: false,
+        invitationStatus: "active",
+        acceptResult: { status: 409, body: { error: "Invitation is no longer active" } },
+      });
+      renderApp("/invite/valid-token");
+
+      await userEvent.type(await screen.findByLabelText(/ログイン ID/), "user1");
+      await userEvent.type(screen.getByLabelText(/表示名/), "テスト");
+      await userEvent.type(screen.getByLabelText(/パスワード/), "password123");
+      await userEvent.click(screen.getByRole("button", { name: /登録/ }));
+
+      expect(await screen.findByText(/無効/)).toBeInTheDocument();
+    });
   });
 
-  it("ID 重複（409）のとき「この ID は既に使われています」が表示される", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockImplementation((input: Request | string | URL) => {
-      const url = input instanceof Request ? input.url : String(input);
-      if (url.includes("/auth/me")) return Promise.resolve(jsonResponse(401, null));
-      if (url.includes("/accept"))
-        return Promise.resolve(jsonResponse(409, { error: "User id already exists" }));
-      if (url.match(/\/invitations\/[^/]+$/)) return Promise.resolve(jsonResponse(200, activeInvitation));
-      return Promise.resolve(jsonResponse(200, {}));
-    }));
+  describe("ログイン済みアクセス", () => {
+    it("ログイン済みで /invite/:token にアクセスするとホーム画面（/）へリダイレクトされる", async () => {
+      stubFetch({ isLoggedIn: true, invitationStatus: "active" });
+      renderApp("/invite/valid-token");
 
-    renderApp("/invite/valid-token");
-
-    await userEvent.type(await screen.findByLabelText(/ログイン ID/), "existinguser");
-    await userEvent.type(screen.getByLabelText(/表示名/), "New User");
-    await userEvent.type(screen.getByLabelText(/パスワード/), "password123");
-    await userEvent.click(screen.getByRole("button", { name: /登録/ }));
-
-    expect(await screen.findByText(/既に使われています/)).toBeInTheDocument();
-  });
-
-  it("ログイン済みのユーザーがアクセスすると / へリダイレクトされる", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockImplementation((input: Request | string | URL) => {
-      const url = input instanceof Request ? input.url : String(input);
-      if (url.includes("/auth/me")) return Promise.resolve(jsonResponse(200, { id: "user1", displayName: "Alice" }));
-      if (url.match(/\/invitations\/[^/]+$/)) return Promise.resolve(jsonResponse(200, activeInvitation));
-      return Promise.resolve(jsonResponse(200, []));
-    }));
-
-    renderApp("/invite/valid-token");
-
-    // ログイン済みなので / へリダイレクト → タイムラインが表示される
-    expect(await screen.findByRole("heading", { name: /タイムライン/ })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: /新規登録/ })).not.toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.queryByRole("heading", { name: /ユーザー登録/ })).not.toBeInTheDocument();
+      });
+    });
   });
 });

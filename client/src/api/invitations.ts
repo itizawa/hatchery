@@ -1,12 +1,23 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { InvitationPublicSchema, InvitationSchema } from "@hatchery/common";
-import type { AcceptInvitation, Invitation, InvitationPublic } from "@hatchery/common";
+import { AuthUserSchema, InvitationPublicSchema, InvitationSchema } from "@hatchery/common";
+import type { AcceptInvitation, AuthUser, Invitation, InvitationPublic } from "@hatchery/common";
 
 import { AUTH_ME_QUERY_KEY } from "./auth.js";
 import { openApiClient } from "./client.js";
 
 export const INVITATIONS_QUERY_KEY = ["admin", "invitations"] as const;
-export const INVITATION_PUBLIC_QUERY_KEY = (token: string) => ["invitations", "public", token] as const;
+export const INVITATION_TOKEN_QUERY_KEY = (token: string) => ["invitation", token] as const;
+
+export class ApiError extends Error {
+  constructor(
+    public readonly status: number,
+    message: string,
+    public readonly body?: unknown,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
 
 export async function fetchInvitations(): Promise<Invitation[]> {
   const { data, error, response } = await openApiClient.GET("/api/admin/invitations", {
@@ -37,29 +48,6 @@ export async function revokeInvitation(id: string): Promise<Invitation> {
   return InvitationSchema.parse(data);
 }
 
-export async function fetchInvitation(token: string): Promise<InvitationPublic | null> {
-  const { data, response } = await openApiClient.GET("/api/invitations/{token}", {
-    params: { path: { token } },
-    credentials: "include",
-  });
-  if (response.status === 404) return null;
-  if (!response.ok) throw new Error(`GET /api/invitations/${token} failed: ${response.status}`);
-  return InvitationPublicSchema.parse(data);
-}
-
-export async function acceptInvitation(token: string, body: AcceptInvitation): Promise<void> {
-  const { error, response } = await openApiClient.POST("/api/invitations/{token}/accept", {
-    params: { path: { token } },
-    body,
-    credentials: "include",
-  });
-  if (!response.ok) {
-    const serverError = error as { error?: string } | undefined;
-    const message = serverError?.error ?? `POST /api/invitations/${token}/accept failed: ${response.status}`;
-    throw Object.assign(new Error(message), { status: response.status });
-  }
-}
-
 export function useInvitations() {
   return useQuery({
     queryKey: INVITATIONS_QUERY_KEY,
@@ -83,10 +71,38 @@ export function useRevokeInvitation() {
   });
 }
 
+/** GET /api/invitations/:token — トークン検証（公開）。404 のとき null を返す。 */
+export async function fetchInvitation(token: string): Promise<InvitationPublic | null> {
+  const { data, response } = await openApiClient.GET("/api/invitations/{token}", {
+    params: { path: { token } },
+  });
+  if (response.status === 404) return null;
+  if (!response.ok) throw new ApiError(response.status, `GET /api/invitations/${token} failed: ${response.status}`);
+  return InvitationPublicSchema.parse(data);
+}
+
+/** POST /api/invitations/:token/accept — 受諾・User 作成・自動ログイン（公開）。 */
+export async function acceptInvitation(token: string, body: AcceptInvitation): Promise<AuthUser> {
+  const { data, error, response } = await openApiClient.POST("/api/invitations/{token}/accept", {
+    params: { path: { token } },
+    body,
+    credentials: "include",
+  });
+  if (!response.ok) {
+    throw new ApiError(
+      response.status,
+      `POST /api/invitations/${token}/accept failed: ${response.status}`,
+      error,
+    );
+  }
+  return AuthUserSchema.parse(data);
+}
+
 export function useInvitation(token: string) {
   return useQuery({
-    queryKey: INVITATION_PUBLIC_QUERY_KEY(token),
+    queryKey: INVITATION_TOKEN_QUERY_KEY(token),
     queryFn: () => fetchInvitation(token),
+    retry: false,
   });
 }
 

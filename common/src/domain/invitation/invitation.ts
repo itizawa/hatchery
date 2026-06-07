@@ -12,14 +12,22 @@ export const CreateInvitationSchema = z.object({
 });
 export type CreateInvitation = z.infer<typeof CreateInvitationSchema>;
 
+export const ACCEPT_INVITATION_ID_MAX_LENGTH = 50;
+export const ACCEPT_INVITATION_DISPLAY_NAME_MAX_LENGTH = 100;
+export const ACCEPT_INVITATION_PASSWORD_MIN_LENGTH = 8;
+export const ACCEPT_INVITATION_PASSWORD_MAX_LENGTH = 100;
+
 /** 招待受諾リクエスト（#132）。新規ユーザーが招待リンクから登録する際のボディ。 */
 export const AcceptInvitationSchema = z.object({
   /** 新規ユーザーのログイン ID。 */
-  id: z.string().min(1).max(50),
+  id: z.string().min(1).max(ACCEPT_INVITATION_ID_MAX_LENGTH),
   /** 表示名。 */
-  displayName: z.string().min(1).max(100),
+  displayName: z.string().min(1).max(ACCEPT_INVITATION_DISPLAY_NAME_MAX_LENGTH),
   /** パスワード（8 文字以上・100 文字以内）。bcrypt ハッシュ化して保存する。 */
-  password: z.string().min(8).max(100),
+  password: z
+    .string()
+    .min(ACCEPT_INVITATION_PASSWORD_MIN_LENGTH)
+    .max(ACCEPT_INVITATION_PASSWORD_MAX_LENGTH),
 });
 export type AcceptInvitation = z.infer<typeof AcceptInvitationSchema>;
 

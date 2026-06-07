@@ -6,6 +6,7 @@ import {
   DialogContent,
   DialogTitle,
   TextField,
+  Typography,
 } from "./uiParts";
 import { useEffect, useState, type FormEvent, type ReactElement } from "react";
 
@@ -24,7 +25,7 @@ export const EditChannelNameDialog = ({ open, channel, onClose }: Props): ReactE
 
   useEffect(() => {
     if (open) setLabel(channel.label);
-  }, [open, channel.label]);
+  }, [open]); // channel.label の背景更新でユーザー入力がリセットされないよう open の変化のみに反応する
 
   const handleClose = (): void => {
     onClose();
@@ -52,6 +53,11 @@ export const EditChannelNameDialog = ({ open, channel, onClose }: Props): ReactE
             inputProps={{ "aria-label": "チャンネル名", maxLength: CHANNEL_LABEL_MAX_LENGTH }}
             fullWidth
           />
+          {updateChannel.isError && (
+            <Typography variant="caption" color="error" sx={{ display: "block", mt: 0.5 }}>
+              保存に失敗しました。もう一度お試しください。
+            </Typography>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose}>キャンセル</Button>

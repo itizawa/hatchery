@@ -45,11 +45,13 @@ export const ChannelScene = (): ReactElement => {
         />
       </Box>
       {authUser && <MessageInput onSubmit={postMessage} disabled={isPending} />}
-      <EditChannelNameDialog
-        open={editDialogOpen}
-        channel={channel}
-        onClose={() => setEditDialogOpen(false)}
-      />
+      {authUser && (
+        <EditChannelNameDialog
+          open={editDialogOpen}
+          channel={channel}
+          onClose={() => setEditDialogOpen(false)}
+        />
+      )}
     </Box>
   );
 };

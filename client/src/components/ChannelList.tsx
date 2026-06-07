@@ -104,7 +104,7 @@ export const ChannelList = (): ReactElement => {
       </Menu>
       {editChannel && (
         <EditChannelNameDialog
-          open={Boolean(editChannel)}
+          open={true}
           channel={editChannel}
           onClose={handleEditClose}
         />

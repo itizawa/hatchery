@@ -77,6 +77,6 @@ describe("ABAC 採用の決定記録 (受け入れ条件 #2)", () => {
 describe("README 一覧への追記 (受け入れ条件 #3)", () => {
   it("docs/adr/README.md に 0014 の行（ファイルリンク付き）がある", () => {
     const readme = readFileSync(path.join(adrDir, "README.md"), "utf8");
-    expect(readme).toMatch(/\[0014\]\(\.\//+"0014-[^)]+\\.md\\)/);
+    expect(readme).toMatch(/\[0014\]\(\.\/0014-[^)]+\.md\)/);
   });
 });

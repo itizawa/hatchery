@@ -95,6 +95,7 @@ export default tseslint.config(
     },
   },
   // 例外: uiParts 自身は MUI を直接 import してよい（ACL 層）。theme.ts / AppRoot.tsx はテーマ基盤として許可。
+  // @hatchery/server の禁止は引き続き有効（MUI direct import のみ解除）。
   {
     files: [
       "client/src/components/uiParts/**",
@@ -102,7 +103,7 @@ export default tseslint.config(
       "client/src/AppRoot.tsx",
     ],
     rules: {
-      "no-restricted-imports": "off",
+      "no-restricted-imports": ["error", { patterns: ["@hatchery/server", "@hatchery/server/*"] }],
     },
   },
   {

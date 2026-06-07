@@ -1,6 +1,7 @@
 import { DEFAULT_EMPLOYEES, type Channel, type Employee, type Message } from "@hatchery/common";
 import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
 
 import { ChannelView } from "./ChannelView";
 
@@ -62,5 +63,24 @@ describe("ChannelView", () => {
     render(<ChannelView channel={channel} messages={[]} employees={employees} />);
     expect(screen.getByText(/まだメッセージがありません/)).toBeInTheDocument();
     expect(screen.queryByRole("list", { name: "メッセージ一覧" })).not.toBeInTheDocument();
+  });
+});
+
+describe("ChannelView 編集ボタン（#206）", () => {
+  it("onEditName が渡されると編集ボタンが表示される", () => {
+    render(<ChannelView channel={channel} messages={[]} onEditName={vi.fn()} />);
+    expect(screen.getByRole("button", { name: "チャンネル名を編集" })).toBeInTheDocument();
+  });
+
+  it("onEditName が渡されないと編集ボタンは表示されない（未ログイン相当）（AC-f）", () => {
+    render(<ChannelView channel={channel} messages={[]} />);
+    expect(screen.queryByRole("button", { name: "チャンネル名を編集" })).not.toBeInTheDocument();
+  });
+
+  it("編集ボタンをクリックすると onEditName が呼ばれる", async () => {
+    const onEditName = vi.fn();
+    render(<ChannelView channel={channel} messages={[]} onEditName={onEditName} />);
+    await userEvent.click(screen.getByRole("button", { name: "チャンネル名を編集" }));
+    expect(onEditName).toHaveBeenCalled();
   });
 });

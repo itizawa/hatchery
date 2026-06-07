@@ -15,6 +15,7 @@ vi.mock("../api/channels.js", () => ({
   useChannels: () => ({ data: mockChannels }),
   useChannelMessages: () => ({ data: mockMessages }),
   usePostChannelMessage: () => ({ mutate: vi.fn(), isPending: false }),
+  useUpdateChannel: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
 vi.mock("../api/auth.js", async () => {

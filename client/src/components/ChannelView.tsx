@@ -1,4 +1,5 @@
-import { Box, List, ListItem, Stack, Typography } from "./uiParts";
+import EditIcon from "@mui/icons-material/Edit";
+import { Box, IconButton, List, ListItem, Stack, Typography } from "./uiParts";
 import {
   createDisplayNameResolver,
   DEFAULT_EMPLOYEES,
@@ -16,6 +17,8 @@ export interface ChannelViewProps {
   messages: readonly Message[];
   /** speaker(ID) → displayName 解決に用いる社員一覧。未指定なら common の DEFAULT_EMPLOYEES。 */
   employees?: readonly Employee[];
+  /** 渡すとヘッダに編集ボタンを表示する。ログイン済みのときのみ渡すこと（#206）。 */
+  onEditName?: () => void;
 }
 
 /**
@@ -29,15 +32,23 @@ export const ChannelView = ({
   channel,
   messages,
   employees = DEFAULT_EMPLOYEES,
+  onEditName,
 }: ChannelViewProps): ReactElement => {
   // speaker(ID) → displayName の解決（common の純粋関数。未解決は ID フォールバック）。
   const resolveDisplayName = createDisplayNameResolver(employees);
 
   return (
     <Box component="section" sx={{ p: 3 }}>
-      <Typography variant="h5" component="h1" gutterBottom>
-        {channel.label}
-      </Typography>
+      <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 1 }}>
+        <Typography variant="h5" component="h1">
+          {channel.label}
+        </Typography>
+        {onEditName && (
+          <IconButton aria-label="チャンネル名を編集" size="small" onClick={onEditName}>
+            <EditIcon fontSize="small" />
+          </IconButton>
+        )}
+      </Stack>
 
       {messages.length === 0 ? (
         <Typography variant="body2" color="text.secondary">

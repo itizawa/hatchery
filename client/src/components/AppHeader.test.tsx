@@ -52,11 +52,19 @@ describe("AppHeader", () => {
     vi.unstubAllGlobals();
   });
 
-  it("ログイン済みのとき displayName が表示される", async () => {
+  it("ログイン済みのとき displayName（名前テキスト）が表示されない", async () => {
     stubFetch(true);
     renderApp("/");
 
-    expect(await screen.findByText("Alice")).toBeInTheDocument();
+    await screen.findByRole("button", { name: /ユーザーメニュー/ });
+    expect(screen.queryByText("Alice")).not.toBeInTheDocument();
+  });
+
+  it("認証確認中（isPending）に Skeleton が表示される", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockImplementation(() => new Promise(() => {})));
+    renderApp("/channels/test-channel");
+
+    expect(await screen.findByTestId("account-skeleton")).toBeInTheDocument();
   });
 
   it("初期表示時にアカウント設定が DOM 上に存在しない（Menu は閃じている）", async () => {

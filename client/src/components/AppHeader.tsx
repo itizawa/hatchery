@@ -1,11 +1,13 @@
 import MenuIcon from "@mui/icons-material/Menu";
-import { Avatar, Box, ButtonBase, IconButton, Link, Menu, MenuItem, Typography } from "./uiParts";
+import { Avatar, Box, ButtonBase, IconButton, Link, Menu, MenuItem, Skeleton } from "./uiParts";
 
 import { Link as RouterLink, useNavigate } from "@tanstack/react-router";
 import { type ReactElement, useState } from "react";
 
 import { useAuth, useLogout } from "../api/auth.js";
 import { SLACK_COLORS } from "../theme.js";
+
+const ACCOUNT_ICON_SIZE = 32;
 
 export interface AppHeaderProps {
   /** モバイル幅でサイドバードロワーを開くコールバック。未指定の場合はハンバーガーボタンを表示しない。 */
@@ -65,7 +67,15 @@ export const AppHeader = ({ onMenuOpen }: AppHeaderProps): ReactElement => {
       </Link>
 
       <Box sx={{ ml: "auto" }}>
-        {!isPending && (user ? (
+        {isPending ? (
+          <Skeleton
+            variant="circular"
+            width={ACCOUNT_ICON_SIZE}
+            height={ACCOUNT_ICON_SIZE}
+            sx={{ bgcolor: "rgba(255,255,255,0.2)" }}
+            data-testid="account-skeleton"
+          />
+        ) : user ? (
           <>
             <ButtonBase
               onClick={handleOpen}
@@ -76,23 +86,16 @@ export const AppHeader = ({ onMenuOpen }: AppHeaderProps): ReactElement => {
               sx={{
                 display: "flex",
                 alignItems: "center",
-                gap: 1,
                 borderRadius: 1,
                 p: 0.5,
                 "&:hover": { bgcolor: "rgba(255,255,255,0.1)" },
               }}
             >
               <Avatar
-                sx={{ width: 32, height: 32, bgcolor: SLACK_COLORS.blue, fontSize: 14 }}
+                sx={{ width: ACCOUNT_ICON_SIZE, height: ACCOUNT_ICON_SIZE, bgcolor: SLACK_COLORS.blue, fontSize: 14 }}
               >
                 {user.displayName.charAt(0).toUpperCase()}
               </Avatar>
-              <Typography
-                variant="body2"
-                sx={{ color: SLACK_COLORS.sidebarText, maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-              >
-                {user.displayName}
-              </Typography>
             </ButtonBase>
             <Menu
               id="app-header-user-menu"
@@ -124,7 +127,7 @@ export const AppHeader = ({ onMenuOpen }: AppHeaderProps): ReactElement => {
           >
             ログイン
           </Link>
-        ))}
+        )}
       </Box>
     </Box>
   );

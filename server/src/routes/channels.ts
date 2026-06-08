@@ -84,7 +84,7 @@ export function createChannelsRouter(
       .catch(next);
   });
 
-  // チャンネルへのメッセージ投稿（認証必須・#48）。speaker は req.user.employeeId を使う。
+  // チャンネルへのメッセージ投稿（認証必須・#48）。createdEmployeeId は req.user.employeeId を使う。
   // 保存後、aiDeps があれば非同期で AI 会話生成を行う（#183）。エラーは握りつぶす。
   router.post(
     "/:channelId/messages",

@@ -106,6 +106,7 @@ model Message {
 
   @@index([channel, createdAt])
   @@index([channel, postedAt])
+  @@index([createdEmployeeId])
 }
 
 /// MVP のタスク状態（common の TaskStatusSchema に対応）。

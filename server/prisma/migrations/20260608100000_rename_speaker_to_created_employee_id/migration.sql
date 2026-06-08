@@ -12,3 +12,6 @@ ALTER TABLE "Message" RENAME COLUMN "speaker" TO "createdEmployeeId";
 ALTER TABLE "Message" ADD CONSTRAINT "Message_createdEmployeeId_fkey"
   FOREIGN KEY ("createdEmployeeId") REFERENCES "Employee"("id")
   ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- PostgreSQL は FK カラムに自動でインデックスを作らないため明示的に追加する。
+CREATE INDEX "Message_createdEmployeeId_idx" ON "Message"("createdEmployeeId");

@@ -10,7 +10,7 @@ export const MAX_MESSAGE_LENGTH = 280;
  * common では非空 string + 文字数上限の検証にとどめる（設計書 §7）。
  */
 export const MessageSchema = z.object({
-  createdEmployeeId: z.string().min(1),
+  createdEmployeeId: z.string().min(1).max(100),
   channel: z.string().min(1),
   text: z.string().min(1).max(MAX_MESSAGE_LENGTH),
 });

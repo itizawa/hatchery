@@ -1,18 +1,23 @@
 import session from "express-session";
 import request from "supertest";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import { buildSessionCookieOptions, createApp } from "./app.js";
-import { InMemoryMessageRepository } from "./persistence/messageRepository.js";
+import type { AppDeps } from "./app.js";
+import { createTestDeps } from "./testing/createTestDeps.js";
+
+/** 各テストで使う共通 deps（InMemory 一式）。beforeEach で初期化。 */
+let baseDeps: AppDeps;
+beforeEach(async () => {
+  baseDeps = await createTestDeps();
+});
 
 describe("createApp: sessionStore の本番ガード（#186）", () => {
   it("NODE_ENV=production かつ sessionStore 未注入のとき起動時例外を投げる", () => {
     const original = process.env.NODE_ENV;
     process.env.NODE_ENV = "production";
     try {
-      expect(() =>
-        createApp({ messageRepository: new InMemoryMessageRepository() }),
-      ).toThrow();
+      expect(() => createApp(baseDeps)).toThrow();
     } finally {
       process.env.NODE_ENV = original;
     }
@@ -25,10 +30,7 @@ describe("createApp: sessionStore の本番ガード（#186）", () => {
     process.env.SESSION_SECRET = "test-secret-for-production-guard-test";
     try {
       expect(() =>
-        createApp({
-          messageRepository: new InMemoryMessageRepository(),
-          sessionStore: new session.MemoryStore(),
-        }),
+        createApp({ ...baseDeps, sessionStore: new session.MemoryStore() }),
       ).not.toThrow();
     } finally {
       process.env.NODE_ENV = originalEnv;
@@ -66,7 +68,7 @@ describe("buildSessionCookieOptions（別ドメイン配信のクロスサイト
 describe("createApp のセキュリティ防衛", () => {
   it("レート制限の上限を超えたリクエストに 429 を返す（/health にグローバル適用）", async () => {
     const app = createApp({
-      messageRepository: new InMemoryMessageRepository(),
+      ...baseDeps,
       security: { rateLimitMax: 2, rateLimitWindowMs: 60_000 },
     });
     const agent = request(app);
@@ -78,10 +80,7 @@ describe("createApp のセキュリティ防衛", () => {
   });
 
   it("ボディサイズ上限を超えるリクエストに 413 を返す", async () => {
-    const app = createApp({
-      messageRepository: new InMemoryMessageRepository(),
-      security: { bodyLimit: "1kb" },
-    });
+    const app = createApp({ ...baseDeps, security: { bodyLimit: "1kb" } });
     const big = [{ createdEmployeeId: "e1", channel: "shigoto", text: "x".repeat(4000) }];
     const res = await request(app).post("/api/messages").send(big);
     expect(res.status).toBe(413);
@@ -89,7 +88,7 @@ describe("createApp のセキュリティ防衛", () => {
   });
 
   it("全応答にセキュアヘッダを付与し X-Powered-By を除去する（/health に適用）", async () => {
-    const app = createApp({ messageRepository: new InMemoryMessageRepository() });
+    const app = createApp(baseDeps);
     const res = await request(app).get("/health");
     expect(res.headers["x-content-type-options"]).toBe("nosniff");
     expect(res.headers["x-frame-options"]).toBe("DENY");
@@ -101,7 +100,7 @@ describe("createApp のセキュリティ防衛", () => {
   it("corsAllowedOrigins に含まれるオリジンへ CORS ヘッダを付与する", async () => {
     const origin = "https://app.example.com";
     const app = createApp({
-      messageRepository: new InMemoryMessageRepository(),
+      ...baseDeps,
       security: { corsAllowedOrigins: [origin] },
     });
     const res = await request(app).get("/health").set("Origin", origin);

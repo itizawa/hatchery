@@ -6,6 +6,7 @@ import { InMemoryChannelMembershipRepository } from "../persistence/channelMembe
 import { InMemoryChannelRepository } from "../persistence/channelRepository.js";
 import { InMemoryMessageRepository } from "../persistence/messageRepository.js";
 import { InMemoryUserRepository } from "../persistence/userRepository.js";
+import { createTestDeps } from "../testing/createTestDeps.js";
 
 async function buildApp(
   channelMembershipRepository = new InMemoryChannelMembershipRepository(),
@@ -14,12 +15,14 @@ async function buildApp(
   userRepository?: InMemoryUserRepository,
 ) {
   const resolvedUserRepository = userRepository ?? (await InMemoryUserRepository.createWithTestUser());
-  const app = createApp({
-    messageRepository,
-    userRepository: resolvedUserRepository,
-    channelMembershipRepository,
-    channelRepository,
-  });
+  const app = createApp(
+    await createTestDeps({
+      messageRepository,
+      userRepository: resolvedUserRepository,
+      channelMembershipRepository,
+      channelRepository,
+    }),
+  );
   return { app, channelMembershipRepository, channelRepository, messageRepository };
 }
 

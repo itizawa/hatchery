@@ -3,18 +3,19 @@ import { describe, expect, it } from "vitest";
 
 import { createApp } from "../app.js";
 import { InMemoryEmployeeRepository } from "../persistence/employeeRepository.js";
-import { InMemoryMessageRepository } from "../persistence/messageRepository.js";
 import { InMemoryUserRepository } from "../persistence/userRepository.js";
+import { createTestDeps } from "../testing/createTestDeps.js";
 
 const EMPLOYEE_ID = "emp-testuser";
 
 async function buildApp(employeeRepository = new InMemoryEmployeeRepository()) {
   const userRepository = await InMemoryUserRepository.createWithTestUser(EMPLOYEE_ID);
-  const app = createApp({
-    messageRepository: new InMemoryMessageRepository(),
-    userRepository,
-    employeeRepository,
-  });
+  const app = createApp(
+    await createTestDeps({
+      userRepository,
+      employeeRepository,
+    }),
+  );
   return { app, employeeRepository };
 }
 

@@ -2,19 +2,20 @@ import request from "supertest";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createApp } from "../app.js";
-import { InMemoryMessageRepository } from "../persistence/messageRepository.js";
 import { InMemoryAppSettingRepository } from "../persistence/appSettingRepository.js";
 import { InMemoryUserRepository } from "../persistence/userRepository.js";
+import { createTestDeps } from "../testing/createTestDeps.js";
 import { getApiKey } from "./admin.js";
 import { encrypt } from "../utils/crypto.js";
 
 async function makeApp(appSettingRepo = new InMemoryAppSettingRepository(), role: "admin" | "member" = "admin") {
   const userRepo = await InMemoryUserRepository.createWithTestUser(null, role);
-  return createApp({
-    messageRepository: new InMemoryMessageRepository(),
-    userRepository: userRepo,
-    appSettingRepository: appSettingRepo,
-  });
+  return createApp(
+    await createTestDeps({
+      userRepository: userRepo,
+      appSettingRepository: appSettingRepo,
+    }),
+  );
 }
 
 async function loginAgent(app: ReturnType<typeof createApp>) {

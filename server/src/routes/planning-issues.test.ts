@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createApp } from "../app.js";
 import { InMemoryMessageRepository } from "../persistence/messageRepository.js";
-import { InMemoryUserRepository } from "../persistence/userRepository.js";
+import { createTestDeps } from "../testing/createTestDeps.js";
 
 /** @octokit/rest をモックする */
 vi.mock("@octokit/rest", () => ({
@@ -20,11 +20,7 @@ vi.mock("@octokit/rest", () => ({
 }));
 
 async function makeApp(messageRepo = new InMemoryMessageRepository()) {
-  const userRepo = await InMemoryUserRepository.createWithTestUser();
-  return createApp({
-    messageRepository: messageRepo,
-    userRepository: userRepo,
-  });
+  return createApp(await createTestDeps({ messageRepository: messageRepo }));
 }
 
 async function loginAgent(app: ReturnType<typeof createApp>) {

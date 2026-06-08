@@ -5,15 +5,15 @@ import { MAX_MESSAGE_LENGTH, MessageRecordSchema, MessageSchema } from "./messag
 describe("MessageSchema (A-3)", () => {
   it("正常な発言は parse 成功する", () => {
     const ok = MessageSchema.parse({
-      speaker: "haru",
+      createdEmployeeId: "haru",
       channel: "zatsudan",
       text: "おはよ〜",
     });
-    expect(ok).toEqual({ speaker: "haru", channel: "zatsudan", text: "おはよ〜" });
+    expect(ok).toEqual({ createdEmployeeId: "haru", channel: "zatsudan", text: "おはよ〜" });
   });
 
   it("text が空文字なら parse に失敗する", () => {
-    expect(MessageSchema.safeParse({ speaker: "haru", channel: "zatsudan", text: "" }).success).toBe(
+    expect(MessageSchema.safeParse({ createdEmployeeId: "haru", channel: "zatsudan", text: "" }).success).toBe(
       false,
     );
   });
@@ -21,30 +21,33 @@ describe("MessageSchema (A-3)", () => {
   it("text が MAX_MESSAGE_LENGTH を超えると parse に失敗する", () => {
     const tooLong = "あ".repeat(MAX_MESSAGE_LENGTH + 1);
     expect(
-      MessageSchema.safeParse({ speaker: "haru", channel: "zatsudan", text: tooLong }).success,
+      MessageSchema.safeParse({ createdEmployeeId: "haru", channel: "zatsudan", text: tooLong }).success,
     ).toBe(false);
   });
 
   it("text がちょうど MAX_MESSAGE_LENGTH なら parse 成功する", () => {
     const exact = "あ".repeat(MAX_MESSAGE_LENGTH);
     expect(
-      MessageSchema.safeParse({ speaker: "haru", channel: "zatsudan", text: exact }).success,
+      MessageSchema.safeParse({ createdEmployeeId: "haru", channel: "zatsudan", text: exact }).success,
     ).toBe(true);
   });
 
-  it("speaker / channel が空文字なら parse に失敗する", () => {
-    expect(MessageSchema.safeParse({ speaker: "", channel: "zatsudan", text: "x" }).success).toBe(
+  it("createdEmployeeId / channel が空文字なら parse に失敗する", () => {
+    expect(MessageSchema.safeParse({ createdEmployeeId: "", channel: "zatsudan", text: "x" }).success).toBe(
       false,
     );
-    expect(MessageSchema.safeParse({ speaker: "haru", channel: "", text: "x" }).success).toBe(false);
+    expect(MessageSchema.safeParse({ createdEmployeeId: "haru", channel: "", text: "x" }).success).toBe(false);
+  });
+
+  it("speaker フィールドでは parse に失敗する（createdEmployeeId に変更済み）（#222）", () => {
+    expect(MessageSchema.safeParse({ speaker: "haru", channel: "zatsudan", text: "x" }).success).toBe(false);
   });
 });
 
 describe("MessageRecordSchema (#40・永続化形)", () => {
-  /** 完全な永続化 record の雛形。各テストで一部を上書きして使う。 */
   const base = {
     id: "msg-1",
-    speaker: "haru",
+    createdEmployeeId: "haru",
     channel: "zatsudan",
     text: "おはよ〜",
     createdAt: new Date("2026-05-31T00:00:00Z"),
@@ -69,7 +72,7 @@ describe("MessageRecordSchema (#40・永続化形)", () => {
   it("id が欠損すると parse に失敗する", () => {
     expect(
       MessageRecordSchema.safeParse({
-        speaker: base.speaker,
+        createdEmployeeId: base.createdEmployeeId,
         channel: base.channel,
         text: base.text,
         createdAt: base.createdAt,

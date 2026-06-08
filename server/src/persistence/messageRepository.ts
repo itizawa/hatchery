@@ -8,7 +8,7 @@ export type { MessageRecord };
 
 /** 企画 チャンネルの UX 提案メッセージ作成入力（#76）。 */
 export interface PlanningMessageInput {
-  speaker: string;
+  createdEmployeeId: string;
   channel: string;
   text: string;
   proposalTitle: string;
@@ -63,7 +63,7 @@ export class InMemoryMessageRepository implements MessageRepository {
       this.seq += 1;
       const record: MessageRecord = {
         id: `mem-${this.seq}`,
-        speaker: m.speaker,
+        createdEmployeeId: m.createdEmployeeId,
         channel: m.channel,
         text: m.text,
         createdAt: new Date(0),
@@ -109,7 +109,7 @@ export class InMemoryMessageRepository implements MessageRepository {
     this.seq += 1;
     const record: MessageRecord = {
       id: `mem-${this.seq}`,
-      speaker: input.speaker,
+      createdEmployeeId: input.createdEmployeeId,
       channel: input.channel,
       text: input.text,
       createdAt: new Date(0),

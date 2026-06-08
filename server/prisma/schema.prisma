@@ -48,6 +48,7 @@ model Employee {
   channels    ChannelEmployee[]
   /// AI バッチのプロンプト指針となる性格設定（任意・500 文字以内）（#38）。
   personality String?
+  messages    Message[]
 }
 
 /// チャンネルのタイプ（#54 / #76）。zatsudan=雑談 / task=仕事 / planning=企画。
@@ -86,9 +87,10 @@ model ChannelEmployee {
 /// postedAt はメッセージを表示する日時（#183）。この時刻を過ぎたメッセージのみ一覧に返す。
 /// proposalTitle / proposalReason / proposalTargetUrl / issueNumber / issueUrl は
 /// 企画 チャンネルの UX 提案メッセージ専用 optional フィールド（#76）。
+/// createdEmployeeId は発言者の Employee.id への外部キー（#222）。onDelete: Restrict。
 model Message {
   id                String   @id @default(uuid(7))
-  speaker           String
+  createdEmployeeId String
   channel           String
   text              String
   createdAt         DateTime @default(now())
@@ -100,9 +102,11 @@ model Message {
   proposalTargetUrl String?
   issueNumber       Int?
   issueUrl          String?
+  createdEmployee   Employee @relation(fields: [createdEmployeeId], references: [id], onDelete: Restrict)
 
   @@index([channel, createdAt])
   @@index([channel, postedAt])
+  @@index([createdEmployeeId])
 }
 
 /// MVP のタスク状態（common の TaskStatusSchema に対応）。

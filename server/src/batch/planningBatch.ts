@@ -51,19 +51,7 @@ async function generateProposalsWithClaude(
     .map(([url, content]) => `[${url}]\n${content || "(コンテンツ取得不可)"}}`)
     .join("\n\n");
 
-  const prompt = `あなたは UX の専門家です。以下のウェブアプリのページコンテンツを分析し、UX 改善点を最大 ${MAX_PROPOSALS} 件提案してください。
-
-ページコンテンツ:
-${pagesDescription}
-
-以下の JSON 配列形式で返答してください（それ以外のテキストは含めないでください）:
-[
-  {
-    "title": "改善提案のタイトル（50文字以内）",
-    "reason": "改善理由と具体的な改善方法（200文字以内）",
-    "targetUrl": "対象ページのURL"
-  }
-]`;
+  const prompt = `あなたは UX の専門家です。以下のウェブアプリのページコンテンツを分析し、UX 改善点を最大 ${MAX_PROPOSALS} 件提案してください。\n\nページコンテンツ:\n${pagesDescription}\n\n以下の JSON 配列形式で返答してください（それ以外のテキストは含めないでください）:\n[\n  {\n    "title": "改善提案のタイトル（50文字以内）",\n    "reason": "改善理由と具体的な改善方法（200文字以内）",\n    "targetUrl": "対象ページのURL"\n  }\n]`;
 
   const message = await client.messages.create({
     model: "claude-haiku-4-5",
@@ -149,7 +137,7 @@ export async function runPlanningBatch(deps: RunPlanningBatchDeps): Promise<Mess
   const saved: MessageRecord[] = [];
   for (const proposal of proposals) {
     const record = await deps.messageRepo.createPlanningMessage({
-      speaker: "ai-planner",
+      createdEmployeeId: "ai-planner",
       channel: PLANNING_CHANNEL_ID,
       text: `【UX提案】${proposal.title}`,
       proposalTitle: proposal.title,

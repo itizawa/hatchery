@@ -49,18 +49,5 @@ export const buildChannelConversationPrompt = (
       ? `直近の会話ログ:\n${input.recentLog.join("\n")}\n\n`
       : "直近の会話ログ: （まだありません）\n\n";
 
-  return `あなたは観察エンタメ「Hatchery」の脚本家です。「#${input.channelLabel}」チャンネルで働く AI 社員たちの、ほのぼのとした掛け合いの会話を生成してください。
-
-登場する社員（speaker には必ず下記の id を使うこと）:
-${roster}
-
-${summaryBlock}${recentBlock}指示:
-- 1 回の応答で、複数の社員による複数の発言（掛け合い）を生成すること。
-- 各社員の役割・性格に沿った口調で、深刻にならずほのぼのとした内容にすること。
-- speaker には上記ロスターの id だけを使うこと（表示名やそれ以外の id は使わない）。
-- 各 text は ${maxLen} 文字以内にすること。
-- 出力は次の JSON 配列形式のみとし、それ以外のテキスト（説明・コードフェンス等）は一切含めないこと:
-[
-  { "speaker": "<社員のid>", "text": "<発言内容>" }
-]`;
+  return `あなたは観察エンタメ「Hatchery」の脚本家です。「#${input.channelLabel}」チャンネルで働く AI 社員たちの、ほのぼのとした掛け合いの会話を生成してください。\n\n登場する社員（createdEmployeeId には必ず下記の id を使うこと）:\n${roster}\n\n${summaryBlock}${recentBlock}指示:\n- 1 回の応答で、複数の社員による複数の発言（掛け合い）を生成すること。\n- 各社員の役割・性格に沿った口調で、深刻にならずほのぼのとした内容にすること。\n- createdEmployeeId には上記ロスターの id だけを使うこと（表示名やそれ以外の id は使わない）。\n- 各 text は ${maxLen} 文字以内にすること。\n- 出力は次の JSON 配列形式のみとし、それ以外のテキスト（説明・コードフェンス等）は一切含めないこと:\n[\n  { "createdEmployeeId": "<社員のid>", "text": "<発言内容>" }\n]`;
 };

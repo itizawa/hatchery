@@ -53,7 +53,7 @@ export async function runSummaryBatch(deps: RunSummaryBatchDeps): Promise<string
       const prompt = buildSummaryPrompt({
         channelLabel: channel.label,
         previousSummary: previous?.summary ?? null,
-        messages: todays.map((m) => ({ speaker: m.speaker, text: m.text })),
+        messages: todays.map((m) => ({ speaker: m.createdEmployeeId, text: m.text })),
       });
 
       const summary = await summarize(prompt, apiKey);

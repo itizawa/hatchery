@@ -16,7 +16,7 @@ function appWithValidation(): Express {
 
 describe("validateBody", () => {
   it("正しいメッセージ配列は通過し parse 済みボディを次へ渡す", async () => {
-    const body = [{ speaker: "e1", channel: "zatsudan", text: "やあ" }];
+    const body = [{ createdEmployeeId: "e1", channel: "zatsudan", text: "やあ" }];
     const res = await request(appWithValidation()).post("/t").send(body);
     expect(res.status).toBe(200);
     expect(res.body).toEqual(body);
@@ -33,7 +33,7 @@ describe("validateBody", () => {
   it("text が空なら 400 を返す", async () => {
     const res = await request(appWithValidation())
       .post("/t")
-      .send([{ speaker: "e1", channel: "zatsudan", text: "" }]);
+      .send([{ createdEmployeeId: "e1", channel: "zatsudan", text: "" }]);
     expect(res.status).toBe(400);
   });
 });

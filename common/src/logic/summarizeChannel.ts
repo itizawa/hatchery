@@ -24,7 +24,8 @@ export interface BuildSummaryPromptInput {
   channelLabel: string;
   /** 既存のあらすじ。無ければ null。 */
   previousSummary?: string | null;
-  /** 当日作成されたメッセージ（speaker / text）。 */
+  /** 当日作成されたメッセージ（speaker / text）。speaker はプロンプト表示用の発言者ラベルで、
+   * 呼び出し元が Employee.id（createdEmployeeId）または表示名を渡す（#222）。 */
   messages: readonly { speaker: string; text: string }[];
   /** あらすじの最大文字数（既定 500）。 */
   maxLength?: number;
@@ -44,13 +45,5 @@ export const buildSummaryPrompt = (input: BuildSummaryPromptInput): string => {
     : "これまでのあらすじ: （まだありません）\n\n";
   const log = input.messages.map((m) => `${m.speaker}: ${m.text}`).join("\n");
 
-  return `あなたは観察エンタメ「Hatchery」の記録係です。「#${input.channelLabel}」チャンネルのこれまでの流れを、後から会話生成の文脈に使えるよう簡潔なあらすじにまとめてください。
-
-${previousBlock}本日の会話ログ:
-${log}
-
-指示:
-- 既存のあらすじと本日の会話を踏まえ、チャンネルのこれまでの経緯を ${maxLen} 文字以内で簡潔にまとめること。
-- 登場人物の関係性や進行中の話題が分かるようにすること。
-- あらすじ本文のみを出力し、見出しや前置き・コードフェンスは含めないこと。`;
+  return `あなたは観察エンタメ「Hatchery」の記録係です。「#${input.channelLabel}」チャンネルのこれまでの流れを、後から会話生成の文脈に使えるよう簡潔なあらすじにまとめてください。\n\n${previousBlock}本日の会話ログ:\n${log}\n\n指示:\n- 既存のあらすじと本日の会話を踏まえ、チャンネルのこれまでの経緯を ${maxLen} 文字以内で簡潔にまとめること。\n- 登場人物の関係性や進行中の話題が分かるようにすること。\n- あらすじ本文のみを出力し、見出しや前置き・コードフェンスは含めないこと。`;
 };

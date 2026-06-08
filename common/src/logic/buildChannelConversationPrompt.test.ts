@@ -35,14 +35,14 @@ describe("buildChannelConversationPrompt (#53)", () => {
     expect(prompt).toContain("雑談");
   });
 
-  it("JSON 配列形式と speaker / text の出力指示を含む", () => {
+  it("JSON 配列形式と createdEmployeeId / text の出力指示を含む（#222）", () => {
     const prompt = buildChannelConversationPrompt({
       channelLabel: "雑談",
       employees,
       recentLog: [],
       summary: null,
     });
-    expect(prompt).toContain("speaker");
+    expect(prompt).toContain("createdEmployeeId");
     expect(prompt).toContain("text");
     expect(prompt).toContain("JSON");
   });

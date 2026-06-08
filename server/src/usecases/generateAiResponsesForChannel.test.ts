@@ -43,7 +43,7 @@ describe("generateAiResponsesForChannel", () => {
     await membershipRepo.addMember("ch1", "bot1");
 
     const stubGenerate = vi.fn().mockResolvedValue(
-      JSON.stringify([{ speaker: "bot1", text: "こんにちは！" }]),
+      JSON.stringify([{ createdEmployeeId: "bot1", text: "こんにちは！" }]),
     );
 
     process.env.ANTHROPIC_API_KEY = "test-key";
@@ -58,7 +58,7 @@ describe("generateAiResponsesForChannel", () => {
 
     const saved = await messageRepo.list();
     expect(saved).toHaveLength(1);
-    expect(saved[0].speaker).toBe("bot1");
+    expect(saved[0].createdEmployeeId).toBe("bot1");
     expect(saved[0].text).toBe("こんにちは！");
     // postedAt は BASE_TIME より未来
     expect(saved[0].postedAt.getTime()).toBeGreaterThan(BASE_TIME.getTime());

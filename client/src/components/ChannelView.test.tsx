@@ -15,8 +15,8 @@ const employees: readonly Employee[] = [
 ];
 
 const messages: readonly Message[] = [
-  { speaker: "haru", channel: "zatsudan", text: "おはようございます！" },
-  { speaker: "ken", channel: "zatsudan", text: "今日もよろしく。" },
+  { createdEmployeeId: "haru", channel: "zatsudan", text: "おはようございます！" },
+  { createdEmployeeId: "ken", channel: "zatsudan", text: "今日もよろしく。" },
 ];
 
 describe("ChannelView", () => {
@@ -31,15 +31,15 @@ describe("ChannelView", () => {
     expect(screen.getByText("今日もよろしく。")).toBeInTheDocument();
   });
 
-  it("speaker(ID) を employees の displayName に解決して表示する", () => {
+  it("createdEmployeeId を employees の displayName に解決して表示する（#222）", () => {
     render(<ChannelView channel={channel} messages={messages} employees={employees} />);
     expect(screen.getByText("ハル")).toBeInTheDocument();
     expect(screen.getByText("ケン")).toBeInTheDocument();
   });
 
-  it("未解決の speaker(ID) は ID をそのままフォールバック表示する", () => {
+  it("未解決の createdEmployeeId は ID をそのままフォールバック表示する（#222）", () => {
     const withUnknown: readonly Message[] = [
-      { speaker: "unknown-id", channel: "zatsudan", text: "誰?" },
+      { createdEmployeeId: "unknown-id", channel: "zatsudan", text: "誰?" },
     ];
     render(<ChannelView channel={channel} messages={withUnknown} employees={employees} />);
     expect(screen.getByText("unknown-id")).toBeInTheDocument();

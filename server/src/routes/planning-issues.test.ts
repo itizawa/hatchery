@@ -87,7 +87,7 @@ describe("POST /api/channels/:channelId/messages/:messageId/create-issue (#76)",
 
     const messageRepo = new InMemoryMessageRepository();
     const created = await messageRepo.createPlanningMessage({
-      speaker: "ai-planner",
+      createdEmployeeId: "ai-planner",
       channel: "kikaku",
       text: "「UX提案」ログインボタンの色を改善する",
       proposalTitle: "ログインボタンの色を改善する",
@@ -116,7 +116,7 @@ describe("POST /api/channels/:channelId/messages/:messageId/create-issue (#76)",
 
     const messageRepo = new InMemoryMessageRepository();
     const created = await messageRepo.createPlanningMessage({
-      speaker: "ai-planner",
+      createdEmployeeId: "ai-planner",
       channel: "kikaku",
       text: "「UX提案」ナビゲーションを改善する",
       proposalTitle: "ナビゲーションを改善する",

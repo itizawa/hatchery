@@ -64,13 +64,13 @@ export const buildRosterMessages = (input: BuildRosterMessagesInput): Message[] 
     const channelMembers = input.membershipByChannel
       ? input.employees.filter((e) => (input.membershipByChannel?.[channel] ?? []).includes(e.id))
       : input.employees;
-    const speakers = selectRandomMembers(channelMembers, input.perChannel, rng);
-    for (const speaker of speakers) {
-      const candidates = input.templates[speaker] ?? [];
+    const employeeIds = selectRandomMembers(channelMembers, input.perChannel, rng);
+    for (const createdEmployeeId of employeeIds) {
+      const candidates = input.templates[createdEmployeeId] ?? [];
       if (candidates.length === 0) continue;
       const index = Math.floor(rng() * candidates.length);
       const text = candidates[index] as string;
-      messages.push({ speaker, channel, text });
+      messages.push({ createdEmployeeId, channel, text });
     }
   }
   return messages;

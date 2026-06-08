@@ -8,8 +8,8 @@ export type MessageGenerator = () => Message[];
 
 /** スタブのメッセージ生成器。MVP の最小メッセージ列を返す。 */
 export const stubMessageGenerator: MessageGenerator = () => [
-  { speaker: "emp-1", channel: "zatsudan", text: "おはようございます。" },
-  { speaker: "emp-2", channel: "zatsudan", text: "今日もよろしくお願いします！" },
+  { createdEmployeeId: "emp-1", channel: "zatsudan", text: "おはようございます。" },
+  { createdEmployeeId: "emp-2", channel: "zatsudan", text: "今日もよろしくお願いします！" },
 ];
 
 /** 定時バッチの依存。永続化と生成器を注入する。 */

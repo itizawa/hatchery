@@ -81,7 +81,7 @@ describe("buildRosterMessages — 定時の発言を組み立てる（#32）", (
     }
   });
 
-  it("speaker は候補社員、channel は入力チャンネル、text は当該社員のテンプレート由来", () => {
+  it("createdEmployeeId は候補社員、channel は入力チャンネル、text は当該社員のテンプレート由来（#222）", () => {
     const messages = buildRosterMessages({
       channels: ["zatsudan"],
       employees: EMPLOYEES,
@@ -90,9 +90,9 @@ describe("buildRosterMessages — 定時の発言を組み立てる（#32）", (
       rng: seq([0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
     });
     for (const m of messages) {
-      expect(["a", "b", "c"]).toContain(m.speaker);
+      expect(["a", "b", "c"]).toContain(m.createdEmployeeId);
       expect(m.channel).toBe("zatsudan");
-      expect(TEMPLATES[m.speaker as "a" | "b" | "c"]).toContain(m.text);
+      expect(TEMPLATES[m.createdEmployeeId as "a" | "b" | "c"]).toContain(m.text);
     }
   });
 

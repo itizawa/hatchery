@@ -1,4 +1,4 @@
-import { Alert, Box, Button, Chip, Snackbar, Tab, Table, TableBody, TableCell, TableHead, TableRow, Tabs, TextField, Typography } from "../components/uiParts";
+import { Alert, Box, Button, Chip, Skeleton, Snackbar, Tab, Table, TableBody, TableCell, TableHead, TableRow, Tabs, TextField, Typography } from "../components/uiParts";
 
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { type SyntheticEvent, useState, type ReactElement, type ReactNode } from "react";
@@ -12,7 +12,7 @@ import { type SettingsTabValue } from "./settingsTabValues.js";
 
 /** API トークン設定タブのコンテンツ（#52）。 */
 const ApiTokenSettings = (): ReactElement => {
-  const { data: settings } = useAdminSettings();
+  const { data: settings, isLoading: isSettingsLoading } = useAdminSettings();
   const saveMutation = useSaveAdminSetting();
   const [apiKey, setApiKey] = useState("");
   const [snackbarOpen, setSnackbarOpen] = useState(false);
@@ -30,6 +30,15 @@ const ApiTokenSettings = (): ReactElement => {
       setErrorOpen(true);
     }
   };
+
+  if (isSettingsLoading) {
+    return (
+      <Box sx={{ maxWidth: 480, display: "flex", flexDirection: "column", gap: 2 }}>
+        <Skeleton variant="text" height={24} width="60%" data-testid="api-token-skeleton" />
+        <Skeleton variant="text" height={40} />
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ maxWidth: 480, display: "flex", flexDirection: "column", gap: 2 }}>
@@ -82,8 +91,18 @@ const ApiTokenSettings = (): ReactElement => {
 
 /** バッチログタブのコンテンツ（#75）。 */
 const BatchLogs = (): ReactElement => {
-  const { data: logs = [] } = useBatchLogs();
+  const { data: logs = [], isLoading: isLogsLoading } = useBatchLogs();
   const refresh = useRefreshBatchLogs();
+
+  if (isLogsLoading) {
+    return (
+      <Box>
+        {Array.from({ length: 3 }, (_, i) => (
+          <Skeleton key={i} variant="text" height={32} data-testid="batch-logs-skeleton" sx={{ my: 0.5 }} />
+        ))}
+      </Box>
+    );
+  }
 
   return (
     <Box>

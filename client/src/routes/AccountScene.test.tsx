@@ -41,6 +41,27 @@ function renderApp(initialPath: string) {
   );
 }
 
+describe("AccountScene スケルトン UI（#241）", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("useAuth() が isLoading=true のときスケルトンが表示される", async () => {
+    vi.spyOn(authApi, "fetchMe").mockResolvedValue({ id: "user1", displayName: "Alice" });
+    vi.spyOn(authApi, "useAuth").mockReturnValue({
+      data: undefined,
+      isLoading: true,
+    } as ReturnType<typeof authApi.useAuth>);
+    renderApp("/account");
+
+    expect(await screen.findByTestId("account-scene-skeleton")).toBeInTheDocument();
+  });
+});
+
 describe("アカウント設定画面（#50）", () => {
   beforeEach(() => {
     vi.restoreAllMocks();

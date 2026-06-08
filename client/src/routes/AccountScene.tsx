@@ -1,4 +1,4 @@
-import { Alert, Box, Button, Snackbar, TextField, Typography } from "../components/uiParts";
+import { Alert, Box, Button, Skeleton, Snackbar, TextField, Typography } from "../components/uiParts";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ReactElement, useEffect, useRef, useState } from "react";
@@ -7,7 +7,7 @@ import { DISPLAY_NAME_MAX_LENGTH } from "@hatchery/common";
 import * as authApi from "../api/auth.js";
 
 export const AccountScene = (): ReactElement => {
-  const { data: authUser } = authApi.useAuth();
+  const { data: authUser, isLoading } = authApi.useAuth();
   const queryClient = useQueryClient();
   const updateMutation = useMutation({
     mutationFn: (body: Parameters<typeof authApi.updateProfile>[0]) => authApi.updateProfile(body),
@@ -36,6 +36,20 @@ export const AccountScene = (): ReactElement => {
   };
 
   const isDisabled = displayName.trim() === "" || updateMutation.isPending;
+
+  if (isLoading) {
+    return (
+      <Box component="section" sx={{ p: 3, maxWidth: 480 }}>
+        <Typography variant="h5" component="h1" gutterBottom>
+          アカウント設定
+        </Typography>
+        <Box sx={{ mt: 2, display: "flex", flexDirection: "column", gap: 2 }}>
+          <Skeleton variant="text" height={40} data-testid="account-scene-skeleton" />
+          <Skeleton variant="text" height={40} />
+        </Box>
+      </Box>
+    );
+  }
 
   return (
     <Box component="section" sx={{ p: 3, maxWidth: 480 }}>

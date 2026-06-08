@@ -2,7 +2,9 @@ import { Box, Link } from "../components/uiParts";
 
 import { isAdmin } from "@hatchery/common";
 import { Link as RouterLink, Outlet } from "@tanstack/react-router";
-import type { ReactElement } from "react";
+import { Suspense, type ReactElement } from "react";
+
+import { MainContentSkeleton } from "../components/MainContentSkeleton";
 
 import { useAuth } from "../api/auth.js";
 import { AppHeader } from "../components/AppHeader";
@@ -49,7 +51,9 @@ export const RootLayout = (): ReactElement => {
           )}
         </Box>
         <Box component="main" sx={{ flexGrow: 1, bgcolor: "background.default", overflow: "auto", display: "flex", flexDirection: "column" }}>
-          <Outlet />
+          <Suspense fallback={<MainContentSkeleton />}>
+            <Outlet />
+          </Suspense>
         </Box>
       </Box>
     </Box>

@@ -1,4 +1,4 @@
-import { Alert, Box, Button, Chip, FormControl, InputLabel, MenuItem, Select, Snackbar, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from "./uiParts";
+import { Alert, Box, Button, Chip, FormControl, InputLabel, MenuItem, Select, Skeleton, Snackbar, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from "./uiParts";
 
 import type { ReactElement } from "react";
 import { useState } from "react";
@@ -171,9 +171,11 @@ export function InvitationsTab(): ReactElement {
           招待一覧
         </Typography>
         {isLoading ? (
-          <Typography variant="body2" color="text.secondary">
-            読み込み中...
-          </Typography>
+          <Box aria-label="招待一覧読み込み中">
+            {Array.from({ length: 4 }, (_, i) => (
+              <Skeleton key={i} variant="text" height={32} data-testid="invitations-skeleton-item" sx={{ my: 0.5 }} />
+            ))}
+          </Box>
         ) : invitations.length === 0 ? (
           <Typography variant="body2" color="text.secondary">
             招待がありません。

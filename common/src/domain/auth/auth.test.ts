@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { AuthUserSchema, LoginRequestSchema, UpdateProfileSchema, UserRoleSchema, isAdmin } from "./auth.js";
+import {
+  AuthUserSchema,
+  DISPLAY_NAME_MAX_LENGTH,
+  LOGIN_ID_MAX_LENGTH,
+  LoginRequestSchema,
+  PASSWORD_MAX_LENGTH,
+  UpdateProfileSchema,
+  UserRoleSchema,
+  isAdmin,
+} from "./auth.js";
 
 describe("LoginRequestSchema", () => {
   it("有効な id と password でパースが成功する", () => {
@@ -28,6 +37,26 @@ describe("LoginRequestSchema", () => {
 
   it("password が欠落しているとき失敗する", () => {
     const result = LoginRequestSchema.safeParse({ loginId: "user1" });
+    expect(result.success).toBe(false);
+  });
+
+  it("loginId が LOGIN_ID_MAX_LENGTH 文字ちょうどなら成功する（#91）", () => {
+    const result = LoginRequestSchema.safeParse({ loginId: "a".repeat(LOGIN_ID_MAX_LENGTH), password: "pass1" });
+    expect(result.success).toBe(true);
+  });
+
+  it("loginId が LOGIN_ID_MAX_LENGTH + 1 文字なら失敗する（#91）", () => {
+    const result = LoginRequestSchema.safeParse({ loginId: "a".repeat(LOGIN_ID_MAX_LENGTH + 1), password: "pass1" });
+    expect(result.success).toBe(false);
+  });
+
+  it("password が PASSWORD_MAX_LENGTH 文字ちょうどなら成功する（#91）", () => {
+    const result = LoginRequestSchema.safeParse({ loginId: "user1", password: "a".repeat(PASSWORD_MAX_LENGTH) });
+    expect(result.success).toBe(true);
+  });
+
+  it("password が PASSWORD_MAX_LENGTH + 1 文字なら失敗する（#91）", () => {
+    const result = LoginRequestSchema.safeParse({ loginId: "user1", password: "a".repeat(PASSWORD_MAX_LENGTH + 1) });
     expect(result.success).toBe(false);
   });
 });
@@ -164,6 +193,16 @@ describe("UpdateProfileSchema (#51)", () => {
       displayName: "Alice",
       avatarUrl: "not-a-url",
     });
+    expect(result.success).toBe(false);
+  });
+
+  it("displayName が DISPLAY_NAME_MAX_LENGTH 文字ちょうどなら成功する（#91）", () => {
+    const result = UpdateProfileSchema.safeParse({ displayName: "a".repeat(DISPLAY_NAME_MAX_LENGTH) });
+    expect(result.success).toBe(true);
+  });
+
+  it("displayName が DISPLAY_NAME_MAX_LENGTH + 1 文字なら失敗する（#91）", () => {
+    const result = UpdateProfileSchema.safeParse({ displayName: "a".repeat(DISPLAY_NAME_MAX_LENGTH + 1) });
     expect(result.success).toBe(false);
   });
 });

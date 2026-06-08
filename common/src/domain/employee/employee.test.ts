@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  EMPLOYEE_DISPLAY_NAME_MAX_LENGTH,
+  EMPLOYEE_ROLE_MAX_LENGTH,
   createDisplayNameResolver,
   DEFAULT_EMPLOYEES,
   EmployeeSchema,
@@ -80,6 +82,26 @@ describe("EmployeeSchema: personality フィールド (#38)", () => {
     const result = EmployeeSchema.safeParse({ id: "haru", displayName: "haru" });
     expect(result.success).toBe(true);
   });
+
+  it("displayName が EMPLOYEE_DISPLAY_NAME_MAX_LENGTH 文字ちょうどなら parse 成功する（#91）", () => {
+    const result = EmployeeSchema.safeParse({ id: "haru", displayName: "a".repeat(EMPLOYEE_DISPLAY_NAME_MAX_LENGTH) });
+    expect(result.success).toBe(true);
+  });
+
+  it("displayName が EMPLOYEE_DISPLAY_NAME_MAX_LENGTH + 1 文字なら parse 失敗する（#91）", () => {
+    const result = EmployeeSchema.safeParse({ id: "haru", displayName: "a".repeat(EMPLOYEE_DISPLAY_NAME_MAX_LENGTH + 1) });
+    expect(result.success).toBe(false);
+  });
+
+  it("role が EMPLOYEE_ROLE_MAX_LENGTH 文字ちょうどなら parse 成功する（#91）", () => {
+    const result = EmployeeSchema.safeParse({ id: "haru", displayName: "haru", role: "a".repeat(EMPLOYEE_ROLE_MAX_LENGTH) });
+    expect(result.success).toBe(true);
+  });
+
+  it("role が EMPLOYEE_ROLE_MAX_LENGTH + 1 文字なら parse 失敗する（#91）", () => {
+    const result = EmployeeSchema.safeParse({ id: "haru", displayName: "haru", role: "a".repeat(EMPLOYEE_ROLE_MAX_LENGTH + 1) });
+    expect(result.success).toBe(false);
+  });
 });
 
 describe("UpdateEmployeeSchema (#38)", () => {
@@ -105,6 +127,26 @@ describe("UpdateEmployeeSchema (#38)", () => {
   it("すべてのフィールドを省略できる（空更新は valid）", () => {
     const result = UpdateEmployeeSchema.safeParse({});
     expect(result.success).toBe(true);
+  });
+
+  it("displayName が EMPLOYEE_DISPLAY_NAME_MAX_LENGTH 文字ちょうどなら valid（#91）", () => {
+    const result = UpdateEmployeeSchema.safeParse({ displayName: "a".repeat(EMPLOYEE_DISPLAY_NAME_MAX_LENGTH) });
+    expect(result.success).toBe(true);
+  });
+
+  it("displayName が EMPLOYEE_DISPLAY_NAME_MAX_LENGTH + 1 文字なら invalid（#91）", () => {
+    const result = UpdateEmployeeSchema.safeParse({ displayName: "a".repeat(EMPLOYEE_DISPLAY_NAME_MAX_LENGTH + 1) });
+    expect(result.success).toBe(false);
+  });
+
+  it("role が EMPLOYEE_ROLE_MAX_LENGTH 文字ちょうどなら valid（#91）", () => {
+    const result = UpdateEmployeeSchema.safeParse({ role: "a".repeat(EMPLOYEE_ROLE_MAX_LENGTH) });
+    expect(result.success).toBe(true);
+  });
+
+  it("role が EMPLOYEE_ROLE_MAX_LENGTH + 1 文字なら invalid（#91）", () => {
+    const result = UpdateEmployeeSchema.safeParse({ role: "a".repeat(EMPLOYEE_ROLE_MAX_LENGTH + 1) });
+    expect(result.success).toBe(false);
   });
 });
 

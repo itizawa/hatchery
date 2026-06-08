@@ -3,6 +3,7 @@ import { Alert, Box, Button, Chip, Snackbar, Tab, Table, TableBody, TableCell, T
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { type SyntheticEvent, useState, type ReactElement, type ReactNode } from "react";
 
+import { APP_SETTING_VALUE_MAX_LENGTH } from "@hatchery/common";
 import { useAdminSettings, useSaveAdminSetting } from "../api/admin.js";
 import { useBatchLogs, useRefreshBatchLogs } from "../api/batchLogs.js";
 import { EmployeeTable } from "../components/EmployeeTable";
@@ -48,6 +49,7 @@ const ApiTokenSettings = (): ReactElement => {
         placeholder="sk-ant-api03-..."
         fullWidth
         size="small"
+        inputProps={{ maxLength: APP_SETTING_VALUE_MAX_LENGTH }}
       />
       <Button
         variant="contained"

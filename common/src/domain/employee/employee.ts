@@ -1,13 +1,16 @@
 import { z } from "zod";
 
+export const EMPLOYEE_DISPLAY_NAME_MAX_LENGTH = 50;
+export const EMPLOYEE_ROLE_MAX_LENGTH = 50;
+
 /**
  * AI 社員。MVP に必要な最小限（id・displayName・role）。
  * キャラクター・バイブルの詳細（語彙の井戸など）は Phase 1 のプロンプト設計 Issue に委ねる（設計書 §7）。
  */
 export const EmployeeSchema = z.object({
   id: z.string().min(1),
-  displayName: z.string().min(1),
-  role: z.string().min(1).optional(),
+  displayName: z.string().min(1).max(EMPLOYEE_DISPLAY_NAME_MAX_LENGTH),
+  role: z.string().min(1).max(EMPLOYEE_ROLE_MAX_LENGTH).optional(),
   // #49: AI 社員（true）とユーザー所有社員（false）を区別する。省略時は false。
   isBot: z.boolean().default(false),
   // #38: AI バッチのプロンプト指針となる性格設定（任意・500 文字以内）。
@@ -20,8 +23,8 @@ export type Employee = z.infer<typeof EmployeeSchema>;
 
 /** PATCH /employees/:id のリクエストボディ。全フィールド任意（部分更新）。 */
 export const UpdateEmployeeSchema = z.object({
-  displayName: z.string().min(1).optional(),
-  role: z.string().min(1).optional(),
+  displayName: z.string().min(1).max(EMPLOYEE_DISPLAY_NAME_MAX_LENGTH).optional(),
+  role: z.string().min(1).max(EMPLOYEE_ROLE_MAX_LENGTH).optional(),
   personality: z.string().max(500).optional(),
 });
 

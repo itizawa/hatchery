@@ -3,6 +3,7 @@ import { Alert, Box, Button, Snackbar, TextField, Typography } from "../componen
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ReactElement, useEffect, useRef, useState } from "react";
 
+import { DISPLAY_NAME_MAX_LENGTH } from "@hatchery/common";
 import * as authApi from "../api/auth.js";
 
 export const AccountScene = (): ReactElement => {
@@ -50,6 +51,7 @@ export const AccountScene = (): ReactElement => {
           required
           fullWidth
           size="small"
+          inputProps={{ maxLength: DISPLAY_NAME_MAX_LENGTH }}
         />
         <TextField
           label="プロフィール画像 URL"

@@ -1,8 +1,11 @@
 import { z } from "zod";
 
+export const APP_SETTING_KEY_MAX_LENGTH = 100;
+export const APP_SETTING_VALUE_MAX_LENGTH = 1000;
+
 /** アプリ設定のキーバリューエントリ（DB の AppSetting モデルに対応）。 */
 export const AppSettingSchema = z.object({
-  key: z.string().min(1),
+  key: z.string().min(1).max(APP_SETTING_KEY_MAX_LENGTH),
   value: z.string(),
   updatedAt: z.date(),
 });
@@ -11,8 +14,8 @@ export type AppSetting = z.infer<typeof AppSettingSchema>;
 
 /** 設定を更新するリクエストボディ。key と value を指定する。 */
 export const UpdateAppSettingSchema = z.object({
-  key: z.string().min(1),
-  value: z.string(),
+  key: z.string().min(1).max(APP_SETTING_KEY_MAX_LENGTH),
+  value: z.string().max(APP_SETTING_VALUE_MAX_LENGTH),
 });
 
 export type UpdateAppSettingInput = z.infer<typeof UpdateAppSettingSchema>;

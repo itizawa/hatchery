@@ -1,9 +1,13 @@
 import { z } from "zod";
 
+export const LOGIN_ID_MAX_LENGTH = 50;
+export const PASSWORD_MAX_LENGTH = 100;
+export const DISPLAY_NAME_MAX_LENGTH = 100;
+
 export const LoginRequestSchema = z.object({
   // #185: id → loginId にリネーム（サロゲートキー化対応）。
-  loginId: z.string().min(1).max(50),
-  password: z.string().min(1).max(100),
+  loginId: z.string().min(1).max(LOGIN_ID_MAX_LENGTH),
+  password: z.string().min(1).max(PASSWORD_MAX_LENGTH),
 });
 
 export type LoginRequest = z.infer<typeof LoginRequestSchema>;
@@ -34,7 +38,7 @@ export function isAdmin(user: Pick<AuthUser, "role">): boolean {
 
 // #51: PATCH /auth/me リクエストボディ。
 export const UpdateProfileSchema = z.object({
-  displayName: z.string().min(1),
+  displayName: z.string().min(1).max(DISPLAY_NAME_MAX_LENGTH),
   avatarUrl: z.string().url().optional(),
 });
 

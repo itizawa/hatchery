@@ -6,6 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { useState } from "react";
 
+import { LOGIN_ID_MAX_LENGTH, PASSWORD_MAX_LENGTH } from "@hatchery/common";
 import { AUTH_ME_QUERY_KEY, login } from "../api/auth.js";
 
 export const LoginScene = (): ReactElement => {
@@ -54,7 +55,7 @@ export const LoginScene = (): ReactElement => {
           <TextField
             label="ID"
             id="login-id"
-            inputProps={{ "aria-label": "ID" }}
+            inputProps={{ "aria-label": "ID", maxLength: LOGIN_ID_MAX_LENGTH }}
             value={field.state.value}
             onChange={(e) => field.handleChange(e.target.value)}
             onBlur={field.handleBlur}
@@ -75,7 +76,7 @@ export const LoginScene = (): ReactElement => {
           <TextField
             label="パスワード"
             id="login-password"
-            inputProps={{ "aria-label": "パスワード" }}
+            inputProps={{ "aria-label": "パスワード", maxLength: PASSWORD_MAX_LENGTH }}
             type="password"
             value={field.state.value}
             onChange={(e) => field.handleChange(e.target.value)}

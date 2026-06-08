@@ -2,22 +2,21 @@ import request from "supertest";
 import { describe, expect, it } from "vitest";
 
 import { createApp } from "../app.js";
-import { InMemoryMessageRepository } from "../persistence/messageRepository.js";
-import { InMemoryBatchRunLogRepository } from "../persistence/batchRunLogRepository.js";
 import { InMemoryTokenUsageLogRepository } from "../persistence/tokenUsageLogRepository.js";
 import { InMemoryUserRepository } from "../persistence/userRepository.js";
+import { createTestDeps } from "../testing/createTestDeps.js";
 
 async function makeApp(
   tokenRepo = new InMemoryTokenUsageLogRepository(),
   role: "admin" | "member" = "admin",
 ) {
   const userRepo = await InMemoryUserRepository.createWithTestUser(undefined, role);
-  return createApp({
-    messageRepository: new InMemoryMessageRepository(),
-    userRepository: userRepo,
-    batchRunLogRepository: new InMemoryBatchRunLogRepository(),
-    tokenUsageLogRepository: tokenRepo,
-  });
+  return createApp(
+    await createTestDeps({
+      userRepository: userRepo,
+      tokenUsageLogRepository: tokenRepo,
+    }),
+  );
 }
 
 async function loginAgent(app: ReturnType<typeof createApp>) {

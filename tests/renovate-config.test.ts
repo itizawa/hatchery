@@ -106,10 +106,10 @@ describe("automerge ポリシー (受け入れ条件 #1・#2)", () => {
     expect(rule?.automergeType).toBe("pr");
   });
 
-  it("本番 dependencies の minor/patch ルールの automerge は falsy（手動レビュー必須）", () => {
+  it("本番 dependencies の minor/patch ルールの automerge は false（手動レビュー必須）", () => {
     const rule = findPackageRule(["dependencies"], ["minor", "patch"]);
     expect(rule, "dependencies minor/patch ルールが存在する").toBeDefined();
-    expect(rule?.automerge).toBeFalsy();
+    expect(rule?.automerge).toBe(false);
   });
 
   it("major 更新ルールに automerge: false が設定されている（破壊的変更は常に手動レビュー）", () => {

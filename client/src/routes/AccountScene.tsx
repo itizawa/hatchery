@@ -5,6 +5,7 @@ import { type ReactElement, useEffect, useRef, useState } from "react";
 
 import { DISPLAY_NAME_MAX_LENGTH } from "@hatchery/common";
 import * as authApi from "../api/auth.js";
+import { isShallowDirty } from "../utils/formDirty.js";
 
 export const AccountScene = (): ReactElement => {
   const { data: authUser, isLoading } = authApi.useAuth();
@@ -35,7 +36,15 @@ export const AccountScene = (): ReactElement => {
     setSnackbarOpen(true);
   };
 
-  const isDisabled = displayName.trim() === "" || updateMutation.isPending;
+  const isDirty =
+    initialized.current &&
+    authUser !== undefined &&
+    isShallowDirty(
+      { displayName: authUser.displayName, avatarUrl: authUser.avatarUrl ?? "" },
+      { displayName, avatarUrl },
+    );
+
+  const isDisabled = displayName.trim() === "" || updateMutation.isPending || !isDirty;
 
   if (isLoading) {
     return (

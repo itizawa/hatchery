@@ -41,6 +41,7 @@ export function isAdmin(user: Pick<AuthUser, "role">): boolean {
 // #51: PATCH /auth/me リクエストボディ。
 export const UpdateProfileSchema = z.object({
   displayName: z.string().min(1).max(DISPLAY_NAME_MAX_LENGTH),
+  // #187: avatarUrl に .max() を追加してバリデーション規約を満たす。
   avatarUrl: z.string().url().max(AVATAR_URL_MAX_LENGTH).optional(),
 });
 

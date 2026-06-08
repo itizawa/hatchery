@@ -177,6 +177,20 @@ describe("プロフィール編集フォーム (#51)", () => {
 
     expect(await screen.findByText(/保存しました/)).toBeInTheDocument();
   });
+
+  it("avatarUrl に不正な URL を入力したとき保存ボタンが無効化またはエラーが表示される（#187）", async () => {
+    vi.spyOn(authApi, "fetchMe").mockResolvedValue({ id: "user1", displayName: "Alice" });
+    renderApp("/account");
+
+    const avatarInput = await screen.findByRole("textbox", { name: /プロフィール画像 URL/ });
+    await userEvent.type(avatarInput, "not-a-url");
+    await userEvent.tab(); // blur してバリデーションを発火
+
+    await waitFor(() => {
+      const hasError = screen.queryByText(/有効な URL/) !== null;
+      expect(hasError).toBe(true);
+    });
+  });
 });
 
 describe("編集フォームのdirty判定 (#179)", () => {

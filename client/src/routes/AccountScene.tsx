@@ -38,7 +38,7 @@ export const AccountScene = (): ReactElement => {
 
   const isDirty =
     initialized.current &&
-    authUser !== undefined &&
+    authUser != null &&
     isShallowDirty(
       { displayName: authUser.displayName, avatarUrl: authUser.avatarUrl ?? "" },
       { displayName, avatarUrl },

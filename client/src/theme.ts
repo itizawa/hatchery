@@ -11,8 +11,6 @@ export const SLACK_COLORS = {
   sidebar: "#FFFFFF",
   /** サイドバーテキスト色（濃色）。白背景での視認性を確保（Issue #272）。 */
   sidebarText: "#1A1A1B",
-  /** コンテンツ背景（白）。 */
-  background: "#FFFFFF",
   /** メイン領域背景（薄グレー）。Reddit 風配色（Issue #272）。 */
   mainBackground: "#F6F7F8",
 } as const;

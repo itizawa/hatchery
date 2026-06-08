@@ -72,7 +72,7 @@ export const AppHeader = ({ onMenuOpen }: AppHeaderProps): ReactElement => {
             variant="circular"
             width={ACCOUNT_ICON_SIZE}
             height={ACCOUNT_ICON_SIZE}
-            sx={{ bgcolor: "rgba(255,255,255,0.2)" }}
+            sx={{ bgcolor: "rgba(0,0,0,0.11)" }}
             data-testid="account-skeleton"
           />
         ) : user ? (
@@ -88,7 +88,7 @@ export const AppHeader = ({ onMenuOpen }: AppHeaderProps): ReactElement => {
                 alignItems: "center",
                 borderRadius: 1,
                 p: 0.5,
-                "&:hover": { bgcolor: "rgba(255,255,255,0.1)" },
+                "&:hover": { bgcolor: "rgba(0,0,0,0.08)" },
               }}
             >
               <Avatar
@@ -122,7 +122,7 @@ export const AppHeader = ({ onMenuOpen }: AppHeaderProps): ReactElement => {
               px: 1.5,
               py: 0.5,
               borderRadius: 1,
-              "&:hover": { bgcolor: "rgba(255,255,255,0.1)" },
+              "&:hover": { bgcolor: "rgba(0,0,0,0.08)" },
             }}
           >
             ログイン

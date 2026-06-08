@@ -8,6 +8,7 @@ import { PrismaChannelRepository } from "../persistence/prismaChannelRepository.
 import { PrismaEmployeeRepository } from "../persistence/prismaEmployeeRepository.js";
 import { PrismaInvitationLinkRepository } from "../persistence/prismaInvitationLinkRepository.js";
 import { PrismaMessageRepository } from "../persistence/prismaMessageRepository.js";
+import { PrismaTokenUsageLogRepository } from "../persistence/prismaTokenUsageLogRepository.js";
 import { PrismaUserRepository } from "../persistence/prismaUserRepository.js";
 
 /**
@@ -31,5 +32,6 @@ export function createPrismaDeps(
     appSettingRepository: new PrismaAppSettingRepository(prisma),
     batchRunLogRepository: new PrismaBatchRunLogRepository(prisma),
     invitationLinkRepository: new PrismaInvitationLinkRepository(prisma),
+    tokenUsageLogRepository: new PrismaTokenUsageLogRepository(prisma),
   };
 }

@@ -5,6 +5,7 @@
  */
 export * from "./domain/appSetting/index.js";
 export * from "./domain/batchRunLog/index.js";
+export * from "./domain/tokenUsageLog/index.js";
 export * from "./domain/auth/index.js";
 export * from "./domain/channel/index.js";
 export * from "./domain/channelMembership/index.js";

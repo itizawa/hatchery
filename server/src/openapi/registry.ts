@@ -23,6 +23,7 @@ import {
   LoginRequestSchema,
   MessageRecordSchema,
   MessageSchema,
+  TokenUsageLogSchema,
   UpdateAppSettingSchema,
   UpdateChannelSchema,
   UpdateEmployeeSchema,
@@ -442,6 +443,43 @@ registry.registerPath({
       content: { "application/json": { schema: z.array(BatchRunLogComponent) } },
     },
     401: { description: "未認証", ...errorJson },
+  },
+});
+
+// トークン使用量ログ（#153）。admin ロール必須。
+const TokenUsageLogComponent = registry.register(
+  "TokenUsageLog",
+  TokenUsageLogSchema.openapi({ description: "AI API トークン使用量ログ（1 呼び出し = 1 レコード）" }),
+);
+
+const TokenUsageSummaryComponent = registry.register(
+  "TokenUsageSummary",
+  z.object({
+    totalInputTokens: z.number().int().nonnegative(),
+    totalOutputTokens: z.number().int().nonnegative(),
+    totalTokens: z.number().int().nonnegative(),
+  }).openapi({ description: "トークン使用量の集計（全期間合計）" }),
+);
+
+const TokenUsageResponseComponent = registry.register(
+  "TokenUsageResponse",
+  z.object({
+    logs: z.array(TokenUsageLogComponent),
+    summary: TokenUsageSummaryComponent,
+  }).openapi({ description: "トークン使用量レスポンス（直近 50 件 + 全期間集計）" }),
+);
+
+registry.registerPath({
+  method: "get",
+  path: "/api/admin/token-usage",
+  summary: "AI トークン使用量を取得（認証必須・admin ロール・直近 50 件 + 集計）（#153）",
+  responses: {
+    200: {
+      description: "トークン使用量一覧と集計",
+      content: { "application/json": { schema: TokenUsageResponseComponent } },
+    },
+    401: { description: "未認証", ...errorJson },
+    403: { description: "admin 権限なし", ...errorJson },
   },
 });
 

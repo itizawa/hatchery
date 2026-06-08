@@ -16,9 +16,11 @@ import type { ChannelRepository } from "./persistence/channelRepository.js";
 import type { EmployeeRepository } from "./persistence/employeeRepository.js";
 import type { InvitationLinkRepository } from "./persistence/invitationLinkRepository.js";
 import type { MessageRepository } from "./persistence/messageRepository.js";
+import type { TokenUsageLogRepository } from "./persistence/tokenUsageLogRepository.js";
 import type { UserRepository } from "./persistence/userRepository.js";
 import { createAdminRouter } from "./routes/admin.js";
 import { createBatchLogsRouter } from "./routes/batch-logs.js";
+import { createTokenUsageRouter } from "./routes/token-usage.js";
 import { createAuthRouter } from "./routes/auth.js";
 import { createChannelsRouter } from "./routes/channels.js";
 import { createEmployeesRouter } from "./routes/employees.js";
@@ -93,6 +95,8 @@ export interface AppDeps {
   batchRunLogRepository: BatchRunLogRepository;
   /** 招待リンクの永続化（#131）。 */
   invitationLinkRepository: InvitationLinkRepository;
+  /** トークン使用量ログの永続化（#153）。 */
+  tokenUsageLogRepository: TokenUsageLogRepository;
   /** DDoS/過負荷対策の設定（#34）。省略時は既定値。 */
   security?: SecurityOptions;
   /**
@@ -176,6 +180,7 @@ export function createApp(deps: AppDeps): Express {
   );
   app.use("/api/employees", createEmployeesRouter(deps.employeeRepository));
   app.use("/api/admin/batch-logs", createBatchLogsRouter(deps.batchRunLogRepository));
+  app.use("/api/admin/token-usage", createTokenUsageRouter(deps.tokenUsageLogRepository));
   app.use("/api/admin", createAdminRouter(deps.appSettingRepository, deps.invitationLinkRepository));
   app.use(
     "/api/invitations",

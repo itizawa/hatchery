@@ -149,6 +149,20 @@ enum BatchRunLogStatus {
   failure
 }
 
+/// AI API トークン使用量ログ（#153）。定時バッチの AI 呼び出しごとに記録する。
+model TokenUsageLog {
+  id           String   @id @default(uuid(7))
+  occurredAt   DateTime @default(now())
+  /// 使用したモデル名（例: "claude-haiku-4-5"）。
+  model        String
+  inputTokens  Int
+  outputTokens Int
+  /// 紐づくバッチ実行ログ ID（任意）。
+  batchRunLogId String?
+
+  @@index([occurredAt])
+}
+
 /// 招待リンク（#131）。管理者が発行し、期限 + single-use で新規ユーザーを招待する。
 model InvitationLink {
   id              String    @id @default(uuid(7))

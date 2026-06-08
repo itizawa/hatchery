@@ -1,9 +1,25 @@
 import { Box, Typography } from "../components/uiParts";
 
-import { DEFAULT_EMPLOYEES } from "@hatchery/common";
 import type { ReactElement } from "react";
 
+import { useBotEmployees } from "../api/employees.js";
 import { OfficeView } from "../components/OfficeView.js";
+
+function OfficeContent(): ReactElement {
+  const { data: employees, isLoading, error } = useBotEmployees();
+  if (isLoading) return <Typography variant="body2">読み込み中...</Typography>;
+  if (error)
+    return (
+      <Typography variant="body2" color="error">
+        社員データの取得に失敗しました。
+      </Typography>
+    );
+  return (
+    <Box sx={{ mt: 2, overflowX: "auto" }}>
+      <OfficeView employees={employees ?? []} />
+    </Box>
+  );
+}
 
 export const OfficeScene = (): ReactElement => (
   <Box component="section" sx={{ p: 3 }}>
@@ -13,8 +29,6 @@ export const OfficeScene = (): ReactElement => (
     <Typography variant="body2" color="text.secondary" gutterBottom>
       AI 社員たちの様子を俯瞰で観察できます。キャラクターをクリックすると詳細が表示されます。
     </Typography>
-    <Box sx={{ mt: 2, overflowX: "auto" }}>
-      <OfficeView employees={DEFAULT_EMPLOYEES} />
-    </Box>
+    <OfficeContent />
   </Box>
 );

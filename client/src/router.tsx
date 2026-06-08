@@ -22,6 +22,7 @@ import { AuthLayout } from "./routes/AuthLayout";
 import { ChannelScene } from "./routes/ChannelScene";
 import { HomeScene } from "./routes/HomeScene";
 import { LoginScene } from "./routes/LoginScene";
+import { OfficeScene } from "./routes/OfficeScene";
 import { RootLayout } from "./routes/RootLayout";
 import { SettingsScene } from "./routes/SettingsScene";
 import { ChannelViewSkeleton } from "./components/ChannelViewSkeleton";
@@ -136,6 +137,14 @@ const accountRoute = createRoute({
   beforeLoad: requireAuth,
 });
 
+/** 仮想オフィス画面（/office）。未ログインまたはネットワークエラーの場合は /login へリダイレクト（#240）。 */
+const officeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/office",
+  component: OfficeScene,
+  beforeLoad: requireAuth,
+});
+
 /** 招待リンク受諾画面（/invite/:token）。公開ルート（requireAuth なし・AuthLayout）。 */
 const inviteRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -149,6 +158,7 @@ const routeTree = rootRoute.addChildren([
   loginRoute,
   adminRoute,
   accountRoute,
+  officeRoute,
   inviteRoute,
 ]);
 

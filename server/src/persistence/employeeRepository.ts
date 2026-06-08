@@ -13,6 +13,8 @@ export interface EmployeeRepository {
   update(id: string, input: UpdateEmployeeInput): Promise<EmployeeRecord | null>;
   /** 複数 id の Employee をまとめて取得する。存在しない id は除外する（#53・定時バッチの発言者解決）。 */
   listByIds(ids: string[]): Promise<EmployeeRecord[]>;
+  /** isBot=true の Employee を全件取得する（#240・仮想オフィス用）。 */
+  listBotEmployees(): Promise<EmployeeRecord[]>;
 }
 
 export class InMemoryEmployeeRepository implements EmployeeRepository {
@@ -41,5 +43,9 @@ export class InMemoryEmployeeRepository implements EmployeeRepository {
       .map((id) => this.employees.find((e) => e.id === id))
       .filter((e): e is EmployeeRecord => e !== undefined)
       .map((e) => ({ ...e }));
+  }
+
+  async listBotEmployees(): Promise<EmployeeRecord[]> {
+    return this.employees.filter((e) => e.isBot).map((e) => ({ ...e }));
   }
 }

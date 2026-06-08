@@ -149,6 +149,18 @@ const UpdateEmployeeComponent = registry.register(
 const employeePathIdParam = z.string().openapi({ param: { name: "id", in: "path" } });
 
 registry.registerPath({
+  method: "get",
+  path: "/api/employees",
+  summary: "Bot Employee 一覧を取得（認証不要・#240）",
+  responses: {
+    200: {
+      description: "isBot=true の Employee 一覧",
+      content: { "application/json": { schema: z.array(EmployeeComponent) } },
+    },
+  },
+});
+
+registry.registerPath({
   method: "patch",
   path: "/api/employees/{id}",
   summary: "自分の Employee を更新（認証必須・本人のみ）",

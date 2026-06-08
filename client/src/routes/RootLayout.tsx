@@ -2,19 +2,13 @@ import { Box, Link, Typography } from "../components/uiParts";
 
 import { isAdmin } from "@hatchery/common";
 import { Link as RouterLink, Outlet } from "@tanstack/react-router";
-import { Suspense, type ReactElement } from "react";
+import type { ReactElement } from "react";
 
 import { useAuth } from "../api/auth.js";
-import { AddChannelForm } from "../components/AddChannelForm";
-import { ChannelList } from "../components/ChannelList";
-import { ChannelListSkeleton } from "../components/ChannelListSkeleton";
+import { SidebarChannelSection } from "../components/SidebarChannelSection";
 import { UserFooter } from "../components/UserFooter";
 import { SLACK_COLORS } from "../theme.js";
 
-/**
- * Slack 風シェル。左サイドバー（ワークスペース名 + チャンネル一覧）と
- * メイン領域（ルートの Outlet）で構成する。
- */
 export const RootLayout = (): ReactElement => {
   const { data: user } = useAuth();
 
@@ -37,10 +31,7 @@ export const RootLayout = (): ReactElement => {
         <Typography variant="h6" component="p" gutterBottom sx={{ color: SLACK_COLORS.sidebarText }}>
           Hatchery
         </Typography>
-        <Suspense fallback={<ChannelListSkeleton />}>
-          <ChannelList />
-        </Suspense>
-        <AddChannelForm />
+        <SidebarChannelSection />
         <Box sx={{ mt: 2 }}>
           <Link component={RouterLink} to="/office" sx={{ color: SLACK_COLORS.sidebarText }} underline="hover">
             仮想オフィス

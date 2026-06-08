@@ -1,5 +1,4 @@
 export { default as Alert } from "@mui/material/Alert";
-export { default as AppBar } from "@mui/material/AppBar";
 export { default as Avatar } from "@mui/material/Avatar";
 export { default as Box } from "@mui/material/Box";
 export { default as Drawer } from "@mui/material/Drawer";

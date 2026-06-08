@@ -143,6 +143,23 @@ describe("RootLayout レスポンシブ対応 (#190)", () => {
       // ドロワーが開くとサイドバー nav が表示される
       expect(await screen.findByRole("navigation", { name: "サイドバー" })).toBeInTheDocument();
     });
+
+    it("チャンネルを選択するとドロワーが閉じる（ナビゲーション後の自動クローズ）", async () => {
+      stubFetch(true);
+      renderWithRouter("/");
+
+      // ドロワーを開く
+      const hamburger = await screen.findByRole("button", { name: /メニューを開く/ });
+      await userEvent.click(hamburger);
+
+      // サイドバーが表示されるのを待ってからチャンネルをクリック
+      const channelLink = await screen.findByRole("link", { name: /雑談/ });
+      await userEvent.click(channelLink);
+
+      // ナビゲーション後にドロワーが閉じる（nav が非表示になる）
+      await screen.findByRole("button", { name: /メニューを開く/ });
+      expect(screen.queryByRole("navigation", { name: "サイドバー" })).not.toBeInTheDocument();
+    });
   });
 
   describe("デスクトップ幅（md 以上）", () => {

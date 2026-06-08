@@ -1,28 +1,16 @@
 import { createApp } from "./app.js";
 import { loadEnv } from "./config/env.js";
-import { PrismaAppSettingRepository } from "./persistence/prismaAppSettingRepository.js";
-import { PrismaChannelMembershipRepository } from "./persistence/prismaChannelMembershipRepository.js";
-import { PrismaChannelRepository } from "./persistence/prismaChannelRepository.js";
+import { createPrismaDeps } from "./composition/createPrismaDeps.js";
 import { prisma } from "./persistence/prismaClient.js";
-import { PrismaEmployeeRepository } from "./persistence/prismaEmployeeRepository.js";
-import { PrismaMessageRepository } from "./persistence/prismaMessageRepository.js";
-import { PrismaUserRepository } from "./persistence/prismaUserRepository.js";
-import { PrismaInvitationLinkRepository } from "./persistence/prismaInvitationLinkRepository.js";
 import { createPgSessionStore } from "./persistence/pgSessionStore.js";
 
-/** API プロセスの起動エントリ。createApp に Prisma 実装を注入して listen する。 */
+/** API プロセスの起動エントリ。createPrismaDeps で Prisma 実装を生成し createApp に注入して listen する（Issue #137）。 */
 const env = loadEnv();
 
 const sessionStore = env.databaseUrl ? createPgSessionStore(env.databaseUrl) : undefined;
 
 const app = createApp({
-  messageRepository: new PrismaMessageRepository(prisma),
-  userRepository: new PrismaUserRepository(prisma),
-  channelMembershipRepository: new PrismaChannelMembershipRepository(prisma),
-  channelRepository: new PrismaChannelRepository(prisma),
-  employeeRepository: new PrismaEmployeeRepository(prisma),
-  appSettingRepository: new PrismaAppSettingRepository(prisma),
-  invitationLinkRepository: new PrismaInvitationLinkRepository(prisma),
+  ...createPrismaDeps(prisma),
   sessionStore,
   security: {
     rateLimitWindowMs: env.rateLimitWindowMs,

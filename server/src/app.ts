@@ -9,32 +9,14 @@ import { createRateLimiter } from "./middleware/rateLimiter.js";
 import { createRequestLogger } from "./middleware/requestLogger.js";
 import { createJsonBodyParser, createRequestTimeout } from "./middleware/requestLimits.js";
 import { createSecureHeaders } from "./middleware/secureHeaders.js";
-import {
-  InMemoryChannelMembershipRepository,
-  type ChannelMembershipRepository,
-} from "./persistence/channelMembershipRepository.js";
-import {
-  InMemoryChannelRepository,
-  type ChannelRepository,
-} from "./persistence/channelRepository.js";
-import {
-  InMemoryEmployeeRepository,
-  type EmployeeRepository,
-} from "./persistence/employeeRepository.js";
+import type { AppSettingRepository } from "./persistence/appSettingRepository.js";
+import type { BatchRunLogRepository } from "./persistence/batchRunLogRepository.js";
+import type { ChannelMembershipRepository } from "./persistence/channelMembershipRepository.js";
+import type { ChannelRepository } from "./persistence/channelRepository.js";
+import type { EmployeeRepository } from "./persistence/employeeRepository.js";
+import type { InvitationLinkRepository } from "./persistence/invitationLinkRepository.js";
 import type { MessageRepository } from "./persistence/messageRepository.js";
-import { InMemoryUserRepository, type UserRepository } from "./persistence/userRepository.js";
-import {
-  InMemoryAppSettingRepository,
-  type AppSettingRepository,
-} from "./persistence/appSettingRepository.js";
-import {
-  InMemoryBatchRunLogRepository,
-  type BatchRunLogRepository,
-} from "./persistence/batchRunLogRepository.js";
-import {
-  InMemoryInvitationLinkRepository,
-  type InvitationLinkRepository,
-} from "./persistence/invitationLinkRepository.js";
+import type { UserRepository } from "./persistence/userRepository.js";
 import { createAdminRouter } from "./routes/admin.js";
 import { createBatchLogsRouter } from "./routes/batch-logs.js";
 import { createAuthRouter } from "./routes/auth.js";
@@ -90,23 +72,27 @@ export function buildSessionCookieOptions(crossSiteCookie: boolean) {
   };
 }
 
-/** createApp の依存（永続化は注入する＝Express/Prisma からドメインを独立させる）。 */
+/**
+ * createApp の依存（永続化は注入する＝Express/Prisma からドメインを独立させる）。
+ * すべてのリポジトリが必須（Issue #137）。InMemory フォールバックは撤去済み。
+ * テスト用合成は server/src/testing/createTestDeps.ts、
+ * 本番用合成は server/src/composition/createPrismaDeps.ts を使う。
+ */
 export interface AppDeps {
   messageRepository: MessageRepository;
-  /** 省略時はテスト用の空リポジトリを使用。本番では PrismaUserRepository を渡す。 */
-  userRepository?: UserRepository;
-  /** チャンネル所属（多対多）の永続化。省略時はインメモリ（#33）。 */
-  channelMembershipRepository?: ChannelMembershipRepository;
-  /** チャンネル CRUD の永続化。省略時はインメモリ（#37）。 */
-  channelRepository?: ChannelRepository;
-  /** Employee CRUD の永続化。省略時はインメモリ（#38）。 */
-  employeeRepository?: EmployeeRepository;
-  /** アプリ設定（API キー等）の永続化。省略時はインメモリ（#52）。 */
-  appSettingRepository?: AppSettingRepository;
-  /** バッチ実行ログの永続化。省略時はインメモリ（#75）。 */
-  batchRunLogRepository?: BatchRunLogRepository;
-  /** 招待リンクの永続化。省略時はインメモリ（#131）。 */
-  invitationLinkRepository?: InvitationLinkRepository;
+  userRepository: UserRepository;
+  /** チャンネル所属（多対多）の永続化（#33）。 */
+  channelMembershipRepository: ChannelMembershipRepository;
+  /** チャンネル CRUD の永続化（#37）。 */
+  channelRepository: ChannelRepository;
+  /** Employee CRUD の永続化（#38）。 */
+  employeeRepository: EmployeeRepository;
+  /** アプリ設定（API キー等）の永続化（#52）。 */
+  appSettingRepository: AppSettingRepository;
+  /** バッチ実行ログの永続化（#75）。 */
+  batchRunLogRepository: BatchRunLogRepository;
+  /** 招待リンクの永続化（#131）。 */
+  invitationLinkRepository: InvitationLinkRepository;
   /** DDoS/過負荷対策の設定（#34）。省略時は既定値。 */
   security?: SecurityOptions;
   /**
@@ -120,20 +106,11 @@ export interface AppDeps {
 /**
  * Express アプリを生成する（listen はしない＝supertest でテスト可能）。
  * 層分離: routes → usecases → persistence(IF)。ドメイン型は common。
+ * 純粋ファクトリ（Issue #137）: 受け取った依存をそのまま配線するだけ。
+ * どの実装を使うかの決定は呼び出し側（composition root）に委ねる。
  */
 export function createApp(deps: AppDeps): Express {
   const app = express();
-  const userRepository = deps.userRepository ?? new InMemoryUserRepository();
-  const channelMembershipRepository =
-    deps.channelMembershipRepository ?? new InMemoryChannelMembershipRepository();
-  const channelRepository = deps.channelRepository ?? new InMemoryChannelRepository();
-  const employeeRepository = deps.employeeRepository ?? new InMemoryEmployeeRepository();
-  const appSettingRepository = deps.appSettingRepository ?? new InMemoryAppSettingRepository();
-  const batchRunLogRepository =
-    deps.batchRunLogRepository ?? new InMemoryBatchRunLogRepository();
-  const invitationLinkRepository =
-    deps.invitationLinkRepository ?? new InMemoryInvitationLinkRepository();
-
   const security = { ...DEFAULT_SECURITY, ...deps.security };
 
   const sessionSecret = process.env.SESSION_SECRET;
@@ -178,24 +155,32 @@ export function createApp(deps: AppDeps): Express {
     }),
   );
 
-  const passportInstance = createPassport(userRepository);
+  const passportInstance = createPassport(deps.userRepository);
   app.use(passportInstance.initialize());
   app.use(passportInstance.session());
 
   app.use("/health", healthRouter);
-  app.use("/api/auth", createAuthRouter(passportInstance, userRepository));
+  app.use("/api/auth", createAuthRouter(passportInstance, deps.userRepository));
   app.use("/api/messages", createMessagesRouter(deps.messageRepository));
   app.use(
     "/api/channels",
-    createChannelsRouter(channelMembershipRepository, channelRepository, deps.messageRepository, {
-      employeeRepo: employeeRepository,
-      appSettingRepo: appSettingRepository,
-    }),
+    createChannelsRouter(
+      deps.channelMembershipRepository,
+      deps.channelRepository,
+      deps.messageRepository,
+      {
+        employeeRepo: deps.employeeRepository,
+        appSettingRepo: deps.appSettingRepository,
+      },
+    ),
   );
-  app.use("/api/employees", createEmployeesRouter(employeeRepository));
-  app.use("/api/admin/batch-logs", createBatchLogsRouter(batchRunLogRepository));
-  app.use("/api/admin", createAdminRouter(appSettingRepository, invitationLinkRepository));
-  app.use("/api/invitations", createInvitationsRouter(invitationLinkRepository, userRepository));
+  app.use("/api/employees", createEmployeesRouter(deps.employeeRepository));
+  app.use("/api/admin/batch-logs", createBatchLogsRouter(deps.batchRunLogRepository));
+  app.use("/api/admin", createAdminRouter(deps.appSettingRepository, deps.invitationLinkRepository));
+  app.use(
+    "/api/invitations",
+    createInvitationsRouter(deps.invitationLinkRepository, deps.userRepository),
+  );
   app.use("/api/channels", createPlanningIssuesRouter(deps.messageRepository));
   app.use(errorHandler);
   return app;

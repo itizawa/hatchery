@@ -96,10 +96,14 @@ common: Zod スキーマ → server: zod-to-openapi で openapi.json 生成 → 
 上限値は表示・DB・UX を考慮して各フィールドごとに決める（例: チャンネル名 50 文字）。
 `.max()` が無い `z.string()` は不正データ・表示崩れ・DB 負荷の原因になるため、レビューで指摘対象とする。
 
-**編集フォームは初期値から変化がない場合 Submit 不可**（#179）。
-`client/src/utils/formDirty.ts` の `isShallowDirty(initial, current)` を使って dirty 判定を行い、変化がないとき保存ボタンを `disabled` にする。
-新規作成フォーム（空チェックで足りる）・初期値の概念がないフォームは対象外。
-dirty 判定なしの編集フォームはレビュー指摘対象とする。
+## フォーム規約
+
+**フォームの状態管理は `@tanstack/react-form`（`useForm` / `form.Field`）を使うこと**（#262）。
+
+- `useState` によるフォームフィールドの自前管理・自前 `isDirty` 実装は禁止。
+- バリデーション・ダーティ検知・送信ハンドリングはすべて `useForm` に委ねる。
+- 参照実装: `client/src/routes/LoginScene.tsx`（`useForm` + `form.Field` + MUI `TextField` の連携例）。
+- 違反（生の `useState` によるフォーム管理・自前 isDirty 等）はレビューで指摘対象とする。
 
 ## ADR の追加・更新
 

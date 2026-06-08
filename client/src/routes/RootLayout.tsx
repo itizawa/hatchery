@@ -13,7 +13,6 @@ import { SLACK_COLORS } from "../theme.js";
 
 /**
  * グローバルヘッダー（AppHeader）＋左サイドバー（チャンネル一覧）＋メイン領域で構成するシェル。
- * アカウントメニューは AppHeader 右上に移動済み（#243）。
  */
 export const RootLayout = (): ReactElement => {
   const { data: user } = useAuth();

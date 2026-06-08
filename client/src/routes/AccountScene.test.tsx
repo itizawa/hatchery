@@ -78,7 +78,6 @@ describe("アカウント設定画面（#50）", () => {
     stubFetch(false);
     renderApp("/");
 
-    // UserFooter は user が null/undefined のとき null を返すためトリガーもメニューも表示されない。
     await waitFor(() => {
       expect(screen.queryByRole("button", { name: /ユーザーメニュー/ })).not.toBeInTheDocument();
     });

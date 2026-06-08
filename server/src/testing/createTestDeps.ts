@@ -23,7 +23,9 @@ export type TestDepsOverrides = Partial<AppDeps>;
  * testuser / testpass のテストユーザーを含む。
  */
 export async function createTestDeps(overrides?: TestDepsOverrides): Promise<AppDeps> {
-  const defaultUserRepo = await InMemoryUserRepository.createWithTestUser();
+  // overrides に userRepository が指定されている場合は bcrypt 計算をスキップする（効率化）。
+  const defaultUserRepo =
+    overrides?.userRepository ?? (await InMemoryUserRepository.createWithTestUser());
   return {
     messageRepository: new InMemoryMessageRepository(),
     userRepository: defaultUserRepo,

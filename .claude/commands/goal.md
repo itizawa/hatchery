@@ -1,5 +1,5 @@
 ---
-description: マイルストーン内の全 df:todo Issue を Workflow pipeline() で順次消化する。引数でマイルストーン名（例: v1.0.0）を受け取り、対象の df:todo Issue を優先度順に 1 件ずつサブエージェントに委譲して処理済み / blocked / スキップのサマリを出力する。
+description: マイルストーン内の全 Issue を Workflow pipeline() で順次消化する。引数でマイルストーン名（例: v1.0.0）を受け取り、対象の Issue を優先度順に 1 件ずつサブエージェントに委譲して処理済み / blocked / スキップのサマリを出力する。
 argument-hint: "<milestone_title> (例: v1.0.0)"
 allowed-tools: Bash(gh issue list:*), Bash(gh issue view:*), Bash(gh issue edit:*), Bash(gh issue close:*), Bash(gh issue comment:*), Bash(gh pr list:*), Bash(gh pr view:*), Bash(gh repo view:*), Bash(gh api:*), Bash(git status:*), Bash(git worktree:*), Bash(git fetch:*), Bash(echo:*), Bash(cat:*), Bash(ls:*), Bash(pwd), Read, Agent
 ---
@@ -7,7 +7,7 @@ allowed-tools: Bash(gh issue list:*), Bash(gh issue view:*), Bash(gh issue edit:
 # /goal — マイルストーン全 Issue 消化
 
 あなたはこのリポジトリ（ai-workspace）の **Dark Factory ゴールランナー** です。
-マイルストーン名を引数に受け取り、対象の `df:todo` Issue を **全件順次消化**します。
+マイルストーン名を引数に受け取り、対象マイルストーンの **全 open Issue を順次消化**します（フェーズ A: 実装→PR、フェーズ B: レビュー→マージ、どちらも処理します）。
 
 - 引数 `$ARGUMENTS` にマイルストーン名（例: `v1.0.0`）を指定する。
 - **対象マイルストーン外の Issue は処理しない。** `milestone/<引数>` ラベルが付いていない Issue は無視する。
@@ -43,13 +43,16 @@ allowed-tools: Bash(gh issue list:*), Bash(gh issue view:*), Bash(gh issue edit:
 ## STEP 0 — 対象 Issue の一覧取得
 
 1. 指定されたマイルストーン名を確認する（引数なしなら停止してユーザーに問い返す）。
-2. `gh issue list` で `milestone/<引数>` ラベルが付いた `df:todo` の open Issue を取得する:
+2. `gh issue list` で `milestone/<引数>` ラベルが付いた open Issue を取得する（`df:todo` ラベルの有無は問わない）:
    ```
-   gh issue list --state open --label "df:todo" --label "milestone/<引数>" \
+   gh issue list --state open --label "milestone/<引数>" \
      --limit 100 --json number,title,labels,createdAt \
      -q 'sort_by(.createdAt)[] | "\(.number)\t\(.title)\t[\([.labels[].name] | join(","))]"'
    ```
 3. **対象マイルストーン外の Issue は処理しない。** `milestone/<引数>` ラベルが付いていない Issue は一覧から除外する。
+   各 Issue について `gh pr list --head feature/issue-<N> --state open` でフェーズを判定する:
+   - **フェーズ A**（PR なし）: 実装 → 実装 PR 作成 → フェーズ B へ続ける
+   - **フェーズ B**（develop ベース open PR あり）: セルフレビュー → develop マージ → Issue クローズ
 4. 優先度順にソートする（`priority/critical` > `priority/high` > `priority/medium` = 未設定 > `priority/low`、同優先度は `createdAt` 古い順 FIFO）。
 
 ---
@@ -127,7 +130,7 @@ pipeline([
 ```
 引数チェック → 無ければ停止してユーザーに問い返す
    ↓
-gh issue list で milestone/<引数> + df:todo + open を取得
+gh issue list で milestone/<引数> + open を取得（df:todo ラベルは不要、milestone ラベルのみでフィルタ）
    ↓
 対象マイルストーン外の Issue を除外（milestone/<引数> ラベル未設定は処理しない）
    ↓

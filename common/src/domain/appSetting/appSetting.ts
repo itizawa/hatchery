@@ -6,7 +6,7 @@ export const APP_SETTING_VALUE_MAX_LENGTH = 1000;
 /** アプリ設定のキーバリューエントリ（DB の AppSetting モデルに対応）。 */
 export const AppSettingSchema = z.object({
   key: z.string().min(1).max(APP_SETTING_KEY_MAX_LENGTH),
-  value: z.string().max(APP_SETTING_VALUE_MAX_LENGTH),
+  value: z.string(),
   updatedAt: z.date(),
 });
 

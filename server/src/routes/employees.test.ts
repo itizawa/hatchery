@@ -145,3 +145,35 @@ describe("PATCH /api/employees/:id（Employee 更新 / #38）", () => {
     });
   });
 });
+
+describe("GET /api/employees（Bot Employee 一覧 / #240）", () => {
+  it("認証不要で 200 を返す", async () => {
+    const { app } = await buildApp(
+      new InMemoryEmployeeRepository([
+        { id: "bot1", displayName: "Bot", role: "役職", isBot: true, personality: null },
+      ]),
+    );
+    const res = await request(app).get("/api/employees");
+    expect(res.status).toBe(200);
+  });
+
+  it("isBot=true の Employee のみを配列で返す", async () => {
+    const { app } = await buildApp(
+      new InMemoryEmployeeRepository([
+        { id: "bot1", displayName: "BotA", role: null, isBot: true, personality: null },
+        { id: "user1", displayName: "UserB", role: null, isBot: false, personality: null },
+      ]),
+    );
+    const res = await request(app).get("/api/employees");
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body.map((e: { id: string }) => e.id)).toEqual(["bot1"]);
+  });
+
+  it("Bot が存在しない場合は空配列を返す", async () => {
+    const { app } = await buildApp(new InMemoryEmployeeRepository([]));
+    const res = await request(app).get("/api/employees");
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([]);
+  });
+});

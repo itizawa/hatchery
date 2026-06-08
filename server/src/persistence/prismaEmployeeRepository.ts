@@ -62,4 +62,15 @@ export class PrismaEmployeeRepository implements EmployeeRepository {
         personality: row.personality,
       }));
   }
+
+  async listBotEmployees(): Promise<EmployeeRecord[]> {
+    const rows = await this.prisma.employee.findMany({ where: { isBot: true } });
+    return rows.map((row) => ({
+      id: row.id,
+      displayName: row.displayName,
+      role: row.role,
+      isBot: row.isBot,
+      personality: row.personality,
+    }));
+  }
 }

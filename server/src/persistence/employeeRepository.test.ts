@@ -69,4 +69,34 @@ describe("InMemoryEmployeeRepository (#38)", () => {
       expect(await repo.listByIds([])).toEqual([]);
     });
   });
+
+  describe("listBotEmployees (#240)", () => {
+    it("isBot=true の Employee のみを返す", async () => {
+      const repo = new InMemoryEmployeeRepository([
+        { id: "bot1", displayName: "Bot", role: null, isBot: true, personality: null },
+        { id: "user1", displayName: "User", role: null, isBot: false, personality: null },
+      ]);
+      const list = await repo.listBotEmployees();
+      expect(list.map((e) => e.id)).toEqual(["bot1"]);
+    });
+
+    it("Bot でない Employee は含まれない", async () => {
+      const repo = new InMemoryEmployeeRepository([
+        { id: "user1", displayName: "User", role: null, isBot: false, personality: null },
+      ]);
+      const list = await repo.listBotEmployees();
+      expect(list).toHaveLength(0);
+    });
+
+    it("Bot が存在しない場合は空配列を返す", async () => {
+      const repo = new InMemoryEmployeeRepository([]);
+      expect(await repo.listBotEmployees()).toEqual([]);
+    });
+
+    it("seed（全員 isBot=true）なら全員返す", async () => {
+      const repo = new InMemoryEmployeeRepository(seed);
+      const list = await repo.listBotEmployees();
+      expect(list.map((e) => e.id)).toEqual(["haru", "ken"]);
+    });
+  });
 });

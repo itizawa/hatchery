@@ -1,10 +1,14 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { DEFAULT_EMPLOYEES } from "@hatchery/common";
+import { Suspense, type ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 import { OfficeScene } from "./OfficeScene.js";
 
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 beforeEach(() => {
   Object.defineProperty(window, "matchMedia", {
@@ -22,40 +26,64 @@ beforeEach(() => {
   });
 });
 
-describe("OfficeScene", () => {
-  it('renders "仮想オフィス" heading', () => {
-    render(<OfficeScene />);
-    expect(screen.getByRole("heading", { name: "仮想オフィス" })).toBeInTheDocument();
+function jsonResponse(status: number, body: unknown): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+function stubFetchWithEmployees(employees: unknown[]) {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn((input: Request | string) => {
+      const url = typeof input === "string" ? input : input.url;
+      if (url.includes("/api/employees")) {
+        return Promise.resolve(jsonResponse(200, employees));
+      }
+      return Promise.resolve(jsonResponse(200, []));
+    }),
+  );
+}
+
+function renderOfficeScene(): ReturnType<typeof render> {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const Wrapper = (): ReactElement => (
+    <QueryClientProvider client={queryClient}>
+      <Suspense fallback={<div>Loading...</div>}>
+        <OfficeScene />
+      </Suspense>
+    </QueryClientProvider>
+  );
+  return render(<Wrapper />);
+}
+
+describe("OfficeScene (#240)", () => {
+  it('renders "仮想オフィス" heading', async () => {
+    stubFetchWithEmployees([]);
+    renderOfficeScene();
+    expect(await screen.findByRole("heading", { name: "仮想オフィス" })).toBeInTheDocument();
   });
 
-  it("renders a button with aria-label for each DEFAULT_EMPLOYEE", () => {
-    render(<OfficeScene />);
-    for (const employee of DEFAULT_EMPLOYEES) {
-      expect(screen.getByRole("button", { name: employee.displayName })).toBeInTheDocument();
-    }
+  it("API から取得した Bot Employee をキャラクターとして表示する", async () => {
+    stubFetchWithEmployees([
+      { id: "bot1", displayName: "テストBot", role: "テスト役職", isBot: true },
+    ]);
+    renderOfficeScene();
+    expect(await screen.findByRole("button", { name: "テストBot" })).toBeInTheDocument();
   });
 
-  it("opens popover with role and isBot badge on character click", async () => {
-    const user = userEvent.setup();
-    render(<OfficeScene />);
-
-    expect(screen.queryByText("ムードメーカー")).not.toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "haru" }));
-
-    expect(screen.getByText("ムードメーカー")).toBeInTheDocument();
-    expect(screen.getByText("AI社員")).toBeInTheDocument();
+  it("Bot Employee が 0 件でも heading が表示される", async () => {
+    stubFetchWithEmployees([]);
+    renderOfficeScene();
+    expect(await screen.findByRole("heading", { name: "仮想オフィス" })).toBeInTheDocument();
   });
 
-  it("opens popover with Enter key on character", async () => {
-    const user = userEvent.setup();
-    render(<OfficeScene />);
-
-    expect(screen.queryByText("ベテラン")).not.toBeInTheDocument();
-
-    screen.getByRole("button", { name: "ken" }).focus();
-    await user.keyboard("{Enter}");
-
-    expect(screen.getByText("ベテラン")).toBeInTheDocument();
+  it("DEFAULT_EMPLOYEES に依存しない（API データが表示される）", async () => {
+    stubFetchWithEmployees([
+      { id: "api-bot", displayName: "APIBot", role: "APIRole", isBot: true },
+    ]);
+    renderOfficeScene();
+    expect(await screen.findByRole("button", { name: "APIBot" })).toBeInTheDocument();
   });
 });

@@ -55,7 +55,7 @@ export const LoginScene = (): ReactElement => {
           <TextField
             label="ID"
             id="login-id"
-            inputProps={{ "aria-label": "ID", maxLength: LOGIN_ID_MAX_LENGTH }}
+            inputProps={{ "aria-label": "ID", maxLength: LOGIN_ID_MAX_LENGTH, autoComplete: "username" }}
             value={field.state.value}
             onChange={(e) => field.handleChange(e.target.value)}
             onBlur={field.handleBlur}
@@ -76,7 +76,7 @@ export const LoginScene = (): ReactElement => {
           <TextField
             label="パスワード"
             id="login-password"
-            inputProps={{ "aria-label": "パスワード", maxLength: PASSWORD_MAX_LENGTH }}
+            inputProps={{ "aria-label": "パスワード", maxLength: PASSWORD_MAX_LENGTH, autoComplete: "current-password" }}
             type="password"
             value={field.state.value}
             onChange={(e) => field.handleChange(e.target.value)}

@@ -49,7 +49,7 @@ const ApiTokenSettings = (): ReactElement => {
         placeholder="sk-ant-api03-..."
         fullWidth
         size="small"
-        inputProps={{ maxLength: APP_SETTING_VALUE_MAX_LENGTH }}
+        inputProps={{ maxLength: APP_SETTING_VALUE_MAX_LENGTH, autoComplete: "off" }}
       />
       <Button
         variant="contained"

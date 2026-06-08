@@ -1,4 +1,5 @@
-import { Avatar, Box, ButtonBase, Link, Menu, MenuItem, Typography } from "./uiParts";
+import MenuIcon from "@mui/icons-material/Menu";
+import { Avatar, Box, ButtonBase, IconButton, Link, Menu, MenuItem, Typography } from "./uiParts";
 
 import { Link as RouterLink, useNavigate } from "@tanstack/react-router";
 import { type ReactElement, useState } from "react";
@@ -6,7 +7,12 @@ import { type ReactElement, useState } from "react";
 import { useAuth, useLogout } from "../api/auth.js";
 import { SLACK_COLORS } from "../theme.js";
 
-export const AppHeader = (): ReactElement => {
+export interface AppHeaderProps {
+  /** モバイル幅でサイドバードロワーを開くコールバック。未指定の場合はハンバーガーボタンを表示しない。 */
+  onMenuOpen?: () => void;
+}
+
+export const AppHeader = ({ onMenuOpen }: AppHeaderProps): ReactElement => {
   const { data: user } = useAuth();
   const { mutate: logout } = useLogout();
   const navigate = useNavigate();
@@ -39,6 +45,15 @@ export const AppHeader = (): ReactElement => {
         boxShadow: 1,
       }}
     >
+      {onMenuOpen && (
+        <IconButton
+          aria-label="メニューを開く"
+          onClick={onMenuOpen}
+          sx={{ color: SLACK_COLORS.sidebarText, mr: 1 }}
+        >
+          <MenuIcon />
+        </IconButton>
+      )}
       <Link
         component={RouterLink}
         to="/"

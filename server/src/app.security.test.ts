@@ -63,7 +63,7 @@ describe("buildSessionCookieOptions（別ドメイン配信のクロスサイト
   });
 });
 
-describe("createApp のセキュリティ防御", () => {
+describe("createApp のセキュリティ防衛", () => {
   it("レート制限の上限を超えたリクエストに 429 を返す（/health にグローバル適用）", async () => {
     const app = createApp({
       messageRepository: new InMemoryMessageRepository(),
@@ -82,7 +82,7 @@ describe("createApp のセキュリティ防御", () => {
       messageRepository: new InMemoryMessageRepository(),
       security: { bodyLimit: "1kb" },
     });
-    const big = [{ speaker: "e1", channel: "shigoto", text: "x".repeat(4000) }];
+    const big = [{ createdEmployeeId: "e1", channel: "shigoto", text: "x".repeat(4000) }];
     const res = await request(app).post("/api/messages").send(big);
     expect(res.status).toBe(413);
     expect(res.body.error).toBe("PayloadTooLarge");

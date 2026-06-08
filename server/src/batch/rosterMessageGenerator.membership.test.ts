@@ -22,8 +22,8 @@ describe("createRosterMessageGenerator — 所属 Employee のみ発言（#33）
       },
     });
     const messages = generate();
-    const zatsudan = messages.filter((m) => m.channel === "zatsudan").map((m) => m.speaker);
-    const shigoto = messages.filter((m) => m.channel === "shigoto").map((m) => m.speaker);
+    const zatsudan = messages.filter((m) => m.channel === "zatsudan").map((m) => m.createdEmployeeId);
+    const shigoto = messages.filter((m) => m.channel === "shigoto").map((m) => m.createdEmployeeId);
     expect(new Set(zatsudan)).toEqual(new Set(["haru"]));
     expect(new Set(shigoto)).toEqual(new Set(["ken", "mei"]));
   });

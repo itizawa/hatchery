@@ -18,9 +18,9 @@ const bots: EmployeeRecord[] = [
 ];
 
 const conversationJson = JSON.stringify([
-  { speaker: "haru", text: "やあ" },
-  { speaker: "ken", text: "よろしく" },
-  { speaker: "user1", text: "（人間は喋らないはず）" },
+  { createdEmployeeId: "haru", text: "やあ" },
+  { createdEmployeeId: "ken", text: "よろしく" },
+  { createdEmployeeId: "user1", text: "（人間は喘らないはず）" },
 ]);
 
 describe("runAiMessageBatch (#53)", () => {
@@ -62,7 +62,7 @@ describe("runAiMessageBatch (#53)", () => {
     expect(generate).toHaveBeenCalledTimes(1);
     // user1（非 bot）は除外され 2 件だけ保存
     expect(saved).toHaveLength(2);
-    expect(saved.map((m) => m.speaker)).toEqual(["haru", "ken"]);
+    expect(saved.map((m) => m.createdEmployeeId)).toEqual(["haru", "ken"]);
     // バッチ生成メッセージは postedAt が未来時刻（#183: 予約表示）
     const now = Date.now();
     expect(saved[0].postedAt.getTime()).toBeGreaterThan(now);
@@ -83,8 +83,8 @@ describe("runAiMessageBatch (#53)", () => {
 
   it("あるチャンネルの生成が失敗してもリトライせず次チャンネルを継続する", async () => {
     const deps = buildDeps([
-      { id: "z1", label: "雑談1", type: "zatsudan" },
-      { id: "z2", label: "雑談2", type: "zatsudan" },
+      { id: "z1", label: "雑談１", type: "zatsudan" },
+      { id: "z2", label: "雑談２", type: "zatsudan" },
     ]);
     await deps.membershipRepo.addMember("z1", "haru");
     await deps.membershipRepo.addMember("z2", "haru");
@@ -93,7 +93,7 @@ describe("runAiMessageBatch (#53)", () => {
     const generate = vi.fn().mockImplementation(() => {
       call += 1;
       if (call === 1) return Promise.reject(new Error("api error"));
-      return Promise.resolve(JSON.stringify([{ speaker: "haru", text: "ok" }]));
+      return Promise.resolve(JSON.stringify([{ createdEmployeeId: "haru", text: "ok" }]));
     });
 
     const saved = await runAiMessageBatch({ ...deps, generate });

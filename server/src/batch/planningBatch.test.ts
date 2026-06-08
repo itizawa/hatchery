@@ -76,7 +76,7 @@ describe("runPlanningBatch (#76)", () => {
     });
 
     expect(result).toHaveLength(1);
-    expect(result[0].speaker).toBe("ai-planner");
+    expect(result[0].createdEmployeeId).toBe("ai-planner");
     expect(result[0].proposalTitle).toBe("ログインボタンの色を改善する");
     expect(result[0].proposalTargetUrl).toBe("/login");
   });

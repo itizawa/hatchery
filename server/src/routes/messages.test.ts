@@ -5,7 +5,7 @@ import { createApp } from "../app.js";
 import { InMemoryMessageRepository } from "../persistence/messageRepository.js";
 
 const validMessages = [
-  { speaker: "e1", channel: "shigoto", text: "今日のタスク確認します" },
+  { createdEmployeeId: "e1", channel: "shigoto", text: "今日のタスク確認します" },
 ];
 
 describe("/api/messages", () => {
@@ -16,7 +16,7 @@ describe("/api/messages", () => {
     expect(Array.isArray(res.body)).toBe(true);
     expect(res.body).toHaveLength(1);
     expect(res.body[0].id).toBeTruthy();
-    expect(res.body[0].speaker).toBe("e1");
+    expect(res.body[0].createdEmployeeId).toBe("e1");
   });
 
   it("POST /api/messages は空配列を 400 で拒否する", async () => {
@@ -29,7 +29,7 @@ describe("/api/messages", () => {
     const app = createApp({ messageRepository: new InMemoryMessageRepository() });
     const res = await request(app)
       .post("/api/messages")
-      .send([{ speaker: "", channel: "zatsudan", text: "x" }]);
+      .send([{ createdEmployeeId: "", channel: "zatsudan", text: "x" }]);
     expect(res.status).toBe(400);
   });
 
@@ -40,6 +40,6 @@ describe("/api/messages", () => {
     const res = await request(app).get("/api/messages");
     expect(res.status).toBe(200);
     expect(res.body).toHaveLength(1);
-    expect(res.body[0].speaker).toBe("e1");
+    expect(res.body[0].createdEmployeeId).toBe("e1");
   });
 });

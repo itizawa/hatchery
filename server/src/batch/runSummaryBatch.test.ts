@@ -34,7 +34,7 @@ describe("runSummaryBatch (#53)", () => {
       { id: "zatsudan", label: "雑談", type: "zatsudan" },
       { id: "shigoto", label: "仕事", type: "task" },
     ]);
-    await deps.messageRepo.createMany([{ speaker: "haru", channel: "zatsudan", text: "やあ" }]);
+    await deps.messageRepo.createMany([{ createdEmployeeId: "haru", channel: "zatsudan", text: "やあ" }]);
 
     const summarize = vi.fn().mockResolvedValue("今日のあらすじ");
     const updated = await runSummaryBatch({ ...deps, summarize, now: DAY });
@@ -49,7 +49,7 @@ describe("runSummaryBatch (#53)", () => {
   it("API キーが未設定ならスキップして空配列を返す", async () => {
     delete process.env.ANTHROPIC_API_KEY;
     const deps = buildDeps([{ id: "zatsudan", label: "雑談", type: "zatsudan" }]);
-    await deps.messageRepo.createMany([{ speaker: "haru", channel: "zatsudan", text: "やあ" }]);
+    await deps.messageRepo.createMany([{ createdEmployeeId: "haru", channel: "zatsudan", text: "やあ" }]);
     const summarize = vi.fn().mockResolvedValue("x");
 
     expect(await runSummaryBatch({ ...deps, summarize, now: DAY })).toEqual([]);
@@ -58,12 +58,12 @@ describe("runSummaryBatch (#53)", () => {
 
   it("あるチャンネルの要約が失敗しても次チャンネルを継続する", async () => {
     const deps = buildDeps([
-      { id: "z1", label: "雑談1", type: "zatsudan" },
-      { id: "z2", label: "雑談2", type: "zatsudan" },
+      { id: "z1", label: "雑談１", type: "zatsudan" },
+      { id: "z2", label: "雑談２", type: "zatsudan" },
     ]);
     await deps.messageRepo.createMany([
-      { speaker: "haru", channel: "z1", text: "a" },
-      { speaker: "haru", channel: "z2", text: "b" },
+      { createdEmployeeId: "haru", channel: "z1", text: "a" },
+      { createdEmployeeId: "haru", channel: "z2", text: "b" },
     ]);
 
     let call = 0;

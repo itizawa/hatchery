@@ -2,6 +2,7 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
+  lazyRouteComponent,
   redirect,
   useLocation,
   type RouterHistory,
@@ -16,16 +17,22 @@ import {
 } from "./routes/settingsTabValues.js";
 
 export { SETTINGS_TAB_VALUES, type SettingsTabValue } from "./routes/settingsTabValues.js";
-import { AcceptInvitationScene } from "./routes/AcceptInvitationScene";
-import { AccountScene } from "./routes/AccountScene";
 import { AuthLayout } from "./routes/AuthLayout";
-import { ChannelScene } from "./routes/ChannelScene";
-import { HomeScene } from "./routes/HomeScene";
-import { LoginScene } from "./routes/LoginScene";
-import { OfficeScene } from "./routes/OfficeScene";
 import { RootLayout } from "./routes/RootLayout";
-import { SettingsScene } from "./routes/SettingsScene";
 import { ChannelViewSkeleton } from "./components/ChannelViewSkeleton";
+
+// ルートコンポーネントを lazyRouteComponent で動的 import（コード分割）する。
+// TanStack Router の defaultPreload: "intent" と組み合わせ、ホバー時にプリロードされる。
+const LazyHomeScene = lazyRouteComponent(() => import("./routes/HomeScene"), "HomeScene");
+const LazyChannelScene = lazyRouteComponent(() => import("./routes/ChannelScene"), "ChannelScene");
+const LazyLoginScene = lazyRouteComponent(() => import("./routes/LoginScene"), "LoginScene");
+const LazySettingsScene = lazyRouteComponent(() => import("./routes/SettingsScene"), "SettingsScene");
+const LazyAccountScene = lazyRouteComponent(() => import("./routes/AccountScene"), "AccountScene");
+const LazyOfficeScene = lazyRouteComponent(() => import("./routes/OfficeScene"), "OfficeScene");
+const LazyAcceptInvitationScene = lazyRouteComponent(
+  () => import("./routes/AcceptInvitationScene"),
+  "AcceptInvitationScene",
+);
 
 /**
  * 認証ガード: 未ログイン（fetchMe が null を返す）またはネットワークエラーの場合に /login へリダイレクト。
@@ -88,7 +95,11 @@ const rootRoute = createRootRoute({
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
-  component: HomeScene,
+  component: () => (
+    <Suspense fallback={null}>
+      <LazyHomeScene />
+    </Suspense>
+  ),
   beforeLoad: requireAuth,
 });
 
@@ -98,7 +109,7 @@ const channelRoute = createRoute({
   path: "/channels/$channelId",
   component: () => (
     <Suspense fallback={<ChannelViewSkeleton />}>
-      <ChannelScene />
+      <LazyChannelScene />
     </Suspense>
   ),
   beforeLoad: requireAuth,
@@ -108,14 +119,22 @@ const channelRoute = createRoute({
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/login",
-  component: LoginScene,
+  component: () => (
+    <Suspense fallback={null}>
+      <LazyLoginScene />
+    </Suspense>
+  ),
 });
 
 /** 管理画面（/admin）。未ログインなら /login、非 admin なら / へリダイレクト（#136）。 */
 const adminRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/admin",
-  component: SettingsScene,
+  component: () => (
+    <Suspense fallback={null}>
+      <LazySettingsScene />
+    </Suspense>
+  ),
   beforeLoad: requireAdminRoute,
   validateSearch: (search: Record<string, unknown>): { tab: SettingsTabValue } => {
     const tab = search.tab;
@@ -133,7 +152,11 @@ const adminRoute = createRoute({
 const accountRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/account",
-  component: AccountScene,
+  component: () => (
+    <Suspense fallback={null}>
+      <LazyAccountScene />
+    </Suspense>
+  ),
   beforeLoad: requireAuth,
 });
 
@@ -141,7 +164,11 @@ const accountRoute = createRoute({
 const officeRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/office",
-  component: OfficeScene,
+  component: () => (
+    <Suspense fallback={null}>
+      <LazyOfficeScene />
+    </Suspense>
+  ),
   beforeLoad: requireAuth,
 });
 
@@ -149,7 +176,11 @@ const officeRoute = createRoute({
 const inviteRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/invite/$token",
-  component: AcceptInvitationScene,
+  component: () => (
+    <Suspense fallback={null}>
+      <LazyAcceptInvitationScene />
+    </Suspense>
+  ),
 });
 
 const routeTree = rootRoute.addChildren([

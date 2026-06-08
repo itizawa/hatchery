@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
-import { Suspense, type ReactElement } from "react";
+import { type ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { OfficeScene } from "./OfficeScene.js";
@@ -50,9 +50,7 @@ function renderOfficeScene(): ReturnType<typeof render> {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const Wrapper = (): ReactElement => (
     <QueryClientProvider client={queryClient}>
-      <Suspense fallback={<div>Loading...</div>}>
-        <OfficeScene />
-      </Suspense>
+      <OfficeScene />
     </QueryClientProvider>
   );
   return render(<Wrapper />);
@@ -85,5 +83,16 @@ describe("OfficeScene (#240)", () => {
     ]);
     renderOfficeScene();
     expect(await screen.findByRole("button", { name: "APIBot" })).toBeInTheDocument();
+  });
+
+  it("API 取得失敗時にエラーメッセージを表示する（SPA クラッシュしない）", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(jsonResponse(500, { message: "Internal Server Error" }))),
+    );
+    renderOfficeScene();
+    expect(
+      await screen.findByText("社員データの取得に失敗しました。"),
+    ).toBeInTheDocument();
   });
 });

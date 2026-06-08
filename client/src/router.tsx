@@ -141,11 +141,7 @@ const accountRoute = createRoute({
 const officeRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/office",
-  component: () => (
-    <Suspense fallback={<div>Loading...</div>}>
-      <OfficeScene />
-    </Suspense>
-  ),
+  component: OfficeScene,
   beforeLoad: requireAuth,
 });
 

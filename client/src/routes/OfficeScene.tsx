@@ -6,10 +6,17 @@ import { useBotEmployees } from "../api/employees.js";
 import { OfficeView } from "../components/OfficeView.js";
 
 function OfficeContent(): ReactElement {
-  const { data: employees } = useBotEmployees();
+  const { data: employees, isLoading, error } = useBotEmployees();
+  if (isLoading) return <Typography variant="body2">読み込み中...</Typography>;
+  if (error)
+    return (
+      <Typography variant="body2" color="error">
+        社員データの取得に失敗しました。
+      </Typography>
+    );
   return (
     <Box sx={{ mt: 2, overflowX: "auto" }}>
-      <OfficeView employees={employees} />
+      <OfficeView employees={employees ?? []} />
     </Box>
   );
 }

@@ -1,5 +1,5 @@
 import type { Employee } from "@hatchery/common";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 
 import { openApiClient } from "./client.js";
 
@@ -8,10 +8,10 @@ export const BOT_EMPLOYEES_QUERY_KEY = ["employees", "bots"] as const;
 /**
  * GET /api/employees を openapi-fetch 経由で取得するフック（ADR-0006）。
  * isBot=true の Employee 一覧を返す（#240・仮想オフィス用）。
- * Suspense 対応: ローディング中は Promise を throw し、data は常に Employee[]（undefined なし）。
+ * useQuery（非 Suspense）を使い、呼び出し元でローディング・エラー状態を処理する。
  */
 export function useBotEmployees() {
-  return useSuspenseQuery({
+  return useQuery({
     queryKey: BOT_EMPLOYEES_QUERY_KEY,
     queryFn: async (): Promise<Employee[]> => {
       const { data, error } = await openApiClient.GET("/api/employees");

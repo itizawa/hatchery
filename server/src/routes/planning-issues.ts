@@ -58,7 +58,6 @@ export function createPlanningIssuesRouter(messageRepo: MessageRepository): Rout
           repo,
           title,
           body,
-          labels: ["df:todo"],
         });
 
         const updated = await messageRepo.updateIssueRef(messageId, data.number, data.html_url);

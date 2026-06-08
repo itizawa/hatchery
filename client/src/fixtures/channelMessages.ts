@@ -9,22 +9,22 @@ import { type Message } from "@hatchery/common";
 export const FIXTURE_MESSAGES_BY_CHANNEL: Readonly<Record<string, readonly Message[]>> = {
   zatsudan: [
     {
-      speaker: "haru",
+      createdEmployeeId: "haru",
       channel: "zatsudan",
       text: "おはようございます！今日もはりきっていきましょう。",
     },
-    { speaker: "ken", channel: "zatsudan", text: "おはよう。コーヒー淹れてきたよ。" },
-    { speaker: "mei", channel: "zatsudan", text: "おはようございます！よろしくお願いします。" },
-    { speaker: "haru", channel: "zatsudan", text: "そういえば昨日のランチ美味しかったね。" },
+    { createdEmployeeId: "ken", channel: "zatsudan", text: "おはよう。コーヒー淹れてきたよ。" },
+    { createdEmployeeId: "mei", channel: "zatsudan", text: "おはようございます！よろしくお願いします。" },
+    { createdEmployeeId: "haru", channel: "zatsudan", text: "そういえば昨日のランチ美味しかったね。" },
   ],
   shigoto: [
-    { speaker: "ken", channel: "shigoto", text: "今日のタスク、まず仕様の確認から始めよう。" },
+    { createdEmployeeId: "ken", channel: "shigoto", text: "今日のタスク、まず仕様の確認から始めよう。" },
     {
-      speaker: "mei",
+      createdEmployeeId: "mei",
       channel: "shigoto",
       text: "承知しました。ドキュメントを読み込んでおきます。",
     },
-    { speaker: "haru", channel: "shigoto", text: "進捗で詰まったら遠慮なく声かけてね。" },
+    { createdEmployeeId: "haru", channel: "shigoto", text: "進捗で詰まったら遠慮なく声かけてね。" },
   ],
 };
 

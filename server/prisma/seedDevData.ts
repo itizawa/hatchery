@@ -88,6 +88,13 @@ export async function seedDevData(prisma: SeedPrisma): Promise<SeedResult> {
     });
   }
 
+  // 企画バッチ専用の AI プランナー社員（#222: FK 制約下で planningBatch の INSERT が失敗しないよう seed）。
+  await prisma.employee.upsert({
+    where: { id: "ai-planner" },
+    update: {},
+    create: { id: "ai-planner", displayName: "AI Planner", role: null, isBot: true },
+  });
+
   // ログインユーザーに対応する Employee は isBot=false / userId で User と 1:1 紐付け（#49）。
   await prisma.employee.upsert({
     where: { id: DEV_USER_EMPLOYEE_ID },

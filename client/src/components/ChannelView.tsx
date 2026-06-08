@@ -15,7 +15,7 @@ export interface ChannelViewProps {
   channel: Channel;
   /** 当該チャンネルに属するメッセージ（Slack 風フラット一覧として表示）。 */
   messages: readonly Message[];
-  /** speaker(ID) → displayName 解決に用いる社員一覧。未指定なら common の DEFAULT_EMPLOYEES。 */
+  /** createdEmployeeId → displayName 解決に用いる社員一覧。未指定なら common の DEFAULT_EMPLOYEES。 */
   employees?: readonly Employee[];
   /** 渡すとヘッダに編集ボタンを表示する。ログイン済みのときのみ渡すこと（#206）。 */
   onEditName?: () => void;
@@ -25,8 +25,8 @@ export interface ChannelViewProps {
  * チャンネル詳細画面の presentational コンポーネント（#30）。
  * channel に属する message[] を「発言者名 + 本文」のフラットな一覧として描画する。
  * API・ルータ・グローバル状態には依存せず、props 駆動で Storybook の fixture 描画ができる
- * （client → common の一方向依存のみ）。speaker(ID) は employees の displayName に解決し、
- * 未解決の ID はそのままフォールバック表示する。
+ * （client → common の一方向依存のみ）。createdEmployeeId は employees の displayName に解決し、
+ * 未解決の ID はそのままフォールバック表示する（#222）。
  */
 export const ChannelView = ({
   channel,
@@ -34,7 +34,6 @@ export const ChannelView = ({
   employees = DEFAULT_EMPLOYEES,
   onEditName,
 }: ChannelViewProps): ReactElement => {
-  // speaker(ID) → displayName の解決（common の純粋関数。未解決は ID フォールバック）。
   const resolveDisplayName = createDisplayNameResolver(employees);
 
   return (
@@ -57,10 +56,10 @@ export const ChannelView = ({
       ) : (
         <List aria-label="メッセージ一覧" disablePadding>
           {messages.map((message, index) => (
-            <ListItem key={`${message.speaker}-${index}`} alignItems="flex-start" disableGutters>
+            <ListItem key={`${message.createdEmployeeId}-${index}`} alignItems="flex-start" disableGutters>
               <Stack spacing={0.5}>
                 <Typography variant="subtitle2" component="span">
-                  {resolveDisplayName(message.speaker)}
+                  {resolveDisplayName(message.createdEmployeeId)}
                 </Typography>
                 <Typography variant="body2" component="span">
                   {message.text}

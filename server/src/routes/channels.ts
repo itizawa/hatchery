@@ -106,7 +106,7 @@ export function createChannelsRouter(
           }
           const now = new Date();
           return messageRepo
-            .createMany([{ speaker: user.employeeId!, channel: channelId, text, postedAt: now }])
+            .createMany([{ createdEmployeeId: user.employeeId!, channel: channelId, text, postedAt: now }])
             .then(([created]) => {
               res.status(201).json(created);
               // 非同期 AI 生成（#183）。レスポンス後に実行し、失敗してもユーザー投稿は守る。

@@ -33,4 +33,17 @@ describe("EmployeeTable", () => {
     expect(screen.getByText("ノーロール")).toBeInTheDocument();
     expect(screen.getByText("—")).toBeInTheDocument();
   });
+
+  it("isLoading=true のときスケルトン行が描画される（#241）", () => {
+    render(<EmployeeTable isLoading />);
+    const skeletons = screen.getAllByTestId("employee-table-skeleton-item");
+    expect(skeletons.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("isLoading=true のとき社員名は表示されない（#241）", () => {
+    render(<EmployeeTable isLoading />);
+    for (const employee of DEFAULT_EMPLOYEES) {
+      expect(screen.queryByText(employee.displayName)).not.toBeInTheDocument();
+    }
+  });
 });

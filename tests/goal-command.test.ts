@@ -39,7 +39,7 @@ describe("順次処理 (受け入れ条件 #3)", () => {
 describe("parallel 禁止 (受け入れ条件 #4)", () => {
   it("parallel() 禁止の記載がある", () => {
     const body = readGoalCommand();
-    expect(body).toMatch(/parallel\(\).*(禁止|prohibited|禁)/s);
+    expect(body).toMatch(/`parallel\(\)`.*禁止/);
   });
 });
 
@@ -54,9 +54,10 @@ describe("安全ゲート (受け入れ条件 #5)", () => {
     expect(body).toMatch(/CI.*(緑|green|必須)/s);
   });
 
-  it("TDD または worktree の記載がある", () => {
+  it("TDD かつ worktree の記載がある", () => {
     const body = readGoalCommand();
-    expect(body.includes("TDD") || body.includes("worktree")).toBe(true);
+    expect(body).toContain("TDD");
+    expect(body).toContain("worktree");
   });
 });
 
@@ -64,7 +65,7 @@ describe("エラー隔離 (受け入れ条件 #6)", () => {
   it("df:blocked になっても次に進むエラー隔離が明記される", () => {
     const body = readGoalCommand();
     expect(body).toContain("df:blocked");
-    expect(body).toMatch(/df:blocked.*(次|continue|スキップ|skip)/s);
+    expect(body).toMatch(/df:blocked.*になっても.*次.*進む/);
   });
 });
 
@@ -72,7 +73,9 @@ describe("サマリ出力 (受け入れ条件 #7)", () => {
   it("処理済み・blocked・スキップのサマリ出力が明記される", () => {
     const body = readGoalCommand();
     expect(body).toMatch(/サマリ|summary/i);
+    expect(body).toMatch(/処理済み|completed/i);
     expect(body).toMatch(/blocked/i);
+    expect(body).toMatch(/スキップ|skip/i);
   });
 });
 

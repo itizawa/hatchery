@@ -19,7 +19,7 @@ export const COMMUNITY_SYNOPSIS_MAX_LENGTH = 2000;
  * - 大文字・アンダースコア・スペース・記号は不可
  * - 1 文字でも可（先頭末尾が同じ文字でも可）
  */
-const COMMUNITY_SLUG_REGEX = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/;
+export const COMMUNITY_SLUG_REGEX = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/;
 
 /** slug の Zod スキーマ（共通）。 */
 const communitySlugSchema = z

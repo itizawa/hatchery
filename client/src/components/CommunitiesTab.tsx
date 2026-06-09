@@ -25,6 +25,7 @@ import {
   COMMUNITY_DESCRIPTION_MAX_LENGTH,
   COMMUNITY_NAME_MAX_LENGTH,
   COMMUNITY_SLUG_MAX_LENGTH,
+  COMMUNITY_SLUG_REGEX,
 } from "@hatchery/common";
 import type { Community, CreateCommunityInput, UpdateCommunityInput } from "@hatchery/common";
 import { useCommunities, useCreateCommunity, useUpdateCommunity } from "../api/communities.js";
@@ -70,7 +71,7 @@ function CreateCommunityForm(): ReactElement {
         validators={{
           onSubmit: ({ value }) => {
             if (!value) return "slug は必須です";
-            if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(value))
+            if (!COMMUNITY_SLUG_REGEX.test(value))
               return "slug は小文字英数字とハイフンのみ（先頭末尾は英数字）";
             return undefined;
           },

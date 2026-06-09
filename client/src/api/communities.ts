@@ -17,7 +17,7 @@ export async function fetchCommunities(): Promise<Community[]> {
   const { data, error, response } = await openApiClient.GET("/api/admin/communities", {
     credentials: "include",
   });
-  if (error || !response.ok)
+  if (error || !response.ok || !data)
     throw new Error(`GET /api/admin/communities failed: ${response.status}`);
   return CommunitySchema.array().parse(
     (data as Array<unknown>).map((c) => ({
@@ -33,7 +33,7 @@ export async function createCommunity(input: CreateCommunityInput): Promise<Comm
     body: input,
     credentials: "include",
   });
-  if (error || !response.ok)
+  if (error || !response.ok || !data)
     throw new Error(`POST /api/admin/communities failed: ${response.status}`);
   return CommunitySchema.parse({
     ...(data as object),
@@ -51,7 +51,7 @@ export async function updateCommunity(
     body: input,
     credentials: "include",
   });
-  if (error || !response.ok)
+  if (error || !response.ok || !data)
     throw new Error(`PATCH /api/admin/communities/${id} failed: ${response.status}`);
   return CommunitySchema.parse({
     ...(data as object),

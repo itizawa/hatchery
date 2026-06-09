@@ -37,18 +37,21 @@ model User {
 }
 
 /// AI ワーカー（社員）。ADR-0019: post / comment の author として使う。
-/// Worker 管理 Issue（#181/#204/#217/#218）で拡張予定。今回は存続させる。
 model Employee {
-  id          String   @id @default(uuid(7))
+  id          String    @id @default(uuid(7))
   displayName String
   role        String?
   /// AI 社員は true、ユーザー所有社員は false（#49）。
-  isBot       Boolean  @default(false)
+  isBot       Boolean   @default(false)
   /// ユーザー所有社員のみ User と 1:1 で紐づく。AI 社員は null（#49）。
-  userId      String?  @unique
-  user        User?    @relation(fields: [userId], references: [id])
+  userId      String?   @unique
+  user        User?     @relation(fields: [userId], references: [id])
   /// AI バッチのプロンプト指針となる性格設定（任意・500 文字以内）（#38）。
   personality String?
+  /// 論理削除日時（#218）。null=有効、値=削除済み。物理削除は行わない。
+  deletedAt   DateTime?
+  /// GCS 上のアバター画像 URL（#204）。admin がアップロード後に設定される。最大 500 文字（#91）。
+  imageUrl    String?
 }
 
 /// アプリ設定のキーバリューストア（#52）。API キーや各種設定値を格納する。値は暗号化して保存。

@@ -3,19 +3,20 @@ import { describe, expect, it } from "vitest";
 
 import { createApp } from "../app.js";
 import { InMemoryInvitationLinkRepository } from "../persistence/invitationLinkRepository.js";
-import { InMemoryMessageRepository } from "../persistence/messageRepository.js";
 import { InMemoryUserRepository } from "../persistence/userRepository.js";
+import { createTestDeps } from "../testing/createTestDeps.js";
 
 async function makeApp(
   invitationRepo = new InMemoryInvitationLinkRepository(),
   role: "admin" | "member" = "admin",
 ) {
   const userRepo = await InMemoryUserRepository.createWithTestUser(null, role);
-  return createApp({
-    messageRepository: new InMemoryMessageRepository(),
-    userRepository: userRepo,
-    invitationLinkRepository: invitationRepo,
-  });
+  return createApp(
+    await createTestDeps({
+      userRepository: userRepo,
+      invitationLinkRepository: invitationRepo,
+    }),
+  );
 }
 
 async function loginAgent(app: ReturnType<typeof createApp>) {

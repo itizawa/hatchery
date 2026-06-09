@@ -22,8 +22,8 @@ describe.skipIf(!hasDb)("PrismaMessageRepository (統合・要 DATABASE_URL)", (
 
   it("createMany で保存し list で順序を保って取得できる", async () => {
     const created = await repo.createMany([
-      { speaker: "e1", channel: "zatsudan", text: "one" },
-      { speaker: "e2", channel: "shigoto", text: "two" },
+      { createdEmployeeId: "e1", channel: "zatsudan", text: "one" },
+      { createdEmployeeId: "e2", channel: "shigoto", text: "two" },
     ]);
     expect(created).toHaveLength(2);
     expect(created[0]?.id).toBeTruthy();

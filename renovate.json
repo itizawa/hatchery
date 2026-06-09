@@ -4,6 +4,8 @@
   "baseBranches": ["develop"],
   "schedule": ["every weekend"],
   "minimumReleaseAge": "7 days",
+  "dependencyDashboard": true,
+  "prConcurrentLimit": 5,
   "labels": ["dependencies"],
   "packageRules": [
     {
@@ -16,13 +18,16 @@
       "matchUpdateTypes": ["minor", "patch"],
       "matchDepTypes": ["devDependencies"],
       "groupName": "devDependencies (minor/patch)",
-      "labels": ["dependencies", "dev"]
+      "labels": ["dependencies", "dev"],
+      "automerge": true,
+      "automergeType": "pr"
     },
     {
       "matchUpdateTypes": ["minor", "patch"],
       "matchDepTypes": ["dependencies"],
       "groupName": "dependencies (minor/patch)",
-      "labels": ["dependencies", "prod"]
+      "labels": ["dependencies", "prod"],
+      "automerge": false
     }
   ],
   "vulnerabilityAlerts": {

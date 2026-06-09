@@ -72,3 +72,22 @@ describe("README 一覧への追記 (受け入れ条件 #6)", () => {
     expect(readme).toMatch(/\[0013\]\(\.\/0013-[^)]+\.md\)/);
   });
 });
+
+// --- Issue #149: automerge 運用ポリシーの ADR 記録 ---
+
+describe("automerge ポリシーの ADR 記録 (受け入れ条件 #6 - Issue #149)", () => {
+  it("ADR-0013 に automerge への言及がある", () => {
+    const body = adrBody();
+    expect(body).toMatch(/automerge/);
+  });
+
+  it("devDependencies の automerge が明記されている", () => {
+    const body = adrBody();
+    expect(body).toMatch(/devDependencies/);
+  });
+
+  it("dependencyDashboard に言及している（PR 溜まり防止の仕組み）", () => {
+    const body = adrBody();
+    expect(body).toMatch(/dependencyDashboard/);
+  });
+});

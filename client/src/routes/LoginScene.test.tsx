@@ -38,6 +38,27 @@ describe("管理画面ガード", () => {
   });
 });
 
+describe("autocomplete 属性（#180）", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("ID 入力欄に autocomplete='username' が設定されている", async () => {
+    vi.spyOn(authApi, "fetchMe").mockResolvedValue(null);
+    renderApp("/login");
+    const idInput = await screen.findByLabelText(/ID/);
+    expect(idInput).toHaveAttribute("autocomplete", "username");
+  });
+
+  it("パスワード入力欄に autocomplete='current-password' が設定されている", async () => {
+    vi.spyOn(authApi, "fetchMe").mockResolvedValue(null);
+    renderApp("/login");
+    await screen.findByLabelText(/ID/);
+    const passwordInput = screen.getByLabelText(/パスワード/);
+    expect(passwordInput).toHaveAttribute("autocomplete", "current-password");
+  });
+});
+
 describe("ログインフォーム", () => {
   beforeEach(() => {
     vi.restoreAllMocks();

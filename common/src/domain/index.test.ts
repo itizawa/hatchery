@@ -27,7 +27,7 @@ describe("domain フォルダ構成（#24）", () => {
   it("message フォルダの index からスキーマと定数を参照できる", () => {
     expect(MAX_MESSAGE_LENGTH).toBe(280);
     expect(
-      MessageSchema.safeParse({ speaker: "e1", channel: "zatsudan", text: "やあ" }).success,
+      MessageSchema.safeParse({ createdEmployeeId: "e1", channel: "zatsudan", text: "やあ" }).success,
     ).toBe(true);
   });
 

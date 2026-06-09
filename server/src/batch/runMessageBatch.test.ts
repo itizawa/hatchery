@@ -19,8 +19,8 @@ describe("runMessageBatch — Express 非依存の定時バッチ", () => {
     const records = await runMessageBatch({
       messageRepository: repo,
       generate: () => [
-        { speaker: "e1", channel: "zatsudan", text: "custom" },
-        { speaker: "e2", channel: "shigoto", text: "custom2" },
+        { createdEmployeeId: "e1", channel: "zatsudan", text: "custom" },
+        { createdEmployeeId: "e2", channel: "shigoto", text: "custom2" },
       ],
     });
     expect(records).toHaveLength(2);
@@ -31,7 +31,7 @@ describe("runMessageBatch — Express 非依存の定時バッチ", () => {
     const messages = stubMessageGenerator();
     expect(messages.length).toBeGreaterThan(0);
     messages.forEach((m) => {
-      expect(typeof m.speaker).toBe("string");
+      expect(typeof m.createdEmployeeId).toBe("string");
       expect(typeof m.channel).toBe("string");
       expect(typeof m.text).toBe("string");
     });

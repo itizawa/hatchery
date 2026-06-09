@@ -14,9 +14,9 @@ describe("slackTheme", () => {
     expect(slackTheme.palette.primary.main).toBe(SLACK_COLORS.blue);
   });
 
-  // #3: メイン背景はライト用の明るい色で、旧ダーク色ではない。
-  it("メイン背景色がライト用の明るい色である（旧ダーク色ではない）", () => {
-    expect(slackTheme.palette.background.default).toBe(SLACK_COLORS.background);
+  // #272: メイン背景は薄グレー（mainBackground）を使用する。
+  it("メイン背景色が SLACK_COLORS.mainBackground（薄グレー）である", () => {
+    expect(slackTheme.palette.background.default).toBe(SLACK_COLORS.mainBackground);
     expect(slackTheme.palette.background.default).not.toBe("#1A1D21");
   });
 
@@ -25,18 +25,23 @@ describe("slackTheme", () => {
     expect(slackTheme.palette.text.primary).toMatch(/rgba\(0,\s*0,\s*0/);
   });
 
-  // #65: サイドバー背景色が #26334D（ダークネイビー）に変更されている。
-  it("SLACK_COLORS.sidebar が #26334D（ダークネイビー）である", () => {
-    expect(SLACK_COLORS.sidebar).toBe("#26334D");
+  // #272: サイドバー背景色が白（#FFFFFF）に変更されている（Reddit 風配色）。
+  it("SLACK_COLORS.sidebar が #FFFFFF（白）である", () => {
+    expect(SLACK_COLORS.sidebar).toBe("#FFFFFF");
   });
 
-  // #65: サイドバーテキスト色が白（#FFFFFF）として定義されている。
-  it("SLACK_COLORS.sidebarText が #FFFFFF（白）である", () => {
-    expect(SLACK_COLORS.sidebarText).toBe("#FFFFFF");
+  // #272: サイドバーテキスト色が濃色（#1A1A1B）に変更されている（白背景での視認性）。
+  it("SLACK_COLORS.sidebarText が #1A1A1B（濃色）である", () => {
+    expect(SLACK_COLORS.sidebarText).toBe("#1A1A1B");
   });
 
-  // #65: グローバルな Paper サーフェスがサイドバー色に汚染されていない（background.paper はデフォルト白）。
-  it("background.paper がサイドバー暗色（#26334D）に汚染されていない", () => {
+  // #272: メイン領域背景色（薄グレー）が定義されている。
+  it("SLACK_COLORS.mainBackground が #F6F7F8（薄グレー）である", () => {
+    expect(SLACK_COLORS.mainBackground).toBe("#F6F7F8");
+  });
+
+  // グローバルな Paper サーフェスがサイドバー旧色に汚染されていない。
+  it("background.paper がサイドバー旧色（#26334D）に汚染されていない", () => {
     expect(slackTheme.palette.background.paper).not.toBe("#26334D");
   });
 });

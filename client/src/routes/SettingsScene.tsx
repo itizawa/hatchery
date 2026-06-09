@@ -1,17 +1,19 @@
-import { Alert, Box, Button, Chip, Snackbar, Tab, Table, TableBody, TableCell, TableHead, TableRow, Tabs, TextField, Typography } from "../components/uiParts";
+import { Alert, Box, Button, Chip, Skeleton, Snackbar, Tab, Table, TableBody, TableCell, TableHead, TableRow, Tabs, TextField, Typography } from "../components/uiParts";
 
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { type SyntheticEvent, useState, type ReactElement, type ReactNode } from "react";
 
+import { APP_SETTING_VALUE_MAX_LENGTH } from "@hatchery/common";
 import { useAdminSettings, useSaveAdminSetting } from "../api/admin.js";
 import { useBatchLogs, useRefreshBatchLogs } from "../api/batchLogs.js";
+import { useTokenUsage, useRefreshTokenUsage } from "../api/tokenUsage.js";
 import { EmployeeTable } from "../components/EmployeeTable";
 import { InvitationsTab } from "../components/InvitationsTab.js";
 import { type SettingsTabValue } from "./settingsTabValues.js";
 
 /** API トークン設定タブのコンテンツ（#52）。 */
 const ApiTokenSettings = (): ReactElement => {
-  const { data: settings } = useAdminSettings();
+  const { data: settings, isLoading: isSettingsLoading } = useAdminSettings();
   const saveMutation = useSaveAdminSetting();
   const [apiKey, setApiKey] = useState("");
   const [snackbarOpen, setSnackbarOpen] = useState(false);
@@ -29,6 +31,15 @@ const ApiTokenSettings = (): ReactElement => {
       setErrorOpen(true);
     }
   };
+
+  if (isSettingsLoading) {
+    return (
+      <Box sx={{ maxWidth: 480, display: "flex", flexDirection: "column", gap: 2 }}>
+        <Skeleton variant="text" height={24} width="60%" data-testid="api-token-skeleton" />
+        <Skeleton variant="text" height={40} />
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ maxWidth: 480, display: "flex", flexDirection: "column", gap: 2 }}>
@@ -48,6 +59,7 @@ const ApiTokenSettings = (): ReactElement => {
         placeholder="sk-ant-api03-..."
         fullWidth
         size="small"
+        inputProps={{ maxLength: APP_SETTING_VALUE_MAX_LENGTH, autoComplete: "off" }}
       />
       <Button
         variant="contained"
@@ -80,8 +92,18 @@ const ApiTokenSettings = (): ReactElement => {
 
 /** バッチログタブのコンテンツ（#75）。 */
 const BatchLogs = (): ReactElement => {
-  const { data: logs = [] } = useBatchLogs();
+  const { data: logs = [], isLoading: isLogsLoading } = useBatchLogs();
   const refresh = useRefreshBatchLogs();
+
+  if (isLogsLoading) {
+    return (
+      <Box>
+        {Array.from({ length: 3 }, (_, i) => (
+          <Skeleton key={i} variant="text" height={32} data-testid="batch-logs-skeleton" sx={{ my: 0.5 }} />
+        ))}
+      </Box>
+    );
+  }
 
   return (
     <Box>
@@ -133,6 +155,77 @@ const BatchLogs = (): ReactElement => {
   );
 };
 
+/** トークン使用量タブのコンテンツ（#153）。 */
+const TokenUsageTab = (): ReactElement => {
+  const { data, isLoading } = useTokenUsage();
+  const refresh = useRefreshTokenUsage();
+  const logs = data?.logs ?? [];
+  const summary = data?.summary;
+
+  if (isLoading) {
+    return (
+      <Box>
+        {Array.from({ length: 3 }, (_, i) => (
+          <Skeleton key={i} variant="text" height={32} data-testid="token-usage-skeleton" sx={{ my: 0.5 }} />
+        ))}
+      </Box>
+    );
+  }
+
+  return (
+    <Box>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
+        <Typography variant="body2" color="text.secondary">
+          AI API のトークン使用量（直近 50 件）を表示します。
+        </Typography>
+        <Button size="small" onClick={refresh} variant="outlined">
+          更新
+        </Button>
+      </Box>
+      {summary && (
+        <Box sx={{ mb: 2, p: 1.5, bgcolor: "background.paper", borderRadius: 1, border: "1px solid", borderColor: "divider" }}>
+          <Typography variant="subtitle2" gutterBottom>
+            合計
+          </Typography>
+          <Typography variant="body2">
+            Input: {summary.totalInputTokens.toLocaleString()} tokens &nbsp;/&nbsp;
+            Output: {summary.totalOutputTokens.toLocaleString()} tokens &nbsp;/&nbsp;
+            合計: {summary.totalTokens.toLocaleString()} tokens
+          </Typography>
+        </Box>
+      )}
+      {logs.length === 0 ? (
+        <Typography variant="body2" color="text.secondary">
+          使用履歴がありません。
+        </Typography>
+      ) : (
+        <Table size="small">
+          <TableHead>
+            <TableRow>
+              <TableCell>日時</TableCell>
+              <TableCell>モデル</TableCell>
+              <TableCell>Input tokens</TableCell>
+              <TableCell>Output tokens</TableCell>
+              <TableCell>合計 tokens</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {logs.map((log) => (
+              <TableRow key={log.id}>
+                <TableCell>{new Date(log.occurredAt).toLocaleString("ja-JP")}</TableCell>
+                <TableCell>{log.model}</TableCell>
+                <TableCell>{log.inputTokens.toLocaleString()}</TableCell>
+                <TableCell>{log.outputTokens.toLocaleString()}</TableCell>
+                <TableCell>{(log.inputTokens + log.outputTokens).toLocaleString()}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
+    </Box>
+  );
+};
+
 /** 管理画面のタブ定義。配列駆動にして将来のタブ追加（会社設定・定時設定など）を妨げない。 */
 interface SettingsTab {
   label: string;
@@ -145,6 +238,7 @@ const SETTINGS_TABS: readonly [SettingsTab, ...SettingsTab[]] = [
   { label: "API トークン設定", value: "api-token", content: <ApiTokenSettings /> },
   { label: "バッチログ", value: "batch-logs", content: <BatchLogs /> },
   { label: "招待", value: "invitations", content: <InvitationsTab /> },
+  { label: "トークン使用量", value: "token-usage", content: <TokenUsageTab /> },
 ];
 
 /** 管理画面（/admin）。タブ UI を持ち、ユーザー一覧タブに AI 社員をテーブル表示する（#25）。 */

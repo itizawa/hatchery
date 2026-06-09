@@ -10,5 +10,5 @@ import type { Message } from "../domain/message/index.js";
 export const formatRecentLog = (messages: readonly Message[], n: number): string[] => {
   if (n <= 0) return [];
   const start = Math.max(0, messages.length - n);
-  return messages.slice(start).map((m) => `[${m.channel}] ${m.speaker}: ${m.text}`);
+  return messages.slice(start).map((m) => `[${m.channel}] ${m.createdEmployeeId}: ${m.text}`);
 };

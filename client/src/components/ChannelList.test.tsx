@@ -10,7 +10,7 @@ import {
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Suspense, type ReactElement } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ChannelList } from "./ChannelList";
 
@@ -230,5 +230,84 @@ describe("ChannelList の編集メニュー（#206）", () => {
     await userEvent.click(await screen.findByRole("menuitem", { name: "名前を編集" }));
     expect(await screen.findByRole("dialog")).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "チャンネル名" })).toHaveValue("雑談");
+  });
+});
+
+// 受け入れ条件 #277: モバイル時 3 点メニュー非表示、デスクトップ時表示
+describe("ChannelList - 3 点メニューのモバイル制御 (#277)", () => {
+  function stubFetchWithUser(meStatus: number, meBody: unknown) {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: Request | string) => {
+        const url = typeof input === "string" ? input : input.url;
+        if (url.includes("/auth/me")) {
+          return Promise.resolve(
+            new Response(JSON.stringify(meBody), {
+              status: meStatus,
+              headers: { "Content-Type": "application/json" },
+            }),
+          );
+        }
+        return Promise.resolve(
+          new Response(JSON.stringify([{ id: "zatsudan", label: "雑談", type: "zatsudan" }]), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        );
+      }),
+    );
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  describe("モバイル幅（md 未満）", () => {
+    beforeEach(() => {
+      Object.defineProperty(window, "matchMedia", {
+        writable: true,
+        value: vi.fn().mockImplementation((query: string) => ({
+          matches: query.includes("max-width"),
+          media: query,
+          onchange: null,
+          addListener: vi.fn(),
+          removeListener: vi.fn(),
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+          dispatchEvent: vi.fn(),
+        })),
+      });
+    });
+
+    it("ログイン時でも 3 点メニューボタンが表示されない", async () => {
+      stubFetchWithUser(200, { id: "u1", displayName: "Alice" });
+      renderWithClient(<ChannelList />);
+      await screen.findByText("雑談");
+      expect(screen.queryByRole("button", { name: /雑談のメニュー/ })).not.toBeInTheDocument();
+    });
+  });
+
+  describe("デスクトップ幅（md 以上）", () => {
+    beforeEach(() => {
+      Object.defineProperty(window, "matchMedia", {
+        writable: true,
+        value: vi.fn().mockImplementation((query: string) => ({
+          matches: false,
+          media: query,
+          onchange: null,
+          addListener: vi.fn(),
+          removeListener: vi.fn(),
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+          dispatchEvent: vi.fn(),
+        })),
+      });
+    });
+
+    it("ログイン時は 3 点メニューボタンが表示される", async () => {
+      stubFetchWithUser(200, { id: "u1", displayName: "Alice" });
+      renderWithClient(<ChannelList />);
+      expect(await screen.findByRole("button", { name: "雑談のメニューを開く" })).toBeInTheDocument();
+    });
   });
 });

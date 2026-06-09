@@ -105,6 +105,23 @@ describe("createAppRouter", () => {
     // ChannelView のヘッダ（見出し）として channel.label を描画する（サイドバーの一覧は heading ではない）。
     expect(await screen.findByRole("heading", { name: "雑談" })).toBeInTheDocument();
   });
+
+  // Issue #236: 動的 import（lazyRouteComponent）後もルートが正しく描画されることを担保する。
+  it("アカウントルート（/account）でアカウント設定画面を描画する", async () => {
+    const router = createAppRouter({
+      history: createMemoryHistory({ initialEntries: ["/account"] }),
+    });
+    render(renderRouter(router));
+    expect(await screen.findByRole("heading", { name: /アカウント設定/ })).toBeInTheDocument();
+  });
+
+  it("管理ルート（/admin）で管理画面を描画する", async () => {
+    const router = createAppRouter({
+      history: createMemoryHistory({ initialEntries: ["/admin"] }),
+    });
+    render(renderRouter(router));
+    expect(await screen.findByRole("heading", { name: /管理画面/ })).toBeInTheDocument();
+  });
 });
 
 // 認証ガード: 未ログインで保護ルートを開くと /login へリダイレクトする。
@@ -125,12 +142,60 @@ describe("認証ガード（未ログイン時のリダイレクト）", () => {
     expect(screen.queryByRole("navigation", { name: /サイドバー/ })).not.toBeInTheDocument();
   });
 
-  it("未ログインでチャンネル（/channels/$channelId）を開くと /login へリダイレクトする", async () => {
+  // Issue #236: 動的 import 後も認証ガードが正しく機能することを担保する。
+  it("未ログインでアカウント（/account）を開くと /login へリダイレクトする", async () => {
     const router = createAppRouter({
-      history: createMemoryHistory({ initialEntries: ["/channels/zatsudan"] }),
+      history: createMemoryHistory({ initialEntries: ["/account"] }),
     });
     render(renderRouter(router));
     expect(await screen.findByRole("heading", { name: /ログイン/ })).toBeInTheDocument();
     expect(screen.queryByRole("navigation", { name: /サイドバー/ })).not.toBeInTheDocument();
+  });
+
+  it("未ログインで管理画面（/admin）を開くと /login へリダイレクトする", async () => {
+    const router = createAppRouter({
+      history: createMemoryHistory({ initialEntries: ["/admin"] }),
+    });
+    render(renderRouter(router));
+    expect(await screen.findByRole("heading", { name: /ログイン/ })).toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: /サイドバー/ })).not.toBeInTheDocument();
+  });
+});
+
+// Issue #255: ゲストユーザー（未認証）がチャンネルを閲覧できる
+describe("ゲストユーザーのチャンネル閲覧 (#255)", () => {
+  beforeEach(() => {
+    stubChannelsFetch({ authenticated: false });
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("未認証でチャンネル（/channels/$channelId）を開くとチャンネル詳細が表示される（リダイレクトなし）", async () => {
+    const router = createAppRouter({
+      history: createMemoryHistory({ initialEntries: ["/channels/zatsudan"] }),
+    });
+    render(renderRouter(router));
+    expect(await screen.findByRole("heading", { name: "雑談" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /ログイン/ })).not.toBeInTheDocument();
+  });
+
+  it("未認証でチャンネルを開いたとき MessageInput の送信ボタンが表示されない", async () => {
+    const router = createAppRouter({
+      history: createMemoryHistory({ initialEntries: ["/channels/zatsudan"] }),
+    });
+    render(renderRouter(router));
+    await screen.findByRole("heading", { name: "雑談" });
+    expect(screen.queryByRole("button", { name: /送信/ })).not.toBeInTheDocument();
+  });
+
+  it("未認証でもサイドバーにチャンネル一覧が表示される", async () => {
+    const router = createAppRouter({
+      history: createMemoryHistory({ initialEntries: ["/channels/zatsudan"] }),
+    });
+    render(renderRouter(router));
+    await screen.findByRole("heading", { name: "雑談" });
+    const channelList = await screen.findByRole("list", { name: "チャンネル一覧" });
+    expect(within(channelList).getByText("雑談")).toBeInTheDocument();
   });
 });

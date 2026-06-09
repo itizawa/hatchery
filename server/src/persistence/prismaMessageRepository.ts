@@ -4,7 +4,7 @@ import type { MessageCreateInput, MessageRecord, MessageRepository, PlanningMess
 
 function toMessageRecord(row: {
   id: string;
-  speaker: string;
+  createdEmployeeId: string;
   channel: string;
   text: string;
   createdAt: Date;
@@ -18,7 +18,7 @@ function toMessageRecord(row: {
 }): MessageRecord {
   return {
     id: row.id,
-    speaker: row.speaker,
+    createdEmployeeId: row.createdEmployeeId,
     channel: row.channel,
     text: row.text,
     createdAt: row.createdAt,
@@ -49,7 +49,7 @@ export class PrismaMessageRepository implements MessageRepository {
       input.map((m, index) =>
         this.prisma.message.create({
           data: {
-            speaker: m.speaker,
+            createdEmployeeId: m.createdEmployeeId,
             channel: m.channel,
             text: m.text,
             postedAt: m.postedAt ?? now,
@@ -95,7 +95,7 @@ export class PrismaMessageRepository implements MessageRepository {
     const nextOrder = (lastInChannel?.order ?? -1) + 1;
     const row = await this.prisma.message.create({
       data: {
-        speaker: input.speaker,
+        createdEmployeeId: input.createdEmployeeId,
         channel: input.channel,
         text: input.text,
         order: nextOrder,

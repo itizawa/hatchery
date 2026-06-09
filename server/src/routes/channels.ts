@@ -51,11 +51,11 @@ export function createChannelsRouter(
       .catch(next);
   });
 
-  // チャンネル作成（認証必須・#47・#54）。id はリポジトリが採番する。type 省略時は zatsudan。
+  // チャンネル作成（認証必須・#47・#54）。id はリポジトリが採番する。type 省略時は zatsudan、goal 省略時は chat（#284）。
   router.post("/", requireAuth, validateBody(CreateChannelSchema), (req, res, next) => {
-    const { label, type } = req.body as CreateChannelInput;
+    const { label, type, goal } = req.body as CreateChannelInput;
     channelRepo
-      .create({ label, type })
+      .create({ label, type, goal })
       .then((channel) => res.status(201).json(channel))
       .catch(next);
   });
@@ -84,7 +84,7 @@ export function createChannelsRouter(
       .catch(next);
   });
 
-  // チャンネルへのメッセージ投稿（認証必須・#48）。speaker は req.user.employeeId を使う。
+  // チャンネルへのメッセージ投稿（認証必須・#48）。createdEmployeeId は req.user.employeeId を使う。
   // 保存後、aiDeps があれば非同期で AI 会話生成を行う（#183）。エラーは握りつぶす。
   router.post(
     "/:channelId/messages",
@@ -106,7 +106,7 @@ export function createChannelsRouter(
           }
           const now = new Date();
           return messageRepo
-            .createMany([{ speaker: user.employeeId!, channel: channelId, text, postedAt: now }])
+            .createMany([{ createdEmployeeId: user.employeeId!, channel: channelId, text, postedAt: now }])
             .then(([created]) => {
               res.status(201).json(created);
               // 非同期 AI 生成（#183）。レスポンス後に実行し、失敗してもユーザー投稿は守る。

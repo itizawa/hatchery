@@ -30,8 +30,8 @@ export interface SeedPrisma {
   channel: {
     upsert(args: {
       where: { id: string };
-      update: { type: "zatsudan" | "task" | "planning" };
-      create: { id: string; label: string; type: "zatsudan" | "task" | "planning" };
+      update: { type: "zatsudan" | "task" | "planning"; goalType: "chat" | "issue"; goalInstructions: string | null };
+      create: { id: string; label: string; type: "zatsudan" | "task" | "planning"; goalType: "chat" | "issue"; goalInstructions: string | null };
     }): Promise<unknown>;
   };
   channelEmployee: {
@@ -88,6 +88,13 @@ export async function seedDevData(prisma: SeedPrisma): Promise<SeedResult> {
     });
   }
 
+  // 企画バッチ専用の AI プランナー社員（#222: FK 制約下で planningBatch の INSERT が失敗しないよう seed）。
+  await prisma.employee.upsert({
+    where: { id: "ai-planner" },
+    update: {},
+    create: { id: "ai-planner", displayName: "AI Planner", role: null, isBot: true },
+  });
+
   // ログインユーザーに対応する Employee は isBot=false / userId で User と 1:1 紐付け（#49）。
   await prisma.employee.upsert({
     where: { id: DEV_USER_EMPLOYEE_ID },
@@ -104,8 +111,8 @@ export async function seedDevData(prisma: SeedPrisma): Promise<SeedResult> {
   for (const channel of DEFAULT_CHANNELS) {
     await prisma.channel.upsert({
       where: { id: channel.id },
-      update: { type: channel.type },
-      create: { id: channel.id, label: channel.label, type: channel.type },
+      update: { type: channel.type, goalType: channel.goal.type, goalInstructions: channel.goal.instructions ?? null },
+      create: { id: channel.id, label: channel.label, type: channel.type, goalType: channel.goal.type, goalInstructions: channel.goal.instructions ?? null },
     });
   }
 

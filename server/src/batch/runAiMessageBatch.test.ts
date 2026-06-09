@@ -18,9 +18,9 @@ const bots: EmployeeRecord[] = [
 ];
 
 const conversationJson = JSON.stringify([
-  { speaker: "haru", text: "やあ" },
-  { speaker: "ken", text: "よろしく" },
-  { speaker: "user1", text: "（人間は喋らないはず）" },
+  { createdEmployeeId: "haru", text: "やあ" },
+  { createdEmployeeId: "ken", text: "よろしく" },
+  { createdEmployeeId: "user1", text: "（人間は喘らないはず）" },
 ]);
 
 describe("runAiMessageBatch (#53)", () => {
@@ -43,36 +43,36 @@ describe("runAiMessageBatch (#53)", () => {
     return { channelRepo, messageRepo, membershipRepo, employeeRepo, appSettingRepo, batchRunLogRepository };
   };
 
-  it("zatsudan チャンネルのみ対象にし、isBot の発言だけを保存する", async () => {
+  it("goal.type='chat' のチャンネルのみ対象にし、isBot の発言だけを保存する", async () => {
     const deps = buildDeps([
-      { id: "zatsudan", label: "雑談", type: "zatsudan" },
-      { id: "shigoto", label: "仕事", type: "task" },
-      { id: "kikaku", label: "企画", type: "planning" },
+      { id: "zatsudan", label: "雑談", type: "zatsudan", goal: { type: "chat" } },
+      { id: "shigoto", label: "仕事", type: "task", goal: { type: "chat" } },
+      { id: "kikaku", label: "企画", type: "planning", goal: { type: "issue" } },
     ]);
     await deps.membershipRepo.addMember("zatsudan", "haru");
     await deps.membershipRepo.addMember("zatsudan", "ken");
     await deps.membershipRepo.addMember("zatsudan", "user1");
-    // task / planning にも所属者を置くが、対象外なので生成されない
-    await deps.membershipRepo.addMember("shigoto", "haru");
+    // goal=issue のチャンネルにも所属者を置くが、対象外なので生成されない
+    await deps.membershipRepo.addMember("kikaku", "haru");
 
     const generate = vi.fn().mockResolvedValue(conversationJson);
     const saved = await runAiMessageBatch({ ...deps, generate });
 
-    // 生成は zatsudan の 1 回だけ
+    // 生成は goal=chat の zatsudan の 1 回だけ（shigoto は goal=chat だがメンバーなし）
     expect(generate).toHaveBeenCalledTimes(1);
     // user1（非 bot）は除外され 2 件だけ保存
     expect(saved).toHaveLength(2);
-    expect(saved.map((m) => m.speaker)).toEqual(["haru", "ken"]);
+    expect(saved.map((m) => m.createdEmployeeId)).toEqual(["haru", "ken"]);
     // バッチ生成メッセージは postedAt が未来時刻（#183: 予約表示）
     const now = Date.now();
     expect(saved[0].postedAt.getTime()).toBeGreaterThan(now);
-    // 対象外チャンネルには何も保存されない
-    expect(await deps.messageRepo.listByChannel("shigoto")).toHaveLength(0);
+    // goal=issue の kikaku には何も保存されない
+    expect(await deps.messageRepo.listByChannel("kikaku")).toHaveLength(0);
   });
 
   it("API キーが未設定なら何も生成せず空配列を返す", async () => {
     delete process.env.ANTHROPIC_API_KEY;
-    const deps = buildDeps([{ id: "zatsudan", label: "雑談", type: "zatsudan" }]);
+    const deps = buildDeps([{ id: "zatsudan", label: "雑談", type: "zatsudan", goal: { type: "chat" } }]);
     await deps.membershipRepo.addMember("zatsudan", "haru");
     const generate = vi.fn().mockResolvedValue(conversationJson);
 
@@ -83,8 +83,8 @@ describe("runAiMessageBatch (#53)", () => {
 
   it("あるチャンネルの生成が失敗してもリトライせず次チャンネルを継続する", async () => {
     const deps = buildDeps([
-      { id: "z1", label: "雑談1", type: "zatsudan" },
-      { id: "z2", label: "雑談2", type: "zatsudan" },
+      { id: "z1", label: "雑談１", type: "zatsudan", goal: { type: "chat" } },
+      { id: "z2", label: "雑談２", type: "zatsudan", goal: { type: "chat" } },
     ]);
     await deps.membershipRepo.addMember("z1", "haru");
     await deps.membershipRepo.addMember("z2", "haru");
@@ -93,7 +93,7 @@ describe("runAiMessageBatch (#53)", () => {
     const generate = vi.fn().mockImplementation(() => {
       call += 1;
       if (call === 1) return Promise.reject(new Error("api error"));
-      return Promise.resolve(JSON.stringify([{ speaker: "haru", text: "ok" }]));
+      return Promise.resolve(JSON.stringify([{ createdEmployeeId: "haru", text: "ok" }]));
     });
 
     const saved = await runAiMessageBatch({ ...deps, generate });
@@ -107,7 +107,7 @@ describe("runAiMessageBatch (#53)", () => {
   });
 
   it("成功時は BatchRunLog に status:success と件数を記録する", async () => {
-    const deps = buildDeps([{ id: "zatsudan", label: "雑談", type: "zatsudan" }]);
+    const deps = buildDeps([{ id: "zatsudan", label: "雑談", type: "zatsudan", goal: { type: "chat" } }]);
     await deps.membershipRepo.addMember("zatsudan", "haru");
     await deps.membershipRepo.addMember("zatsudan", "ken");
     const generate = vi.fn().mockResolvedValue(conversationJson);
@@ -120,7 +120,7 @@ describe("runAiMessageBatch (#53)", () => {
   });
 
   it("チャンネル生成が失敗したら BatchRunLog に status:failure を記録する", async () => {
-    const deps = buildDeps([{ id: "zatsudan", label: "雑談", type: "zatsudan" }]);
+    const deps = buildDeps([{ id: "zatsudan", label: "雑談", type: "zatsudan", goal: { type: "chat" } }]);
     await deps.membershipRepo.addMember("zatsudan", "haru");
     const generate = vi.fn().mockRejectedValue(new Error("api error"));
 
@@ -132,7 +132,7 @@ describe("runAiMessageBatch (#53)", () => {
   });
 
   it("bot 所属がいないチャンネルは生成しない", async () => {
-    const deps = buildDeps([{ id: "zatsudan", label: "雑談", type: "zatsudan" }]);
+    const deps = buildDeps([{ id: "zatsudan", label: "雑談", type: "zatsudan", goal: { type: "chat" } }]);
     await deps.membershipRepo.addMember("zatsudan", "user1"); // 非 bot のみ
     const generate = vi.fn().mockResolvedValue(conversationJson);
 

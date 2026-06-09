@@ -23,9 +23,9 @@ Slack 型 UI で「自分の会社の AI 社員」を放置して眺める観察
 
 ### フロー（人間ゲートは2点のみ）
 
-1. 👤 人間が Issue を起票（ラベル `df:todo`）
-2. 🤖 AI が Issue を解決する実装 PR を作成（`df:todo → df:dev-review`）
-3. 🤖 AI がその PR をセルフレビュー・修正し、CI 緑 + 指摘ゼロで `develop` へマージ（`df:dev-review → df:done`）
+1. 👤 人間が Issue を起票（任意で `priority/*`・マイルストーンを設定。状態ラベルは付けない）
+2. 🤖 AI が Issue を解決する実装 PR を作成（Issue は open のまま・develop ベースの実装 PR が立つ）
+3. 🤖 AI がその PR をセルフレビュー・修正し、CI 緑 + 指摘ゼロで `develop` へマージし Issue をクローズ
 4. 👤 人間が `develop → main` を昇格して本番反映
 
 ### ブランチ戦略
@@ -34,22 +34,25 @@ Slack 型 UI で「自分の会社の AI 社員」を放置して眺める観察
 - `develop` — 統合。実装 PR は **AI 自身がレビュー → 修正 → マージ**（人間承認不要、CI 緑必須）。
 - `feature/issue-<N>` — 実装ブランチ → `develop` への**実装 PR**。
 
-### ラベル状態機械（Issue の状態＝次に動く担当）
+### 状態管理（Issue の状態 + 実装 PR で判定。状態ラベルは使わない）
 
-| ラベル | 意味 | 次の担当 |
-|--------|------|----------|
-| `df:todo` | 人間が Issue 起票済み・AI 着手待ち | 🤖 AI（実装） |
-| `df:dev-review` | 実装 PR 作成済み・レビュー〜マージ | 🤖 AI |
-| `df:done` | develop マージ済み・本番昇格待ち | 👤 人間 |
-| `df:blocked` | AI が判断不能・要人間介入 | 👤 人間 |
+Dark Factory の進行は **Issue の open/closed と develop ベース実装 PR の有無**で管理する。`df:todo` のような `df:*` 状態ラベルは廃止済みで使わない（`/df` がこの状態から「次に何をすべきか」を判定する）。
 
-優先度ラベル `priority/{critical,high,medium,low}` は `df:*` と直交する軸で、複数の AI 実行可能 Issue があるとき `/df`（引数なし）が**着手順**を決めるのに使う（重み降順 → フェーズ進捗 `df:dev-review`>`df:todo` → `createdAt` 古い順）。**未設定は `medium` 相当**。詳細は `docs/dark-factory-workflow.md` §3 と `.claude/commands/df.md`。
+| Issue 状態 | 実装 PR（`feature/issue-<N>` → develop） | フェーズ | 次の担当 |
+|------------|------------------------------------------|---------|----------|
+| open | PR なし | 実装 → 実装 PR 作成 | 🤖 AI |
+| open | develop ベース PR あり | レビュー → マージ → クローズ | 🤖 AI |
+| closed | — | 完了（develop マージ済み・本番昇格待ち） | 👤 人間 |
+
+判断不能・自力解消不能なときは Issue にコメントし、**`milestone/*` ラベル（マイルストーン）を解除**して自動選択対象外にしたうえで停止する（人間介入待ち）。
+
+優先度ラベル `priority/{critical,high,medium,low}` と `milestone/*` ラベルは状態とは直交する軸で、複数の AI 実行可能 Issue があるとき `/df`（引数なし）が**着手対象・着手順**を決めるのに使う（マイルストーン昇順 → 優先度の重み降順 → フェーズ進捗（PR あり > PR なし）→ `createdAt` 古い順）。**優先度未設定は `medium` 相当**。詳細は `docs/dark-factory-workflow.md` §3 と `.claude/commands/df.md`。
 
 ### フェーズごとの AI の動き
 
-- **実装（`df:todo`）**: `feature/issue-<N>` の worktree を `.claude/worktrees/issue-<N>/` に作成（`git worktree add ... origin/develop`。メインツリーは switch しない）→ 設計書 `docs/design/issue-<N>.md` を書いてコミット → Issue 本文の受け入れ条件を入出力に落とし後述の TDD で実装 → `develop` へ実装 PR（設計書を含む。本文 `Closes #N` + 設計判断の要点 + テスト結果サマリ）→ Issue を `df:dev-review` に → **そのまま続けてレビューへ**。
-- **レビュー（`df:dev-review`）**: `/code-review` で実装 PR をレビュー → 指摘を自分で修正 → 収束まで反復 → CI 緑 + 指摘ゼロで **AI が `develop` へマージ** → `df:done`。自力で解消できない場合は `df:blocked` を付け人間に委ねる。`/df` は 1 回の実行で実装からこのマージまでを続けて完走する。
-- **本番（`df:done`）**: `develop → main` の昇格 PR は**人間のみ**がマージ。
+- **実装（open・PR なし）**: `feature/issue-<N>` の worktree を `.claude/worktrees/issue-<N>/` に作成（`git worktree add ... origin/develop`。メインツリーは switch しない）→ 設計書 `docs/design/issue-<N>.md` を書いてコミット → Issue 本文の受け入れ条件を入出力に落とし後述の TDD で実装 → `develop` へ実装 PR（設計書を含む。本文 `Closes #N` + 設計判断の要点 + テスト結果サマリ）→ **そのまま続けてレビューへ**。
+- **レビュー（open・develop ベース PR あり）**: `/code-review` で実装 PR をレビュー → 指摘を自分で修正 → 収束まで反復 → CI 緑 + 指摘ゼロで **AI が `develop` へマージ**し Issue をクローズ。自力で解消できない場合は Issue にコメントしてマイルストーンを解除し人間に委ねる。`/df` は 1 回の実行で実装からこのマージまでを続けて完走する。
+- **本番（Issue クローズ済み）**: `develop → main` の昇格 PR は**人間のみ**がマージ。
 
 ### TDD（実装フェーズ）
 
@@ -95,6 +98,15 @@ common: Zod スキーマ → server: zod-to-openapi で openapi.json 生成 → 
 フロントエンドでも `inputProps={{ maxLength: N }}` 等で同じ上限を強制し、サーバ側 Zod と二重で守る。
 上限値は表示・DB・UX を考慮して各フィールドごとに決める（例: チャンネル名 50 文字）。
 `.max()` が無い `z.string()` は不正データ・表示崩れ・DB 負荷の原因になるため、レビューで指摘対象とする。
+
+## フォーム規約
+
+**フォームの状態管理は `@tanstack/react-form`（`useForm` / `form.Field`）を使うこと**（#262）。
+
+- `useState` によるフォームフィールドの自前管理・自前 `isDirty` 実装は禁止。
+- バリデーション・ダーティ検知・送信ハンドリングはすべて `useForm` に委ねる。
+- 参照実装: `client/src/routes/LoginScene.tsx`（`useForm` + `form.Field` + MUI `TextField` の連携例）。
+- 違反（生の `useState` によるフォーム管理・自前 isDirty 等）はレビューで指摘対象とする。
 
 ## ADR の追加・更新
 

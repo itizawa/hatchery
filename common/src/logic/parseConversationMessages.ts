@@ -30,7 +30,7 @@ const extractJsonArray = (rawText: string): unknown[] => {
  * Claude が生成した会話 JSON をパースし、検証済みの Message[] に変換する（#53・純粋関数）。
  * - JSON 配列でない／抽出できない場合は例外を投げる（呼び出し側でログ・スキップする）。
  * - 各項目を MessageSchema で検証し、channel を引数の channelId で注入する。
- * - speaker が knownSpeakerIds に無い項目、空 text・上限超過 text などの不正項目は除外する。
+ * - createdEmployeeId が knownSpeakerIds に無い項目、空 text・上限超過 text などの不正項目は除外する（#222）。
  */
 export const parseConversationMessages = (
   rawText: string,
@@ -43,9 +43,9 @@ export const parseConversationMessages = (
   const messages: Message[] = [];
   for (const item of items) {
     if (typeof item !== "object" || item === null) continue;
-    const { speaker, text } = item as { speaker?: unknown; text?: unknown };
-    const parsed = MessageSchema.safeParse({ speaker, channel: channelId, text });
-    if (parsed.success && known.has(parsed.data.speaker)) {
+    const { createdEmployeeId, text } = item as { createdEmployeeId?: unknown; text?: unknown };
+    const parsed = MessageSchema.safeParse({ createdEmployeeId, channel: channelId, text });
+    if (parsed.success && known.has(parsed.data.createdEmployeeId)) {
       messages.push(parsed.data);
     }
   }

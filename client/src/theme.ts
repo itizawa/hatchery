@@ -7,12 +7,12 @@ import { createTheme, type Theme } from "@mui/material/styles";
 export const SLACK_COLORS = {
   /** プライマリ（Slack ブルー）。ライト背景でもアクセシブルなので据え置き。 */
   blue: "#1164A3",
-  /** サイドバー背景（ダークネイビー）。RootLayout で直接参照する（Issue #65）。 */
-  sidebar: "#26334D",
-  /** サイドバーテキスト色（白）。サイドバー内の要素に明示設定する（Issue #65）。 */
-  sidebarText: "#FFFFFF",
-  /** メイン背景（白）。 */
-  background: "#FFFFFF",
+  /** サイドバー背景（白）。Reddit 風配色（Issue #272）。 */
+  sidebar: "#FFFFFF",
+  /** サイドバーテキスト色（濃色）。白背景での視認性を確保（Issue #272）。 */
+  sidebarText: "#1A1A1B",
+  /** メイン領域背景（薄グレー）。Reddit 風配色（Issue #272）。 */
+  mainBackground: "#F6F7F8",
 } as const;
 
 /**
@@ -25,7 +25,7 @@ export const slackTheme: Theme = createTheme({
     mode: "light",
     primary: { main: SLACK_COLORS.blue },
     background: {
-      default: SLACK_COLORS.background,
+      default: SLACK_COLORS.mainBackground,
     },
   },
   components: {

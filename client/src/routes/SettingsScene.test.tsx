@@ -1,4 +1,5 @@
 import * as invitationsApi from "../api/invitations.js";
+import * as adminApi from "../api/admin.js";
 import { DEFAULT_EMPLOYEES } from "@hatchery/common";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider, createMemoryHistory } from "@tanstack/react-router";
@@ -129,6 +130,23 @@ describe("設定画面タブ URL 同期・アクセシビリティ（#67）", ()
     await waitFor(() => {
       expect(router.state.location.searchStr).toContain("tab=api-token");
     });
+  });
+});
+
+describe("APIキー入力欄 autocomplete 属性（#180）", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    vi.spyOn(authApi, "fetchMe").mockResolvedValue({ id: "user1", displayName: "Alice", role: "admin" });
+    vi.spyOn(adminApi, "useAdminSettings").mockReturnValue({
+      data: [],
+      isLoading: false,
+    } as ReturnType<typeof adminApi.useAdminSettings>);
+  });
+
+  it("Claude API キー欄に autocomplete='off' が設定されている", async () => {
+    renderApp("/admin?tab=api-token", { id: "user1", displayName: "Alice", role: "admin" });
+    const apiKeyInput = await screen.findByLabelText(/Claude API キー/);
+    expect(apiKeyInput).toHaveAttribute("autocomplete", "off");
   });
 });
 

@@ -1,62 +1,144 @@
-import { Box, Link, Typography } from "../components/uiParts";
+import { Box, Divider, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText } from "../components/uiParts";
 
 import { isAdmin } from "@hatchery/common";
-import { Link as RouterLink, Outlet } from "@tanstack/react-router";
-import { Suspense, type ReactElement } from "react";
+import BusinessIcon from "@mui/icons-material/Business";
+import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
+import { Link as RouterLink, Outlet, useLocation } from "@tanstack/react-router";
+import { Suspense, useEffect, useState, type ReactElement } from "react";
+
+import { MainContentSkeleton } from "../components/MainContentSkeleton";
+import { useIsMobile } from "../hooks/useIsMobile.js";
 
 import { useAuth } from "../api/auth.js";
-import { AddChannelForm } from "../components/AddChannelForm";
-import { ChannelList } from "../components/ChannelList";
-import { ChannelListSkeleton } from "../components/ChannelListSkeleton";
-import { UserFooter } from "../components/UserFooter";
+import { AppHeader } from "../components/AppHeader";
+import { SidebarChannelSection } from "../components/SidebarChannelSection";
 import { SLACK_COLORS } from "../theme.js";
 
+const SIDEBAR_WIDTH = 260;
+const SIDEBAR_ICON_SX = { color: SLACK_COLORS.sidebarText, minWidth: 36 } as const;
+
 /**
- * Slack 風シェル。左サイドバー（ワークスペース名 + チャンネル一覧）と
- * メイン領域（ルートの Outlet）で構成する。
+ * サイドバーの内容。デスクトップの恒久サイドバーとモバイルのドロワー両方で共用する。
  */
-export const RootLayout = (): ReactElement => {
+const SidebarContent = (): ReactElement => {
   const { data: user } = useAuth();
 
   return (
-    <Box sx={{ display: "flex", height: "100vh" }}>
-      <Box
-        component="nav"
-        aria-label="サイドバー"
-        sx={{
-          width: 260,
-          flexShrink: 0,
-          bgcolor: SLACK_COLORS.sidebar,
-          borderRight: 1,
-          borderColor: "divider",
-          p: 2,
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
-        <Typography variant="h6" component="p" gutterBottom sx={{ color: SLACK_COLORS.sidebarText }}>
-          Hatchery
-        </Typography>
-        <Suspense fallback={<ChannelListSkeleton />}>
-          <ChannelList />
-        </Suspense>
-        <AddChannelForm />
-        <Box sx={{ mt: 2 }}>
-          <Link component={RouterLink} to="/office" sx={{ color: SLACK_COLORS.sidebarText }} underline="hover">
-            仮想オフィス
-          </Link>
-        </Box>
+    <>
+      <SidebarChannelSection />
+      <Divider sx={{ my: 1 }} />
+      <List dense>
+        <ListItem disablePadding>
+          <ListItemButton component={RouterLink} to="/office" sx={{ color: SLACK_COLORS.sidebarText }}>
+            <ListItemIcon sx={SIDEBAR_ICON_SX}>
+              <BusinessIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText primary="仮想オフィス" />
+          </ListItemButton>
+        </ListItem>
         {user && isAdmin(user) && (
-          <Box sx={{ mt: 1 }}>
-            <Link component={RouterLink} to="/admin" sx={{ color: SLACK_COLORS.sidebarText }} underline="hover">
-              管理画面
-            </Link>
+          <ListItem disablePadding>
+            <ListItemButton component={RouterLink} to="/admin" sx={{ color: SLACK_COLORS.sidebarText }}>
+              <ListItemIcon sx={SIDEBAR_ICON_SX}>
+                <AdminPanelSettingsIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText primary="管理画面" />
+            </ListItemButton>
+          </ListItem>
+        )}
+      </List>
+    </>
+  );
+};
+
+/**
+ * グローバルヘッダー（AppHeader）＋左サイドバー（チャンネル一覧）＋メイン領域で構成するシェル。
+ * モバイル幅（md 未満）ではサイドバーをドロワー化し、ハンバーガーボタンで開閉する（#190）。
+ * デスクトップ幅（md 以上）では従来どおり恒久サイドバーを横並び表示する。
+ */
+export const RootLayout = (): ReactElement => {
+  const isMobile = useIsMobile();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const location = useLocation();
+
+  // ナビゲーション（パス変化）またはモバイル→デスクトップ切り替わりでドロワーを自動クローズする
+  useEffect(() => {
+    setDrawerOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    setDrawerOpen(false);
+  }, [isMobile]);
+
+  const sidebarStyles = {
+    width: SIDEBAR_WIDTH,
+    flexShrink: 0,
+    bgcolor: SLACK_COLORS.sidebar,
+    borderRight: 1,
+    borderColor: "divider",
+    p: 2,
+    display: "flex",
+    flexDirection: "column",
+    overflowY: "auto",
+  } as const;
+
+  return (
+    <Box
+      data-testid="root-layout-outer"
+      sx={{ display: "flex", flexDirection: "column", height: "100vh", width: "100%", maxWidth: "100%", overflowX: "hidden" }}
+    >
+      <AppHeader onMenuOpen={isMobile ? () => setDrawerOpen(true) : undefined} />
+      <Box sx={{ display: "flex", flexGrow: 1, overflow: "hidden" }}>
+        {/* モバイル: 一時的なドロワー */}
+        {isMobile && (
+          <Drawer
+            variant="temporary"
+            open={drawerOpen}
+            onClose={() => setDrawerOpen(false)}
+            ModalProps={{ keepMounted: true }}
+            sx={{
+              "& .MuiDrawer-paper": {
+                ...sidebarStyles,
+                boxSizing: "border-box",
+              },
+            }}
+          >
+            <Box
+              component="nav"
+              aria-label="サイドバー"
+              sx={{ display: "flex", flexDirection: "column", height: "100%", width: SIDEBAR_WIDTH }}
+            >
+              <SidebarContent />
+            </Box>
+          </Drawer>
+        )}
+
+        {/* デスクトップ: 恒久サイドバー */}
+        {!isMobile && (
+          <Box
+            component="nav"
+            aria-label="サイドバー"
+            sx={sidebarStyles}
+          >
+            <SidebarContent />
           </Box>
         )}
-        <UserFooter />
-      </Box>
-      <Box component="main" sx={{ flexGrow: 1, bgcolor: "background.default", overflow: "auto", display: "flex", flexDirection: "column" }}>
-        <Outlet />
+
+        <Box
+          component="main"
+          sx={{
+            flexGrow: 1,
+            minWidth: 0,
+            bgcolor: "background.default",
+            overflow: "auto",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <Suspense fallback={<MainContentSkeleton />}>
+            <Outlet />
+          </Suspense>
+        </Box>
       </Box>
     </Box>
   );

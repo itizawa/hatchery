@@ -25,15 +25,15 @@ export const mockMemberUser: AuthUser = {
 };
 
 export const mockChannels: Channel[] = [
-  { id: "zatsudan", label: "雑談", type: "zatsudan" },
-  { id: "shigoto", label: "仕事", type: "task" },
-  { id: "kikaku", label: "企画", type: "planning" },
+  { id: "zatsudan", label: "雑談", type: "zatsudan", goal: { type: "chat" } },
+  { id: "shigoto", label: "仕事", type: "task", goal: { type: "chat" } },
+  { id: "kikaku", label: "企画", type: "planning", goal: { type: "issue" } },
 ];
 
 export const mockMessages: MessageRecord[] = [
   {
     id: "msg-1",
-    speaker: "haru",
+    createdEmployeeId: "haru",
     channel: "zatsudan",
     text: "おはようございます！今日もよろしくお願いします。",
     createdAt: new Date("2026-06-05T09:00:00Z"),
@@ -42,7 +42,7 @@ export const mockMessages: MessageRecord[] = [
   },
   {
     id: "msg-2",
-    speaker: "ken",
+    createdEmployeeId: "ken",
     channel: "zatsudan",
     text: "おはよう！昨日の件、確認しておきますね。",
     createdAt: new Date("2026-06-05T09:01:00Z"),
@@ -51,7 +51,7 @@ export const mockMessages: MessageRecord[] = [
   },
   {
     id: "msg-3",
-    speaker: "mei",
+    createdEmployeeId: "mei",
     channel: "zatsudan",
     text: "おはようございます。今日も頑張りましょう！",
     createdAt: new Date("2026-06-05T09:02:00Z"),

@@ -1,4 +1,4 @@
-import type { Channel, ChannelType, MessageRecord } from "@hatchery/common";
+import type { Channel, ChannelGoal, ChannelType, MessageRecord } from "@hatchery/common";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 
 import { openApiClient } from "./client.js";
@@ -30,7 +30,7 @@ export function useChannels() {
 export function useCreateChannel() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { label: string; type?: ChannelType }): Promise<Channel> => {
+    mutationFn: async (input: { label: string; type?: ChannelType; goal?: ChannelGoal }): Promise<Channel> => {
       const { data, error } = await openApiClient.POST("/api/channels", {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         body: input as any,

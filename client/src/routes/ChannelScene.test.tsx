@@ -1,3 +1,4 @@
+import type { Employee } from "@hatchery/common";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -23,6 +24,16 @@ vi.mock("../api/auth.js", async () => {
   return { ...actual, useAuth: () => ({ data: mockAdminUser }) };
 });
 
+const mockEmployees: Employee[] = [
+  { id: "haru", displayName: "ハル" },
+  { id: "ken", displayName: "ケン" },
+  { id: "mei", displayName: "メイ" },
+];
+
+vi.mock("../api/employees.js", () => ({
+  useBotEmployees: () => ({ data: mockEmployees }),
+}));
+
 describe("ChannelScene レイアウト (#203)", () => {
   it("MessageInput（送信ボタン）が ChannelView（メッセージ一覧）より後ろ（下）に位置する", () => {
     render(<ChannelScene />);
@@ -34,5 +45,19 @@ describe("ChannelScene レイアウト (#203)", () => {
     expect(
       messageList.compareDocumentPosition(submitButton) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+  });
+});
+
+describe("ChannelScene displayName 表示（#278）", () => {
+  it("Employee 一覧を取得し、メッセージの発言者を displayName で表示する（生の ID が出ない）", () => {
+    render(<ChannelScene />);
+    // mockMessages の createdEmployeeId "haru" / "ken" / "mei" を displayName に解決できること
+    expect(screen.getByText("ハル")).toBeInTheDocument();
+    expect(screen.getByText("ケン")).toBeInTheDocument();
+    expect(screen.getByText("メイ")).toBeInTheDocument();
+    // 生の ID が表示されていないこと
+    expect(screen.queryByText("haru")).not.toBeInTheDocument();
+    expect(screen.queryByText("ken")).not.toBeInTheDocument();
+    expect(screen.queryByText("mei")).not.toBeInTheDocument();
   });
 });

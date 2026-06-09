@@ -28,7 +28,22 @@
 - `vulnerabilityAlerts.minimumReleaseAge: "0 days"` — CVE 対応 PR は即時生成（クールダウン例外）
 - CI ジョブに `pnpm audit --audit-level=high` を追加（high/critical のみ fail、low/moderate は通過）
 
-**automerge の設定は対象外**（別 Issue #149: どの種別をどの条件で automerge するかは運用 Issue で定める）。
+**automerge ポリシー**（Issue #149 で確定）:
+
+- `devDependencies` の minor/patch: `automerge: true` + `automergeType: "pr"`（CI 緑で自動マージ）
+- 本番 `dependencies` の minor/patch: `automerge: false`（手動レビュー必須）
+- major（全種別）: `automerge: false`（破壊的変更のため常に手動レビュー）
+
+`automergeType: "pr"` を採用することで、Renovate はステータスチェック（lint/test/build）が全て緑になるまで PR のマージを待つ。CI を通過しない PR が自動マージされることはない。
+
+**PR 溜まり防止設定**:
+
+- `dependencyDashboard: true` — GitHub Issue として未処理の Renovate PR 一覧を自動生成し、溜まり具合を可視化する
+- `prConcurrentLimit: 5` — 同時に作られる PR を 5 件以内に抑え、消化が追いつくペースに調整する
+
+**失敗時のハンドリング**:
+
+CI が落ちた Renovate PR は自動マージされず open のまま残る。`dependencyDashboard` Issue で確認・対応する。特定パッケージを一時的に除外したい場合は `ignoreDeps` または `dependencyDashboardApproval: true` を当該ルールに追加する。
 
 **Renovate App の GitHub インストールが別途必要**。設定ファイルを置くだけでは Renovate は動かない。リポジトリオーナーが [Renovate App](https://github.com/apps/renovate) を GitHub からインストールする必要がある。
 
@@ -42,8 +57,8 @@
 
 ### クールダウン 7 日の根拠
 
-- npm エコシステムで悪性版がコミュニティ・自動スキャナに検知されるまでの実績が概ね 24〜72 時間。7 日は余裕を持った安全バッファ。
-- Renovate の公式ドキュメントも "stabilityDays" として 3〜7 日を推奨例として挙げる。
+- npm エコシステムで悪性版がコミュニティ・自動スキャナに検知されるまでの実績が概ね 24～72 時間。7 日は余裕を持った安全バッファ。
+- Renovate の公式ドキュメントも "stabilityDays" として 3～7 日を推奨例として挙げる。
 - 1 週間超えると最新化の恩恵（バグ修正・パフォーマンス改善）を享受できない期間が長くなる。7 日がバランス点。
 
 ### CVE は即時例外
@@ -61,14 +76,14 @@
 - **Dependabot**: GitHub ネイティブで導入容易。ただし `minimumReleaseAge`（クールダウン）機能が無く、グルーピングの柔軟性も低い。本件の核心要件を満たせないため不採用。
 - **クールダウン無しの即時自動アップデート**: 速さ重視だがサプライチェーンリスクを受け入れることになる。本プロジェクトは小規模でも依存数が多く、リスク対策優先。
 - **pnpm 10 系の `minimumReleaseAge`（インストール時クールダウン）**: pnpm 10.16+ の機能で強力だが、pnpm のメジャーアップグレードが必要（別 Issue #150）。本 Issue では Renovate 設定側のクールダウンで代替し、pnpm アップグレードは独立して行う。
-- **`pnpm audit --audit-level=critical`（critical のみ fail）**: 安全側だが high な脆弱性がスルーされる懸念。`high` を最低ラインとして採用。
+- **`pnpm audit --audit-level=critical`（critical のみ fail）**: 安全側だが high な脆弱性がスルーされる漸念。`high` を最低ラインとして採用。
 - **`pnpm audit --audit-level=moderate`**: 誤検知増でビルドが頻繁に red になりノイズになる。不採用。
 
 ## 影響（結果）
 
 **良い影響:**
 - 依存更新が定期・自動化され、手動忘れによる放置が無くなる
-- クールダウンにより悪性リリースを掴むリスクが低減する
+- クールダウンにより悪性リリースを打むリスクが低減する
 - CI での `pnpm audit` により既知 CVE を早期検知できる
 - 更新 PR がすべて `develop` に向くのでブランチ戦略と整合する
 
@@ -79,6 +94,6 @@
 
 **フォローアップが必要なこと:**
 - Renovate App の GitHub インストール（人間が行う）
-- automerge の運用方針決定（Issue #149）
+- ~~automerge の運用方針決定（Issue #149）~~ → 完了（本 ADR に追記済み）
 - pnpm 10 系アップグレード後に pnpm ネイティブの `minimumReleaseAge` も有効化を検討（Issue #150）
 - 多層防御の追加候補（GitHub Dependency review / OpenSSF Scorecard / `onlyBuiltDependencies` によるポストインストールスクリプト制限）の継続検討

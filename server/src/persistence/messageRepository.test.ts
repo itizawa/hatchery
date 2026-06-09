@@ -6,10 +6,10 @@ describe("InMemoryMessageRepository", () => {
   it("createMany で id を採番し list で挿入順に返す", async () => {
     const repo = new InMemoryMessageRepository();
     await repo.createMany([
-      { speaker: "e1", channel: "zatsudan", text: "1" },
-      { speaker: "e2", channel: "shigoto", text: "2" },
+      { createdEmployeeId:"e1", channel: "zatsudan", text: "1" },
+      { createdEmployeeId:"e2", channel: "shigoto", text: "2" },
     ]);
-    await repo.createMany([{ speaker: "e3", channel: "zatsudan", text: "3" }]);
+    await repo.createMany([{ createdEmployeeId:"e3", channel: "zatsudan", text: "3" }]);
 
     const all = await repo.list();
     expect(all).toHaveLength(3);
@@ -17,13 +17,13 @@ describe("InMemoryMessageRepository", () => {
     expect(new Set(all.map((m) => m.id)).size).toBe(3);
   });
 
-  it("createMany が返す record は speaker / channel / text / createdAt / order を持つ", async () => {
+  it("createMany が返す record は createdEmployeeId / channel / text / createdAt / order を持つ", async () => {
     const repo = new InMemoryMessageRepository();
     const [first, second] = await repo.createMany([
-      { speaker: "e1", channel: "zatsudan", text: "hi" },
-      { speaker: "e2", channel: "shigoto", text: "bye" },
+      { createdEmployeeId: "e1", channel: "zatsudan", text: "hi" },
+      { createdEmployeeId: "e2", channel: "shigoto", text: "bye" },
     ]);
-    expect(first?.speaker).toBe("e1");
+    expect(first?.createdEmployeeId).toBe("e1");
     expect(first?.channel).toBe("zatsudan");
     expect(first?.text).toBe("hi");
     expect(first?.createdAt).toBeInstanceOf(Date);
@@ -36,7 +36,7 @@ describe("InMemoryMessageRepository", () => {
     const first = await repo.list();
     first.push({
       id: "x",
-      speaker: "e1",
+      createdEmployeeId: "e1",
       channel: "zatsudan",
       text: "injected",
       createdAt: new Date(0),
@@ -49,10 +49,10 @@ describe("InMemoryMessageRepository", () => {
     it("指定チャンネルの直近 limit 件を新しい順（order 降順）で返す", async () => {
       const repo = new InMemoryMessageRepository();
       await repo.createMany([
-        { speaker: "a", channel: "zatsudan", text: "1" },
-        { speaker: "a", channel: "zatsudan", text: "2" },
-        { speaker: "a", channel: "zatsudan", text: "3" },
-        { speaker: "a", channel: "shigoto", text: "x" },
+        { createdEmployeeId:"a", channel: "zatsudan", text: "1" },
+        { createdEmployeeId:"a", channel: "zatsudan", text: "2" },
+        { createdEmployeeId:"a", channel: "zatsudan", text: "3" },
+        { createdEmployeeId:"a", channel: "shigoto", text: "x" },
       ]);
       const recent = await repo.listRecentByChannel("zatsudan", 2);
       expect(recent.map((m) => m.text)).toEqual(["3", "2"]);
@@ -61,8 +61,8 @@ describe("InMemoryMessageRepository", () => {
     it("limit が件数より大きければ全件を返す", async () => {
       const repo = new InMemoryMessageRepository();
       await repo.createMany([
-        { speaker: "a", channel: "zatsudan", text: "1" },
-        { speaker: "a", channel: "zatsudan", text: "2" },
+        { createdEmployeeId:"a", channel: "zatsudan", text: "1" },
+        { createdEmployeeId:"a", channel: "zatsudan", text: "2" },
       ]);
       expect(await repo.listRecentByChannel("zatsudan", 30)).toHaveLength(2);
     });
@@ -77,7 +77,7 @@ describe("InMemoryMessageRepository", () => {
     it("since 以降（createdAt >= since）のメッセージのみ返す", async () => {
       const repo = new InMemoryMessageRepository();
       // InMemory の createMany は createdAt を epoch(0) で採番する。
-      await repo.createMany([{ speaker: "a", channel: "zatsudan", text: "1" }]);
+      await repo.createMany([{ createdEmployeeId:"a", channel: "zatsudan", text: "1" }]);
       expect(await repo.listByChannelSince("zatsudan", new Date(0))).toHaveLength(1);
       expect(await repo.listByChannelSince("zatsudan", new Date(1))).toHaveLength(0);
     });
@@ -85,8 +85,8 @@ describe("InMemoryMessageRepository", () => {
     it("別チャンネルは含めない", async () => {
       const repo = new InMemoryMessageRepository();
       await repo.createMany([
-        { speaker: "a", channel: "zatsudan", text: "1" },
-        { speaker: "a", channel: "shigoto", text: "2" },
+        { createdEmployeeId:"a", channel: "zatsudan", text: "1" },
+        { createdEmployeeId:"a", channel: "shigoto", text: "2" },
       ]);
       const res = await repo.listByChannelSince("zatsudan", new Date(0));
       expect(res.map((m) => m.channel)).toEqual(["zatsudan"]);

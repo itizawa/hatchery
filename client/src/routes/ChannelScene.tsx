@@ -4,6 +4,7 @@ import { useState, type ReactElement } from "react";
 
 import { useAuth } from "../api/auth.js";
 import { useChannelMessages, useChannels, usePostChannelMessage } from "../api/channels.js";
+import { useBotEmployees } from "../api/employees.js";
 import { Box } from "../components/uiParts";
 import { ChannelView } from "../components/ChannelView.js";
 import { EditChannelNameDialog } from "../components/EditChannelNameDialog.js";
@@ -16,7 +17,7 @@ import { MessageInput } from "../components/MessageInput.js";
  */
 const resolveChannel = (channels: readonly Channel[], channelId: string): Channel =>
   channels.find((c) => c.id === channelId) ??
-  findChannelById(channelId) ?? { id: channelId, label: `#${channelId}`, type: "zatsudan" };
+  findChannelById(channelId) ?? { id: channelId, label: `#${channelId}`, type: "zatsudan", goal: { type: "chat" } };
 
 /**
  * チャンネル別ビュー（/channels/$channelId）のコンテナ（#30）。
@@ -31,6 +32,7 @@ export const ChannelScene = (): ReactElement => {
   const channel = resolveChannel(channels, id);
 
   const { data: messages } = useChannelMessages(id);
+  const { data: employees } = useBotEmployees();
   const { data: authUser } = useAuth();
   const { mutate: postMessage, isPending } = usePostChannelMessage(id);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -41,6 +43,7 @@ export const ChannelScene = (): ReactElement => {
         <ChannelView
           channel={channel}
           messages={messages}
+          employees={employees ?? []}
           onEditName={authUser ? () => setEditDialogOpen(true) : undefined}
         />
       </Box>

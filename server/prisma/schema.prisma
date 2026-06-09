@@ -48,6 +48,7 @@ model Employee {
   channels    ChannelEmployee[]
   /// AI バッチのプロンプト指針となる性格設定（任意・500 文字以内）（#38）。
   personality String?
+  messages    Message[]
 }
 
 /// チャンネルのタイプ（#54 / #76）。zatsudan=雑談 / task=仕事 / planning=企画。
@@ -57,13 +58,24 @@ enum ChannelType {
   planning
 }
 
-/// 話題の入れ物。common の ChannelSchema に対応（id / label / type）。
+/// AI 出力種別（#284 / ADR-0016）。chat=会話生成、issue=GitHub Issue 起票。
+enum ChannelGoalType {
+  chat
+  issue
+}
+
+/// 話題の入れ物。common の ChannelSchema に対応（id / label / type / goal）。
 /// summary / summaryUpdatedAt は定時バッチの会話生成に使うチャンネルのあらすじ（#53）。
 /// 直近 30 件より前の文脈を圧縮した要約で、API（OpenAPI）には公開しないバッチ内部の状態。
+/// goalType / goalInstructions は ADR-0016 で導入した出力契約（#284）。
 model Channel {
   id               String            @id @default(uuid(7))
   label            String
   type             ChannelType       @default(zatsudan)
+  /// AI 出力種別（#284 / ADR-0016）。chat=会話生成、issue=GitHub Issue 起票。
+  goalType         ChannelGoalType   @default(chat)
+  /// バッチプロンプトへの任意の追加指示（#284）。500 文字以内。
+  goalInstructions String?
   summary          String?
   summaryUpdatedAt DateTime?
   members          ChannelEmployee[]
@@ -86,9 +98,10 @@ model ChannelEmployee {
 /// postedAt はメッセージを表示する日時（#183）。この時刻を過ぎたメッセージのみ一覧に返す。
 /// proposalTitle / proposalReason / proposalTargetUrl / issueNumber / issueUrl は
 /// 企画 チャンネルの UX 提案メッセージ専用 optional フィールド（#76）。
+/// createdEmployeeId は発言者の Employee.id への外部キー（#222）。onDelete: Restrict。
 model Message {
   id                String   @id @default(uuid(7))
-  speaker           String
+  createdEmployeeId String
   channel           String
   text              String
   createdAt         DateTime @default(now())
@@ -100,9 +113,11 @@ model Message {
   proposalTargetUrl String?
   issueNumber       Int?
   issueUrl          String?
+  createdEmployee   Employee @relation(fields: [createdEmployeeId], references: [id], onDelete: Restrict)
 
   @@index([channel, createdAt])
   @@index([channel, postedAt])
+  @@index([createdEmployeeId])
 }
 
 /// MVP のタスク状態（common の TaskStatusSchema に対応）。
@@ -143,6 +158,20 @@ model BatchRunLog {
 enum BatchRunLogStatus {
   success
   failure
+}
+
+/// AI API トークン使用量ログ（#153）。定時バッチの AI 呼び出しごとに記録する。
+model TokenUsageLog {
+  id           String   @id @default(uuid(7))
+  occurredAt   DateTime @default(now())
+  /// 使用したモデル名（例: "claude-haiku-4-5"）。
+  model        String
+  inputTokens  Int
+  outputTokens Int
+  /// 紐づくバッチ実行ログ ID（任意）。
+  batchRunLogId String?
+
+  @@index([occurredAt])
 }
 
 /// 招待リンク（#131）。管理者が発行し、期限 + single-use で新規ユーザーを招待する。

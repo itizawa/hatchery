@@ -14,7 +14,6 @@ function jsonResponse(status: number, body?: unknown): Response {
   });
 }
 
-/** グローバル fetch をスタブしてログイン状態を制御する。 */
 function stubFetch(isLoggedIn: boolean) {
   const user = isLoggedIn ? { id: "user1", displayName: "Alice" } : undefined;
   vi.stubGlobal(
@@ -44,7 +43,7 @@ function renderApp(initialPath: string) {
   );
 }
 
-describe("UserFooter", () => {
+describe("AppHeader", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
@@ -53,14 +52,22 @@ describe("UserFooter", () => {
     vi.unstubAllGlobals();
   });
 
-  it("ログイン済みのとき displayName が表示される", async () => {
+  it("ログイン済みのとき displayName（名前テキスト）が表示されない", async () => {
     stubFetch(true);
     renderApp("/");
 
-    expect(await screen.findByText("Alice")).toBeInTheDocument();
+    await screen.findByRole("button", { name: /ユーザーメニュー/ });
+    expect(screen.queryByText("Alice")).not.toBeInTheDocument();
   });
 
-  it("初期表示時にアカウント設定が DOM 上に存在しない（Menu は閉じている）", async () => {
+  it("認証確認中（isPending）に Skeleton が表示される", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockImplementation(() => new Promise(() => {})));
+    renderApp("/channels/test-channel");
+
+    expect(await screen.findByTestId("account-skeleton")).toBeInTheDocument();
+  });
+
+  it("初期表示時にアカウント設定が DOM 上に存在しない（Menu は閃じている）", async () => {
     stubFetch(true);
     renderApp("/");
 
@@ -69,7 +76,7 @@ describe("UserFooter", () => {
     expect(screen.queryByRole("menuitem", { name: /アカウント設定/ })).not.toBeInTheDocument();
   });
 
-  it("初期表示時にログアウト menuitem が DOM 上に存在しない（Menu は閉じている）", async () => {
+  it("初期表示時にログアウト menuitem が DOM 上に存在しない（Menu は閃じている）", async () => {
     stubFetch(true);
     renderApp("/");
 
@@ -142,7 +149,6 @@ describe("UserFooter", () => {
     stubFetch(false);
     renderApp("/");
 
-    // UserFooter は user=null のとき null を返すため "Alice" は表示されない。
     await waitFor(() => {
       expect(screen.queryByText("Alice")).not.toBeInTheDocument();
     });
@@ -152,9 +158,31 @@ describe("UserFooter", () => {
     stubFetch(false);
     renderApp("/");
 
-    // UserFooter は user=null のとき null を返すためトリガーボタンは表示されない。
     await waitFor(() => {
       expect(screen.queryByRole("button", { name: /ユーザーメニュー/ })).not.toBeInTheDocument();
     });
+  });
+
+  it("Hatchery ブランド名がヘッダーに表示される", async () => {
+    stubFetch(true);
+    renderApp("/");
+
+    expect(await screen.findByRole("link", { name: /Hatchery/ })).toBeInTheDocument();
+  });
+
+  // Issue #255: 未認証ユーザーへのログイン誘導 UI
+  it("未ログイン時にヘッダーにログインリンクが表示される", async () => {
+    stubFetch(false);
+    renderApp("/channels/zatsudan");
+
+    expect(await screen.findByRole("link", { name: /ログイン/ })).toBeInTheDocument();
+  });
+
+  it("ログイン済み時にヘッダーにログインリンクが表示されない", async () => {
+    stubFetch(true);
+    renderApp("/");
+
+    await screen.findByRole("button", { name: /ユーザーメニュー/ });
+    expect(screen.queryByRole("link", { name: /ログイン/ })).not.toBeInTheDocument();
   });
 });

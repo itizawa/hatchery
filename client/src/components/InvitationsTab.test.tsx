@@ -127,6 +127,20 @@ describe("InvitationsTab", () => {
     });
   });
 
+  describe("isLoading 状態（#241）", () => {
+    it("isLoading=true のときスケルトン要素が表示される", async () => {
+      mockUseInvitations.mockReturnValue({ data: [], isLoading: true });
+      renderTab();
+      expect(await screen.findAllByTestId("invitations-skeleton-item")).toBeTruthy();
+    });
+
+    it("isLoading=true のとき「読み込み中...」テキストは表示されない", () => {
+      mockUseInvitations.mockReturnValue({ data: [], isLoading: true });
+      renderTab();
+      expect(screen.queryByText("読み込み中...")).not.toBeInTheDocument();
+    });
+  });
+
   describe("招待発行フォーム", () => {
     it("有効期限の選択肢が表示される", async () => {
       renderTab();

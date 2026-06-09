@@ -8,6 +8,13 @@ import type { EmployeeRepository } from "../persistence/employeeRepository.js";
 export function createEmployeesRouter(employeeRepository: EmployeeRepository): Router {
   const router = Router();
 
+  router.get("/", (_req, res, next) => {
+    employeeRepository
+      .listBotEmployees()
+      .then((employees) => res.status(200).json(employees))
+      .catch(next);
+  });
+
   router.patch(
     "/:id",
     requireAuth,

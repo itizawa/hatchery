@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clampPosition, nextPosition } from "./office.js";
+import { OFFICE_MAX_BOUNDS, clampPosition, nextPosition, officeBounds } from "./office.js";
 
 const BOUNDS = { width: 800, height: 500 };
 const CHAR_SIZE = 48;
@@ -67,5 +67,37 @@ describe("nextPosition", () => {
     const result = nextPosition({ x: 100, y: 0 }, { dx: 0, dy: -1 }, SPEED, BOUNDS, CHAR_SIZE);
     expect(result.direction.dy).toBe(1);
     expect(result.position.y).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe("officeBounds (#280)", () => {
+  it("OFFICE_MAX_BOUNDS は 800x500", () => {
+    expect(OFFICE_MAX_BOUNDS).toEqual({ width: 800, height: 500 });
+  });
+
+  it("コンテナ幅が上限以上なら上限 800x500 にクランプする", () => {
+    expect(officeBounds(1000)).toEqual({ width: 800, height: 500 });
+    expect(officeBounds(800)).toEqual({ width: 800, height: 500 });
+  });
+
+  it("コンテナ幅が上限未満ならコンテナ幅にフィットしアスペクト比 800:500 を維持する", () => {
+    expect(officeBounds(400)).toEqual({ width: 400, height: 250 });
+    expect(officeBounds(640)).toEqual({ width: 640, height: 400 });
+  });
+
+  it("算出された width は常に上限 800 以下", () => {
+    for (const w of [0, 100, 320, 799, 800, 1200]) {
+      expect(officeBounds(w).width).toBeLessThanOrEqual(800);
+    }
+  });
+
+  it("コンテナ幅が 0 以下なら {0,0} を返す（測定前ガード）", () => {
+    expect(officeBounds(0)).toEqual({ width: 0, height: 0 });
+    expect(officeBounds(-50)).toEqual({ width: 0, height: 0 });
+  });
+
+  it("maxBounds を指定するとその上限・アスペクト比に従う", () => {
+    expect(officeBounds(2000, { width: 600, height: 300 })).toEqual({ width: 600, height: 300 });
+    expect(officeBounds(300, { width: 600, height: 300 })).toEqual({ width: 300, height: 150 });
   });
 });

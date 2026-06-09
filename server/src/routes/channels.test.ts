@@ -6,6 +6,7 @@ import { InMemoryChannelMembershipRepository } from "../persistence/channelMembe
 import { InMemoryChannelRepository } from "../persistence/channelRepository.js";
 import { InMemoryMessageRepository } from "../persistence/messageRepository.js";
 import { InMemoryUserRepository } from "../persistence/userRepository.js";
+import { createTestDeps } from "../testing/createTestDeps.js";
 
 async function buildApp(
   channelMembershipRepository = new InMemoryChannelMembershipRepository(),
@@ -14,12 +15,14 @@ async function buildApp(
   userRepository?: InMemoryUserRepository,
 ) {
   const resolvedUserRepository = userRepository ?? (await InMemoryUserRepository.createWithTestUser());
-  const app = createApp({
-    messageRepository,
-    userRepository: resolvedUserRepository,
-    channelMembershipRepository,
-    channelRepository,
-  });
+  const app = createApp(
+    await createTestDeps({
+      messageRepository,
+      userRepository: resolvedUserRepository,
+      channelMembershipRepository,
+      channelRepository,
+    }),
+  );
   return { app, channelMembershipRepository, channelRepository, messageRepository };
 }
 
@@ -139,6 +142,14 @@ describe("PATCH /api/channels/:id（チャンネル更新・認証必須・#54�
     expect(res.body).toMatchObject({ id: "zatsudan", label: "新名前", type: "task" });
   });
 
+  it("goal のみを指定して goal を更新できる（#284）", async () => {
+    const { app } = await buildApp();
+    const agent = await login(app);
+    const res = await agent.patch("/api/channels/zatsudan").send({ goal: { type: "issue" } });
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ id: "zatsudan", goal: { type: "issue" } });
+  });
+
   it("label も type も指定しないと 400 を返す（#54）", async () => {
     const { app } = await buildApp();
     const agent = await login(app);
@@ -163,14 +174,14 @@ describe("PATCH /api/channels/:id（チャンネル更新・認証必須・#54�
 });
 
 describe("GET /channels（一覧・認証不要・#47 / #54）", () => {
-  it("認証不要で 200 と既定チャンネル配列を返す（type フィールド含む）", async () => {
+  it("認証不要で 200 と既定チャンネル配列を返す（type / goal フィールド含む）", async () => {
     const { app } = await buildApp();
     const res = await request(app).get("/api/channels");
     expect(res.status).toBe(200);
     expect(res.body).toEqual([
-      { id: "zatsudan", label: "雑談", type: "zatsudan" },
-      { id: "shigoto", label: "仕事", type: "task" },
-      { id: "kikaku", label: "企画", type: "planning" },
+      { id: "zatsudan", label: "雑談", type: "zatsudan", goal: { type: "chat" } },
+      { id: "shigoto", label: "仕事", type: "task", goal: { type: "chat" } },
+      { id: "kikaku", label: "企画", type: "planning", goal: { type: "issue" } },
     ]);
   });
 });
@@ -214,7 +225,7 @@ describe("POST /channels（作成・認証必須・#47 / #54）", () => {
     const agent = await login(app);
     const created = await agent.post("/api/channels").send({ label: "企画" });
     const list = await request(app).get("/api/channels");
-    expect(list.body).toContainEqual({ id: created.body.id, label: "企画", type: "zatsudan" });
+    expect(list.body).toContainEqual({ id: created.body.id, label: "企画", type: "zatsudan", goal: { type: "chat" } });
   });
 });
 
@@ -243,7 +254,7 @@ describe("POST /api/channels/:channelId/messages（メッセージ投稿・認�
     const res = await agent.post("/api/channels/zatsudan/messages").send({ text: "こんにちは！" });
     expect(res.status).toBe(201);
     expect(res.body.text).toBe("こんにちは！");
-    expect(res.body.speaker).toBe("emp1");
+    expect(res.body.createdEmployeeId).toBe("emp1");
     expect(res.body.channel).toBe("zatsudan");
     expect(res.body.id).toBeTruthy();
   });

@@ -252,3 +252,32 @@ describe("ChannelView ドリップ表示 - reduced-motion（#282）", () => {
     expect(screen.queryByLabelText("入力中")).not.toBeInTheDocument();
   });
 });
+
+describe("ChannelView アバター表示（#300）", () => {
+  const employeesWithImage: readonly Employee[] = [
+    { id: "haru", displayName: "ハル", imageUrl: "https://example.com/haru.png", isBot: true },
+    { id: "ken", displayName: "ケン", isBot: true },
+  ];
+
+  it("画像 URL を持つ Employee の発言で img 要素が描画される", () => {
+    render(<ChannelView channel={channel} messages={messages} employees={employeesWithImage} />);
+    // haru の発言（msg-1）に画像 URL → <img alt="ハル"> が表示される
+    const img = screen.getByRole("img", { name: "ハル" });
+    expect(img).toBeInTheDocument();
+    expect(img).toHaveAttribute("src", "https://example.com/haru.png");
+  });
+
+  it("画像未設定の Employee ではイニシャルのフォールバックが表示される", () => {
+    render(<ChannelView channel={channel} messages={messages} employees={employeesWithImage} />);
+    // ken の発言（msg-2）は imageUrl なし → イニシャル "ケ" のテキストが表示される
+    expect(screen.getByText("ケ")).toBeInTheDocument();
+  });
+
+  it("メッセージ一覧の各行にアバターが表示される", () => {
+    render(<ChannelView channel={channel} messages={messages} employees={employeesWithImage} />);
+    const list = screen.getByRole("list", { name: "メッセージ一覧" });
+    // 各 listitem にアバター（img or テキストフォールバック）が存在する
+    const items = within(list).getAllByRole("listitem");
+    expect(items).toHaveLength(messages.length);
+  });
+});

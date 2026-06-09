@@ -20,5 +20,13 @@ export function useHideOnScroll(threshold = HEADER_SCROLL_THRESHOLD) {
     [threshold],
   );
 
-  return { visible, onScroll };
+  // チャンネル切り替え時など、スクロール状態を初期値に戻す。
+  // TanStack Router は同一コンポーネントインスタンスを再利用するため
+  // useState/useRef が自動リセットされず、useEffect から明示的に呼ぶ必要がある。
+  const reset = useCallback(() => {
+    setVisible(true);
+    prevScrollTopRef.current = 0;
+  }, []);
+
+  return { visible, onScroll, reset };
 }

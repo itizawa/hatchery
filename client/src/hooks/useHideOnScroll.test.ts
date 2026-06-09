@@ -61,4 +61,27 @@ describe("useHideOnScroll", () => {
 
     expect(result.current.visible).toBe(false);
   });
+
+  it("reset() を呼ぶと visible=true・スクロール位置が 0 にリセットされる", () => {
+    const { result } = renderHook(() => useHideOnScroll(5));
+
+    // 下スクロールで hidden にする
+    act(() => {
+      result.current.onScroll(makeScrollEvent(100));
+    });
+    expect(result.current.visible).toBe(false);
+
+    // reset 後は visible=true
+    act(() => {
+      result.current.reset();
+    });
+    expect(result.current.visible).toBe(true);
+
+    // reset 後は prevScrollTop=0 にリセットされているため、
+    // scrollTop=10 の微小な下スクロールは hidden になる（リセット前の 100 を基準にしない）
+    act(() => {
+      result.current.onScroll(makeScrollEvent(10));
+    });
+    expect(result.current.visible).toBe(false);
+  });
 });

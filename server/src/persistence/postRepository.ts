@@ -1,0 +1,113 @@
+/**
+ * Post の永続化境界（ポート）。ADR-0004 の層分離に従い、
+ * ユースケースはこのインターフェースにのみ依存する。
+ */
+
+export interface PostRecord {
+  id: string;
+  communityId: string;
+  slotKey: string;
+  seq: number;
+  author: string;
+  title: string;
+  text: string;
+  score: number;
+  createdAt: Date;
+}
+
+/** Post 作成時の入力（バルク用）。 */
+export interface PostCreateInput {
+  slotKey: string;
+  seq: number;
+  author: string;
+  title: string;
+  text: string;
+}
+
+export interface PostRepository {
+  /**
+   * community 配下に複数の post をバルク作成する。
+   * (communityId, slotKey, seq) はユニーク制約があるため、Cron 二重発火時は upsert で skip する。
+   */
+  createMany(communityId: string, inputs: PostCreateInput[]): Promise<PostRecord[]>;
+  /** community 別に新着順（createdAt 降順）で post を取得する。limit 省略時は 50 件。 */
+  listByCommunity(communityId: string, limit?: number): Promise<PostRecord[]>;
+  /** ID で post を取得する。存在しない場合は null を返す。 */
+  findById(id: string): Promise<PostRecord | null>;
+  /**
+   * post の score に delta を加算する。
+   * 存在しない場合は null を返す。
+   */
+  addScore(id: string, delta: number): Promise<PostRecord | null>;
+  /** 複数の communityId の post を新着順（createdAt 降順）で取得する。ホームフィード用。 */
+  listByCommunityIds(communityIds: string[], limit?: number): Promise<PostRecord[]>;
+}
+
+function cloneRecord(r: PostRecord): PostRecord {
+  return { ...r };
+}
+
+/** DB 非依存のインメモリ実装。ユースケース/ルートのテストで注入する。 */
+export class InMemoryPostRepository implements PostRepository {
+  private readonly records: PostRecord[] = [];
+  private seq = 0;
+
+  createMany(communityId: string, inputs: PostCreateInput[]): Promise<PostRecord[]> {
+    const created: PostRecord[] = [];
+    for (const input of inputs) {
+      // 重複チェック（(communityId, slotKey, seq) ユニーク）
+      const exists = this.records.find(
+        (r) => r.communityId === communityId && r.slotKey === input.slotKey && r.seq === input.seq,
+      );
+      if (exists) {
+        // 既存レコードをそのまま返す（upsert で skip）
+        created.push(cloneRecord(exists));
+        continue;
+      }
+      this.seq += 1;
+      const record: PostRecord = {
+        id: `post-${this.seq}`,
+        communityId,
+        slotKey: input.slotKey,
+        seq: input.seq,
+        author: input.author,
+        title: input.title,
+        text: input.text,
+        score: 0,
+        createdAt: new Date(),
+      };
+      this.records.push(record);
+      created.push(cloneRecord(record));
+    }
+    return Promise.resolve(created);
+  }
+
+  listByCommunity(communityId: string, limit = 50): Promise<PostRecord[]> {
+    const filtered = this.records
+      .filter((r) => r.communityId === communityId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .slice(0, limit);
+    return Promise.resolve(filtered.map(cloneRecord));
+  }
+
+  findById(id: string): Promise<PostRecord | null> {
+    const found = this.records.find((r) => r.id === id);
+    return Promise.resolve(found ? cloneRecord(found) : null);
+  }
+
+  addScore(id: string, delta: number): Promise<PostRecord | null> {
+    const record = this.records.find((r) => r.id === id);
+    if (!record) return Promise.resolve(null);
+    record.score += delta;
+    return Promise.resolve(cloneRecord(record));
+  }
+
+  listByCommunityIds(communityIds: string[], limit = 50): Promise<PostRecord[]> {
+    const idSet = new Set(communityIds);
+    const filtered = this.records
+      .filter((r) => idSet.has(r.communityId))
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .slice(0, limit);
+    return Promise.resolve(filtered.map(cloneRecord));
+  }
+}

@@ -1,7 +1,7 @@
-// Hatchery MVP の永続化スキーマ（ADR-0004 / Issue #6 / ADR-0009 / Issue #27）。
-// common（@hatchery/common）のドメイン型に対応する最小構成。
-// 社員・チャンネル・メッセージ（channel 直接紐づき）・タスク（new/done）。
-// Scene は ADR-0009 で廃止した。
+// Hatchery v1.1.0 の永続化スキーマ（ADR-0004 / ADR-0019 / ADR-0020 / Issue #305）。
+// 公共コミュニティモデル: Community / Post / Comment / Subscription / WorldState / Vote。
+// 旧 Message / Channel / ChannelEmployee / Task は削除。
+// User / Employee / AppSetting / BatchRunLog / TokenUsageLog / InvitationLink は継続。
 
 generator client {
   provider = "prisma-client-js"
@@ -21,122 +21,38 @@ enum UserRole {
 /// 認証ユーザー（Issue #26 / ADR-0009 / #185）。パスワードは bcrypt ハッシュで保存する。
 /// id はサロゲートキー（UUIDv7 自動採番）。loginId は人間可読ログイン識別子（#185）。
 model User {
-  id           String    @id @default(uuid(7))
+  id            String         @id @default(uuid(7))
   /// 人間可読なログイン識別子（#185）。認証は loginId ベースで行う。
-  loginId      String    @unique
-  displayName  String
-  passwordHash String
+  loginId       String         @unique
+  displayName   String
+  passwordHash  String
   /// プロフィール画像 URL（#51）。nullable。
-  avatarUrl    String?
+  avatarUrl     String?
   /// 権限ロール（#136）。既定は member。新規登録（招待受諾）は member として登録される。
-  role         UserRole  @default(member)
+  role          UserRole       @default(member)
   /// 1 ユーザー = 1 Employee の任意リレーション（#49）。
-  employee     Employee?
+  employee      Employee?
+  subscriptions Subscription[]
+  votes         Vote[]
 }
 
-/// AI 社員。common の EmployeeSchema に対応（id / displayName / role? / isBot / personality?）。
+/// AI ワーカー（社員）。ADR-0019: post / comment の author として使う。
+/// Worker 管理 Issue（#181/#204/#217/#218）で拡張予定。今回は存続させる。
 model Employee {
-  id          String            @id @default(uuid(7))
+  id          String   @id @default(uuid(7))
   displayName String
   role        String?
   /// AI 社員は true、ユーザー所有社員は false（#49）。
-  isBot       Boolean           @default(false)
+  isBot       Boolean  @default(false)
   /// ユーザー所有社員のみ User と 1:1 で紐づく。AI 社員は null（#49）。
-  userId      String?           @unique
-  user        User?             @relation(fields: [userId], references: [id])
-  tasks       Task[]
-  channels    ChannelEmployee[]
+  userId      String?  @unique
+  user        User?    @relation(fields: [userId], references: [id])
   /// AI バッチのプロンプト指針となる性格設定（任意・500 文字以内）（#38）。
   personality String?
-  messages    Message[]
   /// 論理削除日時（#218）。null=有効、値=削除済み。物理削除は行わない。
   deletedAt   DateTime?
   /// GCS 上のアバター画像 URL（#204）。admin がアップロード後に設定される。最大 500 文字（#91）。
   imageUrl    String?
-}
-
-/// チャンネルのタイプ（#54 / #76）。zatsudan=雑談 / task=仕事 / planning=企画。
-enum ChannelType {
-  zatsudan
-  task
-  planning
-}
-
-/// AI 出力種別（#284 / ADR-0016）。chat=会話生成、issue=GitHub Issue 起票。
-enum ChannelGoalType {
-  chat
-  issue
-}
-
-/// 話題の入れ物。common の ChannelSchema に対応（id / label / type / goal）。
-/// summary / summaryUpdatedAt は定時バッチの会話生成に使うチャンネルのあらすじ（#53）。
-/// 直近 30 件より前の文脈を圧縮した要約で、API（OpenAPI）には公開しないバッチ内部の状態。
-/// goalType / goalInstructions は ADR-0016 で導入した出力契約（#284）。
-model Channel {
-  id               String            @id @default(uuid(7))
-  label            String
-  type             ChannelType       @default(zatsudan)
-  /// AI 出力種別（#284 / ADR-0016）。chat=会話生成、issue=GitHub Issue 起票。
-  goalType         ChannelGoalType   @default(chat)
-  /// バッチプロンプトへの任意の追加指示（#284）。500 文字以内。
-  goalInstructions String?
-  summary          String?
-  summaryUpdatedAt DateTime?
-  members          ChannelEmployee[]
-}
-
-/// Employee ↔ Channel の所属（多対多）の明示的中間テーブル（#33）。
-/// 1 人の Employee が複数チャンネルに所属でき、1 チャンネルに複数 Employee が所属できる。
-model ChannelEmployee {
-  channelId  String
-  employeeId String
-  channel    Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
-  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-
-  @@id([channelId, employeeId])
-  @@index([employeeId])
-}
-
-/// channel に直接紐づく 1 発言（ADR-0009: Scene 廃止）。
-/// createdAt でバッチ間の時系列順を保ち、order でバッチ内の発言順を保つ。
-/// postedAt はメッセージを表示する日時（#183）。この時刻を過ぎたメッセージのみ一覧に返す。
-/// proposalTitle / proposalReason / proposalTargetUrl / issueNumber / issueUrl は
-/// 企画 チャンネルの UX 提案メッセージ専用 optional フィールド（#76）。
-/// createdEmployeeId は発言者の Employee.id への外部キー（#222）。onDelete: Restrict。
-model Message {
-  id                String   @id @default(uuid(7))
-  createdEmployeeId String
-  channel           String
-  text              String
-  createdAt         DateTime @default(now())
-  /// メッセージの表示予約日時（#183）。この時刻を迎えたメッセージのみ listByChannel に返す。
-  postedAt          DateTime @default(now())
-  order             Int
-  proposalTitle     String?
-  proposalReason    String?
-  proposalTargetUrl String?
-  issueNumber       Int?
-  issueUrl          String?
-  createdEmployee   Employee @relation(fields: [createdEmployeeId], references: [id], onDelete: Restrict)
-
-  @@index([channel, createdAt])
-  @@index([channel, postedAt])
-  @@index([createdEmployeeId])
-}
-
-/// MVP のタスク状態（common の TaskStatusSchema に対応）。
-enum TaskStatus {
-  new
-  done
-}
-
-/// 社員が抱えるタスク。common の TaskSchema に対応（id / text / status）。
-model Task {
-  id         String     @id @default(uuid(7))
-  text       String
-  status     TaskStatus @default(new)
-  employee   Employee?  @relation(fields: [employeeId], references: [id])
-  employeeId String?
 }
 
 /// アプリ設定のキーバリューストア（#52）。API キーや各種設定値を格納する。値は暗号化して保存。
@@ -166,12 +82,12 @@ enum BatchRunLogStatus {
 
 /// AI API トークン使用量ログ（#153）。定時バッチの AI 呼び出しごとに記録する。
 model TokenUsageLog {
-  id           String   @id @default(uuid(7))
-  occurredAt   DateTime @default(now())
+  id            String   @id @default(uuid(7))
+  occurredAt    DateTime @default(now())
   /// 使用したモデル名（例: "claude-haiku-4-5"）。
-  model        String
-  inputTokens  Int
-  outputTokens Int
+  model         String
+  inputTokens   Int
+  outputTokens  Int
   /// 紐づくバッチ実行ログ ID（任意）。
   batchRunLogId String?
 
@@ -197,4 +113,118 @@ model InvitationLink {
   createdAt       DateTime  @default(now())
 
   @@index([createdAt])
+}
+
+/// コミュニティ（サブレディット相当）。ADR-0019。
+/// admin が CRUD できる第一級エンティティ（作成 API は #310）。
+/// slug は URL セーフな識別子（例: "technology"）。
+model Community {
+  id            String         @id @default(uuid(7))
+  /// URL セーフなコミュニティ識別子（例: "technology"）。ユニーク。
+  slug          String         @unique
+  name          String
+  description   String
+  /// このコミュニティのあらすじ（記憶③）。定時バッチで更新される。省略可。
+  synopsis      String?
+  /// 最後に生成バッチが走った定時キー。省略可（未生成の場合 null）。
+  lastSlotKey   String?
+  createdAt     DateTime       @default(now())
+  posts         Post[]
+  comments      Comment[]
+  subscriptions Subscription[]
+}
+
+/// 投稿。ADR-0019。AI ワーカーのみが author となる（ADR-0020）。
+/// (communityId, slotKey, seq) の複合ユニークで Cron 二重発火ガード。
+model Post {
+  id          String    @id @default(uuid(7))
+  communityId String
+  community   Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  /// 定時キー（例: "2026-06-10T09:00"）。同一定時内で seq と組み合わせる。
+  slotKey     String
+  /// 定時バッチ内での投稿順序（0 始まり）。
+  seq         Int
+  /// 投稿者の workerId（AI ワーカーのみ・ADR-0020）。
+  author      String
+  title       String
+  text        String
+  /// up vote の累積数（ADR-0019）。生成出力には含めない。
+  score       Int       @default(0)
+  createdAt   DateTime  @default(now())
+  comments    Comment[]
+  votes       Vote[]
+
+  @@unique([communityId, slotKey, seq])
+  @@index([communityId, createdAt])
+}
+
+/// コメント。ADR-0019。AI ワーカーのみが author となる（ADR-0020）。
+/// (communityId, slotKey, seq) の複合ユニークで Cron 二重発火ガード。
+/// MVP はフラット構造（parent_comment_id なし）。
+model Comment {
+  id          String    @id @default(uuid(7))
+  communityId String
+  community   Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  postId      String
+  post        Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  /// 定時キー（Post と同一の slotKey）。
+  slotKey     String
+  /// 定時バッチ内でのコメント順序（0 始まり）。
+  seq         Int
+  /// コメント投稿者の workerId（AI ワーカーのみ・ADR-0020）。
+  author      String
+  text        String
+  /// up vote の累積数（ADR-0019）。生成出力には含めない。
+  score       Int       @default(0)
+  createdAt   DateTime  @default(now())
+  votes       Vote[]
+
+  @@unique([communityId, slotKey, seq])
+  @@index([postId, createdAt])
+}
+
+/// コミュニティへの購読。ADR-0019 / ADR-0020。
+/// ホームフィードの構成に使う（認証ユーザーの購読 community の投稿を集約）。
+model Subscription {
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  communityId String
+  community   Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+
+  @@id([userId, communityId])
+  @@index([userId])
+}
+
+/// ワールド状態（グローバルシングルトン）。ADR-0019。
+/// workerStates は JSON（worker ID → 状態のマップ）。
+/// open_prompts は持たない（お題廃止・ADR-0020）。
+model WorldState {
+  id             String   @id @default("singleton")
+  summaryVersion Int      @default(0)
+  /// ワーカー状態のマップ（JSON: { [workerId]: WorkerState }）。
+  workerStates   Json     @default("{}")
+  updatedAt      DateTime @updatedAt
+}
+
+/// up vote レコード。ADR-0019。
+/// 二重投票防止のため (userId, targetType, targetId) をユニーク制約で保護する。
+/// targetType は "post" または "comment"。
+enum VoteTargetType {
+  post
+  comment
+}
+
+model Vote {
+  id         String         @id @default(uuid(7))
+  userId     String
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  targetType VoteTargetType
+  targetId   String
+  post       Post?          @relation(fields: [targetId], references: [id], onDelete: Cascade, map: "Vote_post_fkey")
+  comment    Comment?       @relation(fields: [targetId], references: [id], onDelete: Cascade, map: "Vote_comment_fkey")
+  createdAt  DateTime       @default(now())
+
+  @@unique([userId, targetType, targetId])
+  @@index([targetType, targetId])
 }

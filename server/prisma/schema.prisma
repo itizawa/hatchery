@@ -49,10 +49,6 @@ model Employee {
   user        User?    @relation(fields: [userId], references: [id])
   /// AI バッチのプロンプト指針となる性格設定（任意・500 文字以内）（#38）。
   personality String?
-  /// 論理削除日時（#218）。null=有効、値=削除済み。物理削除は行わない。
-  deletedAt   DateTime?
-  /// GCS 上のアバター画像 URL（#204）。admin がアップロード後に設定される。最大 500 文字（#91）。
-  imageUrl    String?
 }
 
 /// アプリ設定のキーバリューストア（#52）。API キーや各種設定値を格納する。値は暗号化して保存。

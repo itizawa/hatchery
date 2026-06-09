@@ -32,8 +32,6 @@ export interface CommentRepository {
   createMany(communityId: string, inputs: CommentCreateInput[]): Promise<CommentRecord[]>;
   /** post 別に createdAt 昇順でコメントを取得する。 */
   listByPost(postId: string): Promise<CommentRecord[]>;
-  /** community 別に新着順（createdAt 降順）で comment を取得する。プロンプト用直近ログに使う。limit 省略時は 50 件。 */
-  listByCommunity(communityId: string, limit?: number): Promise<CommentRecord[]>;
   /** ID で comment を取得する。存在しない場合は null を返す。 */
   findById(id: string): Promise<CommentRecord | null>;
   /**
@@ -86,14 +84,6 @@ export class InMemoryCommentRepository implements CommentRepository {
     const filtered = this.records
       .filter((r) => r.postId === postId)
       .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
-    return Promise.resolve(filtered.map(cloneRecord));
-  }
-
-  listByCommunity(communityId: string, limit = 50): Promise<CommentRecord[]> {
-    const filtered = this.records
-      .filter((r) => r.communityId === communityId)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-      .slice(0, limit);
     return Promise.resolve(filtered.map(cloneRecord));
   }
 

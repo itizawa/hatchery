@@ -1,0 +1,88 @@
+import { describe, expect, it } from "vitest";
+import { InMemoryCommentRepository } from "./commentRepository.js";
+
+describe("InMemoryCommentRepository", () => {
+  describe("createMany", () => {
+    it("複数のコメントをバルク作成できる", async () => {
+      const repo = new InMemoryCommentRepository();
+      const created = await repo.createMany("community-1", [
+        { postId: "post-1", slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", text: "Comment 1" },
+        { postId: "post-1", slotKey: "2026-06-10T09:00", seq: 1, author: "worker-2", text: "Comment 2" },
+      ]);
+      expect(created).toHaveLength(2);
+      expect(created[0].communityId).toBe("community-1");
+      expect(created[0].score).toBe(0);
+    });
+
+    it("(communityId, slotKey, seq) が重複する場合は既存を返す（Cron 二重発火ガード）", async () => {
+      const repo = new InMemoryCommentRepository();
+      await repo.createMany("community-1", [
+        { postId: "post-1", slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", text: "Comment 1" },
+      ]);
+      const second = await repo.createMany("community-1", [
+        { postId: "post-1", slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", text: "Comment 1" },
+      ]);
+      expect(second).toHaveLength(1);
+      const all = await repo.listByPost("post-1");
+      expect(all).toHaveLength(1);
+    });
+  });
+
+  describe("listByPost", () => {
+    it("post のコメントを createdAt 昇順で返す", async () => {
+      const repo = new InMemoryCommentRepository();
+      await repo.createMany("community-1", [
+        { postId: "post-1", slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", text: "First" },
+        { postId: "post-1", slotKey: "2026-06-10T09:00", seq: 1, author: "worker-2", text: "Second" },
+      ]);
+      const result = await repo.listByPost("post-1");
+      expect(result).toHaveLength(2);
+      expect(result[0].text).toBe("First");
+    });
+
+    it("別の post のコメントは含めない", async () => {
+      const repo = new InMemoryCommentRepository();
+      await repo.createMany("community-1", [
+        { postId: "post-1", slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", text: "P1 Comment" },
+        { postId: "post-2", slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", text: "P2 Comment" },
+      ]);
+      const result = await repo.listByPost("post-1");
+      expect(result).toHaveLength(1);
+      expect(result[0].text).toBe("P1 Comment");
+    });
+  });
+
+  describe("findById", () => {
+    it("存在する id で取得できる", async () => {
+      const repo = new InMemoryCommentRepository();
+      const [created] = await repo.createMany("community-1", [
+        { postId: "post-1", slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", text: "Comment" },
+      ]);
+      const result = await repo.findById(created.id);
+      expect(result).toMatchObject({ text: "Comment" });
+    });
+
+    it("存在しない id は null を返す", async () => {
+      const repo = new InMemoryCommentRepository();
+      const result = await repo.findById("not-exists");
+      expect(result).toBeNull();
+    });
+  });
+
+  describe("addScore", () => {
+    it("score を加算できる", async () => {
+      const repo = new InMemoryCommentRepository();
+      const [created] = await repo.createMany("community-1", [
+        { postId: "post-1", slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", text: "Comment" },
+      ]);
+      const updated = await repo.addScore(created.id, 1);
+      expect(updated?.score).toBe(1);
+    });
+
+    it("存在しない id は null を返す", async () => {
+      const repo = new InMemoryCommentRepository();
+      const result = await repo.addScore("not-exists", 1);
+      expect(result).toBeNull();
+    });
+  });
+});

@@ -1,121 +1,49 @@
+/**
+ * 旧 Message モデルは ADR-0019 / #305 によりスキーマから削除済み。
+ * このファイルは #305 の API 移行完了後に削除する。
+ * 旧 Prisma テーブルがないため、このクラスは使用不可（NoOp）として型整合のみ維持する。
+ */
 import type { PrismaClient } from "@prisma/client";
 
 import type { MessageCreateInput, MessageRecord, MessageRepository, PlanningMessageInput } from "./messageRepository.js";
 
-function toMessageRecord(row: {
-  id: string;
-  createdEmployeeId: string;
-  channel: string;
-  text: string;
-  createdAt: Date;
-  postedAt: Date;
-  order: number;
-  proposalTitle: string | null;
-  proposalReason: string | null;
-  proposalTargetUrl: string | null;
-  issueNumber: number | null;
-  issueUrl: string | null;
-}): MessageRecord {
-  return {
-    id: row.id,
-    createdEmployeeId: row.createdEmployeeId,
-    channel: row.channel,
-    text: row.text,
-    createdAt: row.createdAt,
-    postedAt: row.postedAt,
-    order: row.order,
-    ...(row.proposalTitle != null && { proposalTitle: row.proposalTitle }),
-    ...(row.proposalReason != null && { proposalReason: row.proposalReason }),
-    ...(row.proposalTargetUrl != null && { proposalTargetUrl: row.proposalTargetUrl }),
-    ...(row.issueNumber != null && { issueNumber: row.issueNumber }),
-    ...(row.issueUrl != null && { issueUrl: row.issueUrl }),
-  };
-}
-
-/** MessageRepository の Prisma / PostgreSQL 実装（ADR-0009）。 */
+/** MessageRepository の旧 Prisma 実装（旧スキーマ削除済み・#305 で廃止予定）。 */
 export class PrismaMessageRepository implements MessageRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly prisma: PrismaClient) {
+    void this.prisma; // 旧スキーマ削除済みのため未使用
+  }
 
   async list(): Promise<MessageRecord[]> {
-    const rows = await this.prisma.message.findMany({
-      orderBy: [{ createdAt: "asc" }, { order: "asc" }],
-    });
-    return rows.map(toMessageRecord);
+    return [];
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async createMany(input: MessageCreateInput[]): Promise<MessageRecord[]> {
-    const now = new Date();
-    const rows = await this.prisma.$transaction(
-      input.map((m, index) =>
-        this.prisma.message.create({
-          data: {
-            createdEmployeeId: m.createdEmployeeId,
-            channel: m.channel,
-            text: m.text,
-            postedAt: m.postedAt ?? now,
-            order: index,
-          },
-        }),
-      ),
-    );
-    return rows.map(toMessageRecord);
+    return [];
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async listByChannel(channelId: string): Promise<MessageRecord[]> {
-    const now = new Date();
-    const rows = await this.prisma.message.findMany({
-      where: { channel: channelId, postedAt: { lte: now } },
-      orderBy: [{ postedAt: "asc" }, { order: "asc" }],
-    });
-    return rows.map(toMessageRecord);
+    return [];
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async listRecentByChannel(channelId: string, limit: number): Promise<MessageRecord[]> {
-    const rows = await this.prisma.message.findMany({
-      where: { channel: channelId },
-      orderBy: [{ createdAt: "desc" }, { order: "desc" }],
-      take: Math.max(0, limit),
-    });
-    return rows.map(toMessageRecord);
+    return [];
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async listByChannelSince(channelId: string, since: Date): Promise<MessageRecord[]> {
-    const rows = await this.prisma.message.findMany({
-      where: { channel: channelId, createdAt: { gte: since } },
-      orderBy: [{ createdAt: "asc" }, { order: "asc" }],
-    });
-    return rows.map(toMessageRecord);
+    return [];
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async createPlanningMessage(input: PlanningMessageInput): Promise<MessageRecord> {
-    const lastInChannel = await this.prisma.message.findFirst({
-      where: { channel: input.channel },
-      orderBy: { order: "desc" },
-    });
-    const nextOrder = (lastInChannel?.order ?? -1) + 1;
-    const row = await this.prisma.message.create({
-      data: {
-        createdEmployeeId: input.createdEmployeeId,
-        channel: input.channel,
-        text: input.text,
-        order: nextOrder,
-        proposalTitle: input.proposalTitle,
-        proposalReason: input.proposalReason,
-        proposalTargetUrl: input.proposalTargetUrl,
-      },
-    });
-    return toMessageRecord(row);
+    throw new Error("PrismaMessageRepository は旧スキーマ削除済み（#305 で廃止予定）");
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async updateIssueRef(id: string, issueNumber: number, issueUrl: string): Promise<MessageRecord | null> {
-    try {
-      const row = await this.prisma.message.update({
-        where: { id },
-        data: { issueNumber, issueUrl },
-      });
-      return toMessageRecord(row);
-    } catch {
-      return null;
-    }
+    return null;
   }
 }

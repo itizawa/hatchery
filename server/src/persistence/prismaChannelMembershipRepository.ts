@@ -1,48 +1,39 @@
+/**
+ * 旧 ChannelEmployee モデルは ADR-0019 / #305 によりスキーマから削除済み。
+ * このファイルは #305 の API 移行完了後に削除する。
+ * 旧 Prisma テーブルがないため、このクラスは使用不可（NoOp）として型整合のみ維持する。
+ */
 import type { PrismaClient } from "@prisma/client";
 
 import type { ChannelMembershipRepository } from "./channelMembershipRepository.js";
 
-/** ChannelMembershipRepository の Prisma / PostgreSQL 実装（多対多 ChannelEmployee / #33）。 */
+/** ChannelMembershipRepository の旧 Prisma 実装（旧スキーマ削除済み・#305 で廃止予定）。 */
 export class PrismaChannelMembershipRepository implements ChannelMembershipRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly prisma: PrismaClient) {
+    void this.prisma; // 旧スキーマ削除済みのため未使用
+  }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async addMember(channelId: string, employeeId: string): Promise<void> {
-    // 複合主キーで upsert することで重複追加を冪等にする。
-    await this.prisma.channelEmployee.upsert({
-      where: { channelId_employeeId: { channelId, employeeId } },
-      update: {},
-      create: { channelId, employeeId },
-    });
+    // NoOp: 旧スキーマ削除済み
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async removeMember(channelId: string, employeeId: string): Promise<void> {
-    await this.prisma.channelEmployee.deleteMany({ where: { channelId, employeeId } });
+    // NoOp: 旧スキーマ削除済み
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async listEmployeeIdsByChannel(channelId: string): Promise<string[]> {
-    const rows = await this.prisma.channelEmployee.findMany({
-      where: { channelId },
-      select: { employeeId: true },
-    });
-    return rows.map((r) => r.employeeId);
+    return [];
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async listChannelIdsByEmployee(employeeId: string): Promise<string[]> {
-    const rows = await this.prisma.channelEmployee.findMany({
-      where: { employeeId },
-      select: { channelId: true },
-    });
-    return rows.map((r) => r.channelId);
+    return [];
   }
 
   async listMembershipByChannel(): Promise<Record<string, string[]>> {
-    const rows = await this.prisma.channelEmployee.findMany({
-      select: { channelId: true, employeeId: true },
-    });
-    const map: Record<string, string[]> = {};
-    for (const row of rows) {
-      (map[row.channelId] ??= []).push(row.employeeId);
-    }
-    return map;
+    return {};
   }
 }

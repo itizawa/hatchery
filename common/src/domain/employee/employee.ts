@@ -39,6 +39,19 @@ export const UpdateEmployeeSchema = z.object({
 export type UpdateEmployeeInput = z.infer<typeof UpdateEmployeeSchema>;
 
 /**
+ * POST /admin/employees のリクエストボディ（#217）。
+ * displayName は必須。role・personality は任意。
+ * isBot は server 側で常に true を付与するためリクエストには含めない。
+ */
+export const CreateEmployeeSchema = z.object({
+  displayName: z.string().min(1).max(EMPLOYEE_DISPLAY_NAME_MAX_LENGTH),
+  role: z.string().min(1).max(EMPLOYEE_ROLE_MAX_LENGTH).optional(),
+  personality: z.string().max(500).optional(),
+});
+
+export type CreateEmployeeInput = z.infer<typeof CreateEmployeeSchema>;
+
+/**
  * MVP の既定 AI 社員（3 人）。client / server が共有する単一情報源（ADR-0005）。
  * id は既存のドメインロジック・テスト（selectAppearingMembers / message）と整合する haru / ken / mei。
  * 表示名・役割は MVP 暫定で、正典の社員定義（Phase 1 のプロンプト設計）が固まれば差し替える。

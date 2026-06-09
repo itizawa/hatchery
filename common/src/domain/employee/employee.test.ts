@@ -6,6 +6,7 @@ import {
   EMPLOYEE_ROLE_MAX_LENGTH,
   createDisplayNameResolver,
   createAvatarUrlResolver,
+  CreateEmployeeSchema,
   DEFAULT_EMPLOYEES,
   EmployeeSchema,
   UpdateEmployeeSchema,
@@ -258,6 +259,61 @@ describe("formatEmployeeDisplayName (#218)", () => {
   it("deletedAt が Date の場合は【削除済み】プレフィックスを付ける", () => {
     const deletedAt = new Date("2024-01-01");
     expect(formatEmployeeDisplayName({ displayName: "田中 太郎", deletedAt })).toBe("【削除済み】田中 太郎");
+  });
+});
+
+describe("CreateEmployeeSchema (#217)", () => {
+  it("displayName のみで parse 成功する", () => {
+    const result = CreateEmployeeSchema.safeParse({ displayName: "新しい社員" });
+    expect(result.success).toBe(true);
+  });
+
+  it("displayName が空文字なら invalid", () => {
+    const result = CreateEmployeeSchema.safeParse({ displayName: "" });
+    expect(result.success).toBe(false);
+  });
+
+  it("displayName が EMPLOYEE_DISPLAY_NAME_MAX_LENGTH 文字ちょうどなら valid", () => {
+    const result = CreateEmployeeSchema.safeParse({ displayName: "a".repeat(EMPLOYEE_DISPLAY_NAME_MAX_LENGTH) });
+    expect(result.success).toBe(true);
+  });
+
+  it("displayName が EMPLOYEE_DISPLAY_NAME_MAX_LENGTH + 1 文字なら invalid", () => {
+    const result = CreateEmployeeSchema.safeParse({ displayName: "a".repeat(EMPLOYEE_DISPLAY_NAME_MAX_LENGTH + 1) });
+    expect(result.success).toBe(false);
+  });
+
+  it("role を省略しても parse 成功する（任意フィールド）", () => {
+    const result = CreateEmployeeSchema.safeParse({ displayName: "社員A" });
+    expect(result.success).toBe(true);
+  });
+
+  it("role を指定すると反映される", () => {
+    const result = CreateEmployeeSchema.safeParse({ displayName: "社員A", role: "エンジニア" });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.role).toBe("エンジニア");
+    }
+  });
+
+  it("role が EMPLOYEE_ROLE_MAX_LENGTH + 1 文字なら invalid", () => {
+    const result = CreateEmployeeSchema.safeParse({ displayName: "社員A", role: "a".repeat(EMPLOYEE_ROLE_MAX_LENGTH + 1) });
+    expect(result.success).toBe(false);
+  });
+
+  it("personality を省略しても parse 成功する（任意フィールド）", () => {
+    const result = CreateEmployeeSchema.safeParse({ displayName: "社員A" });
+    expect(result.success).toBe(true);
+  });
+
+  it("personality が 500 文字ちょうどなら valid", () => {
+    const result = CreateEmployeeSchema.safeParse({ displayName: "社員A", personality: "a".repeat(500) });
+    expect(result.success).toBe(true);
+  });
+
+  it("personality が 501 文字なら invalid", () => {
+    const result = CreateEmployeeSchema.safeParse({ displayName: "社員A", personality: "a".repeat(501) });
+    expect(result.success).toBe(false);
   });
 });
 

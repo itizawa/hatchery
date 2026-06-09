@@ -52,11 +52,11 @@ describe("管理画面（#50）", () => {
     expect(await screen.findByRole("heading", { name: /管理画面/ })).toBeInTheDocument();
   });
 
-  it("管理画面（/admin）のユーザー一覧タブに全 AI ボットの表示名が表示される", async () => {
+  it("管理画面（/admin）のワーカー管理タブに全 AI ボットの表示名が表示される", async () => {
     vi.spyOn(authApi, "fetchMe").mockResolvedValue({ id: "user1", displayName: "Alice", role: "admin" });
     renderApp("/admin");
 
-    expect(await screen.findByRole("tab", { name: /ユーザー一覧/ })).toBeInTheDocument();
+    expect(await screen.findByRole("tab", { name: /ワーカー管理/ })).toBeInTheDocument();
     await waitFor(() => {
       for (const employee of DEFAULT_EMPLOYEES) {
         expect(screen.getByText(employee.displayName)).toBeInTheDocument();

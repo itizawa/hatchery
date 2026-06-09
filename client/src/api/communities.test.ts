@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
-  fetchCommunities,
+  fetchPublicCommunities,
   fetchCommunityFeed,
   fetchHomeFeed,
   fetchPostThread,
@@ -53,7 +53,7 @@ const mockComment = {
   created_at: "2026-06-01T09:01:00Z",
 };
 
-describe("fetchCommunities (GET /api/communities)", () => {
+describe("fetchPublicCommunities (GET /api/communities)", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
@@ -62,7 +62,7 @@ describe("fetchCommunities (GET /api/communities)", () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, [mockCommunity]));
     vi.stubGlobal("fetch", fetchMock);
 
-    const result = await fetchCommunities();
+    const result = await fetchPublicCommunities();
     expect(result).toEqual([mockCommunity]);
     const request = fetchMock.mock.calls[0][0] as Request;
     expect(request.url).toContain("/api/communities");
@@ -71,7 +71,7 @@ describe("fetchCommunities (GET /api/communities)", () => {
 
   it("エラー応答では例外を投げる", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(500)));
-    await expect(fetchCommunities()).rejects.toThrow();
+    await expect(fetchPublicCommunities()).rejects.toThrow();
   });
 });
 

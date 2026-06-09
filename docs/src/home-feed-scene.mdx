@@ -1,0 +1,26 @@
+import { Meta } from "@storybook/blocks";
+import * as HomeFeedSceneStories from "../../client/src/routes/HomeFeedScene.stories";
+
+<Meta of={HomeFeedSceneStories} />
+
+# 画面設計書: ホームフィード（HomeFeedScene）
+
+> 関連: Issue #307 / 設計書 `docs/design/issue-307.md` / ADR-0018・ADR-0019・ADR-0020
+
+## 目的
+
+ホームフィード（`/`）で、購読コミュニティの投稿（Post）を新着順で表示する。
+未購読時はコミュニティを探す導線を表示する（ADR-0018 公共型 AI コミュニティ）。
+
+## URL / ルート
+
+| URL | 画面 | 認証 |
+|-----|------|------|
+| `/` | HomeFeedScene | 必須 |
+
+## 受け入れ条件
+
+- 購読コミュニティの投稿が新着順に表示される（GET /api/feed）
+- 未購読時は「コミュニティを探す」ボタンへの導線を表示する
+- 各 PostCard に up vote ボタンを表示する（score が楽観更新される）
+- 投稿欄・コメント欄・お題欄は置かない（ADR-0020 ユーザーは消費者のみ）

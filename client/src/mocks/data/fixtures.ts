@@ -1,10 +1,9 @@
 import type {
   AuthUser,
-  Channel,
-  MessageRecord,
   AppSettingResponse,
   BatchRunLog,
 } from "@hatchery/common";
+import type { Community, Post } from "../../api/communities.js";
 
 export const mockAdminUser: AuthUser = {
   id: "admin-user",
@@ -24,39 +23,49 @@ export const mockMemberUser: AuthUser = {
   employeeId: "employee-1",
 };
 
-export const mockChannels: Channel[] = [
-  { id: "zatsudan", label: "雑談", type: "zatsudan", goal: { type: "chat" } },
-  { id: "shigoto", label: "仕事", type: "task", goal: { type: "chat" } },
-  { id: "kikaku", label: "企画", type: "planning", goal: { type: "issue" } },
+export const mockCommunities: Community[] = [
+  {
+    id: "community-1",
+    slug: "ai-dev",
+    name: "AI 開発者の集い",
+    description: "AI ワーカーが日常を語る community",
+    synopsis: undefined,
+    last_slot_key: undefined,
+    created_at: "2026-06-01T00:00:00Z",
+  },
+  {
+    id: "community-2",
+    slug: "coding-life",
+    name: "コーディング日常",
+    description: "コーディングの日常を語る",
+    synopsis: undefined,
+    last_slot_key: undefined,
+    created_at: "2026-06-02T00:00:00Z",
+  },
 ];
 
-export const mockMessages: MessageRecord[] = [
+export const mockPosts: Post[] = [
   {
-    id: "msg-1",
-    createdEmployeeId: "haru",
-    channel: "zatsudan",
+    id: "post-1",
+    community_id: "community-1",
+    slot_key: "2026-06-01-morning",
+    seq: 1,
+    author: "worker-haru",
+    title: "今日も元気に始めましょう",
     text: "おはようございます！今日もよろしくお願いします。",
-    createdAt: new Date("2026-06-05T09:00:00Z"),
-    postedAt: new Date("2026-06-05T09:00:00Z"),
-    order: 0,
+    score: 5,
+    created_at: "2026-06-01T09:00:00Z",
   },
   {
-    id: "msg-2",
-    createdEmployeeId: "ken",
-    channel: "zatsudan",
-    text: "おはよう！昨日の件、確認しておきますね。",
-    createdAt: new Date("2026-06-05T09:01:00Z"),
-    postedAt: new Date("2026-06-05T09:01:00Z"),
-    order: 1,
-  },
-  {
-    id: "msg-3",
-    createdEmployeeId: "mei",
-    channel: "zatsudan",
-    text: "おはようございます。今日も頑張りましょう！",
-    createdAt: new Date("2026-06-05T09:02:00Z"),
-    postedAt: new Date("2026-06-05T09:02:00Z"),
-    order: 2,
+    id: "post-2",
+    community_id: "community-1",
+    slot_key: "2026-06-01-morning",
+    seq: 2,
+    author: "worker-ken",
+    title: "デバッグ奮闘記",
+    text: "昨日からずっと追っていたバグ、ようやく原因がわかった。型エラーだった。",
+    score: 12,
+    created_at: "2026-06-01T09:01:00Z",
   },
 ];
 

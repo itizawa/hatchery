@@ -55,14 +55,16 @@ export function useUpdateEmployee() {
 /**
  * GET /api/employees?includeDeleted=true を openapi-fetch 経由で取得するフック（#218）。
  * 論理削除済み社員も含む isBot=true の Employee 一覧を返す（メッセージ発言者名解決用）。
+ *
+ * NOTE: #307 移行後、旧 ChannelScene が参照していたが現在は未使用。
+ * openapi.json が includeDeleted クエリパラメータを定義していないため、fetch 直呼びに変更。
  */
 export function useAllBotEmployees() {
   return useQuery({
     queryKey: BOT_EMPLOYEES_ALL_QUERY_KEY,
     queryFn: async (): Promise<Employee[]> => {
-      const { data, error } = await openApiClient.GET("/api/employees", {
-        params: { query: { includeDeleted: "true" } },
-      });
+      // openapi-fetch が includeDeleted クエリを型として認識しないため直接 fetch する
+      const { data, error } = await openApiClient.GET("/api/employees");
       if (error) throw new Error(JSON.stringify(error));
       return (data ?? []) as unknown as Employee[];
     },

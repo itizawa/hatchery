@@ -1,14 +1,13 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider, createMemoryHistory } from "@tanstack/react-router";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createAppRouter, type AppRouter } from "./router";
 
-const CHANNELS_DATA = [
-  { id: "zatsudan", label: "雑談", type: "zatsudan" },
-  { id: "shigoto", label: "仕事", type: "task" },
+const COMMUNITIES_DATA = [
+  { id: "community-1", slug: "ai-dev", name: "AI 開発者の集い", description: "AI の話", created_at: "2026-06-01T00:00:00Z" },
 ];
 
 /** ログイン済みを表す /auth/me のレスポンスボディ（AuthUser）。 */
@@ -19,10 +18,11 @@ const AUTH_USER = {
   employeeId: "emp-testuser",
 };
 
-/** サイドバー（ChannelList）・ChannelScene が呼ぶ fetch を応答する。
- * mockImplementation で毎回新しい Response を生成する（useSuspenseQuery は複数回 fetch するため）。
- * authenticated=true なら /auth/me → 200 AUTH_USER、false なら 401。/messages → []、その他 → CHANNELS_DATA */
-function stubChannelsFetch({ authenticated }: { authenticated: boolean }) {
+/**
+ * サイドバー・各 Scene が呼ぶ fetch を応答する。
+ * authenticated=true なら /auth/me → 200 AUTH_USER、false なら 401。
+ */
+function stubFetch({ authenticated }: { authenticated: boolean }) {
   vi.stubGlobal(
     "fetch",
     vi.fn().mockImplementation((input: string | URL | Request) => {
@@ -37,15 +37,28 @@ function stubChannelsFetch({ authenticated }: { authenticated: boolean }) {
             )
           : Promise.resolve(new Response(null, { status: 401 }));
       }
-      const body = urlStr.includes("/messages") ? JSON.stringify([]) : JSON.stringify(CHANNELS_DATA);
+      if (urlStr.includes("/api/communities") && !urlStr.includes("/feed") && !urlStr.includes("/subscribe")) {
+        return Promise.resolve(
+          new Response(JSON.stringify(COMMUNITIES_DATA), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        );
+      }
+      if (urlStr.includes("/api/feed")) {
+        return Promise.resolve(
+          new Response(JSON.stringify([]), { status: 200, headers: { "Content-Type": "application/json" } }),
+        );
+      }
+      // posts, comments, etc.
       return Promise.resolve(
-        new Response(body, { status: 200, headers: { "Content-Type": "application/json" } }),
+        new Response(JSON.stringify([]), { status: 200, headers: { "Content-Type": "application/json" } }),
       );
     }),
   );
 }
 
-/** ルータを QueryClientProvider 下で描画する（ChannelList が TanStack Query を使うため・#47）。 */
+/** ルータを QueryClientProvider 下で描画する（各シーンが TanStack Query を使うため）。 */
 function renderRouter(router: AppRouter): ReactElement {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return (
@@ -70,40 +83,37 @@ describe("AuthLayout（ログインページ専用レイアウト）", () => {
   });
 });
 
-// 受け入れ条件 #4: コードベース定義の最小ルート。ホーム（/）でタイムライン表示の枠が描画される。
+// 受け入れ条件 #307: コードベース定義のルート確認。
 describe("createAppRouter", () => {
   beforeEach(() => {
-    stubChannelsFetch({ authenticated: true });
+    stubFetch({ authenticated: true });
   });
   afterEach(() => {
     vi.unstubAllGlobals();
   });
 
-  it("ホームルート（/）でタイムライン表示の枠の見出しを描画する", async () => {
+  it("ホームルート（/）でホームフィードの見出しを描画する", async () => {
     const router = createAppRouter({
       history: createMemoryHistory({ initialEntries: ["/"] }),
     });
     render(renderRouter(router));
-    expect(await screen.findByRole("heading", { name: /タイムライン/ })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /ホームフィード/ })).toBeInTheDocument();
   });
 
-  it("サイドバーにチャンネル一覧（雑談）を描画する", async () => {
+  it("サイドバーにコミュニティセクションが表示される", async () => {
     const router = createAppRouter({
       history: createMemoryHistory({ initialEntries: ["/"] }),
     });
     render(renderRouter(router));
-    // 「雑談」は AddChannelForm のタイプ選択ラジオにも現れるため、サイドバーのチャンネル一覧内にスコープして確認する。
-    const channelList = await screen.findByRole("list", { name: "チャンネル一覧" });
-    expect(within(channelList).getByText("雑談")).toBeInTheDocument();
+    expect(await screen.findByText("コミュニティ")).toBeInTheDocument();
   });
 
-  it("チャンネルルート（/channels/$channelId）で選択中チャンネルの詳細（ヘッダ）を描画する", async () => {
+  it("コミュニティブラウズルート（/communities）でコミュニティ探す見出しを描画する", async () => {
     const router = createAppRouter({
-      history: createMemoryHistory({ initialEntries: ["/channels/zatsudan"] }),
+      history: createMemoryHistory({ initialEntries: ["/communities"] }),
     });
     render(renderRouter(router));
-    // ChannelView のヘッダ（見出し）として channel.label を描画する（サイドバーの一覧は heading ではない）。
-    expect(await screen.findByRole("heading", { name: "雑談" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /コミュニティを探す/ })).toBeInTheDocument();
   });
 
   // Issue #236: 動的 import（lazyRouteComponent）後もルートが正しく描画されることを担保する。
@@ -127,7 +137,7 @@ describe("createAppRouter", () => {
 // 認証ガード: 未ログインで保護ルートを開くと /login へリダイレクトする。
 describe("認証ガード（未ログイン時のリダイレクト）", () => {
   beforeEach(() => {
-    stubChannelsFetch({ authenticated: false });
+    stubFetch({ authenticated: false });
   });
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -160,42 +170,14 @@ describe("認証ガード（未ログイン時のリダイレクト）", () => {
     expect(await screen.findByRole("heading", { name: /ログイン/ })).toBeInTheDocument();
     expect(screen.queryByRole("navigation", { name: /サイドバー/ })).not.toBeInTheDocument();
   });
-});
 
-// Issue #255: ゲストユーザー（未認証）がチャンネルを閲覧できる
-describe("ゲストユーザーのチャンネル閲覧 (#255)", () => {
-  beforeEach(() => {
-    stubChannelsFetch({ authenticated: false });
-  });
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
-
-  it("未認証でチャンネル（/channels/$channelId）を開くとチャンネル詳細が表示される（リダイレクトなし）", async () => {
+  // コミュニティブラウズは認証不要（公開ページ）
+  it("未認証でコミュニティブラウズ（/communities）を開いても /login へリダイレクトしない", async () => {
     const router = createAppRouter({
-      history: createMemoryHistory({ initialEntries: ["/channels/zatsudan"] }),
+      history: createMemoryHistory({ initialEntries: ["/communities"] }),
     });
     render(renderRouter(router));
-    expect(await screen.findByRole("heading", { name: "雑談" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /コミュニティを探す/ })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: /ログイン/ })).not.toBeInTheDocument();
-  });
-
-  it("未認証でチャンネルを開いたとき MessageInput の送信ボタンが表示されない", async () => {
-    const router = createAppRouter({
-      history: createMemoryHistory({ initialEntries: ["/channels/zatsudan"] }),
-    });
-    render(renderRouter(router));
-    await screen.findByRole("heading", { name: "雑談" });
-    expect(screen.queryByRole("button", { name: /送信/ })).not.toBeInTheDocument();
-  });
-
-  it("未認証でもサイドバーにチャンネル一覧が表示される", async () => {
-    const router = createAppRouter({
-      history: createMemoryHistory({ initialEntries: ["/channels/zatsudan"] }),
-    });
-    render(renderRouter(router));
-    await screen.findByRole("heading", { name: "雑談" });
-    const channelList = await screen.findByRole("list", { name: "チャンネル一覧" });
-    expect(within(channelList).getByText("雑談")).toBeInTheDocument();
   });
 });

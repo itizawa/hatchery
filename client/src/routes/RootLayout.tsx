@@ -1,7 +1,6 @@
 import { Box, Divider, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText } from "../components/uiParts";
 
 import { isAdmin } from "@hatchery/common";
-import BusinessIcon from "@mui/icons-material/Business";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import { Link as RouterLink, Outlet, useLocation } from "@tanstack/react-router";
 import { Suspense, useEffect, useState, type ReactElement } from "react";
@@ -11,7 +10,7 @@ import { useIsMobile } from "../hooks/useIsMobile.js";
 
 import { useAuth } from "../api/auth.js";
 import { AppHeader } from "../components/AppHeader";
-import { SidebarChannelSection } from "../components/SidebarChannelSection";
+import { SidebarCommunitySection } from "../components/SidebarCommunitySection";
 import { SLACK_COLORS } from "../theme.js";
 
 const SIDEBAR_WIDTH = 260;
@@ -25,17 +24,9 @@ const SidebarContent = (): ReactElement => {
 
   return (
     <>
-      <SidebarChannelSection />
+      <SidebarCommunitySection />
       <Divider sx={{ my: 1 }} />
       <List dense>
-        <ListItem disablePadding>
-          <ListItemButton component={RouterLink} to="/office" sx={{ color: SLACK_COLORS.sidebarText }}>
-            <ListItemIcon sx={SIDEBAR_ICON_SX}>
-              <BusinessIcon fontSize="small" />
-            </ListItemIcon>
-            <ListItemText primary="仮想オフィス" />
-          </ListItemButton>
-        </ListItem>
         {user && isAdmin(user) && (
           <ListItem disablePadding>
             <ListItemButton component={RouterLink} to="/admin" sx={{ color: SLACK_COLORS.sidebarText }}>
@@ -52,9 +43,9 @@ const SidebarContent = (): ReactElement => {
 };
 
 /**
- * グローバルヘッダー（AppHeader）＋左サイドバー（チャンネル一覧）＋メイン領域で構成するシェル。
- * モバイル幅（md 未満）ではサイドバーをドロワー化し、ハンバーガーボタンで開閉する（#190）。
- * デスクトップ幅（md 以上）では従来どおり恒久サイドバーを横並び表示する。
+ * グローバルヘッダー（AppHeader）＋左サイドバー（コミュニティ一覧）＋メイン領域で構成するシェル。
+ * Reddit 風 UI（ADR-0018）。モバイル幅（md 未満）ではサイドバーをドロワー化し、
+ * ハンバーガーボタンで開閉する（#190）。
  */
 export const RootLayout = (): ReactElement => {
   const isMobile = useIsMobile();

@@ -1,15 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   AuthUserSchema,
-  ChannelSchema,
-  MessageRecordSchema,
   AppSettingResponseSchema,
   BatchRunLogSchema,
 } from "@hatchery/common";
 
-import { mockAdminUser, mockMemberUser, mockChannels, mockMessages, mockSettings, mockBatchLogs } from "./fixtures";
+import { mockAdminUser, mockMemberUser, mockSettings, mockBatchLogs } from "./fixtures";
 
-describe("fixtures — Zod スキーマ準拠テスト（TDD: Issue #108）", () => {
+describe("fixtures — Zod スキーマ準拠テスト（#307 Reddit 風 UI）", () => {
   it("mockAdminUser は AuthUserSchema（role=admin）に準拠する", () => {
     const result = AuthUserSchema.safeParse(mockAdminUser);
     expect(result.success).toBe(true);
@@ -20,20 +18,6 @@ describe("fixtures — Zod スキーマ準拠テスト（TDD: Issue #108）", ()
     const result = AuthUserSchema.safeParse(mockMemberUser);
     expect(result.success).toBe(true);
     expect(mockMemberUser.role).toBe("member");
-  });
-
-  it("mockChannels は Channel[] スキーマに準拠する", () => {
-    for (const ch of mockChannels) {
-      const result = ChannelSchema.safeParse(ch);
-      expect(result.success).toBe(true);
-    }
-  });
-
-  it("mockMessages は MessageRecord[] スキーマに準拠する", () => {
-    for (const msg of mockMessages) {
-      const result = MessageRecordSchema.safeParse(msg);
-      expect(result.success).toBe(true);
-    }
   });
 
   it("mockSettings は AppSettingResponse[] スキーマに準拠する", () => {

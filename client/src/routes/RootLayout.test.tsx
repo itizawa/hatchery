@@ -21,6 +21,10 @@ function jsonResponse(status: number, body: unknown): Response {
   });
 }
 
+const COMMUNITIES_DATA = [
+  { id: "community-1", slug: "ai-dev", name: "AI 開発者の集い", description: "", created_at: "2026-06-01T00:00:00Z" },
+];
+
 function stubFetch(isLoggedIn: boolean, role: "member" | "admin" = "member") {
   const user = isLoggedIn
     ? { id: "user1", displayName: "Alice", role }
@@ -32,13 +36,11 @@ function stubFetch(isLoggedIn: boolean, role: "member" | "admin" = "member") {
       if (url.includes("/auth/me")) {
         return Promise.resolve(jsonResponse(isLoggedIn ? 200 : 401, user));
       }
-      if (url.includes("/channels")) {
-        return Promise.resolve(
-          jsonResponse(200, [
-            { id: "zatsudan", label: "雑談", type: "zatsudan" },
-            { id: "shigoto", label: "仕事", type: "task" },
-          ]),
-        );
+      if (url.includes("/api/communities") && !url.includes("/feed") && !url.includes("/subscribe")) {
+        return Promise.resolve(jsonResponse(200, COMMUNITIES_DATA));
+      }
+      if (url.includes("/api/feed")) {
+        return Promise.resolve(jsonResponse(200, []));
       }
       return Promise.resolve(jsonResponse(200, []));
     }),
@@ -68,16 +70,24 @@ function renderWithRouter(initialPath = "/") {
     ),
   });
 
-  const channelRoute = createRoute({
+  const communitiesRoute = createRoute({
     getParentRoute: () => rootRoute,
-    path: "/channels/$channelId",
+    path: "/communities",
+    component: (): ReactElement => (
+      <RootLayout />
+    ),
+  });
+
+  const communityRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/communities/$slug",
     component: (): ReactElement => (
       <RootLayout />
     ),
   });
 
   const router = createRouter({
-    routeTree: rootRoute.addChildren([indexRoute, channelRoute]),
+    routeTree: rootRoute.addChildren([indexRoute, communitiesRoute, communityRoute]),
     history: createMemoryHistory({ initialEntries: [initialPath] }),
   });
 
@@ -144,7 +154,7 @@ describe("RootLayout レスポンシブ対応 (#190)", () => {
       expect(await screen.findByRole("navigation", { name: "サイドバー" })).toBeInTheDocument();
     });
 
-    it("チャンネルを選択するとドロワーが閉じる（ナビゲーション後の自動クローズ）", async () => {
+    it("コミュニティリンクをクリックするとドロワーが閉じる（ナビゲーション後の自動クローズ）", async () => {
       stubFetch(true);
       renderWithRouter("/");
 
@@ -152,9 +162,9 @@ describe("RootLayout レスポンシブ対応 (#190)", () => {
       const hamburger = await screen.findByRole("button", { name: /メニューを開く/ });
       await userEvent.click(hamburger);
 
-      // サイドバーが表示されるのを待ってからチャンネルをクリック
-      const channelLink = await screen.findByRole("link", { name: /雑談/ });
-      await userEvent.click(channelLink);
+      // サイドバーが表示されるのを待ってから「探す」リンクをクリック
+      const exploreLink = await screen.findByRole("link", { name: /探す/ });
+      await userEvent.click(exploreLink);
 
       // ナビゲーション後にドロワーが閉じる（nav が非表示になる）
       await screen.findByRole("button", { name: /メニューを開く/ });
@@ -199,8 +209,8 @@ describe("RootLayout レスポンシブ対応 (#190)", () => {
   });
 });
 
-// 受け入れ条件 #273: サイドバー Divider・アイコン・hover スタイル
-describe("サイドバーのナビゲーション改善 (#273)", () => {
+// 受け入れ条件 #307: サイドバーのナビゲーション（Reddit 風）
+describe("サイドバーのナビゲーション (#307)", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     // デスクトップ幅（恒久サイドバー表示）
@@ -223,7 +233,7 @@ describe("サイドバーのナビゲーション改善 (#273)", () => {
     vi.unstubAllGlobals();
   });
 
-  it("SidebarChannelSection と仮想オフィスの間に Divider（role=separator）が表示される", async () => {
+  it("SidebarCommunitySection と admin リストの間に Divider（role=separator）が表示される", async () => {
     stubFetch(true);
     renderWithRouter("/");
 
@@ -231,12 +241,12 @@ describe("サイドバーのナビゲーション改善 (#273)", () => {
     expect(screen.getByRole("separator")).toBeInTheDocument();
   });
 
-  it("仮想オフィスが /office へのリンクを持つ ListItemButton でレンダリングされる", async () => {
+  it("「探す」が /communities へのリンクを持つ ListItemButton でレンダリングされる", async () => {
     stubFetch(true);
     renderWithRouter("/");
 
-    const officeLink = await screen.findByRole("link", { name: /仮想オフィス/ });
-    expect(officeLink).toHaveAttribute("href", "/office");
+    const exploreLink = await screen.findByRole("link", { name: /探す/ });
+    expect(exploreLink).toHaveAttribute("href", "/communities");
   });
 
   it("admin ユーザーには管理画面が /admin へのリンクを持つ ListItemButton で表示される", async () => {

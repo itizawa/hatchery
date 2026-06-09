@@ -1,20 +1,38 @@
 import { http, HttpResponse } from "msw";
 
-import { mockAdminUser, mockChannels, mockMessages, mockSettings, mockBatchLogs } from "./data/fixtures.js";
+import { mockAdminUser, mockCommunities, mockPosts, mockSettings, mockBatchLogs } from "./data/fixtures.js";
 
 /** MSW デフォルトハンドラ。各ストーリーで `parameters.msw.handlers` で上書き可能。 */
 export const handlers = [
   http.get("/api/auth/me", () => HttpResponse.json(mockAdminUser)),
 
-  http.get("/api/channels", () => HttpResponse.json(mockChannels)),
+  http.get("/api/communities", () => HttpResponse.json(mockCommunities)),
 
-  http.get("/api/channels/:channelId/messages", () => HttpResponse.json(mockMessages)),
+  http.get("/api/communities/:slug/feed", () => HttpResponse.json(mockPosts)),
+
+  http.post("/api/communities/:slug/subscribe", () =>
+    HttpResponse.json({ userId: "user-1", communityId: "community-1" }, { status: 201 }),
+  ),
+
+  http.delete("/api/communities/:slug/subscribe", () => new HttpResponse(null, { status: 204 })),
+
+  http.get("/api/feed", () => HttpResponse.json(mockPosts)),
+
+  http.get("/api/posts/:postId", () =>
+    HttpResponse.json({ post: mockPosts[0], comments: [] }),
+  ),
+
+  http.post("/api/posts/:postId/vote", () =>
+    HttpResponse.json({ ...mockPosts[0], score: (mockPosts[0]?.score ?? 0) + 1 }),
+  ),
+
+  http.post("/api/comments/:commentId/vote", () =>
+    HttpResponse.json({ id: "comment-1", score: 1 }),
+  ),
 
   http.get("/api/admin/settings", () => HttpResponse.json(mockSettings)),
 
   http.get("/api/admin/batch-logs", () => HttpResponse.json(mockBatchLogs)),
-
-  http.get("/api/messages", () => HttpResponse.json(mockMessages)),
 
   http.post("/api/auth/login", () => HttpResponse.json(mockAdminUser)),
 

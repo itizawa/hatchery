@@ -47,6 +47,8 @@ export function officeBounds(containerWidth: number, maxBounds?: Bounds): Bounds
 - キャラクター初期化は最初の測定後（bounds 確定後）に行う。bounds 変化時は既存座標を `clampPosition` で収める。
 - `nextPosition` / `randomPosition` には動的 bounds を渡す。
 - `prefers-reduced-motion` 尊重・クリックで Popover 表示は現状維持。
+- `ResizeObserver` 未対応環境（テスト用 jsdom 等）では `window` の `resize` イベントで実幅を再測定するフォールバックを用意する。
+- 実幅が測定できない（jsdom など `clientWidth === 0`）場合は上限幅 `OFFICE_MAX_BOUNDS.width` にフォールバックし、キャラクターが描画されない事態を避ける（実測されたら追従）。
 
 ### 3. `client/src/routes/OfficeScene.tsx`
 

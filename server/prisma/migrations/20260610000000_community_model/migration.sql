@@ -118,11 +118,7 @@ CREATE TABLE "Vote" (
 CREATE UNIQUE INDEX "Vote_userId_targetType_targetId_key" ON "Vote"("userId", "targetType", "targetId");
 CREATE INDEX "Vote_targetType_targetId_idx" ON "Vote"("targetType", "targetId");
 
+-- Vote.targetId は多態参照（Post または Comment）のため DB FK は張らない。
+-- アプリケーション層で存在確認を行う。
 ALTER TABLE "Vote" ADD CONSTRAINT "Vote_userId_fkey"
     FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "Vote" ADD CONSTRAINT "Vote_post_fkey"
-    FOREIGN KEY ("targetId") REFERENCES "Post"("id") ON DELETE CASCADE ON UPDATE CASCADE
-    DEFERRABLE INITIALLY DEFERRED;
-ALTER TABLE "Vote" ADD CONSTRAINT "Vote_comment_fkey"
-    FOREIGN KEY ("targetId") REFERENCES "Comment"("id") ON DELETE CASCADE ON UPDATE CASCADE
-    DEFERRABLE INITIALLY DEFERRED;

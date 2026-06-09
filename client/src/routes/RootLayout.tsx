@@ -14,6 +14,7 @@ import { SidebarChannelSection } from "../components/SidebarChannelSection";
 import { SLACK_COLORS } from "../theme.js";
 
 const SIDEBAR_WIDTH = 260;
+const SIDEBAR_ICON_SX = { color: SLACK_COLORS.sidebarText, minWidth: 36 } as const;
 
 /**
  * サイドバーの内容。デスクトップの恒久サイドバーとモバイルのドロワー両方で共用する。
@@ -28,7 +29,7 @@ const SidebarContent = (): ReactElement => {
       <List dense>
         <ListItem disablePadding>
           <ListItemButton component={RouterLink} to="/office" sx={{ color: SLACK_COLORS.sidebarText }}>
-            <ListItemIcon sx={{ color: SLACK_COLORS.sidebarText, minWidth: 36 }}>
+            <ListItemIcon sx={SIDEBAR_ICON_SX}>
               <BusinessIcon fontSize="small" />
             </ListItemIcon>
             <ListItemText primary="仮想オフィス" />
@@ -37,7 +38,7 @@ const SidebarContent = (): ReactElement => {
         {user && isAdmin(user) && (
           <ListItem disablePadding>
             <ListItemButton component={RouterLink} to="/admin" sx={{ color: SLACK_COLORS.sidebarText }}>
-              <ListItemIcon sx={{ color: SLACK_COLORS.sidebarText, minWidth: 36 }}>
+              <ListItemIcon sx={SIDEBAR_ICON_SX}>
                 <AdminPanelSettingsIcon fontSize="small" />
               </ListItemIcon>
               <ListItemText primary="管理画面" />

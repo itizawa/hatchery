@@ -152,7 +152,6 @@ model Post {
   score       Int       @default(0)
   createdAt   DateTime  @default(now())
   comments    Comment[]
-  votes       Vote[]
 
   @@unique([communityId, slotKey, seq])
   @@index([communityId, createdAt])
@@ -177,7 +176,6 @@ model Comment {
   /// up vote の累積数（ADR-0019）。生成出力には含めない。
   score       Int       @default(0)
   createdAt   DateTime  @default(now())
-  votes       Vote[]
 
   @@unique([communityId, slotKey, seq])
   @@index([postId, createdAt])
@@ -221,8 +219,6 @@ model Vote {
   user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   targetType VoteTargetType
   targetId   String
-  post       Post?          @relation(fields: [targetId], references: [id], onDelete: Cascade, map: "Vote_post_fkey")
-  comment    Comment?       @relation(fields: [targetId], references: [id], onDelete: Cascade, map: "Vote_comment_fkey")
   createdAt  DateTime       @default(now())
 
   @@unique([userId, targetType, targetId])

@@ -1,4 +1,5 @@
-import type { PrismaClient } from "@prisma/client";
+import { Prisma, type PrismaClient } from "@prisma/client";
+import { ConflictError } from "@hatchery/common";
 
 import type { VoteRepository, VoteTargetType } from "./voteRepository.js";
 
@@ -20,8 +21,15 @@ export class PrismaVoteRepository implements VoteRepository {
   }
 
   async create(userId: string, targetType: VoteTargetType, targetId: string): Promise<void> {
-    await this.prisma.vote.create({
-      data: { userId, targetType, targetId },
-    });
+    try {
+      await this.prisma.vote.create({
+        data: { userId, targetType, targetId },
+      });
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+        throw new ConflictError("AlreadyVoted");
+      }
+      throw err;
+    }
   }
 }

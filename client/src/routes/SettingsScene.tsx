@@ -234,7 +234,7 @@ interface SettingsTab {
 }
 
 const SETTINGS_TABS: readonly [SettingsTab, ...SettingsTab[]] = [
-  { label: "ユーザー一覧", value: "users", content: <EmployeeTable /> },
+  { label: "ワーカー管理", value: "users", content: <EmployeeTable /> },
   { label: "API トークン設定", value: "api-token", content: <ApiTokenSettings /> },
   { label: "バッチログ", value: "batch-logs", content: <BatchLogs /> },
   { label: "招待", value: "invitations", content: <InvitationsTab /> },

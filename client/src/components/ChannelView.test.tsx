@@ -1,4 +1,4 @@
-import { DEFAULT_EMPLOYEES, type Channel, type Employee, type Message } from "@hatchery/common";
+import { DEFAULT_EMPLOYEES, type Channel, type Employee, type MessageRecord } from "@hatchery/common";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -14,10 +14,29 @@ const employees: readonly Employee[] = [
   { id: "ken", displayName: "ケン" },
 ];
 
-const messages: readonly Message[] = [
-  { createdEmployeeId: "haru", channel: "zatsudan", text: "おはようございます！" },
-  { createdEmployeeId: "ken", channel: "zatsudan", text: "今日もよろしく。" },
+const messages: readonly MessageRecord[] = [
+  {
+    id: "msg-1",
+    createdEmployeeId: "haru",
+    channel: "zatsudan",
+    text: "おはようございます！",
+    postedAt: new Date("2026-06-05T09:00:00Z"),
+    createdAt: new Date("2026-06-05T09:00:00Z"),
+    order: 0,
+  },
+  {
+    id: "msg-2",
+    createdEmployeeId: "ken",
+    channel: "zatsudan",
+    text: "今日もよろしく。",
+    postedAt: new Date("2026-06-05T10:30:00Z"),
+    createdAt: new Date("2026-06-05T10:30:00Z"),
+    order: 1,
+  },
 ];
+
+const formatPostedAt = (date: Date): string =>
+  new Intl.DateTimeFormat("ja-JP", { hour: "2-digit", minute: "2-digit", hour12: false }).format(date);
 
 describe("ChannelView", () => {
   it("チャンネルラベルを見出しとして表示する", () => {
@@ -38,8 +57,16 @@ describe("ChannelView", () => {
   });
 
   it("未解決の createdEmployeeId は ID をそのままフォールバック表示する（#222）", () => {
-    const withUnknown: readonly Message[] = [
-      { createdEmployeeId: "unknown-id", channel: "zatsudan", text: "誰?" },
+    const withUnknown: readonly MessageRecord[] = [
+      {
+        id: "msg-unknown",
+        createdEmployeeId: "unknown-id",
+        channel: "zatsudan",
+        text: "誰?",
+        postedAt: new Date("2026-06-05T09:00:00Z"),
+        createdAt: new Date("2026-06-05T09:00:00Z"),
+        order: 0,
+      },
     ];
     render(<ChannelView channel={channel} messages={withUnknown} employees={employees} />);
     expect(screen.getByText("unknown-id")).toBeInTheDocument();
@@ -63,6 +90,12 @@ describe("ChannelView", () => {
     render(<ChannelView channel={channel} messages={[]} employees={employees} />);
     expect(screen.getByText(/まだメッセージがありません/)).toBeInTheDocument();
     expect(screen.queryByRole("list", { name: "メッセージ一覧" })).not.toBeInTheDocument();
+  });
+
+  it("postedAt の時刻を HH:mm 形式で各メッセージに表示する（#278）", () => {
+    render(<ChannelView channel={channel} messages={messages} employees={employees} />);
+    expect(screen.getByText(formatPostedAt(messages[0].postedAt))).toBeInTheDocument();
+    expect(screen.getByText(formatPostedAt(messages[1].postedAt))).toBeInTheDocument();
   });
 });
 

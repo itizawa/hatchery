@@ -26,37 +26,34 @@ function toRecord(row: {
   };
 }
 
-/** PostRepository の Prisma / PostgreSQL 実装（#306）。 */
+/** PostRepository の Prisma / PostgreSQL 実装（ADR-0019 / #305）。 */
 export class PrismaPostRepository implements PostRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   async createMany(communityId: string, inputs: PostCreateInput[]): Promise<PostRecord[]> {
-    if (inputs.length === 0) return [];
-
-    const created: PostRecord[] = [];
-    for (const input of inputs) {
-      // upsert: (communityId, slotKey, seq) の複合ユニークで二重発火をガード
-      const row = await this.prisma.post.upsert({
-        where: {
-          communityId_slotKey_seq: {
+    const rows = await this.prisma.$transaction(
+      inputs.map((input) =>
+        this.prisma.post.upsert({
+          where: {
+            communityId_slotKey_seq: {
+              communityId,
+              slotKey: input.slotKey,
+              seq: input.seq,
+            },
+          },
+          update: {},
+          create: {
             communityId,
             slotKey: input.slotKey,
             seq: input.seq,
+            author: input.author,
+            title: input.title,
+            text: input.text,
           },
-        },
-        update: {}, // 既存レコードは更新しない（スキップ）
-        create: {
-          communityId,
-          slotKey: input.slotKey,
-          seq: input.seq,
-          author: input.author,
-          title: input.title,
-          text: input.text,
-        },
-      });
-      created.push(toRecord(row));
-    }
-    return created;
+        }),
+      ),
+    );
+    return rows.map(toRecord);
   }
 
   async listByCommunity(communityId: string, limit = 50): Promise<PostRecord[]> {

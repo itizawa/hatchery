@@ -26,52 +26,40 @@ function toRecord(row: {
   };
 }
 
-/** CommentRepository の Prisma / PostgreSQL 実装（#306）。 */
+/** CommentRepository の Prisma / PostgreSQL 実装（ADR-0019 / #305）。 */
 export class PrismaCommentRepository implements CommentRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   async createMany(communityId: string, inputs: CommentCreateInput[]): Promise<CommentRecord[]> {
-    if (inputs.length === 0) return [];
-
-    const created: CommentRecord[] = [];
-    for (const input of inputs) {
-      // upsert: (communityId, slotKey, seq) の複合ユニークで二重発火をガード
-      const row = await this.prisma.comment.upsert({
-        where: {
-          communityId_slotKey_seq: {
+    const rows = await this.prisma.$transaction(
+      inputs.map((input) =>
+        this.prisma.comment.upsert({
+          where: {
+            communityId_slotKey_seq: {
+              communityId,
+              slotKey: input.slotKey,
+              seq: input.seq,
+            },
+          },
+          update: {},
+          create: {
             communityId,
+            postId: input.postId,
             slotKey: input.slotKey,
             seq: input.seq,
+            author: input.author,
+            text: input.text,
           },
-        },
-        update: {}, // 既存レコードは更新しない（スキップ）
-        create: {
-          communityId,
-          postId: input.postId,
-          slotKey: input.slotKey,
-          seq: input.seq,
-          author: input.author,
-          text: input.text,
-        },
-      });
-      created.push(toRecord(row));
-    }
-    return created;
+        }),
+      ),
+    );
+    return rows.map(toRecord);
   }
 
   async listByPost(postId: string): Promise<CommentRecord[]> {
     const rows = await this.prisma.comment.findMany({
       where: { postId },
       orderBy: { createdAt: "asc" },
-    });
-    return rows.map(toRecord);
-  }
-
-  async listByCommunity(communityId: string, limit = 50): Promise<CommentRecord[]> {
-    const rows = await this.prisma.comment.findMany({
-      where: { communityId },
-      orderBy: { createdAt: "desc" },
-      take: limit,
     });
     return rows.map(toRecord);
   }

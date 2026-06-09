@@ -36,6 +36,11 @@ export function useDripMessages(
     }
     isProcessing.current = true;
     const next = queue.current[0];
+    // 直前で length > 0 を確認済みだが、noUncheckedIndexedAccess に合わせて明示的にガードする。
+    if (next === undefined) {
+      isProcessing.current = false;
+      return;
+    }
 
     setTypingEmployeeId(next.createdEmployeeId);
 

@@ -4,9 +4,10 @@ import { createGithubIssueCreator, MAX_ISSUES_PER_RUN } from "./githubIssueTool.
 
 /** Octokit.issues の最小スタブを作るヘルパ。 */
 function makeOctokitStub(existingTitles: string[] = []) {
+  let nextNumber = 100;
   const create = vi.fn().mockImplementation(({ title }: { title: string }) =>
     Promise.resolve({
-      data: { number: 100 + create.mock.calls.length, html_url: `https://example.test/issues/${title}` },
+      data: { number: nextNumber++, html_url: `https://example.test/issues/${title}` },
     }),
   );
   const listForRepo = vi.fn().mockResolvedValue({

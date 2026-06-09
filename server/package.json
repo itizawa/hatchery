@@ -17,6 +17,7 @@
     "start": "node dist/server.js",
     "batch": "tsx src/batch/index.ts",
     "batch:summary": "tsx src/batch/summaryIndex.ts",
+    "batch:researcher": "tsx src/batch/researcherIndex.ts",
     "openapi": "tsx src/openapi/generate.ts",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",
@@ -30,6 +31,7 @@
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.3.169",
     "@anthropic-ai/sdk": "^0.100.1",
     "@asteasolutions/zod-to-openapi": "^7.3.4",
     "@hatchery/common": "workspace:*",

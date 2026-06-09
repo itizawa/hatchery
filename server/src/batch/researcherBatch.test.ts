@@ -169,14 +169,15 @@ describe("runResearcherBatch: Agent SDK リサーチャー自律起票（#285）
 
   it("(d) 起票ツールが duplicate を返した提案はメッセージを残さない（重複起票しない）", async () => {
     const channelRepo = new InMemoryChannelRepository([issueChannel]);
-    const createIssue = vi.fn(
-      (input: { title: string }): Promise<CreateIssueResult> =>
-        Promise.resolve(
-          input.title === "提案A"
-            ? { status: "created", issueNumber: 1, issueUrl: "u1" }
-            : { status: "duplicate" },
-        ),
-    );
+    // 起票ツールの dedup を模した stub: 同一タイトルの 2 回目は duplicate を返す。
+    const seen = new Set<string>();
+    const createIssue = vi.fn((input: { title: string }): Promise<CreateIssueResult> => {
+      if (seen.has(input.title)) {
+        return Promise.resolve({ status: "duplicate" });
+      }
+      seen.add(input.title);
+      return Promise.resolve({ status: "created", issueNumber: 1, issueUrl: "u1" });
+    });
 
     const records = await runResearcherBatch({
       channelRepo,

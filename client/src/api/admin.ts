@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { AppSettingResponse, Employee } from "@hatchery/common";
 
 import { openApiClient } from "./client.js";
+import { BOT_EMPLOYEES_QUERY_KEY } from "./employees.js";
 
 export const ADMIN_SETTINGS_QUERY_KEY = ["admin", "settings"] as const;
 export const ADMIN_EMPLOYEES_QUERY_KEY = ["admin", "employees"] as const;
@@ -109,7 +110,10 @@ export function useCreateAdminEmployee() {
     mutationFn: (input: { displayName: string; role?: string; personality?: string }) =>
       createAdminEmployee(input),
     onSuccess: () => {
+      // 管理画面の一覧 + OfficeScene・ChannelScene で共有する Bot Employee キャッシュを両方無効化する。
+      // 両者は同一の GET /api/employees を参照しているが queryKey が異なるため、それぞれ invalidate する。
       void queryClient.invalidateQueries({ queryKey: ADMIN_EMPLOYEES_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: BOT_EMPLOYEES_QUERY_KEY });
     },
   });
 }

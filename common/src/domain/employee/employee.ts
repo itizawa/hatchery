@@ -57,3 +57,16 @@ export const createDisplayNameResolver = (
   const displayNameById = new Map(employees.map((e) => [e.id, e.displayName]));
   return (employeeId: string): string => displayNameById.get(employeeId) ?? employeeId;
 };
+
+/**
+ * employee ID → imageUrl の解決関数を生成する（メッセージのアバター画像表示で利用・#300）。
+ * 内部で id→imageUrl の索引を 1 度だけ構築し、以降の解決を O(1) にする。
+ * imageUrl が未設定の場合、または未解決の ID の場合は undefined を返す。
+ * 純粋関数（React/DOM 非依存）として common に置き、client が共有する（ADR-0005）。
+ */
+export const createAvatarUrlResolver = (
+  employees: readonly Employee[] = DEFAULT_EMPLOYEES,
+): ((employeeId: string) => string | undefined) => {
+  const imageUrlById = new Map(employees.map((e) => [e.id, e.imageUrl]));
+  return (employeeId: string): string | undefined => imageUrlById.get(employeeId);
+};

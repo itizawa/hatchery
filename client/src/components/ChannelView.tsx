@@ -1,6 +1,7 @@
 import EditIcon from "@mui/icons-material/Edit";
-import { Box, IconButton, List, ListItem, Stack, Typography, useMediaQuery } from "./uiParts";
+import { Avatar, Box, IconButton, List, ListItem, Stack, Typography, useMediaQuery } from "./uiParts";
 import {
+  createAvatarUrlResolver,
   createDisplayNameResolver,
   DEFAULT_EMPLOYEES,
   type Channel,
@@ -17,6 +18,8 @@ const postedAtFormatter = new Intl.DateTimeFormat("ja-JP", { hour: "2-digit", mi
 const formatPostedAt = (date: Date | string): string =>
   postedAtFormatter.format(typeof date === "string" ? new Date(date) : date);
 
+const AVATAR_SIZE = 36;
+
 export interface ChannelViewProps {
   /** 表示対象のチャンネル（ヘッダのラベルに用いる）。 */
   channel: Channel;
@@ -30,7 +33,7 @@ export interface ChannelViewProps {
 
 /**
  * チャンネル詳細画面の presentational コンポーネント（#30）。
- * channel に属する message[] を「発言者名 + 本文」のフラットな一覧として描画する。
+ * channel に属する message[] を「アバター + 発言者名 + 本文」の Slack 風レイアウトで描画する（#300）。
  * 新着メッセージはドリップ表示（タイピングインジケータ付き時間差）し、観戦感を演出する（#282）。
  * API・ルータ・グローバル状態には依存せず、props 駆動で Storybook の fixture 描画ができる
  * （client → common の一方向依存のみ）。createdEmployeeId は employees の displayName に解決し、
@@ -43,6 +46,7 @@ export const ChannelView = ({
   onEditName,
 }: ChannelViewProps): ReactElement => {
   const resolveDisplayName = createDisplayNameResolver(employees);
+  const resolveAvatarUrl = createAvatarUrlResolver(employees);
   const prefersReducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
   const { visibleMessages, typingEmployeeId } = useDripMessages(messages, prefersReducedMotion);
 
@@ -67,32 +71,54 @@ export const ChannelView = ({
         </Typography>
       ) : (
         <List aria-label="メッセージ一覧" disablePadding>
-          {visibleMessages.map((message) => (
-            <ListItem key={message.id} alignItems="flex-start" disableGutters>
-              <Stack spacing={0.5}>
-                <Stack direction="row" spacing={1} alignItems="baseline">
-                  <Typography variant="subtitle2" component="span">
-                    {resolveDisplayName(message.createdEmployeeId)}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary" component="span">
-                    {formatPostedAt(message.postedAt)}
-                  </Typography>
+          {visibleMessages.map((message) => {
+            const displayName = resolveDisplayName(message.createdEmployeeId);
+            const avatarUrl = resolveAvatarUrl(message.createdEmployeeId);
+            return (
+              <ListItem key={message.id} alignItems="flex-start" disableGutters>
+                <Stack direction="row" spacing={1.5} alignItems="flex-start">
+                  <Avatar
+                    src={avatarUrl}
+                    alt={displayName}
+                    sx={{ width: AVATAR_SIZE, height: AVATAR_SIZE, mt: 0.25 }}
+                  >
+                    {displayName[0]}
+                  </Avatar>
+                  <Stack spacing={0.5}>
+                    <Stack direction="row" spacing={1} alignItems="baseline">
+                      <Typography variant="subtitle2" component="span">
+                        {displayName}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" component="span">
+                        {formatPostedAt(message.postedAt)}
+                      </Typography>
+                    </Stack>
+                    <Typography variant="body2" component="span">
+                      {message.text}
+                    </Typography>
+                  </Stack>
                 </Stack>
-                <Typography variant="body2" component="span">
-                  {message.text}
-                </Typography>
-              </Stack>
-            </ListItem>
-          ))}
+              </ListItem>
+            );
+          })}
           {typingEmployeeId !== null && (
             <ListItem aria-label="入力中" alignItems="flex-start" disableGutters>
-              <Stack spacing={0.5}>
-                <Typography variant="subtitle2" component="span">
-                  {resolveDisplayName(typingEmployeeId)}
-                </Typography>
-                <Typography variant="body2" component="span" sx={{ letterSpacing: 2 }}>
-                  ●●●
-                </Typography>
+              <Stack direction="row" spacing={1.5} alignItems="flex-start">
+                <Avatar
+                  src={resolveAvatarUrl(typingEmployeeId)}
+                  alt={resolveDisplayName(typingEmployeeId)}
+                  sx={{ width: AVATAR_SIZE, height: AVATAR_SIZE, mt: 0.25 }}
+                >
+                  {resolveDisplayName(typingEmployeeId)[0]}
+                </Avatar>
+                <Stack spacing={0.5}>
+                  <Typography variant="subtitle2" component="span">
+                    {resolveDisplayName(typingEmployeeId)}
+                  </Typography>
+                  <Typography variant="body2" component="span" sx={{ letterSpacing: 2 }}>
+                    ●●●
+                  </Typography>
+                </Stack>
               </Stack>
             </ListItem>
           )}

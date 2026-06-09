@@ -52,11 +52,11 @@ describe("管理画面（#50）", () => {
     expect(await screen.findByRole("heading", { name: /管理画面/ })).toBeInTheDocument();
   });
 
-  it("管理画面（/admin）のユーザー一覧タブに全 AI ボットの表示名が表示される", async () => {
+  it("管理画面（/admin）のワーカー管理タブに全 AI ボットの表示名が表示される", async () => {
     vi.spyOn(authApi, "fetchMe").mockResolvedValue({ id: "user1", displayName: "Alice", role: "admin" });
     renderApp("/admin");
 
-    expect(await screen.findByRole("tab", { name: /ユーザー一覧/ })).toBeInTheDocument();
+    expect(await screen.findByRole("tab", { name: /ワーカー管理/ })).toBeInTheDocument();
     await waitFor(() => {
       for (const employee of DEFAULT_EMPLOYEES) {
         expect(screen.getByText(employee.displayName)).toBeInTheDocument();
@@ -78,17 +78,17 @@ describe("設定画面タブ URL 同期・アクセシビリティ（#67）", ()
     expect(apiTokenTab).toHaveAttribute("aria-selected", "true");
   });
 
-  it("?tab= 無し（デフォルト）で開くと「ユーザー一覧」タブがアクティブになる", async () => {
+  it("?tab= 無し（デフォルト）で開くと「ワーカー管理」タブがアクティブになる", async () => {
     renderApp("/admin");
 
-    const usersTab = await screen.findByRole("tab", { name: /ユーザー一覧/ });
+    const usersTab = await screen.findByRole("tab", { name: /ワーカー管理/ });
     expect(usersTab).toHaveAttribute("aria-selected", "true");
   });
 
-  it("?tab=invalid（不正値）で開くと「ユーザー一覧」タブにフォールバックする", async () => {
+  it("?tab=invalid（不正値）で開くと「ワーカー管理」タブにフォールバックする", async () => {
     renderApp("/admin?tab=invalid");
 
-    const usersTab = await screen.findByRole("tab", { name: /ユーザー一覧/ });
+    const usersTab = await screen.findByRole("tab", { name: /ワーカー管理/ });
     expect(usersTab).toHaveAttribute("aria-selected", "true");
 
     const apiTokenTab = screen.getByRole("tab", { name: /API トークン設定/ });
@@ -98,7 +98,7 @@ describe("設定画面タブ URL 同期・アクセシビリティ（#67）", ()
   it("各タブに id='settings-tab-{value}' が設定されている", async () => {
     renderApp("/admin");
 
-    expect(await screen.findByRole("tab", { name: /ユーザー一覧/ })).toHaveAttribute(
+    expect(await screen.findByRole("tab", { name: /ワーカー管理/ })).toHaveAttribute(
       "id",
       "settings-tab-users",
     );
@@ -111,7 +111,7 @@ describe("設定画面タブ URL 同期・アクセシビリティ（#67）", ()
   it("各タブパネルに id・aria-labelledby が設定されている", async () => {
     renderApp("/admin");
 
-    await screen.findByRole("tab", { name: /ユーザー一覧/ });
+    await screen.findByRole("tab", { name: /ワーカー管理/ });
 
     const tabpanels = screen.getAllByRole("tabpanel", { hidden: true });
     const usersPanel = tabpanels.find((p) => p.id === "settings-tabpanel-users");
@@ -124,7 +124,7 @@ describe("設定画面タブ URL 同期・アクセシビリティ（#67）", ()
   it("タブクリックで URL の ?tab パラメータが更新される", async () => {
     const { router } = renderApp("/admin");
 
-    await screen.findByRole("tab", { name: /ユーザー一覧/ });
+    await screen.findByRole("tab", { name: /ワーカー管理/ });
     await userEvent.click(screen.getByRole("tab", { name: /API トークン設定/ }));
 
     await waitFor(() => {
@@ -170,7 +170,7 @@ describe("招待タブ（#133）", () => {
 
   it("「招待」タブをクリックすると URL が ?tab=invitations になる", async () => {
     const { router } = renderApp("/admin");
-    await screen.findByRole("tab", { name: /ユーザー一覧/ });
+    await screen.findByRole("tab", { name: /ワーカー管理/ });
     await userEvent.click(screen.getByRole("tab", { name: /招待/ }));
 
     await waitFor(() => {

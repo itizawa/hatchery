@@ -4,6 +4,7 @@ import { useState, type ReactElement } from "react";
 
 import { useAuth } from "../api/auth.js";
 import { useChannelMessages, useChannels, usePostChannelMessage } from "../api/channels.js";
+import { useBotEmployees } from "../api/employees.js";
 import { Box } from "../components/uiParts";
 import { ChannelView } from "../components/ChannelView.js";
 import { EditChannelNameDialog } from "../components/EditChannelNameDialog.js";
@@ -31,6 +32,7 @@ export const ChannelScene = (): ReactElement => {
   const channel = resolveChannel(channels, id);
 
   const { data: messages } = useChannelMessages(id);
+  const { data: employees } = useBotEmployees();
   const { data: authUser } = useAuth();
   const { mutate: postMessage, isPending } = usePostChannelMessage(id);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -41,6 +43,7 @@ export const ChannelScene = (): ReactElement => {
         <ChannelView
           channel={channel}
           messages={messages}
+          employees={employees ?? []}
           onEditName={authUser ? () => setEditDialogOpen(true) : undefined}
         />
       </Box>

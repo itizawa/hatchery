@@ -59,8 +59,8 @@ describe("CommunitySchema", () => {
   });
 
   it("synopsis は省略可能（optional）", () => {
-    const data = { ...validCommunity };
-    const { synopsis: _s, ...dataWithoutSynopsis } = data;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { synopsis: _s, ...dataWithoutSynopsis } = validCommunity;
     const result = CommunitySchema.safeParse(dataWithoutSynopsis);
     expect(result.success).toBe(true);
   });
@@ -71,8 +71,8 @@ describe("CommunitySchema", () => {
   });
 
   it("last_slot_key は省略可能（optional）", () => {
-    const data = { ...validCommunity };
-    const { last_slot_key: _l, ...dataWithoutLastSlot } = data;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { last_slot_key: _l, ...dataWithoutLastSlot } = validCommunity;
     const result = CommunitySchema.safeParse(dataWithoutLastSlot);
     expect(result.success).toBe(true);
   });

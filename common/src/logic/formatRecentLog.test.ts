@@ -1,19 +1,24 @@
 import { describe, expect, it } from "vitest";
 
-import type { Message } from "../domain/message/index.js";
+import type { RecentEntry } from "./formatRecentLog.js";
 import { formatRecentLog } from "./formatRecentLog.js";
 
-const msg = (createdEmployeeId: string, channel: string, text: string): Message => ({
-  createdEmployeeId,
-  channel,
+/**
+ * Issue #304 で Message → RecentEntry へ型を更新（ADR-0019 の Post/Comment モデル移行）。
+ * 旧: Message { createdEmployeeId, channel, text }
+ * 新: RecentEntry { community_id, author, text, title? }
+ */
+const entry = (author: string, community_id: string, text: string): RecentEntry => ({
+  author,
+  community_id,
   text,
 });
 
-const sample: Message[] = [
-  msg("haru", "zatsudan", "1つめ"),
-  msg("mei", "zatsudan", "2つめ"),
-  msg("mei", "shigoto", "3つめ"),
-  msg("haru", "shigoto", "4つめ"),
+const sample: RecentEntry[] = [
+  entry("haru", "zatsudan", "1つめ"),
+  entry("mei", "zatsudan", "2つめ"),
+  entry("mei", "shigoto", "3つめ"),
+  entry("haru", "shigoto", "4つめ"),
 ];
 
 describe("formatRecentLog (B-1)", () => {
@@ -21,11 +26,13 @@ describe("formatRecentLog (B-1)", () => {
     expect(formatRecentLog(sample, 2)).toEqual(["[shigoto] mei: 3つめ", "[shigoto] haru: 4つめ"]);
   });
 
-  it("各発言を [channel] speaker: text 形式に整形する", () => {
-    expect(formatRecentLog([msg("haru", "zatsudan", "やあ")], 5)).toEqual(["[zatsudan] haru: やあ"]);
+  it("各発言を [community_id] author: text 形式に整形する", () => {
+    expect(formatRecentLog([entry("haru", "zatsudan", "やあ")], 5)).toEqual([
+      "[zatsudan] haru: やあ",
+    ]);
   });
 
-  it("messages.length <= n のときは全件返す", () => {
+  it("entries.length <= n のときは全件返す", () => {
     expect(formatRecentLog(sample, 10)).toHaveLength(4);
     expect(formatRecentLog(sample, 4)).toHaveLength(4);
   });

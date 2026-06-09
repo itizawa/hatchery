@@ -46,19 +46,19 @@ describe("runAiMessageBatch (#53)", () => {
   it("goal.type='chat' のチャンネルのみ対象にし、isBot の発言だけを保存する", async () => {
     const deps = buildDeps([
       { id: "zatsudan", label: "雑談", type: "zatsudan", goal: { type: "chat" } },
-      { id: "shigoto", label: "仕事", type: "task", goal: { type: "issue" } },
+      { id: "shigoto", label: "仕事", type: "task", goal: { type: "chat" } },
       { id: "kikaku", label: "企画", type: "planning", goal: { type: "issue" } },
     ]);
     await deps.membershipRepo.addMember("zatsudan", "haru");
     await deps.membershipRepo.addMember("zatsudan", "ken");
     await deps.membershipRepo.addMember("zatsudan", "user1");
     // goal=issue のチャンネルにも所属者を置くが、対象外なので生成されない
-    await deps.membershipRepo.addMember("shigoto", "haru");
+    await deps.membershipRepo.addMember("kikaku", "haru");
 
     const generate = vi.fn().mockResolvedValue(conversationJson);
     const saved = await runAiMessageBatch({ ...deps, generate });
 
-    // 生成は goal=chat の zatsudan の 1 回だけ
+    // 生成は goal=chat の zatsudan の 1 回だけ（shigoto は goal=chat だがメンバーなし）
     expect(generate).toHaveBeenCalledTimes(1);
     // user1（非 bot）は除外され 2 件だけ保存
     expect(saved).toHaveLength(2);
@@ -66,8 +66,8 @@ describe("runAiMessageBatch (#53)", () => {
     // バッチ生成メッセージは postedAt が未来時刻（#183: 予約表示）
     const now = Date.now();
     expect(saved[0].postedAt.getTime()).toBeGreaterThan(now);
-    // 対象外チャンネルには何も保存されない
-    expect(await deps.messageRepo.listByChannel("shigoto")).toHaveLength(0);
+    // goal=issue の kikaku には何も保存されない
+    expect(await deps.messageRepo.listByChannel("kikaku")).toHaveLength(0);
   });
 
   it("API キーが未設定なら何も生成せず空配列を返す", async () => {

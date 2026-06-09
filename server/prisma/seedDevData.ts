@@ -30,8 +30,8 @@ export interface SeedPrisma {
   channel: {
     upsert(args: {
       where: { id: string };
-      update: { type: "zatsudan" | "task" | "planning"; goalType: "chat" | "issue" };
-      create: { id: string; label: string; type: "zatsudan" | "task" | "planning"; goalType: "chat" | "issue" };
+      update: { type: "zatsudan" | "task" | "planning"; goalType: "chat" | "issue"; goalInstructions: string | null };
+      create: { id: string; label: string; type: "zatsudan" | "task" | "planning"; goalType: "chat" | "issue"; goalInstructions: string | null };
     }): Promise<unknown>;
   };
   channelEmployee: {
@@ -111,8 +111,8 @@ export async function seedDevData(prisma: SeedPrisma): Promise<SeedResult> {
   for (const channel of DEFAULT_CHANNELS) {
     await prisma.channel.upsert({
       where: { id: channel.id },
-      update: { type: channel.type, goalType: channel.goal.type },
-      create: { id: channel.id, label: channel.label, type: channel.type, goalType: channel.goal.type },
+      update: { type: channel.type, goalType: channel.goal.type, goalInstructions: channel.goal.instructions ?? null },
+      create: { id: channel.id, label: channel.label, type: channel.type, goalType: channel.goal.type, goalInstructions: channel.goal.instructions ?? null },
     });
   }
 

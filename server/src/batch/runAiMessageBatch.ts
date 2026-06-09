@@ -54,11 +54,11 @@ export async function runAiMessageBatch(deps: RunAiMessageBatchDeps): Promise<Me
   const recentLimit = deps.recentLimit ?? DEFAULT_RECENT_LIMIT;
 
   const channels = await deps.channelRepo.list();
-  const zatsudanChannels = channels.filter((c) => c.goal.type === "chat");
+  const chatChannels = channels.filter((c) => c.goal.type === "chat");
 
   const saved: MessageRecord[] = [];
   const errors: string[] = [];
-  for (const channel of zatsudanChannels) {
+  for (const channel of chatChannels) {
     try {
       const memberIds = await deps.membershipRepo.listEmployeeIdsByChannel(channel.id);
       const members = await deps.employeeRepo.listByIds(memberIds);

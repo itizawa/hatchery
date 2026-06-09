@@ -30,7 +30,7 @@ export type ChannelGoalType = z.infer<typeof ChannelGoalTypeSchema>;
  */
 export const ChannelGoalSchema = z.object({
   type: ChannelGoalTypeSchema,
-  instructions: z.string().max(CHANNEL_GOAL_INSTRUCTIONS_MAX_LENGTH).optional(),
+  instructions: z.string().min(1).max(CHANNEL_GOAL_INSTRUCTIONS_MAX_LENGTH).optional(),
 });
 
 export type ChannelGoal = z.infer<typeof ChannelGoalSchema>;

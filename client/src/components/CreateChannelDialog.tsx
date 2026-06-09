@@ -76,6 +76,7 @@ export const CreateChannelDialog = ({ open, onClose }: CreateChannelDialogProps)
                 onChange={(e) => field.handleChange(e.target.value)}
                 inputProps={{ "aria-label": "チャンネル名", maxLength: CHANNEL_LABEL_MAX_LENGTH }}
                 error={field.state.meta.errors.length > 0}
+                helperText={field.state.meta.errors[0] ?? ""}
                 autoFocus
                 fullWidth
               />

@@ -56,7 +56,7 @@ describe("管理画面（#50）", () => {
   it("管理画面（/admin）のワーカー管理タブに全 AI ボットの表示名が表示される", async () => {
     vi.spyOn(authApi, "fetchMe").mockResolvedValue({ id: "user1", displayName: "Alice", role: "admin" });
     vi.spyOn(employeesApi, "useBotEmployees").mockReturnValue({
-      data: DEFAULT_EMPLOYEES as unknown as ReturnType<typeof employeesApi.useBotEmployees>["data"],
+      data: [...DEFAULT_EMPLOYEES],
       isLoading: false,
     } as ReturnType<typeof employeesApi.useBotEmployees>);
     renderApp("/admin");

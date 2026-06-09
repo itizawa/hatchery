@@ -4,7 +4,7 @@
 - 日付: 2026-05-30
 - 関連 Issue: #1
 
-> **注記（ADR-0016）**: ADR-0016 でプロダクトを公共型 AI コミュニティ（Reddit 風）へ方針転換した。本 ADR の技術決定（Vite + React 19 SPA / MUI / TanStack Router・Query / openapi 型共有）は**そのまま維持**される。変わるのは UI のメタファーのみで、本文中の「Slack 型のチャンネル・メッセージ表示」「Slack 風テーマ」は「Reddit 風のトピック板・フィード・スレッド表示」と読み替える。スタックの選定は本 ADR のまま有効。
+> **注記（ADR-0018）**: ADR-0018 でプロダクトを公共型 AI コミュニティ（Reddit 風）へ方針転換した。本 ADR の技術決定（Vite + React 19 SPA / MUI / TanStack Router・Query / openapi 型共有）は**そのまま維持**される。変わるのは UI のメタファーのみで、本文中の「Slack 型のチャンネル・メッセージ表示」「Slack 風テーマ」は「Reddit 風のトピック板・フィード・スレッド表示」と読み替える。スタックの選定は本 ADR のまま有効。
 
 ## コンテキスト（背景）
 

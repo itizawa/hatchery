@@ -83,7 +83,10 @@ export const RootLayout = (): ReactElement => {
   } as const;
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
+    <Box
+      data-testid="root-layout-outer"
+      sx={{ display: "flex", flexDirection: "column", height: "100vh", width: "100%", maxWidth: "100%", overflowX: "hidden" }}
+    >
       <AppHeader onMenuOpen={isMobile ? () => setDrawerOpen(true) : undefined} />
       <Box sx={{ display: "flex", flexGrow: 1, overflow: "hidden" }}>
         {/* モバイル: 一時的なドロワー */}

@@ -255,3 +255,43 @@ describe("サイドバーのナビゲーション改善 (#273)", () => {
     expect(screen.queryByRole("link", { name: /管理画面/ })).not.toBeInTheDocument();
   });
 });
+
+// 受け入れ条件 #279: 横オーバーフロー防止
+describe("横オーバーフロー防止 (#279)", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("トップレベルコンテナ（data-testid='root-layout-outer'）がレンダリングされる", async () => {
+    stubFetch(true);
+    renderWithRouter("/");
+
+    await screen.findByRole("navigation", { name: "サイドバー" });
+    expect(screen.getByTestId("root-layout-outer")).toBeInTheDocument();
+  });
+
+  it("デスクトップ幅でサイドバーと main 要素が共存する", async () => {
+    stubFetch(true);
+    renderWithRouter("/");
+
+    await screen.findByRole("navigation", { name: "サイドバー" });
+    expect(screen.getByRole("main")).toBeInTheDocument();
+  });
+});

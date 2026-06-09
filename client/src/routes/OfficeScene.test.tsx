@@ -96,3 +96,14 @@ describe("OfficeScene (#240)", () => {
     ).toBeInTheDocument();
   });
 });
+
+// 受け入れ条件 #279: 横スクロール内部コンテナ
+describe("横スクロール内部コンテナ (#279)", () => {
+  it("OfficeView のラッパーコンテナ（data-testid='office-scroll-container'）がレンダリングされる", async () => {
+    stubFetchWithEmployees([]);
+    renderOfficeScene();
+
+    // API 解決後に office-scroll-container がレンダリングされるのを待つ
+    expect(await screen.findByTestId("office-scroll-container")).toBeInTheDocument();
+  });
+});

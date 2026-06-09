@@ -16,7 +16,7 @@ import { MessageInput } from "../components/MessageInput.js";
  */
 const resolveChannel = (channels: readonly Channel[], channelId: string): Channel =>
   channels.find((c) => c.id === channelId) ??
-  findChannelById(channelId) ?? { id: channelId, label: `#${channelId}`, type: "zatsudan" };
+  findChannelById(channelId) ?? { id: channelId, label: `#${channelId}`, type: "zatsudan", goal: { type: "chat" } };
 
 /**
  * チャンネル別ビュー（/channels/$channelId）のコンテナ（#30）。

@@ -18,9 +18,14 @@ describe("Channel / CHANNEL_IDS (A-7)", () => {
     expect(CHANNEL_IDS).toHaveLength(3);
   });
 
-  it("Channel は id / label / type を持ち parse 成功する", () => {
+  it("Channel は id / label / type / goal を持ち parse 成功する", () => {
+    const ok = ChannelSchema.parse({ id: "zatsudan", label: "雑談", type: "zatsudan", goal: { type: "chat" } });
+    expect(ok).toEqual({ id: "zatsudan", label: "雑談", type: "zatsudan", goal: { type: "chat" } });
+  });
+
+  it("goal 省略時はデフォルト { type: 'chat' } で parse 成功する", () => {
     const ok = ChannelSchema.parse({ id: "zatsudan", label: "雑談", type: "zatsudan" });
-    expect(ok).toEqual({ id: "zatsudan", label: "雑談", type: "zatsudan" });
+    expect(ok.goal).toEqual({ type: "chat" });
   });
 
   it("id / label が空文字なら parse に失敗する", () => {
@@ -38,7 +43,7 @@ describe("Channel / CHANNEL_IDS (A-7)", () => {
     expect(ChannelSchema.safeParse({ id: "zatsudan", label: "雑談" }).success).toBe(false);
   });
 
-  it("DEFAULT_CHANNELS は CHANNEL_IDS の 3 チャンネルを表現する", () => {
+  it("DEFAULT_CHANNELS は CHANNEL_IDS の 3 チャンネルを表現し、全て valid な Channel", () => {
     expect(DEFAULT_CHANNELS.map((c) => c.id)).toEqual([...CHANNEL_IDS]);
     for (const ch of DEFAULT_CHANNELS) {
       expect(ChannelSchema.safeParse(ch).success).toBe(true);
@@ -83,12 +88,17 @@ describe("ChannelTypeSchema（#54 / #76）", () => {
 });
 
 describe("CreateChannelSchema（POST /channels ボディ・#47 / #54）", () => {
-  it("label のみ（type 省略）で parse すると type='zatsudan' がデフォルトになる", () => {
-    expect(CreateChannelSchema.parse({ label: "#新規" })).toEqual({ label: "#新規", type: "zatsudan" });
+  it("label のみ（type 省略）で parse すると type='zatsudan'・goal={type:'chat'} がデフォルトになる", () => {
+    const result = CreateChannelSchema.parse({ label: "#新規" });
+    expect(result.label).toBe("#新規");
+    expect(result.type).toBe("zatsudan");
+    expect(result.goal).toEqual({ type: "chat" });
   });
 
   it("type='task' を明示すると task で作成される", () => {
-    expect(CreateChannelSchema.parse({ label: "仕事", type: "task" })).toEqual({ label: "仕事", type: "task" });
+    const result = CreateChannelSchema.parse({ label: "仕事", type: "task" });
+    expect(result.label).toBe("仕事");
+    expect(result.type).toBe("task");
   });
 
   it("label が空文字なら parse に失敗する（400 の根拠）", () => {
@@ -120,7 +130,7 @@ describe("UpdateChannelSchema（PATCH /channels/:id ボディ・#54）", () => {
     expect(result).toEqual({ label: "新しい名前", type: "task" });
   });
 
-  it("label も type も無ければ parse に失敗する（400 の根拠）", () => {
+  it("label も type も goal も無ければ parse に失敗する（400 の根拠）", () => {
     expect(UpdateChannelSchema.safeParse({}).success).toBe(false);
   });
 
@@ -139,7 +149,7 @@ describe("UpdateChannelSchema（PATCH /channels/:id ボディ・#54）", () => {
 
 describe("findChannelById", () => {
   it("既知のチャンネル ID から DEFAULT_CHANNELS の Channel を返す", () => {
-    expect(findChannelById("zatsudan")).toEqual({ id: "zatsudan", label: "雑談", type: "zatsudan" });
+    expect(findChannelById("zatsudan")).toEqual({ id: "zatsudan", label: "雑談", type: "zatsudan", goal: { type: "chat" } });
   });
 
   it("未知のチャンネル ID では undefined を返す", () => {

@@ -27,9 +27,6 @@ export interface ProposalsWithUsage {
   usage: TokenUsageInfo | null;
 }
 
-/** 企画 チャンネルの ID（DEFAULT_CHANNELS の kikaku エントリと一致）。 */
-const PLANNING_CHANNEL_ID = "kikaku";
-
 /** バッチが巡回するデフォルトパス一覧。 */
 const DEFAULT_PATHS = ["/", "/login", "/channels/zatsudan", "/channels/shigoto"];
 
@@ -116,10 +113,10 @@ async function generateProposalsWithClaude(
 }
 
 /**
- * UX 提案バッチ本体（#76）。
+ * UX 提案バッチ本体（#76 / #284）。goal.type='issue' の全チャンネルを対象に（ADR-0016）：
  * - ANTHROPIC_API_KEY が未設定ならスキップ
- * - 企画 チャンネルが存在しなければスキップ
- * - CLIENT_URL のページを巡回して UX 提案を生成し、企画 チャンネルへ保存する
+ * - goal=issue チャンネルが存在しなければスキップ
+ * - CLIENT_URL のページを巡回して UX 提案を生成し、各 goal=issue チャンネルへ保存する
  * - API 呼び出しのトークン使用量を tokenUsageLogRepository に記録する（#153）
  */
 export async function runPlanningBatch(deps: RunPlanningBatchDeps): Promise<MessageRecord[]> {
@@ -129,9 +126,10 @@ export async function runPlanningBatch(deps: RunPlanningBatchDeps): Promise<Mess
     return [];
   }
 
-  const channel = await deps.channelRepo.findById(PLANNING_CHANNEL_ID);
-  if (!channel) {
-    console.error(`[planningBatch] 企画 チャンネル (${PLANNING_CHANNEL_ID}) が存在しないためスキップします`);
+  const allChannels = await deps.channelRepo.list();
+  const issueChannels = allChannels.filter((c) => c.goal.type === "issue");
+  if (issueChannels.length === 0) {
+    console.error("[planningBatch] goal=issue のチャンネルが存在しないためスキップします");
     return [];
   }
 
@@ -200,16 +198,18 @@ export async function runPlanningBatch(deps: RunPlanningBatchDeps): Promise<Mess
   }
 
   const saved: MessageRecord[] = [];
-  for (const proposal of proposals) {
-    const record = await deps.messageRepo.createPlanningMessage({
-      createdEmployeeId: "ai-planner",
-      channel: PLANNING_CHANNEL_ID,
-      text: `【UX提案】${proposal.title}`,
-      proposalTitle: proposal.title,
-      proposalReason: proposal.reason,
-      proposalTargetUrl: proposal.targetUrl,
-    });
-    saved.push(record);
+  for (const channel of issueChannels) {
+    for (const proposal of proposals) {
+      const record = await deps.messageRepo.createPlanningMessage({
+        createdEmployeeId: "ai-planner",
+        channel: channel.id,
+        text: `【UX提案】${proposal.title}`,
+        proposalTitle: proposal.title,
+        proposalReason: proposal.reason,
+        proposalTargetUrl: proposal.targetUrl,
+      });
+      saved.push(record);
+    }
   }
 
   return saved;

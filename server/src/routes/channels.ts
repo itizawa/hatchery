@@ -51,11 +51,11 @@ export function createChannelsRouter(
       .catch(next);
   });
 
-  // チャンネル作成（認証必須・#47・#54）。id はリポジトリが採番する。type 省略時は zatsudan。
+  // チャンネル作成（認証必須・#47・#54）。id はリポジトリが採番する。type 省略時は zatsudan、goal 省略時は chat（#284）。
   router.post("/", requireAuth, validateBody(CreateChannelSchema), (req, res, next) => {
-    const { label, type } = req.body as CreateChannelInput;
+    const { label, type, goal } = req.body as CreateChannelInput;
     channelRepo
-      .create({ label, type })
+      .create({ label, type, goal })
       .then((channel) => res.status(201).json(channel))
       .catch(next);
   });

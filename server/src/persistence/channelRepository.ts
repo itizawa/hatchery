@@ -8,7 +8,7 @@ export interface ChannelRepository {
   list(): Promise<Channel[]>;
   /** チャンネルを新規作成して返す。id はサーバ側で採番する（POST /channels・#47）。 */
   create(input: CreateChannelInput): Promise<Channel>;
-  /** label / type を部分更新して返す。存在しない場合は null（PATCH /channels/:id・#54）。 */
+  /** label / type / goal を部分更新して返す。存在しない場合は null（PATCH /channels/:id・#54）。 */
   update(id: string, input: UpdateChannelInput): Promise<Channel | null>;
   /** id でチャンネルを 1 件取得する。存在しない場合は null（#48）。 */
   findById(id: string): Promise<Channel | null>;
@@ -32,18 +32,23 @@ export class InMemoryChannelRepository implements ChannelRepository {
   private readonly channels: Channel[];
   private readonly summaries = new Map<string, ChannelSummary>();
 
-  constructor(channels: Channel[] = DEFAULT_CHANNELS.map((c) => ({ ...c }))) {
+  constructor(channels: Channel[] = DEFAULT_CHANNELS.map((c) => ({ ...c, goal: { ...c.goal } }))) {
     this.channels = channels;
   }
 
   async list(): Promise<Channel[]> {
-    return this.channels.map((c) => ({ ...c }));
+    return this.channels.map((c) => ({ ...c, goal: { ...c.goal } }));
   }
 
   async create(input: CreateChannelInput): Promise<Channel> {
-    const channel: Channel = { id: randomUUID(), label: input.label, type: input.type };
+    const channel: Channel = {
+      id: randomUUID(),
+      label: input.label,
+      type: input.type,
+      goal: { ...input.goal },
+    };
     this.channels.push(channel);
-    return { ...channel };
+    return { ...channel, goal: { ...channel.goal } };
   }
 
   async update(id: string, input: UpdateChannelInput): Promise<Channel | null> {
@@ -51,11 +56,13 @@ export class InMemoryChannelRepository implements ChannelRepository {
     if (!channel) return null;
     if (input.label !== undefined) channel.label = input.label;
     if (input.type !== undefined) channel.type = input.type;
-    return { ...channel };
+    if (input.goal !== undefined) channel.goal = { ...input.goal };
+    return { ...channel, goal: { ...channel.goal } };
   }
 
   async findById(id: string): Promise<Channel | null> {
-    return this.channels.find((c) => c.id === id) ?? null;
+    const ch = this.channels.find((c) => c.id === id);
+    return ch ? { ...ch, goal: { ...ch.goal } } : null;
   }
 
   async getSummary(channelId: string): Promise<ChannelSummary | null> {

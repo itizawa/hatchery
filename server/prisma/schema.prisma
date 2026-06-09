@@ -58,13 +58,24 @@ enum ChannelType {
   planning
 }
 
-/// 話題の入れ物。common の ChannelSchema に対応（id / label / type）。
+/// AI 出力種別（#284 / ADR-0016）。chat=会話生成、issue=GitHub Issue 起票。
+enum ChannelGoalType {
+  chat
+  issue
+}
+
+/// 話題の入れ物。common の ChannelSchema に対応（id / label / type / goal）。
 /// summary / summaryUpdatedAt は定時バッチの会話生成に使うチャンネルのあらすじ（#53）。
 /// 直近 30 件より前の文脈を圧縮した要約で、API（OpenAPI）には公開しないバッチ内部の状態。
+/// goalType / goalInstructions は ADR-0016 で導入した出力契約（#284）。
 model Channel {
   id               String            @id @default(uuid(7))
   label            String
   type             ChannelType       @default(zatsudan)
+  /// AI 出力種別（#284 / ADR-0016）。chat=会話生成、issue=GitHub Issue 起票。
+  goalType         ChannelGoalType   @default(chat)
+  /// バッチプロンプトへの任意の追加指示（#284）。500 文字以内。
+  goalInstructions String?
   summary          String?
   summaryUpdatedAt DateTime?
   members          ChannelEmployee[]

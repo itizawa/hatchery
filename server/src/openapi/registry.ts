@@ -12,6 +12,7 @@ import {
   AppSettingResponseSchema,
   AuthUserSchema,
   BatchRunLogSchema,
+  ChannelGoalSchema,
   ChannelSchema,
   CreateChannelMessageSchema,
   CreateChannelSchema,
@@ -52,9 +53,14 @@ const CreateChannelMessageComponent = registry.register(
   }),
 );
 
+registry.register(
+  "ChannelGoal",
+  ChannelGoalSchema.openapi({ description: "チャンネルの AI 出力契約（#284 / ADR-0016）" }),
+);
+
 const ChannelComponent = registry.register(
   "Channel",
-  ChannelSchema.openapi({ description: "チャンネル（id / label）" }),
+  ChannelSchema.openapi({ description: "チャンネル（id / label / goal）" }),
 );
 
 const UpdateChannelComponent = registry.register(

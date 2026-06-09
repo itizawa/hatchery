@@ -52,14 +52,14 @@ describe("CreateChannelDialog（#233）", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  it("ダイアログ内にチャンネル名入力欄とタイプ選択ラジオが表示される", async () => {
+  it("ダイアログ内にチャンネル名入力欄とゴール選択ラジオが表示される", async () => {
     stubFetch(200, { id: "u1", displayName: "Alice" });
     const onClose = vi.fn();
     renderWithClient(<CreateChannelDialog open={true} onClose={onClose} />);
     expect(await screen.findByRole("dialog")).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "チャンネル名" })).toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: "雑談" })).toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: "仕事" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "発言（会話）" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "起票（Issue 作成）" })).toBeInTheDocument();
   });
 
   it("チャンネル名が空のとき送信ボタンが無効", async () => {

@@ -2,6 +2,8 @@
  * @hatchery/server パッケージエントリ。
  * Express アプリ生成・定時バッチ・永続化境界の公開 API を re-export する（ADR-0004）。
  * 許可方向 server → common を守り、client には依存しない。
+ *
+ * #305: PrismaMessageRepository は旧スキーマ（Message モデル）削除に伴い廃止。
  */
 export { createApp, type AppDeps } from "./app.js";
 export { loadEnv, type ServerEnv } from "./config/env.js";
@@ -12,7 +14,6 @@ export {
   type MessageRecord,
   type MessageRepository,
 } from "./persistence/messageRepository.js";
-export { PrismaMessageRepository } from "./persistence/prismaMessageRepository.js";
 export {
   InMemoryUserRepository,
   type UserRepository,

@@ -37,16 +37,15 @@ model User {
 }
 
 /// AI ワーカー（社員）。ADR-0019: post / comment の author として使う。
-/// Worker 管理 Issue（#181/#204/#217/#218）で拡張予定。今回は存続させる。
 model Employee {
-  id          String   @id @default(uuid(7))
+  id          String    @id @default(uuid(7))
   displayName String
   role        String?
   /// AI 社員は true、ユーザー所有社員は false（#49）。
-  isBot       Boolean  @default(false)
+  isBot       Boolean   @default(false)
   /// ユーザー所有社員のみ User と 1:1 で紐づく。AI 社員は null（#49）。
-  userId      String?  @unique
-  user        User?    @relation(fields: [userId], references: [id])
+  userId      String?   @unique
+  user        User?     @relation(fields: [userId], references: [id])
   /// AI バッチのプロンプト指針となる性格設定（任意・500 文字以内）（#38）。
   personality String?
   /// 論理削除日時（#218）。null=有効、値=削除済み。物理削除は行わない。
@@ -152,7 +151,6 @@ model Post {
   score       Int       @default(0)
   createdAt   DateTime  @default(now())
   comments    Comment[]
-  votes       Vote[]
 
   @@unique([communityId, slotKey, seq])
   @@index([communityId, createdAt])
@@ -177,7 +175,6 @@ model Comment {
   /// up vote の累積数（ADR-0019）。生成出力には含めない。
   score       Int       @default(0)
   createdAt   DateTime  @default(now())
-  votes       Vote[]
 
   @@unique([communityId, slotKey, seq])
   @@index([postId, createdAt])
@@ -215,14 +212,14 @@ enum VoteTargetType {
   comment
 }
 
+/// Vote.targetId は多態参照（Post または Comment の id）のため DB FK を張らない。
+/// アプリケーション層（vote API）でターゲットの存在確認を行う。
 model Vote {
   id         String         @id @default(uuid(7))
   userId     String
   user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   targetType VoteTargetType
   targetId   String
-  post       Post?          @relation(fields: [targetId], references: [id], onDelete: Cascade, map: "Vote_post_fkey")
-  comment    Comment?       @relation(fields: [targetId], references: [id], onDelete: Cascade, map: "Vote_comment_fkey")
   createdAt  DateTime       @default(now())
 
   @@unique([userId, targetType, targetId])

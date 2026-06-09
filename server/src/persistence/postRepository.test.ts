@@ -1,0 +1,116 @@
+import { describe, expect, it } from "vitest";
+import { InMemoryPostRepository } from "./postRepository.js";
+
+describe("InMemoryPostRepository", () => {
+  describe("createMany", () => {
+    it("複数の post をバルク作成できる", async () => {
+      const repo = new InMemoryPostRepository();
+      const created = await repo.createMany("community-1", [
+        { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "Title 1", text: "Text 1" },
+        { slotKey: "2026-06-10T09:00", seq: 1, author: "worker-2", title: "Title 2", text: "Text 2" },
+      ]);
+      expect(created).toHaveLength(2);
+      expect(created[0].communityId).toBe("community-1");
+      expect(created[0].score).toBe(0);
+      expect(created[1].seq).toBe(1);
+    });
+
+    it("(communityId, slotKey, seq) が重複する場合は既存を返す（Cron 二重発火ガード）", async () => {
+      const repo = new InMemoryPostRepository();
+      await repo.createMany("community-1", [
+        { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "Title 1", text: "Text 1" },
+      ]);
+      const second = await repo.createMany("community-1", [
+        { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "Title 1", text: "Text 1" },
+      ]);
+      expect(second).toHaveLength(1);
+      const all = await repo.listByCommunity("community-1");
+      expect(all).toHaveLength(1); // 重複しないこと
+    });
+  });
+
+  describe("listByCommunity", () => {
+    it("community の post を新着順で返す", async () => {
+      const repo = new InMemoryPostRepository();
+      await repo.createMany("community-1", [
+        { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "Old", text: "Old" },
+      ]);
+      await new Promise((r) => setTimeout(r, 5)); // 時間差を作る
+      await repo.createMany("community-1", [
+        { slotKey: "2026-06-10T18:00", seq: 0, author: "worker-2", title: "New", text: "New" },
+      ]);
+      const result = await repo.listByCommunity("community-1");
+      expect(result[0].title).toBe("New"); // 新着順
+    });
+
+    it("別の community の post は含めない", async () => {
+      const repo = new InMemoryPostRepository();
+      await repo.createMany("community-1", [
+        { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "C1 Post", text: "text" },
+      ]);
+      await repo.createMany("community-2", [
+        { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "C2 Post", text: "text" },
+      ]);
+      const result = await repo.listByCommunity("community-1");
+      expect(result).toHaveLength(1);
+      expect(result[0].title).toBe("C1 Post");
+    });
+  });
+
+  describe("findById", () => {
+    it("存在する id で取得できる", async () => {
+      const repo = new InMemoryPostRepository();
+      const [created] = await repo.createMany("community-1", [
+        { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "Title", text: "Text" },
+      ]);
+      const result = await repo.findById(created.id);
+      expect(result).toMatchObject({ title: "Title" });
+    });
+
+    it("存在しない id は null を返す", async () => {
+      const repo = new InMemoryPostRepository();
+      const result = await repo.findById("not-exists");
+      expect(result).toBeNull();
+    });
+  });
+
+  describe("addScore", () => {
+    it("score を加算できる", async () => {
+      const repo = new InMemoryPostRepository();
+      const [created] = await repo.createMany("community-1", [
+        { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "Title", text: "Text" },
+      ]);
+      const updated = await repo.addScore(created.id, 1);
+      expect(updated?.score).toBe(1);
+    });
+
+    it("存在しない id は null を返す", async () => {
+      const repo = new InMemoryPostRepository();
+      const result = await repo.addScore("not-exists", 1);
+      expect(result).toBeNull();
+    });
+  });
+
+  describe("listByCommunityIds", () => {
+    it("複数 communityId の post を新着順で返す（ホームフィード）", async () => {
+      const repo = new InMemoryPostRepository();
+      await repo.createMany("community-1", [
+        { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "C1", text: "text" },
+      ]);
+      await repo.createMany("community-2", [
+        { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-2", title: "C2", text: "text" },
+      ]);
+      const result = await repo.listByCommunityIds(["community-1", "community-2"]);
+      expect(result).toHaveLength(2);
+    });
+
+    it("空の communityIds は空配列を返す", async () => {
+      const repo = new InMemoryPostRepository();
+      await repo.createMany("community-1", [
+        { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "Title", text: "Text" },
+      ]);
+      const result = await repo.listByCommunityIds([]);
+      expect(result).toEqual([]);
+    });
+  });
+});

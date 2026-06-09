@@ -1,5 +1,3 @@
-import { randomUUID } from "node:crypto";
-
 import type { PrismaClient } from "@prisma/client";
 
 import type {
@@ -29,7 +27,7 @@ function toRecord(row: {
   };
 }
 
-/** CommunityRepository の Prisma / PostgreSQL 実装（#306）。 */
+/** CommunityRepository の Prisma / PostgreSQL 実装（ADR-0019 / #305）。 */
 export class PrismaCommunityRepository implements CommunityRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
@@ -53,7 +51,6 @@ export class PrismaCommunityRepository implements CommunityRepository {
   async create(input: CreateCommunityRecordInput): Promise<CommunityRecord> {
     const row = await this.prisma.community.create({
       data: {
-        id: randomUUID(),
         slug: input.slug,
         name: input.name,
         description: input.description,
@@ -63,15 +60,17 @@ export class PrismaCommunityRepository implements CommunityRepository {
   }
 
   async update(id: string, input: UpdateCommunityRecordInput): Promise<CommunityRecord | null> {
-    const existing = await this.prisma.community.findUnique({ where: { id } });
-    if (!existing) return null;
-    const row = await this.prisma.community.update({
-      where: { id },
-      data: {
-        ...(input.name !== undefined && { name: input.name }),
-        ...(input.description !== undefined && { description: input.description }),
-      },
-    });
-    return toRecord(row);
+    try {
+      const row = await this.prisma.community.update({
+        where: { id },
+        data: {
+          ...(input.name !== undefined && { name: input.name }),
+          ...(input.description !== undefined && { description: input.description }),
+        },
+      });
+      return toRecord(row);
+    } catch {
+      return null;
+    }
   }
 }

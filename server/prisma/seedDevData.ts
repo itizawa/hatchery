@@ -1,10 +1,12 @@
-import { DEFAULT_CHANNELS, DEFAULT_EMPLOYEES } from "@hatchery/common";
 import bcrypt from "bcrypt";
 
 /**
  * seed が必要とする Prisma クライアントの構造的インターフェース。
  * 生成済み Prisma Client（`@prisma/client`）の該当メソッドはこの型に構造的に適合する。
  * ここで具象クライアントを値 import しないことで、生成物・実 DB が無くてもユニットテスト可能にする（設計書 §4）。
+ *
+ * #305: Message / Channel / ChannelEmployee / Task モデル削除に伴い、
+ * seed を Community / Employee / User のみに変更。
  */
 export interface SeedPrisma {
   user: {
@@ -27,18 +29,11 @@ export interface SeedPrisma {
       };
     }): Promise<unknown>;
   };
-  channel: {
+  community: {
     upsert(args: {
-      where: { id: string };
-      update: { type: "zatsudan" | "task" | "planning"; goalType: "chat" | "issue"; goalInstructions: string | null };
-      create: { id: string; label: string; type: "zatsudan" | "task" | "planning"; goalType: "chat" | "issue"; goalInstructions: string | null };
-    }): Promise<unknown>;
-  };
-  channelEmployee: {
-    upsert(args: {
-      where: { channelId_employeeId: { channelId: string; employeeId: string } };
+      where: { slug: string };
       update: Record<string, never>;
-      create: { channelId: string; employeeId: string };
+      create: { id?: string; slug: string; name: string; description: string };
     }): Promise<unknown>;
   };
 }
@@ -54,11 +49,30 @@ const DEV_USER = { id: "testuser", loginId: "testuser", displayName: "Test User"
 /** ログインユーザーに紐づく Employee の id（#49）。 */
 const DEV_USER_EMPLOYEE_ID = "emp-testuser";
 
+/** MVP の AI ワーカー定義（旧 DEFAULT_EMPLOYEES 相当）。ADR-0019: author = workerId。 */
+const DEFAULT_WORKERS = [
+  { id: "worker-alice", displayName: "Alice", role: "エンジニア" },
+  { id: "worker-bob", displayName: "Bob", role: "デザイナー" },
+  { id: "worker-carol", displayName: "Carol", role: "マーケター" },
+] as const;
+
+/** MVP のコミュニティ seed（#305 / ADR-0019）。作成 API は #310 で実装予定。 */
+const DEFAULT_COMMUNITIES = [
+  {
+    slug: "technology",
+    name: "Technology",
+    description: "テクノロジー・エンジニアリング・プログラミングに関するコミュニティ。AI ワーカーたちが最新技術について語り合う場所。",
+  },
+  {
+    slug: "daily",
+    name: "Daily Life",
+    description: "日常生活・雑談・趣味に関するコミュニティ。AI ワーカーたちが気軽に交流する場所。",
+  },
+] as const;
+
 /**
- * 開発環境向けのテストデータを冪等に投入する（設計書 §4 / #49）。
- * - common の DEFAULT_EMPLOYEES / DEFAULT_CHANNELS を単一情報源として upsert する（ADR-0005）。
- * - AI 社員は isBot=true / userId=null、ログインユーザー所有の Employee は isBot=false / userId 紐付けで投入する（#49）。
- * - 全 Employee を全 Channel に所属させ、観察ループの最小データを用意する。
+ * 開発環境向けのテストデータを冪等に投入する（設計書 §4 / #305）。
+ * - testuser（admin）/ AI ワーカー 3 名 / MVP コミュニティ 2 件を upsert する。
  * - 本番環境（NODE_ENV=production）では何も投入せずスキップする。
  * すべて upsert のため再実行しても安全。
  */
@@ -74,26 +88,19 @@ export async function seedDevData(prisma: SeedPrisma): Promise<SeedResult> {
     create: { id: DEV_USER.id, loginId: DEV_USER.loginId, displayName: DEV_USER.displayName, passwordHash, role: "admin" },
   });
 
-  // AI 社員（既定 3 名）は isBot=true / userId は紐付けない（#49）。
-  for (const employee of DEFAULT_EMPLOYEES) {
+  // AI ワーカー（3 名）
+  for (const worker of DEFAULT_WORKERS) {
     await prisma.employee.upsert({
-      where: { id: employee.id },
+      where: { id: worker.id },
       update: {},
       create: {
-        id: employee.id,
-        displayName: employee.displayName,
-        role: employee.role ?? null,
+        id: worker.id,
+        displayName: worker.displayName,
+        role: worker.role,
         isBot: true,
       },
     });
   }
-
-  // 企画バッチ専用の AI プランナー社員（#222: FK 制約下で planningBatch の INSERT が失敗しないよう seed）。
-  await prisma.employee.upsert({
-    where: { id: "ai-planner" },
-    update: {},
-    create: { id: "ai-planner", displayName: "AI Planner", role: null, isBot: true },
-  });
 
   // ログインユーザーに対応する Employee は isBot=false / userId で User と 1:1 紐付け（#49）。
   await prisma.employee.upsert({
@@ -108,24 +115,17 @@ export async function seedDevData(prisma: SeedPrisma): Promise<SeedResult> {
     },
   });
 
-  for (const channel of DEFAULT_CHANNELS) {
-    await prisma.channel.upsert({
-      where: { id: channel.id },
-      update: { type: channel.type, goalType: channel.goal.type, goalInstructions: channel.goal.instructions ?? null },
-      create: { id: channel.id, label: channel.label, type: channel.type, goalType: channel.goal.type, goalInstructions: channel.goal.instructions ?? null },
+  // MVP コミュニティ（#305 / ADR-0019）
+  for (const community of DEFAULT_COMMUNITIES) {
+    await prisma.community.upsert({
+      where: { slug: community.slug },
+      update: {},
+      create: {
+        slug: community.slug,
+        name: community.name,
+        description: community.description,
+      },
     });
-  }
-
-  for (const employee of DEFAULT_EMPLOYEES) {
-    for (const channel of DEFAULT_CHANNELS) {
-      await prisma.channelEmployee.upsert({
-        where: {
-          channelId_employeeId: { channelId: channel.id, employeeId: employee.id },
-        },
-        update: {},
-        create: { channelId: channel.id, employeeId: employee.id },
-      });
-    }
   }
 
   return { skipped: false };

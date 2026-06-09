@@ -16,6 +16,7 @@ import { PrismaWorldStateRepository } from "../persistence/prismaWorldStateRepos
 import { InMemoryChannelMembershipRepository } from "../persistence/channelMembershipRepository.js";
 import { InMemoryChannelRepository } from "../persistence/channelRepository.js";
 import { InMemoryMessageRepository } from "../persistence/messageRepository.js";
+import { GcsStorageService, InMemoryStorageService } from "../services/storageService.js";
 
 /**
  * Prisma 実装一式を生成する共有 composition ヘルパ（Issue #137）。
@@ -33,6 +34,11 @@ import { InMemoryMessageRepository } from "../persistence/messageRepository.js";
 export function createPrismaDeps(
   prisma: PrismaClient,
 ): Omit<AppDeps, "security" | "sessionStore"> {
+  const gcsBucketName = process.env.GCS_BUCKET_NAME;
+  const storageService = gcsBucketName
+    ? new GcsStorageService(gcsBucketName)
+    : new InMemoryStorageService();
+
   return {
     // 旧モデル（Message / Channel / ChannelEmployee）は #305 でスキーマ削除済み。
     // app.ts から旧 routes を外しているため InMemory ダミーを使う。
@@ -53,5 +59,6 @@ export function createPrismaDeps(
     subscriptionRepository: new PrismaSubscriptionRepository(prisma),
     voteRepository: new PrismaVoteRepository(prisma),
     worldStateRepository: new PrismaWorldStateRepository(prisma),
+    storageService,
   };
 }

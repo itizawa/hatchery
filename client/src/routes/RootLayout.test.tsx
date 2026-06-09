@@ -284,17 +284,14 @@ describe("横オーバーフロー防止 (#279)", () => {
     renderWithRouter("/");
 
     await screen.findByRole("navigation", { name: "サイドバー" });
-    expect(document.querySelector("[data-testid='root-layout-outer']")).toBeInTheDocument();
+    expect(screen.getByTestId("root-layout-outer")).toBeInTheDocument();
   });
 
-  it("サイドバーとメインコンテンツが同一画面に共存する（横スクロールで消えない）", async () => {
+  it("デスクトップ幅でサイドバーと main 要素が共存する", async () => {
     stubFetch(true);
     renderWithRouter("/");
 
-    const sidebar = await screen.findByRole("navigation", { name: "サイドバー" });
-    const main = document.querySelector("main");
-
-    expect(sidebar).toBeInTheDocument();
-    expect(main).toBeInTheDocument();
+    await screen.findByRole("navigation", { name: "サイドバー" });
+    expect(screen.getByRole("main")).toBeInTheDocument();
   });
 });

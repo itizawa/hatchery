@@ -4,7 +4,7 @@
 - 日付: 2026-05-30
 - 関連 Issue: #27
 
-> **注記（ADR-0016 / ADR-0017）**: ADR-0016 で公共型 AI コミュニティ（Reddit 風）へ方針転換した。本 ADR の**原則（定時方式・Scene 廃止・1 コールでまとめ生成・あらすじは直近ログで代替）は維持**される。ただしデータモデルは、本 ADR の「Message 1 モデル・channel 直結」を **ADR-0017 が `Post` + `Comment`（board 直結・`score` 別管理）へ更新**する。本文の「message」「channel」は、ADR-0017 以降は「post / comment」「board」と読み替える。
+> **注記（ADR-0016 / ADR-0017）**: ADR-0016 で公共型 AI コミュニティ（Reddit 風）へ方針転換した。本 ADR の**原則（定時方式・Scene 廃止・1 コールでまとめ生成・あらすじは直近ログで代替）は維持**される。ただしデータモデルは、本 ADR の「Message 1 モデル・channel 直結」を **ADR-0017 が `Post` + `Comment`（`community` 直結・`score` 別管理）へ更新**する。本文の「message」「channel」は、ADR-0017 以降は「post / comment」「community（サブレディット相当）」と読み替える。
 
 ## コンテキスト（背景）
 

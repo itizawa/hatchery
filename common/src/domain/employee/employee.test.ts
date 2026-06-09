@@ -5,6 +5,7 @@ import {
   EMPLOYEE_IMAGE_URL_MAX_LENGTH,
   EMPLOYEE_ROLE_MAX_LENGTH,
   createDisplayNameResolver,
+  createAvatarUrlResolver,
   DEFAULT_EMPLOYEES,
   EmployeeSchema,
   UpdateEmployeeSchema,
@@ -219,5 +220,32 @@ describe("createDisplayNameResolver", () => {
     const resolve = createDisplayNameResolver();
     const haru = DEFAULT_EMPLOYEES.find((e) => e.id === "haru")!;
     expect(resolve("haru")).toBe(haru.displayName);
+  });
+});
+
+describe("createAvatarUrlResolver (#300)", () => {
+  const employees = [
+    { id: "haru", displayName: "ハル", imageUrl: "https://example.com/haru.png", isBot: true as const },
+    { id: "ken", displayName: "ケン", isBot: true as const },
+  ];
+
+  it("imageUrl が設定されている employee ID は URL を返す", () => {
+    const resolve = createAvatarUrlResolver(employees);
+    expect(resolve("haru")).toBe("https://example.com/haru.png");
+  });
+
+  it("imageUrl が未設定の employee ID は undefined を返す", () => {
+    const resolve = createAvatarUrlResolver(employees);
+    expect(resolve("ken")).toBeUndefined();
+  });
+
+  it("未解決の employee ID は undefined を返す", () => {
+    const resolve = createAvatarUrlResolver(employees);
+    expect(resolve("unknown-id")).toBeUndefined();
+  });
+
+  it("引数省略時は DEFAULT_EMPLOYEES で解決する（全員 imageUrl 未設定 → undefined）", () => {
+    const resolve = createAvatarUrlResolver();
+    expect(resolve("haru")).toBeUndefined();
   });
 });

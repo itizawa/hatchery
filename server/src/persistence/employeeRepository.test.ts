@@ -70,6 +70,37 @@ describe("InMemoryEmployeeRepository (#38)", () => {
     });
   });
 
+  describe("create (#217)", () => {
+    it("新しい Employee を作成して返す", async () => {
+      const repo = new InMemoryEmployeeRepository([]);
+      const created = await repo.create({ id: "new-id", displayName: "新社員", isBot: true });
+      expect(created.id).toBe("new-id");
+      expect(created.displayName).toBe("新社員");
+      expect(created.isBot).toBe(true);
+      expect(created.role).toBeNull();
+      expect(created.personality).toBeNull();
+    });
+
+    it("role を指定して作成できる", async () => {
+      const repo = new InMemoryEmployeeRepository([]);
+      const created = await repo.create({ id: "new-id", displayName: "社員", role: "エンジニア", isBot: true });
+      expect(created.role).toBe("エンジニア");
+    });
+
+    it("personality を指定して作成できる", async () => {
+      const repo = new InMemoryEmployeeRepository([]);
+      const created = await repo.create({ id: "new-id", displayName: "社員", personality: "明るい", isBot: true });
+      expect(created.personality).toBe("明るい");
+    });
+
+    it("作成した Employee が findById で取得できる", async () => {
+      const repo = new InMemoryEmployeeRepository([]);
+      await repo.create({ id: "new-id", displayName: "新社員", isBot: true });
+      const found = await repo.findById("new-id");
+      expect(found?.id).toBe("new-id");
+    });
+  });
+
   describe("listBotEmployees (#240)", () => {
     it("isBot=true の Employee のみを返す", async () => {
       const repo = new InMemoryEmployeeRepository([

@@ -9,12 +9,13 @@ import { createTestDeps } from "../testing/createTestDeps.js";
 import { getApiKey } from "./admin.js";
 import { encrypt } from "../utils/crypto.js";
 
-async function makeApp(appSettingRepo = new InMemoryAppSettingRepository(), role: "admin" | "member" = "admin") {
+async function makeApp(appSettingRepo = new InMemoryAppSettingRepository(), role: "admin" | "member" = "admin", employeeRepository = new InMemoryEmployeeRepository()) {
   const userRepo = await InMemoryUserRepository.createWithTestUser(null, role);
   return createApp(
     await createTestDeps({
       userRepository: userRepo,
       appSettingRepository: appSettingRepo,
+      employeeRepository,
     }),
   );
 }
@@ -191,5 +192,69 @@ describe("DELETE /api/admin/employees/:id (#218)", () => {
     await agent.delete("/api/admin/employees/emp-1");
     const employee = await employeeRepo.findDeletedById("emp-1");
     expect(employee?.deletedAt).toBeInstanceOf(Date);
+  });
+});
+
+describe("POST /api/admin/employees (#217)", () => {
+  it("未認証の場合は 401 を返す", async () => {
+    const app = await makeApp();
+    const res = await request(app)
+      .post("/api/admin/employees")
+      .send({ displayName: "新社員" });
+    expect(res.status).toBe(401);
+  });
+
+  it("member ロールの場合は 403 を返す", async () => {
+    const app = await makeApp(new InMemoryAppSettingRepository(), "member");
+    const agent = await loginAgent(app);
+    const res = await agent.post("/api/admin/employees").send({ displayName: "新社員" });
+    expect(res.status).toBe(403);
+  });
+
+  it("admin ロールで認証済みの場合 201 と作成した Employee を返す", async () => {
+    const app = await makeApp();
+    const agent = await loginAgent(app);
+    const res = await agent.post("/api/admin/employees").send({ displayName: "新社員" });
+    expect(res.status).toBe(201);
+    expect(res.body.displayName).toBe("新社員");
+    expect(typeof res.body.id).toBe("string");
+    expect(res.body.id.length).toBeGreaterThan(0);
+  });
+
+  it("作成した Employee は isBot=true になる", async () => {
+    const app = await makeApp();
+    const agent = await loginAgent(app);
+    const res = await agent.post("/api/admin/employees").send({ displayName: "ボット社員" });
+    expect(res.status).toBe(201);
+    expect(res.body.isBot).toBe(true);
+  });
+
+  it("role を指定して作成できる", async () => {
+    const app = await makeApp();
+    const agent = await loginAgent(app);
+    const res = await agent.post("/api/admin/employees").send({ displayName: "社員A", role: "エンジニア" });
+    expect(res.status).toBe(201);
+    expect(res.body.role).toBe("エンジニア");
+  });
+
+  it("displayName が空なら 400 を返す", async () => {
+    const app = await makeApp();
+    const agent = await loginAgent(app);
+    const res = await agent.post("/api/admin/employees").send({ displayName: "" });
+    expect(res.status).toBe(400);
+  });
+
+  it("displayName が 51 文字以上なら 400 を返す", async () => {
+    const app = await makeApp();
+    const agent = await loginAgent(app);
+    const res = await agent.post("/api/admin/employees").send({ displayName: "a".repeat(51) });
+    expect(res.status).toBe(400);
+  });
+
+  it("displayName を省略した場合は 400 を返す", async () => {
+    const app = await makeApp();
+    const agent = await loginAgent(app);
+    const res = await agent.post("/api/admin/employees").send({});
+    expect(res.status).toBe(400);
   });
 });

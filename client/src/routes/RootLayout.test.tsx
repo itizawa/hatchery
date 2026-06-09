@@ -21,9 +21,9 @@ function jsonResponse(status: number, body: unknown): Response {
   });
 }
 
-function stubFetch(isLoggedIn: boolean) {
+function stubFetch(isLoggedIn: boolean, role: "member" | "admin" = "member") {
   const user = isLoggedIn
-    ? { id: "user1", displayName: "Alice", role: "member" }
+    ? { id: "user1", displayName: "Alice", role }
     : undefined;
   vi.stubGlobal(
     "fetch",
@@ -196,5 +196,62 @@ describe("RootLayout レスポンシブ対応 (#190)", () => {
 
       expect(await screen.findByRole("navigation", { name: "サイドバー" })).toBeInTheDocument();
     });
+  });
+});
+
+// 受け入れ条件 #273: サイドバー Divider・アイコン・hover スタイル
+describe("サイドバーのナビゲーション改善 (#273)", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    // デスクトップ幅（恒久サイドバー表示）
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("SidebarChannelSection と仮想オフィスの間に Divider（role=separator）が表示される", async () => {
+    stubFetch(true);
+    renderWithRouter("/");
+
+    await screen.findByRole("navigation", { name: "サイドバー" });
+    expect(screen.getByRole("separator")).toBeInTheDocument();
+  });
+
+  it("仮想オフィスが /office へのリンクを持つ ListItemButton でレンダリングされる", async () => {
+    stubFetch(true);
+    renderWithRouter("/");
+
+    const officeLink = await screen.findByRole("link", { name: /仮想オフィス/ });
+    expect(officeLink).toHaveAttribute("href", "/office");
+  });
+
+  it("admin ユーザーには管理画面が /admin へのリンクを持つ ListItemButton で表示される", async () => {
+    stubFetch(true, "admin");
+    renderWithRouter("/");
+
+    const adminLink = await screen.findByRole("link", { name: /管理画面/ });
+    expect(adminLink).toHaveAttribute("href", "/admin");
+  });
+
+  it("member ユーザーには管理画面リンクが表示されない", async () => {
+    stubFetch(true, "member");
+    renderWithRouter("/");
+
+    await screen.findByRole("navigation", { name: "サイドバー" });
+    expect(screen.queryByRole("link", { name: /管理画面/ })).not.toBeInTheDocument();
   });
 });

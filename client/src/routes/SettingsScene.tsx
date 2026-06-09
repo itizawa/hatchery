@@ -234,7 +234,8 @@ interface SettingsTab {
 }
 
 const SETTINGS_TABS: readonly [SettingsTab, ...SettingsTab[]] = [
-  { label: "ワーカー管理", value: "users", content: <EmployeeTable /> },
+  // #181: admin 管理画面なので isEditable=true を渡してワーカー編集ボタンを有効化する。
+  { label: "ワーカー管理", value: "users", content: <EmployeeTable isEditable /> },
   { label: "API トークン設定", value: "api-token", content: <ApiTokenSettings /> },
   { label: "バッチログ", value: "batch-logs", content: <BatchLogs /> },
   { label: "招待", value: "invitations", content: <InvitationsTab /> },

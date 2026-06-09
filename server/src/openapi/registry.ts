@@ -167,10 +167,11 @@ registry.registerPath({
   },
 });
 
+// #181: ADR-0018/0020 に従い admin ロールのみ更新可。
 registry.registerPath({
   method: "patch",
   path: "/api/employees/{id}",
-  summary: "自分の Employee を更新（認証必須・本人のみ）",
+  summary: "Employee を更新（admin ロール必須 / #181）",
   request: {
     params: z.object({ id: employeePathIdParam }),
     body: { content: { "application/json": { schema: UpdateEmployeeComponent } } },
@@ -180,9 +181,9 @@ registry.registerPath({
       description: "更新後の Employee",
       content: { "application/json": { schema: EmployeeComponent } },
     },
-    400: { description: "バリデーションエラー（personality 501 文字超など）", ...errorJson },
+    400: { description: "バリデーションエラー（displayName 51 文字超・personality 501 文字超など）", ...errorJson },
     401: { description: "未認証", ...errorJson },
-    403: { description: "他ユーザーの Employee への操作禁止", ...errorJson },
+    403: { description: "admin ロール以外の操作禁止", ...errorJson },
     404: { description: "Employee が存在しない", ...errorJson },
   },
 });

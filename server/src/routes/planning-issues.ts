@@ -68,8 +68,8 @@ export function createPlanningIssuesRouter(messageRepo: MessageRepository): Rout
           issueNumber: data.number,
           issueUrl: data.html_url,
         });
-      } catch (err) {
-        next(err);
+      } catch (e) {
+        next(e);
       }
     },
   );

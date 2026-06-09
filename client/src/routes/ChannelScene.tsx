@@ -9,6 +9,7 @@ import { Box } from "../components/uiParts";
 import { ChannelView } from "../components/ChannelView.js";
 import { EditChannelNameDialog } from "../components/EditChannelNameDialog.js";
 import { MessageInput } from "../components/MessageInput.js";
+import { useHideOnScroll } from "../hooks/useHideOnScroll.js";
 
 /**
  * channelId から Channel を解決する。API のチャンネル一覧（GET /channels）を単一情報源とし
@@ -24,6 +25,7 @@ const resolveChannel = (channels: readonly Channel[], channelId: string): Channe
  * channelId から Channel を解決し、実 API でメッセージを取得して presentational な
  * ChannelView に渡す（#48）。ログイン済みユーザーはメッセージ投稿フォームも表示する。
  * ログイン済みのときはヘッダに編集ボタンを表示し、チャンネル名編集ダイアログを管理する（#206）。
+ * スクロール方向に応じてヘッダを表示／非表示する（#302）。
  */
 export const ChannelScene = (): ReactElement => {
   const { channelId } = useParams({ strict: false });
@@ -36,15 +38,17 @@ export const ChannelScene = (): ReactElement => {
   const { data: authUser } = useAuth();
   const { mutate: postMessage, isPending } = usePostChannelMessage(id);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const { visible: headerVisible, onScroll } = useHideOnScroll();
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <Box sx={{ flex: 1, overflow: "auto" }}>
+      <Box sx={{ flex: 1, overflow: "auto" }} onScroll={onScroll}>
         <ChannelView
           channel={channel}
           messages={messages}
           employees={employees ?? []}
           onEditName={authUser ? () => setEditDialogOpen(true) : undefined}
+          headerVisible={headerVisible}
         />
       </Box>
       {authUser && <MessageInput onSubmit={postMessage} disabled={isPending} />}

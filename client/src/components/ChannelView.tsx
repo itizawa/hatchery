@@ -17,6 +17,9 @@ const postedAtFormatter = new Intl.DateTimeFormat("ja-JP", { hour: "2-digit", mi
 const formatPostedAt = (date: Date | string): string =>
   postedAtFormatter.format(typeof date === "string" ? new Date(date) : date);
 
+/** ヘッダ表示切り替えトランジションの所要時間（ms）。 */
+export const HEADER_TRANSITION_MS = 200;
+
 export interface ChannelViewProps {
   /** 表示対象のチャンネル（ヘッダのラベルに用いる）。 */
   channel: Channel;
@@ -26,6 +29,12 @@ export interface ChannelViewProps {
   employees?: readonly Employee[];
   /** 渡すとヘッダに編集ボタンを表示する。ログイン済みのときのみ渡すこと（#206）。 */
   onEditName?: () => void;
+  /**
+   * ヘッダの表示状態。false のとき非表示（フェードアウト）。
+   * prefers-reduced-motion 環境では本 prop を無視して常時表示する。
+   * 省略すると true（常時表示）。
+   */
+  headerVisible?: boolean;
 }
 
 /**
@@ -35,22 +44,48 @@ export interface ChannelViewProps {
  * API・ルータ・グローバル状態には依存せず、props 駆動で Storybook の fixture 描画ができる
  * （client → common の一方向依存のみ）。createdEmployeeId は employees の displayName に解決し、
  * 未解決の ID はそのままフォールバック表示する（#222）。
+ * ヘッダはスクロールコンテナ上部に sticky で固定し、headerVisible prop に応じてフェードイン/アウトする（#302）。
  */
 export const ChannelView = ({
   channel,
   messages,
   employees = DEFAULT_EMPLOYEES,
   onEditName,
+  headerVisible = true,
 }: ChannelViewProps): ReactElement => {
   const resolveDisplayName = createDisplayNameResolver(employees);
   const prefersReducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
   const { visibleMessages, typingEmployeeId } = useDripMessages(messages, prefersReducedMotion);
 
+  // prefers-reduced-motion 時はヘッダを常時表示（アニメーション無効化）
+  const effectiveVisible = prefersReducedMotion ? true : headerVisible;
+
   const isEmpty = visibleMessages.length === 0 && typingEmployeeId === null;
 
   return (
     <Box component="section" sx={{ p: 3 }}>
-      <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 1 }}>
+      <Stack
+        component="header"
+        data-testid="channel-header"
+        data-visible={effectiveVisible ? "true" : "false"}
+        direction="row"
+        alignItems="center"
+        spacing={0.5}
+        sx={{
+          position: "sticky",
+          top: 0,
+          zIndex: 1,
+          bgcolor: "background.paper",
+          py: 1,
+          mb: 1,
+          opacity: effectiveVisible ? 1 : 0,
+          transform: effectiveVisible ? "translateY(0)" : "translateY(-8px)",
+          pointerEvents: effectiveVisible ? "auto" : "none",
+          transition: prefersReducedMotion
+            ? "none"
+            : `opacity ${HEADER_TRANSITION_MS}ms ease, transform ${HEADER_TRANSITION_MS}ms ease`,
+        }}
+      >
         <Typography variant="h5" component="h1">
           {channel.label}
         </Typography>

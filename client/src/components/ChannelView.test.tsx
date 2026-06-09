@@ -124,7 +124,7 @@ describe("ChannelView ドリップ表示（#282）", () => {
     id: "msg-new-1",
     createdEmployeeId: "haru",
     channel: "zatsudan",
-    text: "新しいメッセージ1",
+    text: "新しいメッセージ１",
     postedAt: new Date("2026-06-05T11:00:00Z"),
     createdAt: new Date("2026-06-05T11:00:00Z"),
     order: 2,
@@ -133,7 +133,7 @@ describe("ChannelView ドリップ表示（#282）", () => {
     id: "msg-new-2",
     createdEmployeeId: "ken",
     channel: "zatsudan",
-    text: "新しいメッセージ2",
+    text: "新しいメッセージ２",
     postedAt: new Date("2026-06-05T11:01:00Z"),
     createdAt: new Date("2026-06-05T11:01:00Z"),
     order: 3,
@@ -159,7 +159,7 @@ describe("ChannelView ドリップ表示（#282）", () => {
     rerender(<ChannelView channel={channel} messages={[...messages, newMsg1]} employees={employees} />);
 
     expect(screen.getByText("おはようございます！")).toBeInTheDocument();
-    expect(screen.queryByText("新しいメッセージ1")).not.toBeInTheDocument();
+    expect(screen.queryByText("新しいメッセージ１")).not.toBeInTheDocument();
     expect(screen.getByLabelText("入力中")).toBeInTheDocument();
   });
 
@@ -171,7 +171,7 @@ describe("ChannelView ドリップ表示（#282）", () => {
       vi.advanceTimersByTime(DRIP_TYPING_MS);
     });
 
-    expect(screen.getByText("新しいメッセージ1")).toBeInTheDocument();
+    expect(screen.getByText("新しいメッセージ１")).toBeInTheDocument();
     expect(screen.queryByLabelText("入力中")).not.toBeInTheDocument();
   });
 
@@ -180,16 +180,16 @@ describe("ChannelView ドリップ表示（#282）", () => {
     rerender(<ChannelView channel={channel} messages={[...messages, newMsg1, newMsg2]} employees={employees} />);
 
     // 1件目: typing 中
-    expect(screen.queryByText("新しいメッセージ1")).not.toBeInTheDocument();
-    expect(screen.queryByText("新しいメッセージ2")).not.toBeInTheDocument();
+    expect(screen.queryByText("新しいメッセージ１")).not.toBeInTheDocument();
+    expect(screen.queryByText("新しいメッセージ２")).not.toBeInTheDocument();
     expect(screen.getByLabelText("入力中")).toBeInTheDocument();
 
     // 1件目表示
     act(() => {
       vi.advanceTimersByTime(DRIP_TYPING_MS);
     });
-    expect(screen.getByText("新しいメッセージ1")).toBeInTheDocument();
-    expect(screen.queryByText("新しいメッセージ2")).not.toBeInTheDocument();
+    expect(screen.getByText("新しいメッセージ１")).toBeInTheDocument();
+    expect(screen.queryByText("新しいメッセージ２")).not.toBeInTheDocument();
 
     // DRIP_INTERVAL_MS 後に2件目の typing 開始
     act(() => {
@@ -201,7 +201,7 @@ describe("ChannelView ドリップ表示（#282）", () => {
     act(() => {
       vi.advanceTimersByTime(DRIP_TYPING_MS);
     });
-    expect(screen.getByText("新しいメッセージ2")).toBeInTheDocument();
+    expect(screen.getByText("新しいメッセージ２")).toBeInTheDocument();
     expect(screen.queryByLabelText("入力中")).not.toBeInTheDocument();
   });
 
@@ -214,6 +214,41 @@ describe("ChannelView ドリップ表示（#282）", () => {
     expect(screen.getByText("おはようございます！")).toBeInTheDocument();
     expect(screen.getByText("今日もよろしく。")).toBeInTheDocument();
     expect(screen.queryByLabelText("入力中")).not.toBeInTheDocument();
+  });
+});
+
+describe("ChannelView スクロールヘッダ表示（#302）", () => {
+  it("headerVisible が未指定（デフォルト）のときヘッダに data-visible='true' が付く", () => {
+    render(<ChannelView channel={channel} messages={[]} employees={employees} />);
+    expect(screen.getByTestId("channel-header")).toHaveAttribute("data-visible", "true");
+  });
+
+  it("headerVisible={false} のときヘッダに data-visible='false' が付く", () => {
+    render(<ChannelView channel={channel} messages={[]} employees={employees} headerVisible={false} />);
+    expect(screen.getByTestId("channel-header")).toHaveAttribute("data-visible", "false");
+  });
+
+  it("headerVisible={true} のときヘッダに data-visible='true' が付く", () => {
+    render(<ChannelView channel={channel} messages={[]} employees={employees} headerVisible={true} />);
+    expect(screen.getByTestId("channel-header")).toHaveAttribute("data-visible", "true");
+  });
+
+  it("prefers-reduced-motion 時は headerVisible={false} でも data-visible='true' になる（常時表示）", () => {
+    vi.stubGlobal("matchMedia", (query: string) => ({
+      matches: query === "(prefers-reduced-motion: reduce)",
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
+
+    render(<ChannelView channel={channel} messages={[]} employees={employees} headerVisible={false} />);
+    expect(screen.getByTestId("channel-header")).toHaveAttribute("data-visible", "true");
+
+    vi.unstubAllGlobals();
   });
 });
 

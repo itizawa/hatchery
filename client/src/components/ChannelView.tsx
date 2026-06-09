@@ -101,27 +101,31 @@ export const ChannelView = ({
               </ListItem>
             );
           })}
-          {typingEmployeeId !== null && (
-            <ListItem aria-label="入力中" alignItems="flex-start" disableGutters>
-              <Stack direction="row" spacing={1.5} alignItems="flex-start">
-                <Avatar
-                  src={resolveAvatarUrl(typingEmployeeId)}
-                  alt={resolveDisplayName(typingEmployeeId)}
-                  sx={{ width: AVATAR_SIZE, height: AVATAR_SIZE, mt: 0.25 }}
-                >
-                  {resolveDisplayName(typingEmployeeId)[0]}
-                </Avatar>
-                <Stack spacing={0.5}>
-                  <Typography variant="subtitle2" component="span">
-                    {resolveDisplayName(typingEmployeeId)}
-                  </Typography>
-                  <Typography variant="body2" component="span" sx={{ letterSpacing: 2 }}>
-                    ●●●
-                  </Typography>
+          {typingEmployeeId !== null && (() => {
+            const typingDisplayName = resolveDisplayName(typingEmployeeId);
+            const typingAvatarUrl = resolveAvatarUrl(typingEmployeeId);
+            return (
+              <ListItem aria-label="入力中" alignItems="flex-start" disableGutters>
+                <Stack direction="row" spacing={1.5} alignItems="flex-start">
+                  <Avatar
+                    src={typingAvatarUrl}
+                    alt={typingDisplayName}
+                    sx={{ width: AVATAR_SIZE, height: AVATAR_SIZE, mt: 0.25 }}
+                  >
+                    {typingDisplayName[0]}
+                  </Avatar>
+                  <Stack spacing={0.5}>
+                    <Typography variant="subtitle2" component="span">
+                      {typingDisplayName}
+                    </Typography>
+                    <Typography variant="body2" component="span" sx={{ letterSpacing: 2 }}>
+                      ●●●
+                    </Typography>
+                  </Stack>
                 </Stack>
-              </Stack>
-            </ListItem>
-          )}
+              </ListItem>
+            );
+          })()}
         </List>
       )}
     </Box>

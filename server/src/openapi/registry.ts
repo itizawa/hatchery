@@ -8,29 +8,21 @@ import { z } from "zod";
 
 import {
   AcceptInvitationSchema,
-  AddChannelMemberSchema,
   AppSettingResponseSchema,
   AuthUserSchema,
   BatchRunLogSchema,
-  ChannelGoalSchema,
-  ChannelSchema,
   CommunitySchema,
   CommentSchema,
-  CreateChannelMessageSchema,
-  CreateChannelSchema,
   CreateInvitationSchema,
   WorkerSchema,
   InvitationPublicSchema,
   InvitationSchema,
   InvitationStatusSchema,
   LoginRequestSchema,
-  MessageRecordSchema,
-  MessageSchema,
   PostSchema,
   SubscriptionSchema,
   TokenUsageLogSchema,
   UpdateAppSettingSchema,
-  UpdateChannelSchema,
   UpdateWorkerSchema,
   UpdateProfileSchema,
   UserRoleSchema,
@@ -39,50 +31,6 @@ import {
 extendZodWithOpenApi(z);
 
 const registry = new OpenAPIRegistry();
-
-const MessageComponent = registry.register(
-  "Message",
-  MessageSchema.openapi({ description: "channel に直接紐づく社員の 1 発言（ADR-0009）" }),
-);
-
-const MessageRecordComponent = registry.register(
-  "MessageRecord",
-  MessageRecordSchema.openapi({ description: "永続化された発言（id / createdAt / order 付き）" }),
-);
-
-const CreateChannelMessageComponent = registry.register(
-  "CreateChannelMessage",
-  CreateChannelMessageSchema.openapi({
-    description: "ユーザーがチャンネルへメッセージを投稿するリクエストボディ（#48）",
-  }),
-);
-
-registry.register(
-  "ChannelGoal",
-  ChannelGoalSchema.openapi({ description: "チャンネルの AI 出力契約（#284 / ADR-0016）" }),
-);
-
-const ChannelComponent = registry.register(
-  "Channel",
-  ChannelSchema.openapi({ description: "チャンネル（id / label / goal）" }),
-);
-
-const UpdateChannelComponent = registry.register(
-  "UpdateChannel",
-  UpdateChannelSchema.openapi({ description: "チャンネル名更新リクエストボディ（#37）" }),
-);
-
-const CreateChannelComponent = registry.register(
-  "CreateChannel",
-  CreateChannelSchema.openapi({ description: "チャンネル作成リクエストボディ（#47・label のみ）" }),
-);
-
-const AddChannelMemberComponent = registry.register(
-  "AddChannelMember",
-  AddChannelMemberSchema.openapi({
-    description: "チャンネルへ Worker を追加するリクエストボディ（#33）",
-  }),
-);
 
 registry.register("UserRole", UserRoleSchema.openapi({ description: "ユーザー権限ロール（#136）" }));
 
@@ -98,53 +46,12 @@ const LoginRequestComponent = registry.register(
   LoginRequestSchema.openapi({ description: "ログインリクエストボディ（id / password）" }),
 );
 
-// エラー応答スキーマ。実装（validateBody / errorHandler）が実際に返す形 `{ error: string }` に忠実。
+// エラー応答スキーマ。実装（validateBody / errorHandler）が実際に返す形 `{ error: string }` に忐実。
 const ErrorComponent = registry.register(
   "Error",
   z.object({ error: z.string() }).openapi({ description: "エラー応答（実装の実際の形に準拠）" }),
 );
 const errorJson = { content: { "application/json": { schema: ErrorComponent } } };
-
-registry.registerPath({
-  method: "get",
-  path: "/api/messages",
-  summary: "メッセージ一覧を取得",
-  responses: {
-    200: {
-      description: "メッセージ一覧",
-      content: {
-        "application/json": {
-          schema: z.array(MessageComponent),
-        },
-      },
-    },
-  },
-});
-
-registry.registerPath({
-  method: "post",
-  path: "/api/messages",
-  summary: "メッセージを一括作成",
-  request: {
-    body: {
-      content: {
-        "application/json": {
-          schema: z.array(MessageComponent).min(1),
-        },
-      },
-    },
-  },
-  responses: {
-    201: {
-      description: "作成されたメッセージ一覧",
-      content: {
-        "application/json": {
-          schema: z.array(MessageComponent),
-        },
-      },
-    },
-  },
-});
 
 // Worker CRUD（#38 / #329）。
 const WorkerComponent = registry.register(
@@ -188,144 +95,6 @@ registry.registerPath({
     401: { description: "未認証", ...errorJson },
     403: { description: "admin 権限なし", ...errorJson },
     404: { description: "Worker が存在しない", ...errorJson },
-  },
-});
-
-// チャンネル CRUD（#37 / #47）。
-const channelIdParam = z.string().openapi({ param: { name: "channelId", in: "path" } });
-const employeeIdParam = z.string().openapi({ param: { name: "employeeId", in: "path" } });
-const channelPathIdParam = z.string().openapi({ param: { name: "id", in: "path" } });
-
-registry.registerPath({
-  method: "get",
-  path: "/api/channels",
-  summary: "チャンネル一覧を取得（認証不要・#47）",
-  responses: {
-    200: {
-      description: "チャンネル一覧",
-      content: { "application/json": { schema: z.array(ChannelComponent) } },
-    },
-  },
-});
-
-registry.registerPath({
-  method: "post",
-  path: "/api/channels",
-  summary: "チャンネルを作成（認証必須・#47）",
-  request: {
-    body: { content: { "application/json": { schema: CreateChannelComponent } } },
-  },
-  responses: {
-    201: {
-      description: "作成されたチャンネル",
-      content: { "application/json": { schema: ChannelComponent } },
-    },
-    400: { description: "リクエストボディが不正（label 空など）", ...errorJson },
-    401: { description: "未認証", ...errorJson },
-  },
-});
-
-registry.registerPath({
-  method: "patch",
-  path: "/api/channels/{id}",
-  summary: "チャンネル名を更新（認証必須）",
-  request: {
-    params: z.object({ id: channelPathIdParam }),
-    body: {
-      content: { "application/json": { schema: UpdateChannelComponent } },
-    },
-  },
-  responses: {
-    200: {
-      description: "更新後のチャンネル情報",
-      content: { "application/json": { schema: ChannelComponent } },
-    },
-    400: { description: "リクエストボディが不正（label 空など）", ...errorJson },
-    401: { description: "未認証", ...errorJson },
-    404: { description: "チャンネルが存在しない", ...errorJson },
-  },
-});
-
-// チャンネル別メッセージ（#48）。
-registry.registerPath({
-  method: "get",
-  path: "/api/channels/{channelId}/messages",
-  summary: "チャンネル別メッセージ一覧を取得（認証不要・#48）",
-  request: { params: z.object({ channelId: channelIdParam }) },
-  responses: {
-    200: {
-      description: "チャンネルのメッセージ一覧",
-      content: { "application/json": { schema: z.array(MessageRecordComponent) } },
-    },
-  },
-});
-
-registry.registerPath({
-  method: "post",
-  path: "/api/channels/{channelId}/messages",
-  summary: "チャンネルにメッセージを投稿（認証必須・#48）",
-  request: {
-    params: z.object({ channelId: channelIdParam }),
-    body: { content: { "application/json": { schema: CreateChannelMessageComponent } } },
-  },
-  responses: {
-    201: {
-      description: "作成されたメッセージ",
-      content: { "application/json": { schema: MessageRecordComponent } },
-    },
-    400: { description: "text が空 or employeeId 未紐づけ", ...errorJson },
-    401: { description: "未認証", ...errorJson },
-    404: { description: "チャンネルが存在しない", ...errorJson },
-  },
-});
-
-registry.registerPath({
-  method: "get",
-  path: "/api/channels/{channelId}/employees",
-  summary: "チャンネルに所属する Employee の id 一覧を取得",
-  request: { params: z.object({ channelId: channelIdParam }) },
-  responses: {
-    200: {
-      description: "所属 Employee の id 一覧",
-      content: { "application/json": { schema: z.array(z.string()) } },
-    },
-  },
-});
-
-registry.registerPath({
-  method: "post",
-  path: "/api/channels/{channelId}/employees",
-  summary: "チャンネルに Employee を追加（認証必須）",
-  request: {
-    params: z.object({ channelId: channelIdParam }),
-    body: {
-      content: { "application/json": { schema: AddChannelMemberComponent } },
-    },
-  },
-  responses: {
-    201: {
-      description: "追加された所属",
-      content: {
-        "application/json": {
-          schema: z.object({ channelId: z.string(), employeeId: z.string() }),
-        },
-      },
-    },
-    400: { description: "リクエストボディが不正（employeeId 空など）" },
-    401: { description: "未認証" },
-  },
-});
-
-registry.registerPath({
-  method: "delete",
-  path: "/api/channels/{channelId}/employees/{employeeId}",
-  summary: "チャンネルから Employee を除外（認証必須）",
-  request: {
-    params: z.object({ channelId: channelIdParam, employeeId: employeeIdParam }),
-  },
-  responses: {
-    204: { description: "除外完了" },
-    401: { description: "未認証" },
   },
 });
 
@@ -389,7 +158,7 @@ registry.registerPath({
       description: "更新後の認証済みユーザー",
       content: { "application/json": { schema: AuthUserComponent } },
     },
-    400: { description: "リクエストボディが不正（displayName 空・avatarUrl 不正など）", ...errorJson },
+    400: { description: "リクエストボディが不正（displayName 空・avtarUrl 不正など）", ...errorJson },
     401: { description: "未認証", ...errorJson },
   },
 });
@@ -506,35 +275,6 @@ registry.registerPath({
   },
 });
 
-// GitHub Issue 起票（#76）。認証必須。
-registry.registerPath({
-  method: "post",
-  path: "/api/channels/{channelId}/messages/{messageId}/create-issue",
-  summary: "企画 チャンネルのメッセージから GitHub Issue を起票（認証必須・#76）",
-  request: {
-    params: z.object({
-      channelId: z.string().openapi({ description: "チャンネル ID" }),
-      messageId: z.string().openapi({ description: "メッセージ ID" }),
-    }),
-  },
-  responses: {
-    201: {
-      description: "Issue 起票成功。issueNumber と issueUrl を返す",
-      content: {
-        "application/json": {
-          schema: z.object({
-            issueNumber: z.number().int().positive(),
-            issueUrl: z.string().url(),
-          }),
-        },
-      },
-    },
-    401: { description: "未認証", ...errorJson },
-    404: { description: "メッセージが存在しない", ...errorJson },
-    500: { description: "GITHUB_TOKEN 等の環境変数未設定", ...errorJson },
-  },
-});
-
 // 招待リンク API（#131）。管理者が招待リンクを発行・一覧・失効できる。
 registry.register("InvitationStatus", InvitationStatusSchema.openapi({ description: "招待リンクのステータス（#131）" }));
 
@@ -603,7 +343,7 @@ registry.registerPath({
 // 招待受諾 API（#132）。公開エンドポイント（requireAuth なし）。
 const InvitationPublicComponent = registry.register(
   "InvitationPublic",
-  InvitationPublicSchema.openapi({ description: "招待トークン検証レスポンス（公開・機微情報なし）" }),
+  InvitationPublicSchema.openapi({ description: "招待トークン検証レスポンス（公開・機寧情報なし）" }),
 );
 
 const AcceptInvitationComponent = registry.register(
@@ -648,7 +388,7 @@ registry.registerPath({
   },
 });
 
-// ── 公共コミュニティ API（#305 / ADR-0019 / ADR-0020）──────────────────────────
+// ── 公共コミュニティ API（#305 / ADR-0019 / ADR-0020）──────────────────────
 
 const CommunityComponent = registry.register(
   "Community",

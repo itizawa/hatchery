@@ -28,7 +28,7 @@ model User {
   passwordHash  String
   /// プロフィール画像 URL（#51）。nullable。
   avatarUrl     String?
-  /// 権限ロール（#136）。旧定は member。新規登録（招待受諾）は member として登録される。
+  /// 権限ロール（#136）。既定は member。新規登録（招待受諾）は member として登録される。
   role          UserRole       @default(member)
   /// 1 ユーザー = 1 Worker の任意リレーション（#49 / #329）。
   worker        Worker?

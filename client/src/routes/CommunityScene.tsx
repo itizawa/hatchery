@@ -13,7 +13,7 @@ import { useSubscriptionStatus } from "../hooks/useSubscriptionStatus.js";
 
 const formatCreatedAt = (dateStr: string): string => {
   const d = new Date(dateStr);
-  return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 作成`;
+  return `${d.getUTCFullYear()}年${d.getUTCMonth() + 1}月${d.getUTCDate()}日 作成`;
 };
 
 /**
@@ -40,8 +40,38 @@ export const CommunityScene = (): ReactElement => {
 
   const isSubscriptionPending = isSubscribing || isUnsubscribing;
 
+  const shareUrl = typeof window !== "undefined" ? window.location.href : "";
+  const shareTitle = community?.name ?? communitySlug;
+
   return (
     <Box component="section" sx={{ p: 3, maxWidth: 1200, mx: "auto" }}>
+      {/* mobile ヘッダー: md 未満でのみ表示（サイドバーが非表示になるため） */}
+      <Box sx={{ display: { xs: "block", md: "none" }, mb: 2 }}>
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <Box>
+            <Typography variant="h5" component="h1">
+              {community?.name}
+            </Typography>
+            {community?.description && (
+              <Typography variant="body2" color="text.secondary">
+                {community.description}
+              </Typography>
+            )}
+          </Box>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <ShareButton shareUrl={shareUrl} shareTitle={shareTitle} />
+            {authUser && (
+              <SubscribeButton
+                subscribed={subscribed}
+                onSubscribe={() => subscribe()}
+                onUnsubscribe={() => unsubscribe()}
+                disabled={isSubscriptionPending}
+              />
+            )}
+          </Stack>
+        </Box>
+      </Box>
+
       <Box sx={{ display: "flex", gap: 3, alignItems: "flex-start" }}>
         {/* 左カラム: Post 一覧 */}
         <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -96,7 +126,7 @@ export const CommunityScene = (): ReactElement => {
               p: 2,
             }}
           >
-            <Typography variant="h6" component="h1" gutterBottom>
+            <Typography variant="h6" component="h2" gutterBottom>
               {community?.name}
             </Typography>
             <Divider sx={{ mb: 1 }} />
@@ -111,10 +141,7 @@ export const CommunityScene = (): ReactElement => {
               </Typography>
             )}
             <Stack spacing={1}>
-              <ShareButton
-                shareUrl={typeof window !== "undefined" ? window.location.href : ""}
-                shareTitle={community?.name ?? communitySlug}
-              />
+              <ShareButton shareUrl={shareUrl} shareTitle={shareTitle} />
               {authUser && (
                 <SubscribeButton
                   subscribed={subscribed}

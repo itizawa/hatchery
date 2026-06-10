@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 // フォルダ index 経由で代表シンボルを import できることを検証する（構成の回帰ガード）。
 import { AuthUserSchema, LoginRequestSchema } from "./auth/index.js";
 import { CHANNEL_IDS, ChannelSchema, DEFAULT_CHANNELS } from "./channel/index.js";
-import { EmployeeSchema } from "./employee/index.js";
+import { WorkerSchema } from "./worker/index.js";
 import { MAX_MESSAGE_LENGTH, MessageSchema } from "./message/index.js";
 import { TaskSchema } from "./task/index.js";
 
@@ -20,8 +20,8 @@ describe("domain フォルダ構成（#24）", () => {
     expect(ChannelSchema.safeParse({ id: "zatsudan", label: "雑談", type: "zatsudan" }).success).toBe(true);
   });
 
-  it("employee フォルダの index からスキーマを参照できる", () => {
-    expect(EmployeeSchema.safeParse({ id: "e1", displayName: "社員" }).success).toBe(true);
+  it("worker フォルダの index からスキーマを参照できる", () => {
+    expect(WorkerSchema.safeParse({ id: "e1", displayName: "ワーカー" }).success).toBe(true);
   });
 
   it("message フォルダの index からスキーマと定数を参照できる", () => {

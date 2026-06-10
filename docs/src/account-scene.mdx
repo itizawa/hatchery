@@ -16,14 +16,15 @@ import * as AccountSceneStories from "../../client/src/routes/AccountScene.stori
 
 | URL | 画面 | 認証 |
 |-----|------|------|
-| `/account` | AccountScene | 推奨（未ログインはフォーム空） |
+| `/account` | AccountScene | 必須（`requireAuth`: 未ログインは `/login` へリダイレクト） |
 
-参照: [`docs/design/url-list.md`](./url-list.md)
+全画面の URL（ルート）一覧は Storybook の「設計/画面URL一覧（ルーティング表）」ページ（正本: `docs/design/url-list.md`）を参照してください。
 
 ## 認証要否
 
-認証は必須ではないが、ログイン済みの場合に現在のプロフィールがフォームに反映される。
-未ログイン（`/auth/me` が 401）の場合はフォームが空になる。
+認証必須。`accountRoute` の `beforeLoad: requireAuth` により、未ログイン（`/auth/me` が 401）
+またはネットワークエラー時は `/login` へリダイレクトされる（`client/src/router.tsx` を正とする）。
+ログイン済みの場合は現在のプロフィールがフォームに反映される。
 
 ## 状態一覧
 

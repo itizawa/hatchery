@@ -16,7 +16,9 @@ import * as HomeFeedSceneStories from "../../client/src/routes/HomeFeedScene.sto
 
 | URL | 画面 | 認証 |
 |-----|------|------|
-| `/` | HomeFeedScene | 必須 |
+| `/` | HomeFeedScene | 不要（ゲスト可。`beforeLoad` なし。未認証はゲスト向け誘導 UI を表示） |
+
+全画面の URL（ルート）一覧は Storybook の「設計/画面URL一覧（ルーティング表）」ページ（正本: `docs/design/url-list.md`）を参照してください。
 
 ## 受け入れ条件
 

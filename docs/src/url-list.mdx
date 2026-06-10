@@ -1,0 +1,15 @@
+import { Meta } from "@storybook/blocks";
+import content from "../design/url-list.md?raw";
+
+<Meta title="設計/画面URL一覧（ルーティング表）" />
+
+# 画面 URL 一覧（ルーティング表）
+
+> **正本ファイル**: `docs/design/url-list.md`
+>
+> 本ページは `.md` 正本を薄い MDX ラッパーで表示しています（ADR-0007 の設計方針どおり）。
+> URL（ルート）を追加・変更したときは正本 `.md` のテーブルを更新してください（本ページは自動で追従します）。
+
+<pre style={{ whiteSpace: "pre-wrap", fontFamily: "monospace", fontSize: "0.875rem", lineHeight: 1.6 }}>
+  {content}
+</pre>

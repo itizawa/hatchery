@@ -1,5 +1,24 @@
 import react from "@vitejs/plugin-react";
+import type { Plugin } from "vite";
 import { defineConfig } from "vitest/config";
+
+/** OGP 用の本番ドメイン既定値（#256 / ADR-0008）。デプロイ時は VITE_OGP_URL で上書きする。 */
+const DEFAULT_OGP_URL = "https://hatchery.pages.dev";
+
+/**
+ * index.html の `%VITE_OGP_URL%` を VITE_OGP_URL（未設定なら既定値）で置換するプラグイン（#256）。
+ * Vite 標準の `%VITE_*%` HTML 置換は env 未設定時にトークンを残すため、共通 OGP（og:url / og:image）が
+ * 必ず有効な URL になるよう既定値でフォールバックする。
+ */
+function ogpUrlHtmlPlugin(): Plugin {
+  return {
+    name: "hatchery-ogp-url",
+    transformIndexHtml(html) {
+      const ogpUrl = process.env.VITE_OGP_URL?.trim() || DEFAULT_OGP_URL;
+      return html.replaceAll("%VITE_OGP_URL%", ogpUrl);
+    },
+  };
+}
 
 /**
  * Vite（dev / build）と Vitest（test）の単一設定（ADR-0003）。
@@ -8,7 +27,7 @@ import { defineConfig } from "vitest/config";
  * - test は jsdom 環境 + RTL セットアップ。
  */
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), ogpUrlHtmlPlugin()],
   server: {
     // dev では SPA(5173) から API(3000) へプロキシする。
     // /api プレフィックスに統一したことでルータ追加時も proxy を触らなくて済む（#168）。

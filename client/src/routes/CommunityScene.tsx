@@ -6,6 +6,7 @@ import { useCommunityFeed, useSubscribe, useUnsubscribe, useVotePost, usePublicC
 import { useAuth } from "../api/auth.js";
 import { PostCard } from "../components/PostCard.js";
 import { SubscribeButton } from "../components/SubscribeButton.js";
+import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
 import { useSubscriptionStatus } from "../hooks/useSubscriptionStatus.js";
 
 /**
@@ -18,6 +19,9 @@ export const CommunityScene = (): ReactElement => {
 
   const { data: communities } = usePublicCommunities();
   const community = communities?.find((c) => c.slug === communitySlug);
+
+  // ブラウザタブのタイトルをコミュニティ名で動的更新する（#256）。未取得時は既定の Hatchery。
+  useDocumentTitle(community ? `${community.name} - Hatchery` : undefined);
 
   const { data: posts, isLoading } = useCommunityFeed(communitySlug);
   const { data: authUser } = useAuth();

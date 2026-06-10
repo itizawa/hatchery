@@ -94,7 +94,54 @@ describe("createApp のセキュリティ防衛", () => {
     expect(res.headers["x-frame-options"]).toBe("DENY");
     expect(res.headers["x-xss-protection"]).toBe("1; mode=block");
     expect(res.headers["referrer-policy"]).toBe("no-referrer");
+    expect(res.headers["content-security-policy"]).toContain("default-src 'none'");
     expect(res.headers["x-powered-by"]).toBeUndefined();
+  });
+
+  it("NODE_ENV=production で corsAllowedOrigins に * を含むと起動時例外を投げる", () => {
+    const original = process.env.NODE_ENV;
+    const originalSecret = process.env.SESSION_SECRET;
+    process.env.NODE_ENV = "production";
+    process.env.SESSION_SECRET = "test-secret";
+    try {
+      expect(() =>
+        createApp({
+          ...baseDeps,
+          security: { corsAllowedOrigins: ["*"] },
+        }),
+      ).toThrow(/CORS.*\*/);
+    } finally {
+      process.env.NODE_ENV = original;
+      if (originalSecret === undefined) {
+        delete process.env.SESSION_SECRET;
+      } else {
+        process.env.SESSION_SECRET = originalSecret;
+      }
+    }
+  });
+
+  it("NODE_ENV=production で corsAllowedOrigins に明示オリジンのみ含むと正常起動する", () => {
+    const original = process.env.NODE_ENV;
+    const originalSecret = process.env.SESSION_SECRET;
+    process.env.NODE_ENV = "production";
+    process.env.SESSION_SECRET = "test-secret";
+    try {
+      // sessionStore も必要（本番ガード）
+      expect(() =>
+        createApp({
+          ...baseDeps,
+          sessionStore: new session.MemoryStore(),
+          security: { corsAllowedOrigins: ["https://app.example.com"] },
+        }),
+      ).not.toThrow();
+    } finally {
+      process.env.NODE_ENV = original;
+      if (originalSecret === undefined) {
+        delete process.env.SESSION_SECRET;
+      } else {
+        process.env.SESSION_SECRET = originalSecret;
+      }
+    }
   });
 
   it("corsAllowedOrigins に含まれるオリジンへ CORS ヘッダを付与する", async () => {

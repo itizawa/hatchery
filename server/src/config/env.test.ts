@@ -62,4 +62,14 @@ describe("loadEnv", () => {
     const env = loadEnv({ DATABASE_URL: urlWithTimeout });
     expect(env.databaseUrl).toBe(urlWithTimeout);
   });
+
+  it("SESSION_SECRET が設定されている場合に ServerEnv.sessionSecret として返す", () => {
+    const env = loadEnv({ SESSION_SECRET: "my-super-secret" });
+    expect(env.sessionSecret).toBe("my-super-secret");
+  });
+
+  it("SESSION_SECRET 未設定なら sessionSecret が undefined を返す", () => {
+    const env = loadEnv({});
+    expect(env.sessionSecret).toBeUndefined();
+  });
 });

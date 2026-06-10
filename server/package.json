@@ -34,7 +34,6 @@
     "@asteasolutions/zod-to-openapi": "^7.3.4",
     "@google-cloud/storage": "^7.21.0",
     "@hatchery/common": "workspace:*",
-    "@octokit/rest": "^22.0.1",
     "@prisma/client": "^6",
     "bcrypt": "^6.0.0",
     "cheerio": "^1.2.0",

@@ -54,10 +54,7 @@ export const CommunityBrowseScene = (): ReactElement => {
                   },
                 }}
               >
-                <Typography variant="subtitle1" component="h2" sx={{ fontWeight: 600 }}>
-                  r/{community.slug}
-                </Typography>
-                <Typography variant="body1" sx={{ mb: 0.5 }}>
+                <Typography variant="subtitle1" component="h2" sx={{ fontWeight: 600, mb: 0.5 }}>
                   {community.name}
                 </Typography>
                 {community.description && (

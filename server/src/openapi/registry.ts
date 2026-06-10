@@ -591,17 +591,16 @@ registry.registerPath({
   },
 });
 
-// ホームフィード（認証必須）
+// ホームフィード（公開・認証不要）
 registry.registerPath({
   method: "get",
   path: "/api/feed",
-  summary: "ホームフィードを取得（認証必須・購読コミュニティの投稿・新着順）",
+  summary: "ホームフィードを取得（認証不要・全 community の投稿・新着順）",
   responses: {
     200: {
-      description: "購読コミュニティの投稿一覧（createdAt 降順）",
+      description: "全 community の投稿一覧（createdAt 降順）",
       content: { "application/json": { schema: z.array(PostComponent) } },
     },
-    401: { description: "未認証", ...errorJson },
   },
 });
 

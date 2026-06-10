@@ -3,7 +3,7 @@
  * - 管理者向け CRUD（/api/admin/communities）: #310
  * - 公開ブラウズ・フィード・投票・購読（/api/communities, /api/feed 等）: #307
  */
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import { CommunitySchema } from "@hatchery/common";
 import type {
   Community as AdminCommunity,
@@ -14,18 +14,18 @@ import type {
 import { openApiClient } from "./client.js";
 import type { components } from "./openapi.gen.js";
 
-// ─── 公開 API 向け型定義（openapi.gen.ts より）─────────────────────────────
+// ─── 公開 API 向け型定義（openapi.gen.ts より）───────────────────────────────────────────
 export type Community = components["schemas"]["Community"];
 export type Post = components["schemas"]["Post"];
 export type Comment = components["schemas"]["Comment"];
 
-// ─── 管理者 API 向け型 re-export（@hatchery/common より）──────────────────
+// ─── 管理者 API 向け型 re-export（@hatchery/common より）────────────────────────
 export type { AdminCommunity, CreateCommunityInput, UpdateCommunityInput };
 
-// ─── Query Keys ────────────────────────────────────────────────────────────
+// ─── Query Keys ───────────────────────────────────────────────────────────────────
 /** 管理者コミュニティ一覧（/api/admin/communities）のキャッシュキー。 */
 export const ADMIN_COMMUNITIES_QUERY_KEY = ["admin", "communities"] as const;
-/** 後方互換のエイリアス（CommunitiesTab.tsx など既存コードが参照）。 */
+/** 後方互换のエイリアス（CommunitiesTab.tsx など既存コードが参照）。 */
 export const COMMUNITIES_QUERY_KEY = ADMIN_COMMUNITIES_QUERY_KEY;
 
 export const communityFeedQueryKey = (slug: string) => ["communities", slug, "feed"] as const;
@@ -34,7 +34,7 @@ export const postThreadQueryKey = (postId: string) => ["posts", postId] as const
 export const communitySubscriptionQueryKey = (slug: string) =>
   ["communities", slug, "subscription"] as const;
 
-// ─── 管理者向け API 関数（/api/admin/communities）─────────────────────────
+// ─── 管理者向け API 関数（/api/admin/communities）───────────────────────────────────────
 
 /** GET /api/admin/communities — コミュニティ一覧を取得する（admin のみ）。 */
 export async function fetchAdminCommunities(): Promise<AdminCommunity[]> {
@@ -51,7 +51,7 @@ export async function fetchAdminCommunities(): Promise<AdminCommunity[]> {
   );
 }
 
-/** 後方互換: CommunitiesTab.tsx などが参照する fetchCommunities は管理者向けを指す。 */
+/** 後方互换: CommunitiesTab.tsx などが参照する fetchCommunities は管理者向けを指す。 */
 export const fetchCommunities = fetchAdminCommunities;
 
 /** POST /api/admin/communities — コミュニティを作成する（admin のみ）。 */
@@ -111,7 +111,7 @@ export function useUpdateCommunity() {
   });
 }
 
-// ─── 公開ブラウズ向け API 関数（/api/communities, /api/feed 等）─────────────
+// ─── 公開ブラウズ向け API 関数（/api/communities, /api/feed 等）──────────────────────────
 
 /** GET /api/communities — 公開コミュニティ一覧を取得する（認証不要）。 */
 export async function fetchPublicCommunities(): Promise<Community[]> {
@@ -136,14 +136,17 @@ export async function fetchCommunityFeed(slug: string): Promise<Post[]> {
 }
 
 /**
- * GET /api/feed — ホームフィードを取得する（認証不要・全 community の投稿・新着順）。
+ * GET /api/feed — ホームフィードを 1 ページ分取得する（カーソルページネーション #367）。
  */
-export async function fetchHomeFeed(): Promise<Post[]> {
+export async function fetchHomeFeedPage(
+  cursor?: string,
+): Promise<{ posts: Post[]; nextCursor: string | null }> {
   const { data, response } = await openApiClient.GET("/api/feed", {
+    params: { query: cursor ? { cursor, limit: 20 } : { limit: 20 } },
     credentials: "include",
   });
   if (!response.ok || !data) throw new Error(`GET /api/feed failed: ${response.status}`);
-  return data;
+  return data as { posts: Post[]; nextCursor: string | null };
 }
 
 /**
@@ -232,11 +235,13 @@ export function useCommunityFeed(slug: string) {
   });
 }
 
-/** ホームフィードを TanStack Query で取得するフック（認証不要・全 community の投稿・新着順）。 */
-export function useHomeFeed() {
-  return useQuery({
+/** ホームフィードを TanStack Query の無限スクロールで取得するフック（#367）。 */
+export function useInfiniteHomeFeed() {
+  return useInfiniteQuery({
     queryKey: homeFeedQueryKey(),
-    queryFn: fetchHomeFeed,
+    queryFn: ({ pageParam }) => fetchHomeFeedPage(pageParam as string | undefined),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     staleTime: 30_000,
     retry: false,
   });

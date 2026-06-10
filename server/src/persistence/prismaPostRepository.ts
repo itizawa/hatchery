@@ -1,4 +1,4 @@
-import type { PrismaClient } from "@prisma/client";
+import { Prisma, type PrismaClient } from "@prisma/client";
 
 import { decodeCursor, encodeCursor } from "./postRepository.js";
 import type { PostCreateInput, PostRecord, PostRepository } from "./postRepository.js";
@@ -94,7 +94,7 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
       cursor?: string,
       limit = 20,
     ): Promise<{ posts: PostRecord[]; nextCursor: string | null }> {
-      let where: Parameters<typeof prisma.post.findMany>[0]["where"] = undefined;
+      let where: Prisma.PostWhereInput | undefined = undefined;
 
       if (cursor !== undefined) {
         const payload = decodeCursor(cursor);
@@ -116,7 +116,7 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
 
       const hasMore = rows.length > limit;
       const posts = hasMore ? rows.slice(0, limit) : rows;
-      const nextCursor = hasMore ? encodeCursor(toRecord(posts[posts.length - 1])) : null;
+      const nextCursor = hasMore ? encodeCursor(toRecord(posts[posts.length - 1]!)) : null;
 
       return { posts: posts.map(toRecord), nextCursor };
     },

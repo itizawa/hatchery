@@ -30,3 +30,9 @@ export const WORKER_MESSAGE_TEMPLATES: Readonly<Record<string, readonly string[]
 /** ワーカー id に対応するテンプレート群を返す。未知 id は空配列（呼び出し側でスキップ可能）。 */
 export const getWorkerMessageTemplates = (workerId: string): readonly string[] =>
   WORKER_MESSAGE_TEMPLATES[workerId] ?? [];
+
+// ── 後方互換エクスポート（Employee → Worker リネーム #329） ────────────────────────
+/** @deprecated Use WORKER_MESSAGE_TEMPLATES */
+export const EMPLOYEE_MESSAGE_TEMPLATES = WORKER_MESSAGE_TEMPLATES;
+/** @deprecated Use getWorkerMessageTemplates */
+export const getEmployeeMessageTemplates = getWorkerMessageTemplates;

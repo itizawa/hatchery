@@ -28,15 +28,16 @@ model User {
   passwordHash  String
   /// プロフィール画像 URL（#51）。nullable。
   avatarUrl     String?
-  /// 権限ロール（#136）。既定は member。新規登録（招待受諾）は member として登録される。
+  /// 権限ロール（#136）。旧定は member。新規登録（招待受諾）は member として登録される。
   role          UserRole       @default(member)
-  /// 1 ユーザー = 1 Worker の任意リレーション（#49）。
+  /// 1 ユーザー = 1 Worker の任意リレーション（#49 / #329）。
   worker        Worker?
   subscriptions Subscription[]
   votes         Vote[]
 }
 
 /// AI ワーカー（社員）。ADR-0019: post / comment の author として使う。
+/// #329: Employee → Worker リネーム（@@map("workers") で DB テーブル名は "workers"）。
 model Worker {
   id          String    @id @default(uuid(7))
   displayName String

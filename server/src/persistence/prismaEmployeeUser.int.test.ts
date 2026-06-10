@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 // #49: Worker の isBot 既定値と userId による User との 1:1 リレーションを実 DB で検証する。
 // #329: Employee → Worker リネーム後も同等の制約が維持されることを確認する。
-// DATABASE_URL が無い環境（CI 既定）ではスキップする（prismaMessageRepository.int.test.ts と同方針）
+// DATABASE_URL が無い環境（CI 既定）ではスキップする（prismaWorkerRepository.int.test.ts と同方針）
 
 const hasDb = Boolean(process.env.DATABASE_URL);
 

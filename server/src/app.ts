@@ -11,15 +11,12 @@ import { createJsonBodyParser, createRequestTimeout } from "./middleware/request
 import { createSecureHeaders } from "./middleware/secureHeaders.js";
 import type { AppSettingRepository } from "./persistence/appSettingRepository.js";
 import type { BatchRunLogRepository } from "./persistence/batchRunLogRepository.js";
-import type { ChannelMembershipRepository } from "./persistence/channelMembershipRepository.js";
-import type { ChannelRepository } from "./persistence/channelRepository.js";
 import type { CommunityRepository } from "./persistence/communityRepository.js";
 import { InMemoryCommunityRepository } from "./persistence/communityRepository.js";
 import type { CommentRepository } from "./persistence/commentRepository.js";
 import { InMemoryCommentRepository } from "./persistence/commentRepository.js";
 import type { WorkerRepository } from "./persistence/workerRepository.js";
 import type { InvitationLinkRepository } from "./persistence/invitationLinkRepository.js";
-import type { MessageRepository } from "./persistence/messageRepository.js";
 import type { StorageService } from "./services/storageService.js";
 import type { PostRepository } from "./persistence/postRepository.js";
 import { InMemoryPostRepository } from "./persistence/postRepository.js";
@@ -36,14 +33,11 @@ import { createAdminWorkerImageRouter } from "./routes/adminWorkerImage.js";
 import { createBatchLogsRouter } from "./routes/batch-logs.js";
 import { createTokenUsageRouter } from "./routes/token-usage.js";
 import { createAuthRouter } from "./routes/auth.js";
-import { createChannelsRouter } from "./routes/channels.js";
 import { createCommunitiesRouter } from "./routes/communities.js";
 import { createWorkersRouter } from "./routes/workers.js";
 import { createFeedRouter } from "./routes/feed.js";
 import { healthRouter } from "./routes/health.js";
 import { createInvitationsRouter } from "./routes/invitations.js";
-import { createMessagesRouter } from "./routes/messages.js";
-import { createPlanningIssuesRouter } from "./routes/planning-issues.js";
 import { createPostsRouter } from "./routes/posts.js";
 
 /** DDoS/過負荷対策（#34）の設定。未指定の項目は安全な既定値を使う。 */
@@ -62,7 +56,6 @@ export interface SecurityOptions {
   enableHsts?: boolean;
   /**
    * セッション cookie をクロスサイト（別ドメイン）でも送信できるようにするか（#78）。
-   * フロント（Cloudflare Pages）と API（Cloud Run）が別ドメインの本番/dev で true。
    * true で SameSite=None + Secure（HTTPS 前提）。ローカル同一オリジンは false（SameSite=Lax）。既定 false。
    */
   crossSiteCookie?: boolean;
@@ -93,17 +86,11 @@ export function buildSessionCookieOptions(crossSiteCookie: boolean) {
 
 /**
  * createApp の依存（永続化は注入する＝Express/Prisma からドメインを独立させる）。
- * すべてのリポジトリが必須（Issue #137）。InMemory フォールバックは撤去済み。
  * テスト用合成は server/src/testing/createTestDeps.ts、
  * 本番用合成は server/src/composition/createPrismaDeps.ts を使う。
  */
 export interface AppDeps {
-  messageRepository: MessageRepository;
   userRepository: UserRepository;
-  /** チャンネル所属（多対多）の永続化（#33）。 */
-  channelMembershipRepository: ChannelMembershipRepository;
-  /** チャンネル CRUD の永続化（#37）。 */
-  channelRepository: ChannelRepository;
   /** Worker CRUD の永続化（#38）。 */
   workerRepository: WorkerRepository;
   /** アプリ設定（API キー等）の永続化（#52）。 */
@@ -114,17 +101,17 @@ export interface AppDeps {
   invitationLinkRepository: InvitationLinkRepository;
   /** トークン使用量ログの永続化（#153）。 */
   tokenUsageLogRepository: TokenUsageLogRepository;
-  /** コミュニティの永続化（#305 / ADR-0019）。省略時は空の InMemory 実装。 */
+  /** コミュニティの永続化（ADR-0019）。省略時は空の InMemory 実装。 */
   communityRepository?: CommunityRepository;
-  /** 投稿の永続化（#305 / ADR-0019）。省略時は空の InMemory 実装。 */
+  /** 投稿の永続化（ADR-0019）。省略時は空の InMemory 実装。 */
   postRepository?: PostRepository;
-  /** コメントの永続化（#305 / ADR-0019）。省略時は空の InMemory 実装。 */
+  /** コメントの永続化（ADR-0019）。省略時は空の InMemory 実装。 */
   commentRepository?: CommentRepository;
-  /** 購読の永続化（#305 / ADR-0019）。省略時は空の InMemory 実装。 */
+  /** 購読の永続化（ADR-0019）。省略時は空の InMemory 実装。 */
   subscriptionRepository?: SubscriptionRepository;
-  /** up vote の永続化（#305 / ADR-0019）。省略時は空の InMemory 実装。 */
+  /** up vote の永続化（ADR-0019）。省略時は空の InMemory 実装。 */
   voteRepository?: VoteRepository;
-  /** ワールド状態の永続化（#305 / ADR-0019）。省略時は空の InMemory 実装。 */
+  /** ワールド状態の永続化（ADR-0019）。省略時は空の InMemory 実装。 */
   worldStateRepository?: WorldStateRepository;
   /** GCS ストレージサービス（#204 / ADR-0022）。本番は GcsStorageService、テスト・ローカルは InMemoryStorageService。 */
   storageService: StorageService;
@@ -194,19 +181,6 @@ export function createApp(deps: AppDeps): Express {
 
   app.use("/health", healthRouter);
   app.use("/api/auth", createAuthRouter(passportInstance, deps.userRepository));
-  app.use("/api/messages", createMessagesRouter(deps.messageRepository));
-  app.use(
-    "/api/channels",
-    createChannelsRouter(
-      deps.channelMembershipRepository,
-      deps.channelRepository,
-      deps.messageRepository,
-      {
-        workerRepo: deps.workerRepository,
-        appSettingRepo: deps.appSettingRepository,
-      },
-    ),
-  );
   app.use("/api/workers", createWorkersRouter(deps.workerRepository));
   app.use("/api/admin/batch-logs", createBatchLogsRouter(deps.batchRunLogRepository));
   app.use("/api/admin/token-usage", createTokenUsageRouter(deps.tokenUsageLogRepository));
@@ -219,8 +193,6 @@ export function createApp(deps: AppDeps): Express {
     "/api/invitations",
     createInvitationsRouter(deps.invitationLinkRepository, deps.userRepository),
   );
-  app.use("/api/channels", createPlanningIssuesRouter(deps.messageRepository));
-
   app.use(
     "/api/communities",
     createCommunitiesRouter(communityRepo, postRepo, subscriptionRepo),

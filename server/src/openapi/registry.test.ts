@@ -9,16 +9,6 @@ describe("generateOpenApiDocument", () => {
     expect(doc.info.title).toBeDefined();
   });
 
-  it("paths に /messages が含まれる", () => {
-    const doc = generateOpenApiDocument();
-    expect(doc.paths).toHaveProperty("/api/messages");
-  });
-
-  it("components.schemas に Message が含まれる", () => {
-    const doc = generateOpenApiDocument();
-    expect(doc.components?.schemas).toHaveProperty("Message");
-  });
-
   // #41: createApp が登録する全エンドポイントが spec に含まれること。
   it("paths に auth/health のエンドポイントが含まれる", () => {
     const doc = generateOpenApiDocument();
@@ -41,7 +31,6 @@ describe("generateOpenApiDocument", () => {
       | { properties?: Record<string, unknown>; required?: string[] }
       | undefined;
     expect(authUser?.properties).toHaveProperty("employeeId");
-    // 任意フィールドなので required には含めない。
     expect(authUser?.required ?? []).not.toContain("employeeId");
   });
 
@@ -69,26 +58,14 @@ describe("generateOpenApiDocument", () => {
     expect(me?.responses?.["401"]).toBeDefined();
   });
 
-  // #48: チャンネル別メッセージ投稿・取得エンドポイントが spec に含まれる。
-  it("paths に /channels/{channelId}/messages が含まれる", () => {
+  it("paths に /api/communities が含まれる（ADR-0019）", () => {
     const doc = generateOpenApiDocument();
-    expect(doc.paths).toHaveProperty("/api/channels/{channelId}/messages");
+    expect(doc.paths).toHaveProperty("/api/communities");
   });
 
-  it("/channels/{channelId}/messages(get) は 200 でメッセージ配列を返す", () => {
+  it("components.schemas に Community と Post が含まれる（ADR-0019）", () => {
     const doc = generateOpenApiDocument();
-    const get = doc.paths?.["/api/channels/{channelId}/messages"]?.get;
-    expect(get).toBeDefined();
-    expect(get?.responses?.["200"]).toBeDefined();
-  });
-
-  it("/channels/{channelId}/messages(post) は 201 を返し 400/401/404 を定義する", () => {
-    const doc = generateOpenApiDocument();
-    const post = doc.paths?.["/api/channels/{channelId}/messages"]?.post;
-    expect(post).toBeDefined();
-    expect(post?.responses?.["201"]).toBeDefined();
-    expect(post?.responses?.["400"]).toBeDefined();
-    expect(post?.responses?.["401"]).toBeDefined();
-    expect(post?.responses?.["404"]).toBeDefined();
+    expect(doc.components?.schemas).toHaveProperty("Community");
+    expect(doc.components?.schemas).toHaveProperty("Post");
   });
 });

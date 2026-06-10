@@ -13,9 +13,6 @@ import { PrismaCommentRepository } from "../persistence/prismaCommentRepository.
 import { PrismaSubscriptionRepository } from "../persistence/prismaSubscriptionRepository.js";
 import { PrismaVoteRepository } from "../persistence/prismaVoteRepository.js";
 import { PrismaWorldStateRepository } from "../persistence/prismaWorldStateRepository.js";
-import { InMemoryChannelMembershipRepository } from "../persistence/channelMembershipRepository.js";
-import { InMemoryChannelRepository } from "../persistence/channelRepository.js";
-import { InMemoryMessageRepository } from "../persistence/messageRepository.js";
 import { GcsStorageService, InMemoryStorageService } from "../services/storageService.js";
 
 /**
@@ -26,10 +23,6 @@ import { GcsStorageService, InMemoryStorageService } from "../services/storageSe
  * sessionStore と security は呼び出し元（server.ts）が別途設定する。
  * DI コンテナは使わず手動 DI のまま（ADR-0012）。
  * common への DI 基盤の漏洩なし（ADR-0001 / ADR-0005）。
- *
- * #305: Message / Channel 系の Prisma 実装は旧スキーマ削除に伴い廃止。
- * 旧 API ルート（/api/channels, /api/messages）は app.ts から外しているため、
- * InMemory 実装でダミーを渡す（将来的には AppDeps から削除予定）。
  */
 export function createPrismaDeps(
   prisma: PrismaClient,
@@ -40,9 +33,6 @@ export function createPrismaDeps(
     : new InMemoryStorageService();
 
   return {
-    messageRepository: new InMemoryMessageRepository(),
-    channelMembershipRepository: new InMemoryChannelMembershipRepository(),
-    channelRepository: new InMemoryChannelRepository(),
     userRepository: new PrismaUserRepository(prisma),
     workerRepository: new PrismaWorkerRepository(prisma),
     appSettingRepository: new PrismaAppSettingRepository(prisma),

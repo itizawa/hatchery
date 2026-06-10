@@ -1,20 +1,14 @@
 import type { AppDeps } from "../app.js";
 import { InMemoryAppSettingRepository } from "../persistence/appSettingRepository.js";
 import { InMemoryBatchRunLogRepository } from "../persistence/batchRunLogRepository.js";
-import { InMemoryChannelMembershipRepository } from "../persistence/channelMembershipRepository.js";
-import { InMemoryChannelRepository } from "../persistence/channelRepository.js";
 import { InMemoryCommunityRepository } from "../persistence/communityRepository.js";
 import { InMemoryWorkerRepository } from "../persistence/workerRepository.js";
 import { InMemoryInvitationLinkRepository } from "../persistence/invitationLinkRepository.js";
-import { InMemoryMessageRepository } from "../persistence/messageRepository.js";
 import { InMemoryTokenUsageLogRepository } from "../persistence/tokenUsageLogRepository.js";
 import { InMemoryUserRepository } from "../persistence/userRepository.js";
 import { InMemoryStorageService } from "../services/storageService.js";
 
-/**
- * テスト用の依存注入オーバーライド。
- * 各フィールドを省略すると InMemory 実装のデフォルトが使われる。
- */
+/** テスト用の依存注入オーバーライド。各フィールドを省略すると InMemory 実装のデフォルトが使われる。 */
 export type TestDepsOverrides = Partial<AppDeps>;
 
 /**
@@ -26,10 +20,7 @@ export async function createTestDeps(overrides?: TestDepsOverrides): Promise<App
   const defaultUserRepo =
     overrides?.userRepository ?? (await InMemoryUserRepository.createWithTestUser());
   return {
-    messageRepository: new InMemoryMessageRepository(),
     userRepository: defaultUserRepo,
-    channelMembershipRepository: new InMemoryChannelMembershipRepository(),
-    channelRepository: new InMemoryChannelRepository(),
     workerRepository: new InMemoryWorkerRepository(),
     appSettingRepository: new InMemoryAppSettingRepository(),
     batchRunLogRepository: new InMemoryBatchRunLogRepository(),

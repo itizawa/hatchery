@@ -11,7 +11,7 @@ import { randomUUID } from "crypto";
 
 /** アップロード入力 */
 export interface UploadWorkerImageInput {
-  employeeId: string;
+  workerId: string;
   mimeType: string;
   buffer: Buffer;
 }
@@ -20,7 +20,7 @@ export interface UploadWorkerImageInput {
 export interface StorageService {
   /**
    * ワーカーのアバター画像をアップロードして公開 URL を返す。
-   * 命名規約: workers/{employeeId}/{uuid}.{ext}
+   * 命名規約: workers/{workerId}/{uuid}.{ext}
    */
   uploadWorkerImage(input: UploadWorkerImageInput): Promise<string>;
 }
@@ -70,7 +70,7 @@ export class GcsStorageService implements StorageService {
       throw new Error(`Unsupported MIME type: ${input.mimeType}`);
     }
 
-    const objectName = `workers/${input.employeeId}/${randomUUID()}.${ext}`;
+    const objectName = `workers/${input.workerId}/${randomUUID()}.${ext}`;
     const bucket = storage.bucket(this.bucketName);
     const file = bucket.file(objectName);
 
@@ -88,7 +88,7 @@ export class InMemoryStorageService implements StorageService {
 
   async uploadWorkerImage(input: UploadWorkerImageInput): Promise<string> {
     const ext = getImageExtension(input.mimeType) ?? "bin";
-    const objectName = `workers/${input.employeeId}/${randomUUID()}.${ext}`;
+    const objectName = `workers/${input.workerId}/${randomUUID()}.${ext}`;
     const url = `inmemory://${objectName}`;
     this.store.set(url, { mimeType: input.mimeType, buffer: input.buffer });
     return url;

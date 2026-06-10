@@ -55,7 +55,7 @@ describe("InMemoryStorageService", () => {
     const service = new InMemoryStorageService();
     const buffer = Buffer.from("fake-image-data");
     const result = await service.uploadWorkerImage({
-      employeeId: "haru",
+      workerId: "haru",
       mimeType: "image/png",
       buffer,
     });
@@ -66,7 +66,7 @@ describe("InMemoryStorageService", () => {
     const service = new InMemoryStorageService();
     const buffer = Buffer.from("test-content");
     const url = await service.uploadWorkerImage({
-      employeeId: "employee-1",
+      workerId: "worker-1",
       mimeType: "image/jpeg",
       buffer,
     });
@@ -76,11 +76,11 @@ describe("InMemoryStorageService", () => {
     expect(stored?.buffer.equals(buffer)).toBe(true);
   });
 
-  it("異なる employeeId に対して異なる URL を生成する", async () => {
+  it("異なる workerId に対して異なる URL を生成する", async () => {
     const service = new InMemoryStorageService();
     const buffer = Buffer.from("data");
-    const url1 = await service.uploadWorkerImage({ employeeId: "haru", mimeType: "image/png", buffer });
-    const url2 = await service.uploadWorkerImage({ employeeId: "ken", mimeType: "image/png", buffer });
+    const url1 = await service.uploadWorkerImage({ workerId: "haru", mimeType: "image/png", buffer });
+    const url2 = await service.uploadWorkerImage({ workerId: "ken", mimeType: "image/png", buffer });
     expect(url1).not.toBe(url2);
     expect(url1).toContain("/haru/");
     expect(url2).toContain("/ken/");

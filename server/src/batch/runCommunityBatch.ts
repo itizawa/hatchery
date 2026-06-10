@@ -1,5 +1,5 @@
 import {
-  DEFAULT_EMPLOYEES,
+  DEFAULT_WORKERS,
   GenerationOutputSchema,
   formatRecentLog,
   type RecentEntry,
@@ -37,7 +37,7 @@ export interface RunCommunityBatchDeps {
   generate?: ConversationGenerator;
   /** プロンプトに載せる直近 post/comment 件数（既定 30）。 */
   recentLimit?: number;
-  /** ワーカー定義（省略時は DEFAULT_EMPLOYEES）。 */
+  /** ワーカー定義（省略時は DEFAULT_WORKERS）。 */
   workers?: readonly WorkerDef[];
   /**
    * 定時キー（省略時は現在時刻から "YYYY-MM-DDTHH:MM" 形式を自動生成）。
@@ -87,7 +87,7 @@ export async function runCommunityBatch(
 
   const generate = deps.generate ?? generateConversationWithClaude;
   const recentLimit = deps.recentLimit ?? DEFAULT_RECENT_LIMIT;
-  const workers = deps.workers ?? (DEFAULT_EMPLOYEES as WorkerDef[]);
+  const workers = deps.workers ?? (DEFAULT_WORKERS as WorkerDef[]);
   const slotKey = deps.slotKey ?? generateSlotKey();
   const workerIds = workers.map((w) => w.id);
 

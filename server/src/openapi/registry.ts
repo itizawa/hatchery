@@ -19,7 +19,7 @@ import {
   CreateChannelMessageSchema,
   CreateChannelSchema,
   CreateInvitationSchema,
-  EmployeeSchema,
+  WorkerSchema,
   InvitationPublicSchema,
   InvitationSchema,
   InvitationStatusSchema,
@@ -31,7 +31,7 @@ import {
   TokenUsageLogSchema,
   UpdateAppSettingSchema,
   UpdateChannelSchema,
-  UpdateEmployeeSchema,
+  UpdateWorkerSchema,
   UpdateProfileSchema,
   UserRoleSchema,
 } from "@hatchery/common";
@@ -80,7 +80,7 @@ const CreateChannelComponent = registry.register(
 const AddChannelMemberComponent = registry.register(
   "AddChannelMember",
   AddChannelMemberSchema.openapi({
-    description: "チャンネルへ Employee を追加するリクエストボディ（#33）",
+    description: "チャンネルへ Worker を追加するリクエストボディ（#33）",
   }),
 );
 
@@ -146,48 +146,48 @@ registry.registerPath({
   },
 });
 
-// Employee CRUD（#38）。
-const EmployeeComponent = registry.register(
-  "Employee",
-  EmployeeSchema.openapi({ description: "AI 社員（id / displayName / role / isBot / personality）" }),
+// Worker CRUD（#38 / #329）。
+const WorkerComponent = registry.register(
+  "Worker",
+  WorkerSchema.openapi({ description: "AI ワーカー（id / displayName / role / isBot / personality）" }),
 );
 
-const UpdateEmployeeComponent = registry.register(
-  "UpdateEmployee",
-  UpdateEmployeeSchema.openapi({ description: "Employee 更新リクエストボディ（#38）" }),
+const UpdateWorkerComponent = registry.register(
+  "UpdateWorker",
+  UpdateWorkerSchema.openapi({ description: "Worker 更新リクエストボディ（#38）" }),
 );
 
-const employeePathIdParam = z.string().openapi({ param: { name: "id", in: "path" } });
+const workerPathIdParam = z.string().openapi({ param: { name: "id", in: "path" } });
 
 registry.registerPath({
   method: "get",
-  path: "/api/employees",
-  summary: "Bot Employee 一覧を取得（認証不要・#240）",
+  path: "/api/workers",
+  summary: "Bot Worker 一覧を取得（認証不要・#240）",
   responses: {
     200: {
-      description: "isBot=true の Employee 一覧",
-      content: { "application/json": { schema: z.array(EmployeeComponent) } },
+      description: "isBot=true の Worker 一覧",
+      content: { "application/json": { schema: z.array(WorkerComponent) } },
     },
   },
 });
 
 registry.registerPath({
   method: "patch",
-  path: "/api/employees/{id}",
-  summary: "自分の Employee を更新（認証必須・本人のみ）",
+  path: "/api/workers/{id}",
+  summary: "Worker を更新（認証必須・admin のみ）",
   request: {
-    params: z.object({ id: employeePathIdParam }),
-    body: { content: { "application/json": { schema: UpdateEmployeeComponent } } },
+    params: z.object({ id: workerPathIdParam }),
+    body: { content: { "application/json": { schema: UpdateWorkerComponent } } },
   },
   responses: {
     200: {
-      description: "更新後の Employee",
-      content: { "application/json": { schema: EmployeeComponent } },
+      description: "更新後の Worker",
+      content: { "application/json": { schema: WorkerComponent } },
     },
     400: { description: "バリデーションエラー（personality 501 文字超など）", ...errorJson },
     401: { description: "未認証", ...errorJson },
-    403: { description: "他ユーザーの Employee への操作禁止", ...errorJson },
-    404: { description: "Employee が存在しない", ...errorJson },
+    403: { description: "admin 権限なし", ...errorJson },
+    404: { description: "Worker が存在しない", ...errorJson },
   },
 });
 

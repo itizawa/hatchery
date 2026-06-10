@@ -64,12 +64,23 @@ employeeRepository, appSettingRepository, batchRunLogRepository（省略可）
 
 - **案C: DI コンテナ導入（Awilix）**: デコレータ不要の関数 DI。`server` 内に閉じられるため ADR-0001/0005 への影響は最小。ただし Awilix 独自の API・命名規約の学習コストが必要で、現状の明示的引数注入より見通しが悪くなる。**採用しない。**
 
-- **案D: Composition root の整理のみ（コンテナなし）**: `createApp` の InMemory デフォルト生成を `server.ts` に移し、`createApp` を依存がすべて必須の純粋なファクトリに整理する。将来の拡張には有効だが、現時点で顕在化した問題はない（テスト・本番ともに動作しており、追加コストが先行する）。**今後のリポジトリ増加に応じて再評価する。**
+- **案D: Composition root の整理のみ（コンテナなし）**: `createApp` の InMemory デフォルト生成を呼び出し側に移し、`createApp` を依存がすべて必須の純粋なファクトリに整理する。将来の拡張には有効だが、決定当時は顕在化した問題はなかった。**→ その後 #137・#290 で採用済み（後述「補遺」参照）。**
 
 ---
 
 ## 影響（結果）
 
 - **良い影響**: 追加コスト・ライブラリ依存がなく、既存のテストパターンがそのまま維持される
-- **トレードオフ**: `AppDeps` はリポジトリ追加のたびに型を更新する必要がある（現状の課題が残る）
-- **フォローアップが必要なこと**: リポジトリ数が 10 以上に増えるか、バッチとサーバで配線の重複が顕著になった時点で案 D（composition root 整理）を再評価する
+- **トレードオフ**: `AppDeps` はリポジトリ追加のたびに型を更新する必要がある（IoC コンテナを入れない以上、この課題は残る）
+- **フォローアップ（解消済み）**: 当初「リポジトリ数が 10 以上に増えるか、バッチとサーバで配線の重複が顕著になった時点で案D（composition root 整理）を再評価する」としていた。実際にリポジトリが増え配線重複が顕在化したため、#137・#290 で案D を採用し再評価を完了した（IoC コンテナ不採用の本決定は維持）。
+
+---
+
+## 補遺: 案D の採用（#137・#290）
+
+本決定（IoC/DI コンテナ不採用・手動 DI 継続）は維持しつつ、フォローアップに残していた **案D（composition root 整理）を採用した**。コンテナは導入せず、手動 DI のまま composition root を整理しただけなので、本 ADR の決定そのものとは矛盾しない。
+
+- **#137**: 本番用 composition root を `server/src/composition/createPrismaDeps.ts` に集約し、`server.ts`・`batch/index.ts`・`batch/summaryIndex.ts` がこれを共有。Prisma リポジトリの二重インスタンス化を解消。テスト用の InMemory 合成ヘルパ `server/src/testing/createTestDeps.ts` も導入。
+- **#290**: `createApp` から InMemory デフォルト生成（`?? new InMemoryX()`）を撤去し、`AppDeps` の全リポジトリフィールドを必須化。`createApp` は「受け取った依存をそのまま配線するだけ」の純粋ファクトリになった。どの実装を使うかの決定は呼び出し側（`createPrismaDeps` / `createTestDeps`）に一元化された。
+
+結果として、依存の選択と生成は composition root（`createPrismaDeps` / `createTestDeps`）に集約され、`createApp` は実装非依存の純粋ファクトリとなった。挙動・HTTP 契約は不変（純粋リファクタ）。

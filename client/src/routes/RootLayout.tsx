@@ -6,6 +6,7 @@ import { Link as RouterLink, Outlet, useLocation } from "@tanstack/react-router"
 import { Suspense, useEffect, useState, type ReactElement } from "react";
 
 import { MainContentSkeleton } from "../components/MainContentSkeleton";
+import { useHideOnScroll } from "../hooks/useHideOnScroll.js";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 
 import { useAuth } from "../api/auth.js";
@@ -51,6 +52,8 @@ export const RootLayout = (): ReactElement => {
   const isMobile = useIsMobile();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const location = useLocation();
+  // スクロール方向に応じてヘッダを出し入れする（#302）
+  const { hidden: headerHidden, onScroll: onMainScroll } = useHideOnScroll();
 
   // ナビゲーション（パス変化）またはモバイル→デスクトップ切り替わりでドロワーを自動クローズする
   useEffect(() => {
@@ -78,7 +81,7 @@ export const RootLayout = (): ReactElement => {
       data-testid="root-layout-outer"
       sx={{ display: "flex", flexDirection: "column", height: "100vh", width: "100%", maxWidth: "100%", overflowX: "hidden" }}
     >
-      <AppHeader onMenuOpen={isMobile ? () => setDrawerOpen(true) : undefined} />
+      <AppHeader onMenuOpen={isMobile ? () => setDrawerOpen(true) : undefined} hidden={headerHidden} />
       <Box sx={{ display: "flex", flexGrow: 1, overflow: "hidden" }}>
         {/* モバイル: 一時的なドロワー */}
         {isMobile && (
@@ -117,6 +120,7 @@ export const RootLayout = (): ReactElement => {
 
         <Box
           component="main"
+          onScroll={onMainScroll}
           sx={{
             flexGrow: 1,
             minWidth: 0,

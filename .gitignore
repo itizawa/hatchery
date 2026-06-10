@@ -15,6 +15,7 @@ storybook-static/
 # Generated
 **/generated/
 *.gen.ts
+*.gen.json
 **/openapi.json
 
 # Env

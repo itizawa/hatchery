@@ -1,0 +1,64 @@
+import { Meta } from "@storybook/blocks";
+
+import formSpecs from "./generated/field-specs.gen.json";
+
+<Meta title="設計/画面項目一覧（Zod 生成）" />
+
+# 画面項目（入力フィールド）一覧
+
+> 関連: Issue #201 / 設計書 `docs/design/issue-201.md` / ADR-0006（OpenAPI 型共有）・ADR-0007（docs 基盤）
+
+このページは **`common` の Zod 入力スキーマを正本**に、各フォームの入力項目（項目名 / 型 / 必須 /
+制約 / 説明）を**自動生成**して表示しています（手書きではありません）。Zod スキーマを変更すると
+ビルド時に再生成され、この一覧も自動で追従するため drift しません。
+
+- **生成元**: `common` の Zod 入力スキーマ（`@hatchery/common`）
+- **抽出ロジック**: `docs/src/fieldSpec/extractFieldSpecs.ts`
+- **生成スクリプト**: `docs/scripts/gen-field-specs.ts`（→ `docs/src/generated/field-specs.gen.json`・コミットしない）
+- **生成順序**: turbo で `@hatchery/docs#gen-field-specs → @hatchery/docs#storybook:build` を保証
+
+<div>
+  {formSpecs.map((form) => (
+    <section key={form.id} style={{ marginBottom: "2rem" }}>
+      <h2 style={{ marginBottom: "0.25rem" }}>
+        {form.title} <code style={{ fontSize: "0.8em", color: "#666" }}>{form.id}</code>
+      </h2>
+      {form.description ? <p style={{ marginTop: 0, color: "#555" }}>{form.description}</p> : null}
+      <table>
+        <thead>
+          <tr>
+            <th>項目名</th>
+            <th>型</th>
+            <th>必須</th>
+            <th>制約</th>
+            <th>説明</th>
+          </tr>
+        </thead>
+        <tbody>
+          {form.fields.map((field) => {
+            const c = field.constraints ?? {};
+            const constraintParts = [
+              c.min != null ? `min: ${c.min}` : null,
+              c.max != null ? `max: ${c.max}` : null,
+              c.int ? "int" : null,
+              c.positive ? "positive" : null,
+              c.format != null ? `format: ${c.format}` : null,
+              c.enum != null ? `enum: [${c.enum.join(", ")}]` : null,
+            ].filter(Boolean);
+            return (
+              <tr key={field.name}>
+                <td>
+                  <code>{field.name}</code>
+                </td>
+                <td>{field.type}</td>
+                <td>{field.required ? "✓" : "—"}</td>
+                <td>{constraintParts.length > 0 ? constraintParts.join(" / ") : "—"}</td>
+                <td>{field.description ?? "—"}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </section>
+  ))}
+</div>

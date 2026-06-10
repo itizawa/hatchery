@@ -1,10 +1,11 @@
-import { Box, Typography } from "../components/uiParts";
+import { Box, Stack, Typography } from "../components/uiParts";
 import { Link as RouterLink, useParams } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 
 import { useCommunityFeed, useSubscribe, useUnsubscribe, useVotePost, usePublicCommunities } from "../api/communities.js";
 import { useAuth } from "../api/auth.js";
 import { PostCard } from "../components/PostCard.js";
+import { ShareButton } from "../components/ShareButton.js";
 import { SubscribeButton } from "../components/SubscribeButton.js";
 import { useSubscriptionStatus } from "../hooks/useSubscriptionStatus.js";
 
@@ -49,14 +50,20 @@ export const CommunityScene = (): ReactElement => {
             </>
           )}
         </Box>
-        {authUser && (
-          <SubscribeButton
-            subscribed={subscribed}
-            onSubscribe={() => subscribe()}
-            onUnsubscribe={() => unsubscribe()}
-            disabled={isSubscriptionPending}
+        <Stack direction="row" spacing={1} alignItems="center">
+          <ShareButton
+            shareUrl={typeof window !== "undefined" ? window.location.href : ""}
+            shareTitle={community?.name ?? `r/${communitySlug}`}
           />
-        )}
+          {authUser && (
+            <SubscribeButton
+              subscribed={subscribed}
+              onSubscribe={() => subscribe()}
+              onUnsubscribe={() => unsubscribe()}
+              disabled={isSubscriptionPending}
+            />
+          )}
+        </Stack>
       </Box>
 
       {isLoading ? (

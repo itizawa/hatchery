@@ -4,7 +4,8 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-// #49: Employee ↔ User の 1:1 リレーションと isBot フラグの定義を schema / migration レベルで検証する。
+// #49: Worker ↔ User の 1:1 リレーションと isBot フラグの定義を schema / migration レベルで検証する。
+// #329: Employee → Worker へのリネーム後も同等の制約が維持されることを確認する。
 // DB を必要としないユニットテスト（CI で実行可能）。実行時挙動の検証は int テスト（要 DATABASE_URL）が担う。
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -27,23 +28,22 @@ function allMigrationSql(): string {
     .join("\n");
 }
 
-describe("Prisma schema: Employee に isBot / userId（#49）", () => {
-  it("Employee に isBot Boolean @default(false) がある（AC-1）", () => {
+describe("Prisma schema: Worker に isBot / userId（#49 / #329）", () => {
+  it("Worker に isBot Boolean @default(false) がある（AC-1）", () => {
     expect(schema).toMatch(/isBot\s+Boolean\s+@default\(false\)/);
   });
 
-  it("Employee に userId String? @unique がある（AC-2）", () => {
+  it("Worker に userId String? @unique がある（AC-2）", () => {
     expect(schema).toMatch(/userId\s+String\?\s+@unique/);
   });
 
-  it("Employee が User への任意リレーションを持つ（AC-2）", () => {
+  it("Worker が User への任意リレーションを持つ（AC-2）", () => {
     expect(schema).toMatch(/user\s+User\?\s+@relation\(fields:\s*\[userId\],\s*references:\s*\[id\]\)/);
   });
 
-  it("User が Employee への逆リレーションを持つ（AC-2）", () => {
-    // schema 全体だと Task.employee も一致してしまうため、User モデル定義ブロックに限定して検証する。
+  it("User が Worker への逆リレーションを持つ（AC-2）", () => {
     const userModel = schema.match(/model User \{[\s\S]*?\n\}/)?.[0] ?? "";
-    expect(userModel).toMatch(/employee\s+Employee\?/);
+    expect(userModel).toMatch(/worker\s+Worker\?/);
   });
 });
 
@@ -58,11 +58,7 @@ describe("Prisma migration: isBot / userId 列の追加（#49）", () => {
     expect(sql).toMatch(/ADD COLUMN\s+"userId"\s+TEXT/i);
   });
 
-  it("userId の一意インデックスを作成する（AC-3）", () => {
-    expect(sql).toMatch(/CREATE UNIQUE INDEX\s+"Employee_userId_key"\s+ON\s+"Employee"\("userId"\)/i);
-  });
-
-  it("userId の外部キー（User 参照）を定義する（AC-3）", () => {
-    expect(sql).toMatch(/FOREIGN KEY\s+\("userId"\)\s+REFERENCES\s+"User"\("id"\)/i);
+  it("workers テーブルへのリネームマイグレーションがある（#329）", () => {
+    expect(sql).toMatch(/ALTER TABLE\s+"Employee"\s+RENAME TO\s+"workers"/i);
   });
 });

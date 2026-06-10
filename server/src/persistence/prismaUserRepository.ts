@@ -13,7 +13,7 @@ export class PrismaUserRepository implements UserRepository {
     passwordHash: string;
     role: string;
     avatarUrl: string | null;
-    employee: { id: string } | null;
+    worker: { id: string } | null;
   }): User {
     return {
       id: row.id,
@@ -21,7 +21,7 @@ export class PrismaUserRepository implements UserRepository {
       displayName: row.displayName,
       passwordHash: row.passwordHash,
       role: UserRoleSchema.parse(row.role ?? "member"),
-      employeeId: row.employee?.id ?? null,
+      employeeId: row.worker?.id ?? null,
       avatarUrl: row.avatarUrl ?? null,
     };
   }
@@ -29,7 +29,7 @@ export class PrismaUserRepository implements UserRepository {
   async findById(id: string): Promise<User | null> {
     const row = await this.prisma.user.findUnique({
       where: { id },
-      include: { employee: { select: { id: true } } },
+      include: { worker: { select: { id: true } } },
     });
     if (!row) return null;
     return this.mapRow(row);
@@ -38,7 +38,7 @@ export class PrismaUserRepository implements UserRepository {
   async findByLoginId(loginId: string): Promise<User | null> {
     const row = await this.prisma.user.findUnique({
       where: { loginId },
-      include: { employee: { select: { id: true } } },
+      include: { worker: { select: { id: true } } },
     });
     if (!row) return null;
     return this.mapRow(row);
@@ -52,7 +52,7 @@ export class PrismaUserRepository implements UserRepository {
           displayName: data.displayName,
           ...(data.avatarUrl !== undefined ? { avatarUrl: data.avatarUrl } : {}),
         },
-        include: { employee: { select: { id: true } } },
+        include: { worker: { select: { id: true } } },
       });
       return this.mapRow(row);
     } catch (err) {
@@ -72,7 +72,7 @@ export class PrismaUserRepository implements UserRepository {
           passwordHash: input.passwordHash,
           role: "member",
         },
-        include: { employee: { select: { id: true } } },
+        include: { worker: { select: { id: true } } },
       });
       return this.mapRow(row);
     } catch (err) {

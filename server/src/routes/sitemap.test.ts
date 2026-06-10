@@ -2,7 +2,7 @@ import request from "supertest";
 import { describe, expect, it } from "vitest";
 
 import { createApp } from "../app.js";
-import { InMemoryCommunityRepository } from "../persistence/communityRepository.js";
+import { createInMemoryCommunityRepository } from "../persistence/communityRepository.js";
 import type { CommunityRecord } from "../persistence/communityRepository.js";
 import { createTestDeps } from "../testing/createTestDeps.js";
 
@@ -21,7 +21,7 @@ const makeCommunity = (overrides: Partial<CommunityRecord> = {}): CommunityRecor
 
 /** sitemap 用にテストアプリを組み立てる（#259）。publicBaseUrl は固定値で検証する。 */
 async function buildApp(communities: CommunityRecord[]) {
-  const communityRepo = new InMemoryCommunityRepository(communities);
+  const communityRepo = createInMemoryCommunityRepository(communities);
   const deps = await createTestDeps({
     communityRepository: communityRepo,
     publicBaseUrl: BASE_URL,

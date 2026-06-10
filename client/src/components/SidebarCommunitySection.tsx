@@ -40,7 +40,7 @@ export const SidebarCommunitySection = (): ReactElement => {
               sx={{ color: SLACK_COLORS.sidebarText, py: 0.25 }}
             >
               <ListItemText
-                primary={`r/${community.slug}`}
+                primary={community.name}
                 primaryTypographyProps={{ variant: "body2" }}
               />
             </ListItemButton>

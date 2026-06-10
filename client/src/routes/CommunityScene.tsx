@@ -39,25 +39,18 @@ export const CommunityScene = (): ReactElement => {
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 2 }}>
         <Box>
           <Typography variant="h5" component="h1">
-            r/{communitySlug}
+            {community?.name}
           </Typography>
-          {community && (
-            <>
-              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                {community.name}
-              </Typography>
-              {community.description && (
-                <Typography variant="body2" color="text.secondary">
-                  {community.description}
-                </Typography>
-              )}
-            </>
+          {community?.description && (
+            <Typography variant="body2" color="text.secondary">
+              {community.description}
+            </Typography>
           )}
         </Box>
         <Stack direction="row" spacing={1} alignItems="center">
           <ShareButton
             shareUrl={typeof window !== "undefined" ? window.location.href : ""}
-            shareTitle={community?.name ?? `r/${communitySlug}`}
+            shareTitle={community?.name ?? communitySlug}
           />
           {authUser && (
             <SubscribeButton

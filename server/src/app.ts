@@ -174,8 +174,6 @@ export function createApp(deps: AppDeps): Express {
   app.use(passportInstance.initialize());
   app.use(passportInstance.session());
 
-  // 依存はすべて必須（#290 / ADR-0012 案D）。InMemory フォールバックは持たず、
-  // 呼び出し側（composition root: createPrismaDeps / createTestDeps）が注入する。
   const communityRepo = deps.communityRepository;
   const postRepo = deps.postRepository;
   const commentRepo = deps.commentRepository;
@@ -183,14 +181,11 @@ export function createApp(deps: AppDeps): Express {
   const voteRepo = deps.voteRepository;
   const worldStateRepo = deps.worldStateRepository;
 
-  // API 仕様の閲覧（#106 / ADR-0006）。トグルが有効なときだけ配線する。
-  // 無効時（本番既定）はルート未登録＝404。生成 OpenAPI（registry）を単一情報源として配信する。
   if (isApiDocsEnabled(process.env)) {
     app.use("/", createApiDocsRouter());
   }
 
   app.use("/health", healthRouter);
-  // sitemap.xml は認証不要で公開ページ（トップ + 全 community）を列挙する（#259）。
   app.use(
     "/sitemap.xml",
     createSitemapRouter(communityRepo, deps.publicBaseUrl ?? DEFAULT_PUBLIC_BASE_URL),
@@ -212,7 +207,7 @@ export function createApp(deps: AppDeps): Express {
     "/api/communities",
     createCommunitiesRouter(communityRepo, postRepo, subscriptionRepo),
   );
-  app.use("/api/feed", createFeedRouter(subscriptionRepo, postRepo));
+  app.use("/api/feed", createFeedRouter(postRepo));
   app.use("/api", createPostsRouter(postRepo, commentRepo, voteRepo));
 
   void worldStateRepo;

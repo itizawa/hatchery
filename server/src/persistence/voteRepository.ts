@@ -4,8 +4,10 @@
  * 同一方向の再押下で toggle off（中立）、異なる方向で switch する。
  */
 
+import type { VoteDirection } from "@hatchery/common";
+
+export type { VoteDirection };
 export type VoteTargetType = "post" | "comment";
-export type VoteDirection = "up" | "down";
 
 export interface VoteRecord {
   id: string;

@@ -9,7 +9,10 @@ import type {
   Community as AdminCommunity,
   CreateCommunityInput,
   UpdateCommunityInput,
+  VoteDirection,
 } from "@hatchery/common";
+
+export type { VoteDirection };
 
 import { openApiClient } from "./client.js";
 import type { components } from "./openapi.gen.js";
@@ -190,8 +193,6 @@ export async function unsubscribeCommunity(slug: string): Promise<void> {
   if (!response.ok && response.status !== 204)
     throw new Error(`DELETE /api/communities/${slug}/subscribe failed: ${response.status}`);
 }
-
-export type VoteDirection = "up" | "down";
 
 /**
  * POST /api/posts/{postId}/vote — post に up/down vote する（ADR-0025）。

@@ -2,8 +2,9 @@ import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import { Box, IconButton, Typography } from "./uiParts";
 import type { ReactElement } from "react";
+import type { VoteDirection } from "@hatchery/common";
 
-export type VoteDirection = "up" | "down";
+export type { VoteDirection };
 
 interface VoteControlProps {
   score: number;

@@ -24,6 +24,7 @@ const app = createApp({
     // フロント（Cloudflare Pages）と API（Cloud Run）が別ドメインの本番/dev では、
     // セッション cookie を SameSite=None + Secure にしないとログインが維持できない（#78）。
     crossSiteCookie: process.env.NODE_ENV === "production",
+    sessionSecret: env.sessionSecret,
   },
 });
 

@@ -50,6 +50,12 @@ export function createApiDocsRouter(): Router {
   });
 
   router.get("/api-docs", (_req, res) => {
+    // Redoc は CDN スクリプト・inline スタイル・blob ワーカーを使うため、このルートのみ CSP を緩和する。
+    // 他の API ルートには影響しない（後から res.setHeader で上書きされるため）。
+    res.setHeader(
+      "Content-Security-Policy",
+      "default-src 'none'; script-src https://cdn.redoc.ly; style-src 'unsafe-inline'; worker-src blob:; connect-src 'self'; img-src data: blob: https:",
+    );
     res.status(200).type("html").send(REDOC_HTML);
   });
 

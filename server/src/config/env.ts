@@ -18,6 +18,8 @@ export interface ServerEnv {
   corsAllowedOrigins: string[];
   /** sitemap.xml が出力する公開ページの絶対 URL ベース（#259）。未設定なら本番フロント既定値。 */
   publicBaseUrl: string;
+  /** express-session の署名秘密鍵（#344）。本番では必須。未設定なら undefined。 */
+  sessionSecret: string | undefined;
 }
 
 /** 公開ページのベース URL の既定値（#259）。client の DEFAULT_OGP_URL と同じドメイン。 */
@@ -56,6 +58,7 @@ const EnvSchema = z.object({
         .map((origin) => origin.trim())
         .filter((origin) => origin.length > 0),
     ),
+  SESSION_SECRET: z.string().min(1).optional(),
 });
 
 /** 環境変数から ServerEnv を構築する。不正な値は ZodError を投げて起動時に気付けるようにする。 */
@@ -69,6 +72,7 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): ServerEnv {
     REQUEST_TIMEOUT_MS: source.REQUEST_TIMEOUT_MS,
     PUBLIC_BASE_URL: source.PUBLIC_BASE_URL,
     CORS_ALLOWED_ORIGINS: source.CORS_ALLOWED_ORIGINS,
+    SESSION_SECRET: source.SESSION_SECRET,
   });
   return {
     port: parsed.PORT,
@@ -79,5 +83,6 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): ServerEnv {
     requestTimeoutMs: parsed.REQUEST_TIMEOUT_MS,
     corsAllowedOrigins: parsed.CORS_ALLOWED_ORIGINS,
     publicBaseUrl: parsed.PUBLIC_BASE_URL,
+    sessionSecret: parsed.SESSION_SECRET,
   };
 }

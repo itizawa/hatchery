@@ -55,6 +55,8 @@ export interface SecurityOptions {
    * true で SameSite=None + Secure（HTTPS 前提）。ローカル同一オリジンは false（SameSite=Lax）。既定 false。
    */
   crossSiteCookie?: boolean;
+  /** express-session の署名秘密鍵（#344）。本番では必須。未指定なら開発用既定値。 */
+  sessionSecret?: string;
 }
 
 /** SecurityOptions の既定値（env.ts と共有＝単一情報源。本番は server.ts が env から渡す）。 */
@@ -63,6 +65,7 @@ const DEFAULT_SECURITY: Required<SecurityOptions> = {
   corsAllowedOrigins: [],
   enableHsts: false,
   crossSiteCookie: false,
+  sessionSecret: "hatchery-dev-secret",
 };
 
 /**
@@ -137,15 +140,23 @@ export function createApp(deps: AppDeps): Express {
   const app = express();
   const security = { ...DEFAULT_SECURITY, ...deps.security };
 
-  const sessionSecret = process.env.SESSION_SECRET;
-  if (!sessionSecret && process.env.NODE_ENV === "production") {
-    throw new Error("SESSION_SECRET 環境変数が設定されていません。本番環境では必須です。");
-  }
-
-  if (!deps.sessionStore && process.env.NODE_ENV === "production") {
-    throw new Error(
-      "sessionStore が必須です。本番環境では connect-pg-simple 等の永続ストアを AppDeps.sessionStore に渡してください（#186）。",
-    );
+  // deps.security から直接読む（DEFAULT_SECURITY の "hatchery-dev-secret" を介さない）ことで、
+  // sessionSecret を明示しないまま NODE_ENV=production で起動した場合も本番ガードが正しく機能する。
+  const sessionSecret = deps.security?.sessionSecret ?? process.env.SESSION_SECRET;
+  if (process.env.NODE_ENV === "production") {
+    if (security.corsAllowedOrigins.includes("*")) {
+      throw new Error(
+        "本番環境で CORS に * は使用できません。CORS_ALLOWED_ORIGINS に具体的なオリジンを設定してください（#344）。",
+      );
+    }
+    if (!sessionSecret) {
+      throw new Error("SESSION_SECRET 環境変数が設定されていません。本番環境では必須です。");
+    }
+    if (!deps.sessionStore) {
+      throw new Error(
+        "sessionStore が必須です。本番環境では connect-pg-simple 等の永続ストアを AppDeps.sessionStore に渡してください（#186）。",
+      );
+    }
   }
 
   app.use(createSecureHeaders({ enableHsts: security.enableHsts }));
@@ -162,7 +173,7 @@ export function createApp(deps: AppDeps): Express {
 
   app.use(
     session({
-      secret: sessionSecret ?? "hatchery-dev-secret",
+      secret: sessionSecret ?? DEFAULT_SECURITY.sessionSecret,
       resave: false,
       saveUninitialized: false,
       cookie: buildSessionCookieOptions(security.crossSiteCookie),

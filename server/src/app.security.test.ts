@@ -23,6 +23,29 @@ describe("createApp: sessionStore の本番ガード（#186）", () => {
     }
   });
 
+  it("NODE_ENV=production で security に sessionSecret を省略しても SESSION_SECRET 未設定なら例外を投げる（#344）", () => {
+    const original = process.env.NODE_ENV;
+    const originalSecret = process.env.SESSION_SECRET;
+    process.env.NODE_ENV = "production";
+    delete process.env.SESSION_SECRET;
+    try {
+      expect(() =>
+        createApp({
+          ...baseDeps,
+          sessionStore: new session.MemoryStore(),
+          security: { corsAllowedOrigins: ["https://example.com"] },
+        }),
+      ).toThrow(/SESSION_SECRET/);
+    } finally {
+      process.env.NODE_ENV = original;
+      if (originalSecret === undefined) {
+        delete process.env.SESSION_SECRET;
+      } else {
+        process.env.SESSION_SECRET = originalSecret;
+      }
+    }
+  });
+
   it("NODE_ENV=production でも sessionStore を注入すれば起動時例外を投げない", () => {
     const originalEnv = process.env.NODE_ENV;
     const originalSecret = process.env.SESSION_SECRET;
@@ -94,7 +117,54 @@ describe("createApp のセキュリティ防衛", () => {
     expect(res.headers["x-frame-options"]).toBe("DENY");
     expect(res.headers["x-xss-protection"]).toBe("1; mode=block");
     expect(res.headers["referrer-policy"]).toBe("no-referrer");
+    expect(res.headers["content-security-policy"]).toContain("default-src 'none'");
     expect(res.headers["x-powered-by"]).toBeUndefined();
+  });
+
+  it("NODE_ENV=production で corsAllowedOrigins に * を含むと起動時例外を投げる", () => {
+    const original = process.env.NODE_ENV;
+    const originalSecret = process.env.SESSION_SECRET;
+    process.env.NODE_ENV = "production";
+    process.env.SESSION_SECRET = "test-secret";
+    try {
+      expect(() =>
+        createApp({
+          ...baseDeps,
+          security: { corsAllowedOrigins: ["*"] },
+        }),
+      ).toThrow(/CORS.*\*/);
+    } finally {
+      process.env.NODE_ENV = original;
+      if (originalSecret === undefined) {
+        delete process.env.SESSION_SECRET;
+      } else {
+        process.env.SESSION_SECRET = originalSecret;
+      }
+    }
+  });
+
+  it("NODE_ENV=production で corsAllowedOrigins に明示オリジンのみ含むと正常起動する", () => {
+    const original = process.env.NODE_ENV;
+    const originalSecret = process.env.SESSION_SECRET;
+    process.env.NODE_ENV = "production";
+    process.env.SESSION_SECRET = "test-secret";
+    try {
+      // sessionStore も必要（本番ガード）
+      expect(() =>
+        createApp({
+          ...baseDeps,
+          sessionStore: new session.MemoryStore(),
+          security: { corsAllowedOrigins: ["https://app.example.com"] },
+        }),
+      ).not.toThrow();
+    } finally {
+      process.env.NODE_ENV = original;
+      if (originalSecret === undefined) {
+        delete process.env.SESSION_SECRET;
+      } else {
+        process.env.SESSION_SECRET = originalSecret;
+      }
+    }
   });
 
   it("corsAllowedOrigins に含まれるオリジンへ CORS ヘッダを付与する", async () => {

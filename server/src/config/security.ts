@@ -13,6 +13,8 @@ const HSTS_MAX_AGE_SECONDS = 63_072_000;
  */
 export function buildSecurityHeaders(enableHsts: boolean): Record<string, string> {
   const headers: Record<string, string> = {
+    // API サーバーはリソース取得を行わないため、すべてのソースをデフォルト禁止にする。
+    "Content-Security-Policy": "default-src 'none'",
     // MIME スニッフィングを禁止し、Content-Type 偽装由来の XSS を防ぐ。
     "X-Content-Type-Options": "nosniff",
     // クリックジャッキング対策。本アプリは iframe 埋め込みを想定しないため DENY。

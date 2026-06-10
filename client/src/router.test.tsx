@@ -46,7 +46,7 @@ function stubFetch({ authenticated }: { authenticated: boolean }) {
       }
       if (urlStr.includes("/api/feed")) {
         return Promise.resolve(
-          new Response(JSON.stringify([]), { status: 200, headers: { "Content-Type": "application/json" } }),
+          new Response(JSON.stringify({ posts: [], nextCursor: null }), { status: 200, headers: { "Content-Type": "application/json" } }),
         );
       }
       // posts, comments, etc.

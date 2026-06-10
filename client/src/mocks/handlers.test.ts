@@ -12,7 +12,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { fetchMe } from "../api/auth.js";
 import { fetchSettings } from "../api/admin.js";
 import { fetchBatchLogs } from "../api/batchLogs.js";
-import { fetchPublicCommunities, fetchHomeFeed } from "../api/communities.js";
+import { fetchPublicCommunities, fetchHomeFeedPage } from "../api/communities.js";
 import { mockAdminUser, mockSettings, mockBatchLogs, mockCommunities, mockPosts } from "./data/fixtures.js";
 import { handlers } from "./handlers.js";
 
@@ -50,9 +50,10 @@ describe("MSW ハンドラのパスが API クライアントの実パスと一�
   });
 
   it("fetchHomeFeed が /api/feed ハンドラにマッチしてホームフィードを返す", async () => {
-    const result = await fetchHomeFeed();
-    expect(result.length).toBe(mockPosts.length);
-    expect(result[0].id).toBe(mockPosts[0].id);
+    const result = await fetchHomeFeedPage();
+    expect(result.posts.length).toBe(mockPosts.length);
+    expect(result.posts[0].id).toBe(mockPosts[0].id);
+    expect(result.nextCursor).toBeNull();
   });
 
   it("POST /api/auth/login ハンドラが存在しモック AuthUser を返す", async () => {

@@ -39,7 +39,7 @@ function stubFetch({ authenticated, feedPosts = [] }: FetchStubOptions) {
       }
       if (url.includes("/api/feed")) {
         return Promise.resolve(
-          new Response(JSON.stringify(feedPosts), {
+          new Response(JSON.stringify({ posts: feedPosts, nextCursor: null }), {
             status: 200,
             headers: { "Content-Type": "application/json" },
           }),
@@ -106,7 +106,7 @@ describe("HomeFeedScene — 未認証ユーザー (#347)", () => {
         return Promise.resolve(new Response(null, { status: 401 }));
       }
       return Promise.resolve(
-        new Response(JSON.stringify([]), { status: 200, headers: { "Content-Type": "application/json" } }),
+        new Response(JSON.stringify({ posts: [], nextCursor: null }), { status: 200, headers: { "Content-Type": "application/json" } }),
       );
     });
     vi.stubGlobal("fetch", fetchMock);

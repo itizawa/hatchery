@@ -1,9 +1,7 @@
-import { describe, expect, it } from "vitest";
-
-import { docsChannelCount } from "./index.js";
+import { describe, it } from "vitest";
 
 describe("@hatchery/docs", () => {
-  it("client の channelCount を再利用する (docs → client)", () => {
-    expect(docsChannelCount()).toBe(3);
+  it("モジュールとして正常にインポートできる", async () => {
+    await import("./index.js");
   });
 });

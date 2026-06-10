@@ -1,11 +1,16 @@
 import type { AppDeps } from "../app.js";
 import { InMemoryAppSettingRepository } from "../persistence/appSettingRepository.js";
 import { InMemoryBatchRunLogRepository } from "../persistence/batchRunLogRepository.js";
+import { InMemoryCommentRepository } from "../persistence/commentRepository.js";
 import { InMemoryCommunityRepository } from "../persistence/communityRepository.js";
 import { InMemoryWorkerRepository } from "../persistence/workerRepository.js";
 import { InMemoryInvitationLinkRepository } from "../persistence/invitationLinkRepository.js";
+import { InMemoryPostRepository } from "../persistence/postRepository.js";
+import { InMemorySubscriptionRepository } from "../persistence/subscriptionRepository.js";
 import { InMemoryTokenUsageLogRepository } from "../persistence/tokenUsageLogRepository.js";
 import { InMemoryUserRepository } from "../persistence/userRepository.js";
+import { InMemoryVoteRepository } from "../persistence/voteRepository.js";
+import { InMemoryWorldStateRepository } from "../persistence/worldStateRepository.js";
 import { InMemoryStorageService } from "../services/storageService.js";
 
 /** テスト用の依存注入オーバーライド。各フィールドを省略すると InMemory 実装のデフォルトが使われる。 */
@@ -27,6 +32,11 @@ export async function createTestDeps(overrides?: TestDepsOverrides): Promise<App
     invitationLinkRepository: new InMemoryInvitationLinkRepository(),
     tokenUsageLogRepository: new InMemoryTokenUsageLogRepository(),
     communityRepository: new InMemoryCommunityRepository(),
+    postRepository: new InMemoryPostRepository(),
+    commentRepository: new InMemoryCommentRepository(),
+    subscriptionRepository: new InMemorySubscriptionRepository(),
+    voteRepository: new InMemoryVoteRepository(),
+    worldStateRepository: new InMemoryWorldStateRepository(),
     storageService: new InMemoryStorageService(),
     ...overrides,
   };

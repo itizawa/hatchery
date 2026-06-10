@@ -12,22 +12,16 @@ import { createSecureHeaders } from "./middleware/secureHeaders.js";
 import type { AppSettingRepository } from "./persistence/appSettingRepository.js";
 import type { BatchRunLogRepository } from "./persistence/batchRunLogRepository.js";
 import type { CommunityRepository } from "./persistence/communityRepository.js";
-import { InMemoryCommunityRepository } from "./persistence/communityRepository.js";
 import type { CommentRepository } from "./persistence/commentRepository.js";
-import { InMemoryCommentRepository } from "./persistence/commentRepository.js";
 import type { WorkerRepository } from "./persistence/workerRepository.js";
 import type { InvitationLinkRepository } from "./persistence/invitationLinkRepository.js";
 import type { StorageService } from "./services/storageService.js";
 import type { PostRepository } from "./persistence/postRepository.js";
-import { InMemoryPostRepository } from "./persistence/postRepository.js";
 import type { SubscriptionRepository } from "./persistence/subscriptionRepository.js";
-import { InMemorySubscriptionRepository } from "./persistence/subscriptionRepository.js";
 import type { TokenUsageLogRepository } from "./persistence/tokenUsageLogRepository.js";
 import type { UserRepository } from "./persistence/userRepository.js";
 import type { VoteRepository } from "./persistence/voteRepository.js";
-import { InMemoryVoteRepository } from "./persistence/voteRepository.js";
 import type { WorldStateRepository } from "./persistence/worldStateRepository.js";
-import { InMemoryWorldStateRepository } from "./persistence/worldStateRepository.js";
 import { createAdminRouter } from "./routes/admin.js";
 import { createAdminWorkerImageRouter } from "./routes/adminWorkerImage.js";
 import { createBatchLogsRouter } from "./routes/batch-logs.js";
@@ -101,18 +95,18 @@ export interface AppDeps {
   invitationLinkRepository: InvitationLinkRepository;
   /** トークン使用量ログの永続化（#153）。 */
   tokenUsageLogRepository: TokenUsageLogRepository;
-  /** コミュニティの永続化（ADR-0019）。省略時は空の InMemory 実装。 */
-  communityRepository?: CommunityRepository;
-  /** 投稿の永続化（ADR-0019）。省略時は空の InMemory 実装。 */
-  postRepository?: PostRepository;
-  /** コメントの永続化（ADR-0019）。省略時は空の InMemory 実装。 */
-  commentRepository?: CommentRepository;
-  /** 購読の永続化（ADR-0019）。省略時は空の InMemory 実装。 */
-  subscriptionRepository?: SubscriptionRepository;
-  /** up vote の永続化（ADR-0019）。省略時は空の InMemory 実装。 */
-  voteRepository?: VoteRepository;
-  /** ワールド状態の永続化（ADR-0019）。省略時は空の InMemory 実装。 */
-  worldStateRepository?: WorldStateRepository;
+  /** コミュニティの永続化（ADR-0019）。呼び出し側（composition root）が注入する（#290）。 */
+  communityRepository: CommunityRepository;
+  /** 投稿の永続化（ADR-0019）。呼び出し側（composition root）が注入する（#290）。 */
+  postRepository: PostRepository;
+  /** コメントの永続化（ADR-0019）。呼び出し側（composition root）が注入する（#290）。 */
+  commentRepository: CommentRepository;
+  /** 購読の永続化（ADR-0019）。呼び出し側（composition root）が注入する（#290）。 */
+  subscriptionRepository: SubscriptionRepository;
+  /** up vote の永続化（ADR-0019）。呼び出し側（composition root）が注入する（#290）。 */
+  voteRepository: VoteRepository;
+  /** ワールド状態の永続化（ADR-0019）。呼び出し側（composition root）が注入する（#290）。 */
+  worldStateRepository: WorldStateRepository;
   /** GCS ストレージサービス（#204 / ADR-0022）。本番は GcsStorageService、テスト・ローカルは InMemoryStorageService。 */
   storageService: StorageService;
   /** DDoS/過負荷対策の設定（#34）。省略時は既定値。 */
@@ -172,12 +166,14 @@ export function createApp(deps: AppDeps): Express {
   app.use(passportInstance.initialize());
   app.use(passportInstance.session());
 
-  const communityRepo = deps.communityRepository ?? new InMemoryCommunityRepository();
-  const postRepo = deps.postRepository ?? new InMemoryPostRepository();
-  const commentRepo = deps.commentRepository ?? new InMemoryCommentRepository();
-  const subscriptionRepo = deps.subscriptionRepository ?? new InMemorySubscriptionRepository();
-  const voteRepo = deps.voteRepository ?? new InMemoryVoteRepository();
-  const worldStateRepo = deps.worldStateRepository ?? new InMemoryWorldStateRepository();
+  // 依存はすべて必須（#290 / ADR-0012 案D）。InMemory フォールバックは持たず、
+  // 呼び出し側（composition root: createPrismaDeps / createTestDeps）が注入する。
+  const communityRepo = deps.communityRepository;
+  const postRepo = deps.postRepository;
+  const commentRepo = deps.commentRepository;
+  const subscriptionRepo = deps.subscriptionRepository;
+  const voteRepo = deps.voteRepository;
+  const worldStateRepo = deps.worldStateRepository;
 
   app.use("/health", healthRouter);
   app.use("/api/auth", createAuthRouter(passportInstance, deps.userRepository));

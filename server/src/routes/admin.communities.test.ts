@@ -217,3 +217,61 @@ describe("PATCH /api/admin/communities/:id (#310)", () => {
     expect(res.status).toBe(400);
   });
 });
+
+describe("PATCH /api/admin/communities/:id — artifact_config (#332)", () => {
+  async function makeAppWithCommunity(role: "admin" | "member" = "admin") {
+    const repo = new InMemoryCommunityRepository();
+    const community = await repo.create({
+      slug: "test-community",
+      name: "テストコミュニティ",
+      description: "テスト用です。",
+    });
+    return { app: await makeApp(repo, role), repo, communityId: community.id };
+  }
+
+  it("artifact_config を設定すると 200 でレスポンスに含まれる", async () => {
+    const { app, communityId } = await makeAppWithCommunity();
+    const agent = await loginAgent(app);
+    const res = await agent
+      .patch(`/api/admin/communities/${communityId}`)
+      .send({ artifact_config: { skills: ["github-issue"], instructions: "テスト指示" } });
+    expect(res.status).toBe(200);
+    expect((res.body as { artifact_config: unknown }).artifact_config).toMatchObject({
+      skills: ["github-issue"],
+      instructions: "テスト指示",
+    });
+  });
+
+  it("artifact_config: null でクリアできる", async () => {
+    const { app, communityId } = await makeAppWithCommunity();
+    const agent = await loginAgent(app);
+    // まず設定
+    await agent
+      .patch(`/api/admin/communities/${communityId}`)
+      .send({ artifact_config: { skills: ["github-issue"] } });
+    // クリア
+    const res = await agent
+      .patch(`/api/admin/communities/${communityId}`)
+      .send({ artifact_config: null });
+    expect(res.status).toBe(200);
+    expect((res.body as { artifact_config: unknown }).artifact_config).toBeUndefined();
+  });
+
+  it("artifact_config.instructions が 501 文字なら 400 を返す", async () => {
+    const { app, communityId } = await makeAppWithCommunity();
+    const agent = await loginAgent(app);
+    const res = await agent
+      .patch(`/api/admin/communities/${communityId}`)
+      .send({ artifact_config: { skills: ["github-issue"], instructions: "a".repeat(501) } });
+    expect(res.status).toBe(400);
+  });
+
+  it("artifact_config.skills が空配列なら 400 を返す", async () => {
+    const { app, communityId } = await makeAppWithCommunity();
+    const agent = await loginAgent(app);
+    const res = await agent
+      .patch(`/api/admin/communities/${communityId}`)
+      .send({ artifact_config: { skills: [] } });
+    expect(res.status).toBe(400);
+  });
+});

@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  COMMUNITY_ARTIFACT_INSTRUCTIONS_MAX_LENGTH,
   COMMUNITY_DESCRIPTION_MAX_LENGTH,
   COMMUNITY_NAME_MAX_LENGTH,
   COMMUNITY_SLUG_MAX_LENGTH,
+  ArtifactConfigSchema,
   CommunitySchema,
   CreateCommunitySchema,
   UpdateCommunitySchema,
@@ -94,7 +96,7 @@ describe("CommunitySchema", () => {
       expect(CommunitySchema.safeParse({ ...validCommunity, slug: "a" }).success).toBe(true);
     });
 
-    it("小文字英数字のみを受け入れる", () => {
+    it("導導英数字のみを受け入れる", () => {
       expect(CommunitySchema.safeParse({ ...validCommunity, slug: "techie123" }).success).toBe(true);
     });
 
@@ -220,5 +222,100 @@ describe("UpdateCommunitySchema（#310）", () => {
   it(`description が ${COMMUNITY_DESCRIPTION_MAX_LENGTH} 文字を超えると拒否する`, () => {
     const longDesc = "a".repeat(COMMUNITY_DESCRIPTION_MAX_LENGTH + 1);
     expect(UpdateCommunitySchema.safeParse({ description: longDesc }).success).toBe(false);
+  });
+
+  it("artifact_config: null を受け入れる（設定なし）", () => {
+    expect(UpdateCommunitySchema.safeParse({ artifact_config: null }).success).toBe(true);
+  });
+
+  it("artifact_config を省略できる（変更なし）", () => {
+    expect(UpdateCommunitySchema.safeParse({ name: "名前" }).success).toBe(true);
+  });
+
+  it("有効な artifact_config オブジェクトを受け入れる", () => {
+    expect(
+      UpdateCommunitySchema.safeParse({
+        artifact_config: { skills: ["github-issue"], instructions: "テスト指示" },
+      }).success,
+    ).toBe(true);
+  });
+
+  it("artifact_config.skills が空配列なら拒否する", () => {
+    expect(
+      UpdateCommunitySchema.safeParse({ artifact_config: { skills: [] } }).success,
+    ).toBe(false);
+  });
+});
+
+describe("ArtifactConfigSchema (#332)", () => {
+  it(`COMMUNITY_ARTIFACT_INSTRUCTIONS_MAX_LENGTH が ${COMMUNITY_ARTIFACT_INSTRUCTIONS_MAX_LENGTH} であること`, () => {
+    expect(COMMUNITY_ARTIFACT_INSTRUCTIONS_MAX_LENGTH).toBe(500);
+  });
+
+  it("skills: ['github-issue'] を受け入れる", () => {
+    expect(ArtifactConfigSchema.safeParse({ skills: ["github-issue"] }).success).toBe(true);
+  });
+
+  it("空の skills 配列を拒否する（min(1)）", () => {
+    expect(ArtifactConfigSchema.safeParse({ skills: [] }).success).toBe(false);
+  });
+
+  it("不明なスキルを拒否する", () => {
+    expect(ArtifactConfigSchema.safeParse({ skills: ["unknown-skill"] }).success).toBe(false);
+  });
+
+  it(`instructions が ${COMMUNITY_ARTIFACT_INSTRUCTIONS_MAX_LENGTH} 文字ちょうどを受け入れる`, () => {
+    expect(
+      ArtifactConfigSchema.safeParse({
+        skills: ["github-issue"],
+        instructions: "a".repeat(COMMUNITY_ARTIFACT_INSTRUCTIONS_MAX_LENGTH),
+      }).success,
+    ).toBe(true);
+  });
+
+  it(`instructions が ${COMMUNITY_ARTIFACT_INSTRUCTIONS_MAX_LENGTH + 1} 文字なら拒否する`, () => {
+    expect(
+      ArtifactConfigSchema.safeParse({
+        skills: ["github-issue"],
+        instructions: "a".repeat(COMMUNITY_ARTIFACT_INSTRUCTIONS_MAX_LENGTH + 1),
+      }).success,
+    ).toBe(false);
+  });
+
+  it("instructions は省略可能", () => {
+    expect(ArtifactConfigSchema.safeParse({ skills: ["github-issue"] }).success).toBe(true);
+  });
+});
+
+describe("CommunitySchema artifact_config (#332)", () => {
+  const validCommunity = {
+    id: "comm-1",
+    slug: "ai-workers",
+    name: "AI ワーカー雑談",
+    description: "AI ワーカーたちが日常を語るコミュニティ",
+    created_at: new Date("2026-06-01T00:00:00.000Z"),
+  };
+
+  it("artifact_config: null を受け入れる", () => {
+    expect(CommunitySchema.safeParse({ ...validCommunity, artifact_config: null }).success).toBe(true);
+  });
+
+  it("artifact_config を省略できる", () => {
+    expect(CommunitySchema.safeParse(validCommunity).success).toBe(true);
+  });
+
+  it("有効な artifact_config オブジェクトを受け入れる", () => {
+    expect(
+      CommunitySchema.safeParse({
+        ...validCommunity,
+        artifact_config: { skills: ["github-issue"], instructions: "指示文" },
+      }).success,
+    ).toBe(true);
+  });
+
+  it("artifact_config.skills が空なら拒否する", () => {
+    expect(
+      CommunitySchema.safeParse({ ...validCommunity, artifact_config: { skills: [] } }).success,
+    ).toBe(false);
   });
 });

@@ -136,7 +136,7 @@ export async function fetchCommunityFeed(slug: string): Promise<Post[]> {
 }
 
 /**
- * GET /api/feed — ホームフィードを取得する（認証必須）。
+ * GET /api/feed — ホームフィードを取得する（認証不要・全 community の投稿・新着順）。
  */
 export async function fetchHomeFeed(): Promise<Post[]> {
   const { data, response } = await openApiClient.GET("/api/feed", {
@@ -232,14 +232,13 @@ export function useCommunityFeed(slug: string) {
   });
 }
 
-/** ホームフィードを TanStack Query で取得するフック（認証必須）。未認証時は enabled: false を渡してコールを抑制できる。 */
-export function useHomeFeed(options?: { enabled?: boolean }) {
+/** ホームフィードを TanStack Query で取得するフック（認証不要・全 community の投稿・新着順）。 */
+export function useHomeFeed() {
   return useQuery({
     queryKey: homeFeedQueryKey(),
     queryFn: fetchHomeFeed,
     staleTime: 30_000,
     retry: false,
-    enabled: options?.enabled,
   });
 }
 

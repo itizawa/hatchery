@@ -81,11 +81,9 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
       }
     },
 
-    async listByCommunityIds(communityIds: string[], limit = 50): Promise<PostRecord[]> {
-      if (communityIds.length === 0) return [];
+    async listLatest(limit = 50): Promise<PostRecord[]> {
       const rows = await prisma.post.findMany({
-        where: { communityId: { in: communityIds } },
-        orderBy: { createdAt: "desc" },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
         take: limit,
       });
       return rows.map(toRecord);

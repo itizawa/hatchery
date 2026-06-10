@@ -67,7 +67,7 @@ function renderApp(initialPath: string) {
   );
 }
 
-describe("HomeFeedScene — 未認証ユーザー (#341)", () => {
+describe("HomeFeedScene — 未認証ユーザー (#347)", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
@@ -76,17 +76,30 @@ describe("HomeFeedScene — 未認証ユーザー (#341)", () => {
     vi.unstubAllGlobals();
   });
 
-  it("未認証ユーザーが / にアクセスするとゲスト向け誘導 UI が表示される（ログインへのリダイレクトなし）", async () => {
-    stubFetch({ authenticated: false });
+  it("未認証ユーザーが / にアクセスするとホームフィードが表示される（ゲスト誘導 UI ではなく投稿一覧）", async () => {
+    stubFetch({
+      authenticated: false,
+      feedPosts: [
+        {
+          id: "post-1",
+          community_id: "community-1",
+          slot_key: "2026-06-10-morning",
+          seq: 1,
+          author: "worker-haru",
+          title: "ゲスト閲覧テスト投稿",
+          text: "内容",
+          score: 0,
+          created_at: "2026-06-10T00:00:00Z",
+        },
+      ],
+    });
     renderApp("/");
 
     expect(await screen.findByRole("heading", { name: /ホームフィード/ })).toBeInTheDocument();
-    // ゲスト向けのログインボタン（Button）が表示される
-    const loginLinks = await screen.findAllByRole("link", { name: /ログイン/ });
-    expect(loginLinks.length).toBeGreaterThan(0);
+    expect(await screen.findByText("ゲスト閲覧テスト投稿")).toBeInTheDocument();
   });
 
-  it("未認証時に GET /api/feed が呼ばれない", async () => {
+  it("未認証時でも GET /api/feed が呼ばれる", async () => {
     const fetchMock = vi.fn().mockImplementation((input: RequestInfo | URL) => {
       const url = input instanceof Request ? input.url : String(input);
       if (url.includes("/auth/me")) {
@@ -99,20 +112,17 @@ describe("HomeFeedScene — 未認証ユーザー (#341)", () => {
     vi.stubGlobal("fetch", fetchMock);
     renderApp("/");
 
-    // ゲスト UI が表示されるまで待つ
-    expect(await screen.findByRole("heading", { name: /ホームフィード/ })).toBeInTheDocument();
-
     await waitFor(() => {
       const feedCalls = fetchMock.mock.calls.filter((args: unknown[]) => {
         const url = args[0] instanceof Request ? args[0].url : String(args[0]);
         return url.includes("/api/feed");
       });
-      expect(feedCalls).toHaveLength(0);
+      expect(feedCalls.length).toBeGreaterThan(0);
     });
   });
 });
 
-describe("HomeFeedScene — 認証済みユーザー (#341)", () => {
+describe("HomeFeedScene — フィード表示 (#347)", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
@@ -121,13 +131,11 @@ describe("HomeFeedScene — 認証済みユーザー (#341)", () => {
     vi.unstubAllGlobals();
   });
 
-  it("認証済みで購読投稿なしの場合は「購読なし」誘導 UI が表示される", async () => {
-    stubFetch({ authenticated: true, feedPosts: [] });
+  it("投稿が 0 件のときは「まだ投稿がありません」が表示される", async () => {
+    stubFetch({ authenticated: false, feedPosts: [] });
     renderApp("/");
 
-    expect(
-      await screen.findByText(/購読中のコミュニティに投稿がありません/),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/まだ投稿がありません/)).toBeInTheDocument();
     expect(await screen.findByRole("link", { name: /コミュニティを探す/ })).toBeInTheDocument();
   });
 

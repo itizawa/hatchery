@@ -1,6 +1,6 @@
 # ADR-0017: goal=issue リサーチャーエンジンへの Claude Agent SDK 採用（ADR-0004 増補）
 
-- ステータス: Accepted
+- ステータス: Superseded by [ADR-0023](./0023-simplify-to-pure-conversation-observation.md)（成果物生成の廃止・Agent SDK 不採用）
 - 日付: 2026-06-09
 - 関連 Issue: #287
 

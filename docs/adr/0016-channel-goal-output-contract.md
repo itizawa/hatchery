@@ -1,6 +1,6 @@
 # ADR-0016: チャンネル goal（出力契約）の導入
 
-- ステータス: Accepted
+- ステータス: Superseded by [ADR-0023](./0023-simplify-to-pure-conversation-observation.md)（成果物生成の廃止）
 - 日付: 2026-06-09
 - 関連 Issue: #284
 

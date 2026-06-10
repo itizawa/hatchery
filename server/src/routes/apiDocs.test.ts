@@ -66,6 +66,13 @@ describe("API ドキュメント配信ルート（dev = 有効）", () => {
     // /openapi.json を spec として参照していること
     expect(res.text).toContain("/openapi.json");
   });
+
+  it("GET /api-docs の CSP は cdn.redoc.ly のスクリプト読み込みを許可する", async () => {
+    const res = await request(createApp(baseDeps)).get("/api-docs");
+    const csp = res.headers["content-security-policy"] as string;
+    expect(csp).toContain("script-src");
+    expect(csp).toContain("cdn.redoc.ly");
+  });
 });
 
 describe("API ドキュメント配信ルート（本番無効 = 404）", () => {

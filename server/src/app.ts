@@ -140,7 +140,9 @@ export function createApp(deps: AppDeps): Express {
   const app = express();
   const security = { ...DEFAULT_SECURITY, ...deps.security };
 
-  const sessionSecret = security.sessionSecret ?? process.env.SESSION_SECRET;
+  // deps.security から直接読む（DEFAULT_SECURITY の "hatchery-dev-secret" を介さない）ことで、
+  // sessionSecret を明示しないまま NODE_ENV=production で起動した場合も本番ガードが正しく機能する。
+  const sessionSecret = deps.security?.sessionSecret ?? process.env.SESSION_SECRET;
   if (process.env.NODE_ENV === "production") {
     if (security.corsAllowedOrigins.includes("*")) {
       throw new Error(

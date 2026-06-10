@@ -23,6 +23,29 @@ describe("createApp: sessionStore の本番ガード（#186）", () => {
     }
   });
 
+  it("NODE_ENV=production で security に sessionSecret を省略しても SESSION_SECRET 未設定なら例外を投げる（#344）", () => {
+    const original = process.env.NODE_ENV;
+    const originalSecret = process.env.SESSION_SECRET;
+    process.env.NODE_ENV = "production";
+    delete process.env.SESSION_SECRET;
+    try {
+      expect(() =>
+        createApp({
+          ...baseDeps,
+          sessionStore: new session.MemoryStore(),
+          security: { corsAllowedOrigins: ["https://example.com"] },
+        }),
+      ).toThrow(/SESSION_SECRET/);
+    } finally {
+      process.env.NODE_ENV = original;
+      if (originalSecret === undefined) {
+        delete process.env.SESSION_SECRET;
+      } else {
+        process.env.SESSION_SECRET = originalSecret;
+      }
+    }
+  });
+
   it("NODE_ENV=production でも sessionStore を注入すれば起動時例外を投げない", () => {
     const originalEnv = process.env.NODE_ENV;
     const originalSecret = process.env.SESSION_SECRET;

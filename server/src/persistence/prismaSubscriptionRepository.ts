@@ -1,4 +1,4 @@
-import type { PrismaClient } from "@prisma/client";
+import { Prisma, type PrismaClient } from "@prisma/client";
 
 import type { SubscriptionRepository } from "./subscriptionRepository.js";
 
@@ -19,8 +19,11 @@ export class PrismaSubscriptionRepository implements SubscriptionRepository {
       await this.prisma.subscription.delete({
         where: { userId_communityId: { userId, communityId } },
       });
-    } catch {
-      // 存在しない場合は何もしない
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025") {
+        return;
+      }
+      throw err;
     }
   }
 

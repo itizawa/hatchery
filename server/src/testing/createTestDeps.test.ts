@@ -13,6 +13,16 @@ describe("createTestDeps", () => {
     expect(deps.invitationLinkRepository).toBeDefined();
   });
 
+  it("community / post / comment / subscription / vote / worldState も InMemory 実装で返る（#290）", async () => {
+    const deps = await createTestDeps();
+    expect(deps.communityRepository).toBeDefined();
+    expect(deps.postRepository).toBeDefined();
+    expect(deps.commentRepository).toBeDefined();
+    expect(deps.subscriptionRepository).toBeDefined();
+    expect(deps.voteRepository).toBeDefined();
+    expect(deps.worldStateRepository).toBeDefined();
+  });
+
   it("overrides で特定のリポジトリを上書きできる", async () => {
     const customWorkerRepo = new InMemoryWorkerRepository();
     const deps = await createTestDeps({ workerRepository: customWorkerRepo });

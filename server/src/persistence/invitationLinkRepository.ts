@@ -68,58 +68,62 @@ export function toInvitationLinkResponse(
   };
 }
 
-export class InMemoryInvitationLinkRepository implements InvitationLinkRepository {
-  private records: InvitationLinkRecord[] = [];
-  private _seq = 0;
+export function createInMemoryInvitationLinkRepository(): InvitationLinkRepository {
+  const records: InvitationLinkRecord[] = [];
+  let seq = 0;
 
-  async create(input: {
-    token: string;
-    expiresAt: Date;
-    createdByUserId: string;
-    memo?: string;
-  }): Promise<InvitationLinkRecord> {
-    const record: InvitationLinkRecord = {
-      id: `invitation-${++this._seq}`,
-      token: input.token,
-      expiresAt: input.expiresAt,
-      usedAt: null,
-      usedByUserId: null,
-      revokedAt: null,
-      createdByUserId: input.createdByUserId,
-      memo: input.memo ?? null,
-      createdAt: new Date(),
-    };
-    this.records.push(record);
-    return { ...record };
-  }
+  return {
+    create(input: {
+      token: string;
+      expiresAt: Date;
+      createdByUserId: string;
+      memo?: string;
+    }): Promise<InvitationLinkRecord> {
+      const record: InvitationLinkRecord = {
+        id: `invitation-${++seq}`,
+        token: input.token,
+        expiresAt: input.expiresAt,
+        usedAt: null,
+        usedByUserId: null,
+        revokedAt: null,
+        createdByUserId: input.createdByUserId,
+        memo: input.memo ?? null,
+        createdAt: new Date(),
+      };
+      records.push(record);
+      return Promise.resolve({ ...record });
+    },
 
-  async list(): Promise<InvitationLinkRecord[]> {
-    return [...this.records]
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-      .map((r) => ({ ...r }));
-  }
+    list(): Promise<InvitationLinkRecord[]> {
+      return Promise.resolve(
+        [...records]
+          .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+          .map((r) => ({ ...r })),
+      );
+    },
 
-  async findByToken(token: string): Promise<InvitationLinkRecord | null> {
-    const record = this.records.find((r) => r.token === token);
-    return record ? { ...record } : null;
-  }
+    findByToken(token: string): Promise<InvitationLinkRecord | null> {
+      const record = records.find((r) => r.token === token);
+      return Promise.resolve(record ? { ...record } : null);
+    },
 
-  async revoke(id: string): Promise<InvitationLinkRecord | null> {
-    const record = this.records.find((r) => r.id === id);
-    if (!record) return null;
-    record.revokedAt = new Date();
-    return { ...record };
-  }
+    revoke(id: string): Promise<InvitationLinkRecord | null> {
+      const record = records.find((r) => r.id === id);
+      if (!record) return Promise.resolve(null);
+      record.revokedAt = new Date();
+      return Promise.resolve({ ...record });
+    },
 
-  async markUsed(id: string, usedByUserId: string): Promise<InvitationLinkRecord | null> {
-    const now = new Date();
-    const record = this.records.find((r) => r.id === id);
-    if (!record) return null;
-    if (record.usedAt !== null || record.revokedAt !== null || record.expiresAt <= now) {
-      return null;
-    }
-    record.usedAt = now;
-    record.usedByUserId = usedByUserId;
-    return { ...record };
-  }
+    markUsed(id: string, usedByUserId: string): Promise<InvitationLinkRecord | null> {
+      const now = new Date();
+      const record = records.find((r) => r.id === id);
+      if (!record) return Promise.resolve(null);
+      if (record.usedAt !== null || record.revokedAt !== null || record.expiresAt <= now) {
+        return Promise.resolve(null);
+      }
+      record.usedAt = now;
+      record.usedByUserId = usedByUserId;
+      return Promise.resolve({ ...record });
+    },
+  };
 }

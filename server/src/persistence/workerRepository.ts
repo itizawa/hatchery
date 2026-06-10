@@ -40,72 +40,85 @@ export interface WorkerRepository {
   create(input: CreateWorkerInput): Promise<WorkerRecord>;
 }
 
-export class InMemoryWorkerRepository implements WorkerRepository {
-  private readonly workers: WorkerRecord[];
+export function createInMemoryWorkerRepository(
+  initialWorkers: Array<
+    Omit<WorkerRecord, "deletedAt" | "imageUrl"> & {
+      deletedAt?: Date | null;
+      imageUrl?: string | null;
+    }
+  > = [],
+): WorkerRepository {
+  const workers: WorkerRecord[] = initialWorkers.map((w) => ({
+    ...w,
+    deletedAt: w.deletedAt ?? null,
+    imageUrl: w.imageUrl ?? null,
+  }));
 
-  constructor(workers: Array<Omit<WorkerRecord, "deletedAt" | "imageUrl"> & { deletedAt?: Date | null; imageUrl?: string | null }> = []) {
-    this.workers = workers.map((w) => ({ ...w, deletedAt: w.deletedAt ?? null, imageUrl: w.imageUrl ?? null }));
-  }
+  return {
+    findById(id: string): Promise<WorkerRecord | null> {
+      const found = workers.find((w) => w.id === id && w.deletedAt === null);
+      return Promise.resolve(found ? { ...found } : null);
+    },
 
-  async findById(id: string): Promise<WorkerRecord | null> {
-    const found = this.workers.find((w) => w.id === id && w.deletedAt === null);
-    return found ? { ...found } : null;
-  }
+    update(id: string, input: UpdateWorkerInput): Promise<WorkerRecord | null> {
+      const worker = workers.find((w) => w.id === id && w.deletedAt === null);
+      if (!worker) return Promise.resolve(null);
+      if (input.displayName !== undefined) worker.displayName = input.displayName;
+      if (input.role !== undefined) worker.role = input.role;
+      if (input.personality !== undefined) worker.personality = input.personality;
+      return Promise.resolve({ ...worker });
+    },
 
-  async update(id: string, input: UpdateWorkerInput): Promise<WorkerRecord | null> {
-    const worker = this.workers.find((w) => w.id === id && w.deletedAt === null);
-    if (!worker) return null;
-    if (input.displayName !== undefined) worker.displayName = input.displayName;
-    if (input.role !== undefined) worker.role = input.role;
-    if (input.personality !== undefined) worker.personality = input.personality;
-    return { ...worker };
-  }
+    listByIds(ids: string[]): Promise<WorkerRecord[]> {
+      return Promise.resolve(
+        ids
+          .map((id) => workers.find((w) => w.id === id && w.deletedAt === null))
+          .filter((w): w is WorkerRecord => w !== undefined)
+          .map((w) => ({ ...w })),
+      );
+    },
 
-  async listByIds(ids: string[]): Promise<WorkerRecord[]> {
-    return ids
-      .map((id) => this.workers.find((w) => w.id === id && w.deletedAt === null))
-      .filter((w): w is WorkerRecord => w !== undefined)
-      .map((w) => ({ ...w }));
-  }
+    listBotWorkers(): Promise<WorkerRecord[]> {
+      return Promise.resolve(
+        workers.filter((w) => w.isBot && w.deletedAt === null).map((w) => ({ ...w })),
+      );
+    },
 
-  async listBotWorkers(): Promise<WorkerRecord[]> {
-    return this.workers.filter((w) => w.isBot && w.deletedAt === null).map((w) => ({ ...w }));
-  }
+    listAllBotWorkers(): Promise<WorkerRecord[]> {
+      return Promise.resolve(workers.filter((w) => w.isBot).map((w) => ({ ...w })));
+    },
 
-  async listAllBotWorkers(): Promise<WorkerRecord[]> {
-    return this.workers.filter((w) => w.isBot).map((w) => ({ ...w }));
-  }
+    softDelete(id: string): Promise<WorkerRecord | null> {
+      const worker = workers.find((w) => w.id === id && w.deletedAt === null);
+      if (!worker) return Promise.resolve(null);
+      worker.deletedAt = new Date();
+      return Promise.resolve({ ...worker });
+    },
 
-  async softDelete(id: string): Promise<WorkerRecord | null> {
-    const worker = this.workers.find((w) => w.id === id && w.deletedAt === null);
-    if (!worker) return null;
-    worker.deletedAt = new Date();
-    return { ...worker };
-  }
+    findDeletedById(id: string): Promise<WorkerRecord | null> {
+      const found = workers.find((w) => w.id === id);
+      return Promise.resolve(found ? { ...found } : null);
+    },
 
-  async findDeletedById(id: string): Promise<WorkerRecord | null> {
-    const found = this.workers.find((w) => w.id === id);
-    return found ? { ...found } : null;
-  }
+    updateImageUrl(id: string, imageUrl: string): Promise<WorkerRecord | null> {
+      const worker = workers.find((w) => w.id === id);
+      if (!worker) return Promise.resolve(null);
+      worker.imageUrl = imageUrl;
+      return Promise.resolve({ ...worker });
+    },
 
-  async updateImageUrl(id: string, imageUrl: string): Promise<WorkerRecord | null> {
-    const worker = this.workers.find((w) => w.id === id);
-    if (!worker) return null;
-    worker.imageUrl = imageUrl;
-    return { ...worker };
-  }
-
-  async create(input: CreateWorkerInput): Promise<WorkerRecord> {
-    const record: WorkerRecord = {
-      id: input.id,
-      displayName: input.displayName,
-      role: input.role ?? null,
-      isBot: input.isBot,
-      personality: input.personality ?? null,
-      imageUrl: null,
-      deletedAt: null,
-    };
-    this.workers.push(record);
-    return { ...record };
-  }
+    create(input: CreateWorkerInput): Promise<WorkerRecord> {
+      const record: WorkerRecord = {
+        id: input.id,
+        displayName: input.displayName,
+        role: input.role ?? null,
+        isBot: input.isBot,
+        personality: input.personality ?? null,
+        imageUrl: null,
+        deletedAt: null,
+      };
+      workers.push(record);
+      return Promise.resolve({ ...record });
+    },
+  };
 }

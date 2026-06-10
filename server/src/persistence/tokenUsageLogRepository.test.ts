@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { InMemoryTokenUsageLogRepository } from "./tokenUsageLogRepository.js";
+import { createInMemoryTokenUsageLogRepository } from "./tokenUsageLogRepository.js";
 
-describe("InMemoryTokenUsageLogRepository", () => {
+describe("createInMemoryTokenUsageLogRepository", () => {
   it("create でレコードを追加し id と occurredAt が付与される", async () => {
-    const repo = new InMemoryTokenUsageLogRepository();
+    const repo = createInMemoryTokenUsageLogRepository();
     const log = await repo.create({
       model: "claude-haiku-4-5",
       inputTokens: 100,
@@ -19,7 +19,7 @@ describe("InMemoryTokenUsageLogRepository", () => {
   });
 
   it("batchRunLogId あり/なし両方保存できる", async () => {
-    const repo = new InMemoryTokenUsageLogRepository();
+    const repo = createInMemoryTokenUsageLogRepository();
     const log1 = await repo.create({ model: "m", inputTokens: 10, outputTokens: 5, batchRunLogId: "batch-1" });
     const log2 = await repo.create({ model: "m", inputTokens: 20, outputTokens: 10, batchRunLogId: null });
     expect(log1.batchRunLogId).toBe("batch-1");
@@ -27,7 +27,7 @@ describe("InMemoryTokenUsageLogRepository", () => {
   });
 
   it("findRecent は occurredAt 降順で最大 limit 件取得する", async () => {
-    const repo = new InMemoryTokenUsageLogRepository();
+    const repo = createInMemoryTokenUsageLogRepository();
     await repo.create({ model: "m", inputTokens: 1, outputTokens: 1, batchRunLogId: null });
     await repo.create({ model: "m", inputTokens: 2, outputTokens: 2, batchRunLogId: null });
     await repo.create({ model: "m", inputTokens: 3, outputTokens: 3, batchRunLogId: null });
@@ -39,13 +39,13 @@ describe("InMemoryTokenUsageLogRepository", () => {
   });
 
   it("findRecent に空リストを返す（ログ未登録時）", async () => {
-    const repo = new InMemoryTokenUsageLogRepository();
+    const repo = createInMemoryTokenUsageLogRepository();
     const logs = await repo.findRecent(10);
     expect(logs).toEqual([]);
   });
 
   it("summarize はすべてのトークン合計を返す", async () => {
-    const repo = new InMemoryTokenUsageLogRepository();
+    const repo = createInMemoryTokenUsageLogRepository();
     await repo.create({ model: "m", inputTokens: 100, outputTokens: 50, batchRunLogId: null });
     await repo.create({ model: "m", inputTokens: 200, outputTokens: 100, batchRunLogId: null });
     const summary = await repo.summarize();
@@ -55,7 +55,7 @@ describe("InMemoryTokenUsageLogRepository", () => {
   });
 
   it("summarize はログなしの場合 0 を返す", async () => {
-    const repo = new InMemoryTokenUsageLogRepository();
+    const repo = createInMemoryTokenUsageLogRepository();
     const summary = await repo.summarize();
     expect(summary.totalInputTokens).toBe(0);
     expect(summary.totalOutputTokens).toBe(0);

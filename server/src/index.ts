@@ -8,9 +8,10 @@ export { loadEnv, type ServerEnv } from "./config/env.js";
 export { validateBody } from "./middleware/validateBody.js";
 export { errorHandler } from "./middleware/errorHandler.js";
 export {
-  InMemoryUserRepository,
+  createInMemoryUserRepository,
+  createTestUserRepository,
   type UserRepository,
   type User,
 } from "./persistence/userRepository.js";
-export { PrismaUserRepository } from "./persistence/prismaUserRepository.js";
+export { createPrismaUserRepository } from "./persistence/prismaUserRepository.js";
 export { requireAuth } from "./middleware/requireAuth.js";

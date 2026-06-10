@@ -2,15 +2,15 @@ import request from "supertest";
 import { describe, expect, it } from "vitest";
 
 import { createApp } from "../app.js";
-import { InMemoryBatchRunLogRepository } from "../persistence/batchRunLogRepository.js";
-import { InMemoryUserRepository } from "../persistence/userRepository.js";
+import { createInMemoryBatchRunLogRepository } from "../persistence/batchRunLogRepository.js";
+import { createTestUserRepository } from "../persistence/userRepository.js";
 import { createTestDeps } from "../testing/createTestDeps.js";
 
 async function makeApp(
-  logRepo = new InMemoryBatchRunLogRepository(),
+  logRepo = createInMemoryBatchRunLogRepository(),
   role: "admin" | "member" = "admin",
 ) {
-  const userRepo = await InMemoryUserRepository.createWithTestUser(undefined, role);
+  const userRepo = await createTestUserRepository(undefined, role);
   return createApp(
     await createTestDeps({
       userRepository: userRepo,
@@ -33,7 +33,7 @@ describe("GET /api/admin/batch-logs", () => {
   });
 
   it("member ロールの場合は 403 を返す（#136）", async () => {
-    const app = await makeApp(new InMemoryBatchRunLogRepository(), "member");
+    const app = await makeApp(createInMemoryBatchRunLogRepository(), "member");
     const agent = await loginAgent(app);
     const res = await agent.get("/api/admin/batch-logs");
     expect(res.status).toBe(403);
@@ -48,7 +48,7 @@ describe("GET /api/admin/batch-logs", () => {
   });
 
   it("認証済みの場合は 200 とログ一覧（executedAt 降順）を返す", async () => {
-    const logRepo = new InMemoryBatchRunLogRepository();
+    const logRepo = createInMemoryBatchRunLogRepository();
     await logRepo.create({ status: "success", messageCount: 3, errorMessage: null, errorCode: null });
     await logRepo.create({ status: "failure", messageCount: 0, errorMessage: "API error", errorCode: "ERR_API" });
     const app = await makeApp(logRepo);

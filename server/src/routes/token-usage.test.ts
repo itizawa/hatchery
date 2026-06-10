@@ -2,15 +2,15 @@ import request from "supertest";
 import { describe, expect, it } from "vitest";
 
 import { createApp } from "../app.js";
-import { InMemoryTokenUsageLogRepository } from "../persistence/tokenUsageLogRepository.js";
-import { InMemoryUserRepository } from "../persistence/userRepository.js";
+import { createInMemoryTokenUsageLogRepository } from "../persistence/tokenUsageLogRepository.js";
+import { createTestUserRepository } from "../persistence/userRepository.js";
 import { createTestDeps } from "../testing/createTestDeps.js";
 
 async function makeApp(
-  tokenRepo = new InMemoryTokenUsageLogRepository(),
+  tokenRepo = createInMemoryTokenUsageLogRepository(),
   role: "admin" | "member" = "admin",
 ) {
-  const userRepo = await InMemoryUserRepository.createWithTestUser(undefined, role);
+  const userRepo = await createTestUserRepository(undefined, role);
   return createApp(
     await createTestDeps({
       userRepository: userRepo,
@@ -33,7 +33,7 @@ describe("GET /api/admin/token-usage", () => {
   });
 
   it("member ロールの場合は 403 を返す", async () => {
-    const app = await makeApp(new InMemoryTokenUsageLogRepository(), "member");
+    const app = await makeApp(createInMemoryTokenUsageLogRepository(), "member");
     const agent = await loginAgent(app);
     const res = await agent.get("/api/admin/token-usage");
     expect(res.status).toBe(403);
@@ -51,7 +51,7 @@ describe("GET /api/admin/token-usage", () => {
   });
 
   it("認証済み admin の場合は 200 と使用量一覧・集計を返す", async () => {
-    const tokenRepo = new InMemoryTokenUsageLogRepository();
+    const tokenRepo = createInMemoryTokenUsageLogRepository();
     await tokenRepo.create({ model: "claude-haiku-4-5", inputTokens: 100, outputTokens: 50, batchRunLogId: null });
     await tokenRepo.create({ model: "claude-haiku-4-5", inputTokens: 200, outputTokens: 100, batchRunLogId: "batch-1" });
     const app = await makeApp(tokenRepo);

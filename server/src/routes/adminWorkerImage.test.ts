@@ -2,8 +2,8 @@ import request from "supertest";
 import { describe, expect, it } from "vitest";
 
 import { createApp } from "../app.js";
-import { InMemoryWorkerRepository } from "../persistence/workerRepository.js";
-import { InMemoryUserRepository } from "../persistence/userRepository.js";
+import { createInMemoryWorkerRepository } from "../persistence/workerRepository.js";
+import { createTestUserRepository } from "../persistence/userRepository.js";
 import { createTestDeps } from "../testing/createTestDeps.js";
 import { InMemoryStorageService } from "../services/storageService.js";
 
@@ -12,8 +12,8 @@ const defaultWorkers = [
 ];
 
 async function makeApp(role: "admin" | "member" = "admin") {
-  const userRepo = await InMemoryUserRepository.createWithTestUser(null, role);
-  const workerRepo = new InMemoryWorkerRepository(defaultWorkers);
+  const userRepo = await createTestUserRepository(null, role);
+  const workerRepo = createInMemoryWorkerRepository(defaultWorkers);
   const storageService = new InMemoryStorageService();
   return createApp(
     await createTestDeps({

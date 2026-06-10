@@ -2,14 +2,14 @@ import request from "supertest";
 import { describe, expect, it } from "vitest";
 
 import { createApp } from "../app.js";
-import { InMemoryWorkerRepository } from "../persistence/workerRepository.js";
-import { InMemoryUserRepository } from "../persistence/userRepository.js";
+import { createInMemoryWorkerRepository } from "../persistence/workerRepository.js";
+import { createTestUserRepository } from "../persistence/userRepository.js";
 import { createTestDeps } from "../testing/createTestDeps.js";
 
 const WORKER_ID = "wrk-testworker";
 
-async function buildApp(workerRepository = new InMemoryWorkerRepository()) {
-  const userRepository = await InMemoryUserRepository.createWithTestUser(null, "admin");
+async function buildApp(workerRepository = createInMemoryWorkerRepository()) {
+  const userRepository = await createTestUserRepository(null, "admin");
   const app = createApp(
     await createTestDeps({
       userRepository,
@@ -19,8 +19,8 @@ async function buildApp(workerRepository = new InMemoryWorkerRepository()) {
   return { app, workerRepository };
 }
 
-async function buildAppWithMember(workerRepository = new InMemoryWorkerRepository()) {
-  const userRepository = await InMemoryUserRepository.createWithTestUser(null, "member");
+async function buildAppWithMember(workerRepository = createInMemoryWorkerRepository()) {
+  const userRepository = await createTestUserRepository(null, "member");
   const app = createApp(
     await createTestDeps({
       userRepository,
@@ -46,7 +46,7 @@ describe("PATCH /api/workers/:id（admin のみ更新可 / #181）", () => {
   describe("認証", () => {
     it("①未認証だと 401 を返す", async () => {
       const { app } = await buildApp(
-        new InMemoryWorkerRepository([
+        createInMemoryWorkerRepository([
           { id: WORKER_ID, displayName: "Worker", isBot: true, role: null, personality: null, imageUrl: null },
         ]),
       );
@@ -60,7 +60,7 @@ describe("PATCH /api/workers/:id（admin のみ更新可 / #181）", () => {
   describe("認可", () => {
     it("②admin は更新できて 200 を返す", async () => {
       const { app } = await buildApp(
-        new InMemoryWorkerRepository([
+        createInMemoryWorkerRepository([
           { id: WORKER_ID, displayName: "Worker", isBot: true, role: null, personality: null, imageUrl: null },
         ]),
       );
@@ -74,7 +74,7 @@ describe("PATCH /api/workers/:id（admin のみ更新可 / #181）", () => {
 
     it("③member は更新できず 403 を返す", async () => {
       const { app } = await buildAppWithMember(
-        new InMemoryWorkerRepository([
+        createInMemoryWorkerRepository([
           { id: WORKER_ID, displayName: "Worker", isBot: true, role: null, personality: null, imageUrl: null },
         ]),
       );
@@ -89,7 +89,7 @@ describe("PATCH /api/workers/:id（admin のみ更新可 / #181）", () => {
   describe("正常系", () => {
     it("admin が displayName / role / personality を更新すると 200 で更新後の Worker を返す", async () => {
       const { app } = await buildApp(
-        new InMemoryWorkerRepository([
+        createInMemoryWorkerRepository([
           { id: WORKER_ID, displayName: "Worker", isBot: true, role: null, personality: null, imageUrl: null },
         ]),
       );
@@ -106,7 +106,7 @@ describe("PATCH /api/workers/:id（admin のみ更新可 / #181）", () => {
 
   describe("存在しないリソース", () => {
     it("④不存在 Worker への更新は 404 を返す", async () => {
-      const { app } = await buildApp(new InMemoryWorkerRepository([]));
+      const { app } = await buildApp(createInMemoryWorkerRepository([]));
       const agent = await loginAsAdmin(app);
       const res = await agent.patch("/api/workers/non-existent-id").send({ displayName: "test" });
       expect(res.status).toBe(404);
@@ -116,7 +116,7 @@ describe("PATCH /api/workers/:id（admin のみ更新可 / #181）", () => {
   describe("バリデーション", () => {
     it("⑤displayName が 51 文字なら 400 を返す", async () => {
       const { app } = await buildApp(
-        new InMemoryWorkerRepository([
+        createInMemoryWorkerRepository([
           { id: WORKER_ID, displayName: "Worker", isBot: true, role: null, personality: null, imageUrl: null },
         ]),
       );
@@ -132,7 +132,7 @@ describe("PATCH /api/workers/:id（admin のみ更新可 / #181）", () => {
 describe("GET /api/workers（Bot Worker 一覧 / #240）", () => {
   it("認証不要で 200 を返す", async () => {
     const { app } = await buildApp(
-      new InMemoryWorkerRepository([
+      createInMemoryWorkerRepository([
         { id: "bot1", displayName: "Bot", role: "役職", isBot: true, personality: null, imageUrl: null },
       ]),
     );
@@ -142,7 +142,7 @@ describe("GET /api/workers（Bot Worker 一覧 / #240）", () => {
 
   it("isBot=true の Worker のみを配列で返す", async () => {
     const { app } = await buildApp(
-      new InMemoryWorkerRepository([
+      createInMemoryWorkerRepository([
         { id: "bot1", displayName: "BotA", role: null, isBot: true, personality: null, imageUrl: null },
         { id: "user1", displayName: "UserB", role: null, isBot: false, personality: null, imageUrl: null },
       ]),
@@ -154,7 +154,7 @@ describe("GET /api/workers（Bot Worker 一覧 / #240）", () => {
   });
 
   it("Bot が存在しない場合は空配列を返す", async () => {
-    const { app } = await buildApp(new InMemoryWorkerRepository([]));
+    const { app } = await buildApp(createInMemoryWorkerRepository([]));
     const res = await request(app).get("/api/workers");
     expect(res.status).toBe(200);
     expect(res.body).toEqual([]);
@@ -162,7 +162,7 @@ describe("GET /api/workers（Bot Worker 一覧 / #240）", () => {
 
   it("論理削除済み Bot は通常一覧に含まれない（#218）", async () => {
     const { app } = await buildApp(
-      new InMemoryWorkerRepository([
+      createInMemoryWorkerRepository([
         { id: "bot1", displayName: "BotA", role: null, isBot: true, personality: null, deletedAt: new Date() },
       ]),
     );
@@ -173,7 +173,7 @@ describe("GET /api/workers（Bot Worker 一覧 / #240）", () => {
 
   it("includeDeleted=true を指定すると論理削除済み Bot も含まれる（#218）", async () => {
     const { app } = await buildApp(
-      new InMemoryWorkerRepository([
+      createInMemoryWorkerRepository([
         { id: "bot1", displayName: "ActiveBot", role: null, isBot: true, personality: null },
         { id: "bot2", displayName: "DeletedBot", role: null, isBot: true, personality: null, deletedAt: new Date() },
       ]),

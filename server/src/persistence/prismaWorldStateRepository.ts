@@ -18,27 +18,27 @@ function toRecord(row: {
 }
 
 /** WorldStateRepository の Prisma / PostgreSQL 実装（ADR-0019 / #305）。 */
-export class PrismaWorldStateRepository implements WorldStateRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export function createPrismaWorldStateRepository(prisma: PrismaClient): WorldStateRepository {
+  return {
+    async get(): Promise<WorldStateRecord | null> {
+      const row = await prisma.worldState.findUnique({ where: { id: "singleton" } });
+      return row ? toRecord(row) : null;
+    },
 
-  async get(): Promise<WorldStateRecord | null> {
-    const row = await this.prisma.worldState.findUnique({ where: { id: "singleton" } });
-    return row ? toRecord(row) : null;
-  }
-
-  async upsert(state: Omit<WorldStateRecord, "id" | "updatedAt">): Promise<WorldStateRecord> {
-    const row = await this.prisma.worldState.upsert({
-      where: { id: "singleton" },
-      update: {
-        summaryVersion: state.summaryVersion,
-        workerStates: state.workerStates,
-      },
-      create: {
-        id: "singleton",
-        summaryVersion: state.summaryVersion,
-        workerStates: state.workerStates,
-      },
-    });
-    return toRecord(row);
-  }
+    async upsert(state: Omit<WorldStateRecord, "id" | "updatedAt">): Promise<WorldStateRecord> {
+      const row = await prisma.worldState.upsert({
+        where: { id: "singleton" },
+        update: {
+          summaryVersion: state.summaryVersion,
+          workerStates: state.workerStates,
+        },
+        create: {
+          id: "singleton",
+          summaryVersion: state.summaryVersion,
+          workerStates: state.workerStates,
+        },
+      });
+      return toRecord(row);
+    },
+  };
 }

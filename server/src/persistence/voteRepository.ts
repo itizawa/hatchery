@@ -21,26 +21,28 @@ export interface VoteRepository {
 }
 
 /** DB 非依存のインメモリ実装。ユースケース/ルートのテストで注入する。 */
-export class InMemoryVoteRepository implements VoteRepository {
-  private readonly records: VoteRecord[] = [];
-  private seq = 0;
+export function createInMemoryVoteRepository(): VoteRepository {
+  const records: VoteRecord[] = [];
+  let seq = 0;
 
-  hasVoted(userId: string, targetType: VoteTargetType, targetId: string): Promise<boolean> {
-    const exists = this.records.some(
-      (r) => r.userId === userId && r.targetType === targetType && r.targetId === targetId,
-    );
-    return Promise.resolve(exists);
-  }
+  return {
+    hasVoted(userId: string, targetType: VoteTargetType, targetId: string): Promise<boolean> {
+      const exists = records.some(
+        (r) => r.userId === userId && r.targetType === targetType && r.targetId === targetId,
+      );
+      return Promise.resolve(exists);
+    },
 
-  create(userId: string, targetType: VoteTargetType, targetId: string): Promise<void> {
-    this.seq += 1;
-    this.records.push({
-      id: `vote-${this.seq}`,
-      userId,
-      targetType,
-      targetId,
-      createdAt: new Date(),
-    });
-    return Promise.resolve();
-  }
+    create(userId: string, targetType: VoteTargetType, targetId: string): Promise<void> {
+      seq += 1;
+      records.push({
+        id: `vote-${seq}`,
+        userId,
+        targetType,
+        targetId,
+        createdAt: new Date(),
+      });
+      return Promise.resolve();
+    },
+  };
 }

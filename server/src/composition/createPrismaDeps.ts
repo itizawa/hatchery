@@ -1,18 +1,18 @@
 import type { PrismaClient } from "@prisma/client";
 
 import type { AppDeps } from "../app.js";
-import { PrismaAppSettingRepository } from "../persistence/prismaAppSettingRepository.js";
-import { PrismaBatchRunLogRepository } from "../persistence/prismaBatchRunLogRepository.js";
-import { PrismaWorkerRepository } from "../persistence/prismaWorkerRepository.js";
-import { PrismaInvitationLinkRepository } from "../persistence/prismaInvitationLinkRepository.js";
-import { PrismaTokenUsageLogRepository } from "../persistence/prismaTokenUsageLogRepository.js";
-import { PrismaUserRepository } from "../persistence/prismaUserRepository.js";
-import { PrismaCommunityRepository } from "../persistence/prismaCommunityRepository.js";
-import { PrismaPostRepository } from "../persistence/prismaPostRepository.js";
-import { PrismaCommentRepository } from "../persistence/prismaCommentRepository.js";
-import { PrismaSubscriptionRepository } from "../persistence/prismaSubscriptionRepository.js";
-import { PrismaVoteRepository } from "../persistence/prismaVoteRepository.js";
-import { PrismaWorldStateRepository } from "../persistence/prismaWorldStateRepository.js";
+import { createPrismaAppSettingRepository } from "../persistence/prismaAppSettingRepository.js";
+import { createPrismaBatchRunLogRepository } from "../persistence/prismaBatchRunLogRepository.js";
+import { createPrismaWorkerRepository } from "../persistence/prismaWorkerRepository.js";
+import { createPrismaInvitationLinkRepository } from "../persistence/prismaInvitationLinkRepository.js";
+import { createPrismaTokenUsageLogRepository } from "../persistence/prismaTokenUsageLogRepository.js";
+import { createPrismaUserRepository } from "../persistence/prismaUserRepository.js";
+import { createPrismaCommunityRepository } from "../persistence/prismaCommunityRepository.js";
+import { createPrismaPostRepository } from "../persistence/prismaPostRepository.js";
+import { createPrismaCommentRepository } from "../persistence/prismaCommentRepository.js";
+import { createPrismaSubscriptionRepository } from "../persistence/prismaSubscriptionRepository.js";
+import { createPrismaVoteRepository } from "../persistence/prismaVoteRepository.js";
+import { createPrismaWorldStateRepository } from "../persistence/prismaWorldStateRepository.js";
 import { GcsStorageService, InMemoryStorageService } from "../services/storageService.js";
 
 /**
@@ -24,27 +24,25 @@ import { GcsStorageService, InMemoryStorageService } from "../services/storageSe
  * DI コンテナは使わず手動 DI のまま（ADR-0012）。
  * common への DI 基盤の漏洩なし（ADR-0001 / ADR-0005）。
  */
-export function createPrismaDeps(
-  prisma: PrismaClient,
-): Omit<AppDeps, "security" | "sessionStore"> {
+export function createPrismaDeps(prisma: PrismaClient): Omit<AppDeps, "security" | "sessionStore"> {
   const gcsBucketName = process.env.GCS_BUCKET_NAME;
   const storageService = gcsBucketName
     ? new GcsStorageService(gcsBucketName)
     : new InMemoryStorageService();
 
   return {
-    userRepository: new PrismaUserRepository(prisma),
-    workerRepository: new PrismaWorkerRepository(prisma),
-    appSettingRepository: new PrismaAppSettingRepository(prisma),
-    batchRunLogRepository: new PrismaBatchRunLogRepository(prisma),
-    invitationLinkRepository: new PrismaInvitationLinkRepository(prisma),
-    tokenUsageLogRepository: new PrismaTokenUsageLogRepository(prisma),
-    communityRepository: new PrismaCommunityRepository(prisma),
-    postRepository: new PrismaPostRepository(prisma),
-    commentRepository: new PrismaCommentRepository(prisma),
-    subscriptionRepository: new PrismaSubscriptionRepository(prisma),
-    voteRepository: new PrismaVoteRepository(prisma),
-    worldStateRepository: new PrismaWorldStateRepository(prisma),
+    userRepository: createPrismaUserRepository(prisma),
+    workerRepository: createPrismaWorkerRepository(prisma),
+    appSettingRepository: createPrismaAppSettingRepository(prisma),
+    batchRunLogRepository: createPrismaBatchRunLogRepository(prisma),
+    invitationLinkRepository: createPrismaInvitationLinkRepository(prisma),
+    tokenUsageLogRepository: createPrismaTokenUsageLogRepository(prisma),
+    communityRepository: createPrismaCommunityRepository(prisma),
+    postRepository: createPrismaPostRepository(prisma),
+    commentRepository: createPrismaCommentRepository(prisma),
+    subscriptionRepository: createPrismaSubscriptionRepository(prisma),
+    voteRepository: createPrismaVoteRepository(prisma),
+    worldStateRepository: createPrismaWorldStateRepository(prisma),
     storageService,
   };
 }

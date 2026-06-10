@@ -2,15 +2,15 @@ import request from "supertest";
 import { describe, expect, it } from "vitest";
 
 import { createApp } from "../app.js";
-import { InMemoryCommentRepository } from "../persistence/commentRepository.js";
-import { InMemoryPostRepository } from "../persistence/postRepository.js";
-import { InMemoryVoteRepository } from "../persistence/voteRepository.js";
+import { createInMemoryCommentRepository } from "../persistence/commentRepository.js";
+import { createInMemoryPostRepository } from "../persistence/postRepository.js";
+import { createInMemoryVoteRepository } from "../persistence/voteRepository.js";
 import { createTestDeps } from "../testing/createTestDeps.js";
 
 describe("GET /api/posts/:postId", () => {
   it("post + comments のスレッドを取得できる（認証不要）", async () => {
-    const postRepo = new InMemoryPostRepository();
-    const commentRepo = new InMemoryCommentRepository();
+    const postRepo = createInMemoryPostRepository();
+    const commentRepo = createInMemoryCommentRepository();
 
     const [post] = await postRepo.createMany("community-1", [
       { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "Thread Title", text: "Thread Text" },
@@ -42,7 +42,7 @@ describe("GET /api/posts/:postId", () => {
 
 describe("POST /api/posts/:postId/vote", () => {
   it("認証済みユーザーが post に up vote できる", async () => {
-    const postRepo = new InMemoryPostRepository();
+    const postRepo = createInMemoryPostRepository();
     const [post] = await postRepo.createMany("community-1", [
       { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "Title", text: "Text" },
     ]);
@@ -63,8 +63,8 @@ describe("POST /api/posts/:postId/vote", () => {
   });
 
   it("二重投票は 409 を返す", async () => {
-    const postRepo = new InMemoryPostRepository();
-    const voteRepo = new InMemoryVoteRepository();
+    const postRepo = createInMemoryPostRepository();
+    const voteRepo = createInMemoryVoteRepository();
     const [post] = await postRepo.createMany("community-1", [
       { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "Title", text: "Text" },
     ]);
@@ -93,7 +93,7 @@ describe("POST /api/posts/:postId/vote", () => {
   });
 
   it("未認証では 401 を返す", async () => {
-    const postRepo = new InMemoryPostRepository();
+    const postRepo = createInMemoryPostRepository();
     const [post] = await postRepo.createMany("community-1", [
       { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "Title", text: "Text" },
     ]);
@@ -121,8 +121,8 @@ describe("POST /api/posts/:postId/vote", () => {
 
 describe("POST /api/comments/:commentId/vote", () => {
   it("認証済みユーザーが comment に up vote できる", async () => {
-    const postRepo = new InMemoryPostRepository();
-    const commentRepo = new InMemoryCommentRepository();
+    const postRepo = createInMemoryPostRepository();
+    const commentRepo = createInMemoryCommentRepository();
     const [post] = await postRepo.createMany("community-1", [
       { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "Title", text: "Text" },
     ]);
@@ -149,9 +149,9 @@ describe("POST /api/comments/:commentId/vote", () => {
   });
 
   it("二重投票は 409 を返す", async () => {
-    const postRepo = new InMemoryPostRepository();
-    const commentRepo = new InMemoryCommentRepository();
-    const voteRepo = new InMemoryVoteRepository();
+    const postRepo = createInMemoryPostRepository();
+    const commentRepo = createInMemoryCommentRepository();
+    const voteRepo = createInMemoryVoteRepository();
     const [post] = await postRepo.createMany("community-1", [
       { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "Title", text: "Text" },
     ]);

@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { InMemoryCommentRepository } from "./commentRepository.js";
+import { createInMemoryCommentRepository } from "./commentRepository.js";
 
-describe("InMemoryCommentRepository", () => {
+describe("createInMemoryCommentRepository", () => {
   describe("createMany", () => {
     it("複数のコメントをバルク作成できる", async () => {
-      const repo = new InMemoryCommentRepository();
+      const repo = createInMemoryCommentRepository();
       const created = await repo.createMany("community-1", [
         { postId: "post-1", slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", text: "Comment 1" },
         { postId: "post-1", slotKey: "2026-06-10T09:00", seq: 1, author: "worker-2", text: "Comment 2" },
@@ -15,7 +15,7 @@ describe("InMemoryCommentRepository", () => {
     });
 
     it("(communityId, slotKey, seq) が重複する場合は既存を返す（Cron 二重発火ガード）", async () => {
-      const repo = new InMemoryCommentRepository();
+      const repo = createInMemoryCommentRepository();
       await repo.createMany("community-1", [
         { postId: "post-1", slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", text: "Comment 1" },
       ]);
@@ -30,7 +30,7 @@ describe("InMemoryCommentRepository", () => {
 
   describe("listByPost", () => {
     it("post のコメントを createdAt 昇順で返す", async () => {
-      const repo = new InMemoryCommentRepository();
+      const repo = createInMemoryCommentRepository();
       await repo.createMany("community-1", [
         { postId: "post-1", slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", text: "First" },
         { postId: "post-1", slotKey: "2026-06-10T09:00", seq: 1, author: "worker-2", text: "Second" },
@@ -41,7 +41,7 @@ describe("InMemoryCommentRepository", () => {
     });
 
     it("別の post のコメントは含めない", async () => {
-      const repo = new InMemoryCommentRepository();
+      const repo = createInMemoryCommentRepository();
       await repo.createMany("community-1", [
         { postId: "post-1", slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", text: "P1 Comment" },
         { postId: "post-2", slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", text: "P2 Comment" },
@@ -54,7 +54,7 @@ describe("InMemoryCommentRepository", () => {
 
   describe("findById", () => {
     it("存在する id で取得できる", async () => {
-      const repo = new InMemoryCommentRepository();
+      const repo = createInMemoryCommentRepository();
       const [created] = await repo.createMany("community-1", [
         { postId: "post-1", slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", text: "Comment" },
       ]);
@@ -63,7 +63,7 @@ describe("InMemoryCommentRepository", () => {
     });
 
     it("存在しない id は null を返す", async () => {
-      const repo = new InMemoryCommentRepository();
+      const repo = createInMemoryCommentRepository();
       const result = await repo.findById("not-exists");
       expect(result).toBeNull();
     });
@@ -71,7 +71,7 @@ describe("InMemoryCommentRepository", () => {
 
   describe("addScore", () => {
     it("score を加算できる", async () => {
-      const repo = new InMemoryCommentRepository();
+      const repo = createInMemoryCommentRepository();
       const [created] = await repo.createMany("community-1", [
         { postId: "post-1", slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", text: "Comment" },
       ]);
@@ -80,7 +80,7 @@ describe("InMemoryCommentRepository", () => {
     });
 
     it("存在しない id は null を返す", async () => {
-      const repo = new InMemoryCommentRepository();
+      const repo = createInMemoryCommentRepository();
       const result = await repo.addScore("not-exists", 1);
       expect(result).toBeNull();
     });

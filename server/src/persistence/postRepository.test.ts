@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { InMemoryPostRepository } from "./postRepository.js";
+import { createInMemoryPostRepository } from "./postRepository.js";
 
-describe("InMemoryPostRepository", () => {
+describe("createInMemoryPostRepository", () => {
   describe("createMany", () => {
     it("複数の post をバルク作成できる", async () => {
-      const repo = new InMemoryPostRepository();
+      const repo = createInMemoryPostRepository();
       const created = await repo.createMany("community-1", [
         { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "Title 1", text: "Text 1" },
         { slotKey: "2026-06-10T09:00", seq: 1, author: "worker-2", title: "Title 2", text: "Text 2" },
@@ -16,7 +16,7 @@ describe("InMemoryPostRepository", () => {
     });
 
     it("(communityId, slotKey, seq) が重複する場合は既存を返す（Cron 二重発火ガード）", async () => {
-      const repo = new InMemoryPostRepository();
+      const repo = createInMemoryPostRepository();
       await repo.createMany("community-1", [
         { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "Title 1", text: "Text 1" },
       ]);
@@ -31,7 +31,7 @@ describe("InMemoryPostRepository", () => {
 
   describe("listByCommunity", () => {
     it("community の post を新着順で返す", async () => {
-      const repo = new InMemoryPostRepository();
+      const repo = createInMemoryPostRepository();
       await repo.createMany("community-1", [
         { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "Old", text: "Old" },
       ]);
@@ -44,7 +44,7 @@ describe("InMemoryPostRepository", () => {
     });
 
     it("別の community の post は含めない", async () => {
-      const repo = new InMemoryPostRepository();
+      const repo = createInMemoryPostRepository();
       await repo.createMany("community-1", [
         { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "C1 Post", text: "text" },
       ]);
@@ -59,7 +59,7 @@ describe("InMemoryPostRepository", () => {
 
   describe("findById", () => {
     it("存在する id で取得できる", async () => {
-      const repo = new InMemoryPostRepository();
+      const repo = createInMemoryPostRepository();
       const [created] = await repo.createMany("community-1", [
         { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "Title", text: "Text" },
       ]);
@@ -68,7 +68,7 @@ describe("InMemoryPostRepository", () => {
     });
 
     it("存在しない id は null を返す", async () => {
-      const repo = new InMemoryPostRepository();
+      const repo = createInMemoryPostRepository();
       const result = await repo.findById("not-exists");
       expect(result).toBeNull();
     });
@@ -76,7 +76,7 @@ describe("InMemoryPostRepository", () => {
 
   describe("addScore", () => {
     it("score を加算できる", async () => {
-      const repo = new InMemoryPostRepository();
+      const repo = createInMemoryPostRepository();
       const [created] = await repo.createMany("community-1", [
         { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "Title", text: "Text" },
       ]);
@@ -85,7 +85,7 @@ describe("InMemoryPostRepository", () => {
     });
 
     it("存在しない id は null を返す", async () => {
-      const repo = new InMemoryPostRepository();
+      const repo = createInMemoryPostRepository();
       const result = await repo.addScore("not-exists", 1);
       expect(result).toBeNull();
     });
@@ -93,7 +93,7 @@ describe("InMemoryPostRepository", () => {
 
   describe("listByCommunityIds", () => {
     it("複数 communityId の post を新着順で返す（ホームフィード）", async () => {
-      const repo = new InMemoryPostRepository();
+      const repo = createInMemoryPostRepository();
       await repo.createMany("community-1", [
         { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "C1", text: "text" },
       ]);
@@ -105,7 +105,7 @@ describe("InMemoryPostRepository", () => {
     });
 
     it("空の communityIds は空配列を返す", async () => {
-      const repo = new InMemoryPostRepository();
+      const repo = createInMemoryPostRepository();
       await repo.createMany("community-1", [
         { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "Title", text: "Text" },
       ]);

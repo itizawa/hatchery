@@ -10,15 +10,15 @@ import request from "supertest";
 import { describe, expect, it } from "vitest";
 
 import { createApp } from "../app.js";
-import { InMemoryCommunityRepository } from "../persistence/communityRepository.js";
-import { InMemoryUserRepository } from "../persistence/userRepository.js";
+import { createInMemoryCommunityRepository } from "../persistence/communityRepository.js";
+import { createTestUserRepository } from "../persistence/userRepository.js";
 import { createTestDeps } from "../testing/createTestDeps.js";
 
 async function makeApp(
-  communityRepo = new InMemoryCommunityRepository(),
+  communityRepo = createInMemoryCommunityRepository(),
   role: "admin" | "member" = "admin",
 ) {
-  const userRepo = await InMemoryUserRepository.createWithTestUser(null, role);
+  const userRepo = await createTestUserRepository(null, role);
   return createApp(
     await createTestDeps({
       userRepository: userRepo,
@@ -41,7 +41,7 @@ describe("GET /api/admin/communities (#310)", () => {
   });
 
   it("member ユーザーは 403 を返す", async () => {
-    const app = await makeApp(new InMemoryCommunityRepository(), "member");
+    const app = await makeApp(createInMemoryCommunityRepository(), "member");
     const agent = await loginAgent(app);
     const res = await agent.get("/api/admin/communities");
     expect(res.status).toBe(403);
@@ -56,7 +56,7 @@ describe("GET /api/admin/communities (#310)", () => {
   });
 
   it("登録済みの community が一覧に含まれる", async () => {
-    const repo = new InMemoryCommunityRepository();
+    const repo = createInMemoryCommunityRepository();
     await repo.create({
       slug: "tech-news",
       name: "テックニュース",
@@ -84,7 +84,7 @@ describe("POST /api/admin/communities (#310)", () => {
   });
 
   it("member ユーザーは 403 を返す", async () => {
-    const app = await makeApp(new InMemoryCommunityRepository(), "member");
+    const app = await makeApp(createInMemoryCommunityRepository(), "member");
     const agent = await loginAgent(app);
     const res = await agent.post("/api/admin/communities").send(validBody);
     expect(res.status).toBe(403);
@@ -104,7 +104,7 @@ describe("POST /api/admin/communities (#310)", () => {
   });
 
   it("slug 重複の場合は 409 を返す", async () => {
-    const repo = new InMemoryCommunityRepository();
+    const repo = createInMemoryCommunityRepository();
     await repo.create({ slug: "existing-slug", name: "既存", description: "説明" });
     const app = await makeApp(repo);
     const agent = await loginAgent(app);
@@ -150,7 +150,7 @@ describe("PATCH /api/admin/communities/:id (#310)", () => {
   };
 
   async function makeAppWithCommunity(role: "admin" | "member" = "admin") {
-    const repo = new InMemoryCommunityRepository();
+    const repo = createInMemoryCommunityRepository();
     const community = await repo.create({
       slug: "test-community",
       name: "テストコミュニティ",

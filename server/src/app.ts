@@ -12,22 +12,22 @@ import { createSecureHeaders } from "./middleware/secureHeaders.js";
 import type { AppSettingRepository } from "./persistence/appSettingRepository.js";
 import type { BatchRunLogRepository } from "./persistence/batchRunLogRepository.js";
 import type { CommunityRepository } from "./persistence/communityRepository.js";
-import { InMemoryCommunityRepository } from "./persistence/communityRepository.js";
+import { createInMemoryCommunityRepository } from "./persistence/communityRepository.js";
 import type { CommentRepository } from "./persistence/commentRepository.js";
-import { InMemoryCommentRepository } from "./persistence/commentRepository.js";
+import { createInMemoryCommentRepository } from "./persistence/commentRepository.js";
 import type { WorkerRepository } from "./persistence/workerRepository.js";
 import type { InvitationLinkRepository } from "./persistence/invitationLinkRepository.js";
 import type { StorageService } from "./services/storageService.js";
 import type { PostRepository } from "./persistence/postRepository.js";
-import { InMemoryPostRepository } from "./persistence/postRepository.js";
+import { createInMemoryPostRepository } from "./persistence/postRepository.js";
 import type { SubscriptionRepository } from "./persistence/subscriptionRepository.js";
-import { InMemorySubscriptionRepository } from "./persistence/subscriptionRepository.js";
+import { createInMemorySubscriptionRepository } from "./persistence/subscriptionRepository.js";
 import type { TokenUsageLogRepository } from "./persistence/tokenUsageLogRepository.js";
 import type { UserRepository } from "./persistence/userRepository.js";
 import type { VoteRepository } from "./persistence/voteRepository.js";
-import { InMemoryVoteRepository } from "./persistence/voteRepository.js";
+import { createInMemoryVoteRepository } from "./persistence/voteRepository.js";
 import type { WorldStateRepository } from "./persistence/worldStateRepository.js";
-import { InMemoryWorldStateRepository } from "./persistence/worldStateRepository.js";
+import { createInMemoryWorldStateRepository } from "./persistence/worldStateRepository.js";
 import { createAdminRouter } from "./routes/admin.js";
 import { createAdminWorkerImageRouter } from "./routes/adminWorkerImage.js";
 import { createBatchLogsRouter } from "./routes/batch-logs.js";
@@ -172,31 +172,33 @@ export function createApp(deps: AppDeps): Express {
   app.use(passportInstance.initialize());
   app.use(passportInstance.session());
 
-  const communityRepo = deps.communityRepository ?? new InMemoryCommunityRepository();
-  const postRepo = deps.postRepository ?? new InMemoryPostRepository();
-  const commentRepo = deps.commentRepository ?? new InMemoryCommentRepository();
-  const subscriptionRepo = deps.subscriptionRepository ?? new InMemorySubscriptionRepository();
-  const voteRepo = deps.voteRepository ?? new InMemoryVoteRepository();
-  const worldStateRepo = deps.worldStateRepository ?? new InMemoryWorldStateRepository();
+  const communityRepo = deps.communityRepository ?? createInMemoryCommunityRepository();
+  const postRepo = deps.postRepository ?? createInMemoryPostRepository();
+  const commentRepo = deps.commentRepository ?? createInMemoryCommentRepository();
+  const subscriptionRepo = deps.subscriptionRepository ?? createInMemorySubscriptionRepository();
+  const voteRepo = deps.voteRepository ?? createInMemoryVoteRepository();
+  const worldStateRepo = deps.worldStateRepository ?? createInMemoryWorldStateRepository();
 
   app.use("/health", healthRouter);
   app.use("/api/auth", createAuthRouter(passportInstance, deps.userRepository));
   app.use("/api/workers", createWorkersRouter(deps.workerRepository));
   app.use("/api/admin/batch-logs", createBatchLogsRouter(deps.batchRunLogRepository));
   app.use("/api/admin/token-usage", createTokenUsageRouter(deps.tokenUsageLogRepository));
-  app.use("/api/admin", createAdminRouter(deps.appSettingRepository, deps.invitationLinkRepository, deps.workerRepository, communityRepo));
   app.use(
     "/api/admin",
-    createAdminWorkerImageRouter(deps.workerRepository, deps.storageService),
+    createAdminRouter(
+      deps.appSettingRepository,
+      deps.invitationLinkRepository,
+      deps.workerRepository,
+      communityRepo,
+    ),
   );
+  app.use("/api/admin", createAdminWorkerImageRouter(deps.workerRepository, deps.storageService));
   app.use(
     "/api/invitations",
     createInvitationsRouter(deps.invitationLinkRepository, deps.userRepository),
   );
-  app.use(
-    "/api/communities",
-    createCommunitiesRouter(communityRepo, postRepo, subscriptionRepo),
-  );
+  app.use("/api/communities", createCommunitiesRouter(communityRepo, postRepo, subscriptionRepo));
   app.use("/api/feed", createFeedRouter(subscriptionRepo, postRepo));
   app.use("/api", createPostsRouter(postRepo, commentRepo, voteRepo));
 

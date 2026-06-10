@@ -48,64 +48,66 @@ function cloneRecord(r: CommentRecord): CommentRecord {
 }
 
 /** DB 非依存のインメモリ実装。ユースケース/ルートのテストで注入する。 */
-export class InMemoryCommentRepository implements CommentRepository {
-  private readonly records: CommentRecord[] = [];
-  private seq = 0;
+export function createInMemoryCommentRepository(): CommentRepository {
+  const records: CommentRecord[] = [];
+  let seq = 0;
 
-  createMany(communityId: string, inputs: CommentCreateInput[]): Promise<CommentRecord[]> {
-    const created: CommentRecord[] = [];
-    for (const input of inputs) {
-      // 重複チェック（(communityId, slotKey, seq) ユニーク）
-      const exists = this.records.find(
-        (r) =>
-          r.communityId === communityId && r.slotKey === input.slotKey && r.seq === input.seq,
-      );
-      if (exists) {
-        created.push(cloneRecord(exists));
-        continue;
+  return {
+    createMany(communityId: string, inputs: CommentCreateInput[]): Promise<CommentRecord[]> {
+      const created: CommentRecord[] = [];
+      for (const input of inputs) {
+        // 重複チェック（(communityId, slotKey, seq) ユニーク）
+        const exists = records.find(
+          (r) =>
+            r.communityId === communityId && r.slotKey === input.slotKey && r.seq === input.seq,
+        );
+        if (exists) {
+          created.push(cloneRecord(exists));
+          continue;
+        }
+        seq += 1;
+        const record: CommentRecord = {
+          id: `comment-${seq}`,
+          communityId,
+          postId: input.postId,
+          slotKey: input.slotKey,
+          seq: input.seq,
+          author: input.author,
+          text: input.text,
+          score: 0,
+          createdAt: new Date(),
+        };
+        records.push(record);
+        created.push(cloneRecord(record));
       }
-      this.seq += 1;
-      const record: CommentRecord = {
-        id: `comment-${this.seq}`,
-        communityId,
-        postId: input.postId,
-        slotKey: input.slotKey,
-        seq: input.seq,
-        author: input.author,
-        text: input.text,
-        score: 0,
-        createdAt: new Date(),
-      };
-      this.records.push(record);
-      created.push(cloneRecord(record));
-    }
-    return Promise.resolve(created);
-  }
+      return Promise.resolve(created);
+    },
 
-  listByPost(postId: string): Promise<CommentRecord[]> {
-    const filtered = this.records
-      .filter((r) => r.postId === postId)
-      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
-    return Promise.resolve(filtered.map(cloneRecord));
-  }
+    listByPost(postId: string): Promise<CommentRecord[]> {
+      const filtered = records
+        .filter((r) => r.postId === postId)
+        .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+      return Promise.resolve(filtered.map(cloneRecord));
+    },
 
-  listByCommunity(communityId: string, limit = 50): Promise<CommentRecord[]> {
-    const filtered = this.records
-      .filter((r) => r.communityId === communityId)
-      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
-      .slice(0, limit);
-    return Promise.resolve(filtered.map(cloneRecord));
-  }
+    listByCommunity(communityId: string, limit = 50): Promise<CommentRecord[]> {
+      const filtered = records
+        .filter((r) => r.communityId === communityId)
+        .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+        .slice(0, limit);
+      return Promise.resolve(filtered.map(cloneRecord));
+    },
 
-  findById(id: string): Promise<CommentRecord | null> {
-    const found = this.records.find((r) => r.id === id);
-    return Promise.resolve(found ? cloneRecord(found) : null);
-  }
+    findById(id: string): Promise<CommentRecord | null> {
+      const found = records.find((r) => r.id === id);
+      return Promise.resolve(found ? cloneRecord(found) : null);
+    },
 
-  addScore(id: string, delta: number): Promise<CommentRecord | null> {
-    const record = this.records.find((r) => r.id === id);
-    if (!record) return Promise.resolve(null);
-    record.score += delta;
-    return Promise.resolve(cloneRecord(record));
-  }
+    addScore(id: string, delta: number): Promise<CommentRecord | null> {
+      const record = records.find((r) => r.id === id);
+      if (!record) return Promise.resolve(null);
+      record.score += delta;
+      return Promise.resolve(cloneRecord(record));
+    },
+  };
 }

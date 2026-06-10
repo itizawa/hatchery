@@ -2,15 +2,15 @@ import request from "supertest";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createApp } from "../app.js";
-import { InMemoryAppSettingRepository } from "../persistence/appSettingRepository.js";
-import { InMemoryWorkerRepository } from "../persistence/workerRepository.js";
-import { InMemoryUserRepository } from "../persistence/userRepository.js";
+import { createInMemoryAppSettingRepository } from "../persistence/appSettingRepository.js";
+import { createInMemoryWorkerRepository } from "../persistence/workerRepository.js";
+import { createTestUserRepository } from "../persistence/userRepository.js";
 import { createTestDeps } from "../testing/createTestDeps.js";
 import { getApiKey } from "./admin.js";
 import { encrypt } from "../utils/crypto.js";
 
-async function makeApp(appSettingRepo = new InMemoryAppSettingRepository(), role: "admin" | "member" = "admin", workerRepository = new InMemoryWorkerRepository()) {
-  const userRepo = await InMemoryUserRepository.createWithTestUser(null, role);
+async function makeApp(appSettingRepo = createInMemoryAppSettingRepository(), role: "admin" | "member" = "admin", workerRepository = createInMemoryWorkerRepository()) {
+  const userRepo = await createTestUserRepository(null, role);
   return createApp(
     await createTestDeps({
       userRepository: userRepo,
@@ -42,14 +42,14 @@ describe("GET /api/admin/settings", () => {
   });
 
   it("member ユーザーは 403 を返す (#136)", async () => {
-    const app = await makeApp(new InMemoryAppSettingRepository(), "member");
+    const app = await makeApp(createInMemoryAppSettingRepository(), "member");
     const agent = await loginAgent(app);
     const res = await agent.get("/api/admin/settings");
     expect(res.status).toBe(403);
   });
 
   it("CLAUDE_API_KEY が設定済みの場合はマスク表示で返す", async () => {
-    const appSettingRepo = new InMemoryAppSettingRepository([
+    const appSettingRepo = createInMemoryAppSettingRepository([
       { key: "CLAUDE_API_KEY", value: "not-encrypted", updatedAt: new Date() },
     ]);
     const app = await makeApp(appSettingRepo);
@@ -78,7 +78,7 @@ describe("PATCH /api/admin/settings", () => {
   });
 
   it("member ユーザーは 403 を返す (#136)", async () => {
-    const memberApp = await makeApp(new InMemoryAppSettingRepository(), "member");
+    const memberApp = await makeApp(createInMemoryAppSettingRepository(), "member");
     const memberAgent = await loginAgent(memberApp);
     const res = await memberAgent.patch("/api/admin/settings").send({ key: "CLAUDE_API_KEY", value: "sk-ant-test" });
     expect(res.status).toBe(403);
@@ -122,14 +122,14 @@ describe("getApiKey", () => {
 
   it("DB 未設定・env 未設定の場合は undefined を返す", async () => {
     delete process.env.ANTHROPIC_API_KEY;
-    const repo = new InMemoryAppSettingRepository();
+    const repo = createInMemoryAppSettingRepository();
     expect(await getApiKey(repo)).toBeUndefined();
   });
 
   it("DB に設定済みの場合は復号した値を返す", async () => {
     delete process.env.ANTHROPIC_API_KEY;
     const plaintext = "sk-ant-api03-test-key";
-    const repo = new InMemoryAppSettingRepository([
+    const repo = createInMemoryAppSettingRepository([
       { key: "CLAUDE_API_KEY", value: encrypt(plaintext), updatedAt: new Date() },
     ]);
     expect(await getApiKey(repo)).toBe(plaintext);
@@ -137,15 +137,15 @@ describe("getApiKey", () => {
 
   it("DB 未設定・env 設定済みの場合は env 値を返す", async () => {
     process.env.ANTHROPIC_API_KEY = "sk-ant-env-key";
-    const repo = new InMemoryAppSettingRepository();
+    const repo = createInMemoryAppSettingRepository();
     expect(await getApiKey(repo)).toBe("sk-ant-env-key");
   });
 });
 
 describe("DELETE /api/admin/workers/:id (#218)", () => {
   async function makeAppWithWorker(role: "admin" | "member" = "admin") {
-    const userRepo = await InMemoryUserRepository.createWithTestUser(null, role);
-    const workerRepo = new InMemoryWorkerRepository([
+    const userRepo = await createTestUserRepository(null, role);
+    const workerRepo = createInMemoryWorkerRepository([
       { id: "emp-1", displayName: "田中 太郎", role: "エンジニア", isBot: true, personality: null },
     ]);
     return {
@@ -205,7 +205,7 @@ describe("POST /api/admin/workers (#217)", () => {
   });
 
   it("member ロールの場合は 403 を返す", async () => {
-    const app = await makeApp(new InMemoryAppSettingRepository(), "member");
+    const app = await makeApp(createInMemoryAppSettingRepository(), "member");
     const agent = await loginAgent(app);
     const res = await agent.post("/api/admin/workers").send({ displayName: "新社員" });
     expect(res.status).toBe(403);

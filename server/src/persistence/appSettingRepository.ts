@@ -9,31 +9,31 @@ export interface AppSettingRepository {
   upsert(key: string, value: string): Promise<AppSetting>;
 }
 
-export class InMemoryAppSettingRepository implements AppSettingRepository {
-  private readonly settings: AppSetting[];
+export function createInMemoryAppSettingRepository(
+  initialSettings: AppSetting[] = [],
+): AppSettingRepository {
+  const settings: AppSetting[] = initialSettings.map((s) => ({ ...s }));
 
-  constructor(settings: AppSetting[] = []) {
-    this.settings = settings.map((s) => ({ ...s }));
-  }
+  return {
+    findAll(): Promise<AppSetting[]> {
+      return Promise.resolve(settings.map((s) => ({ ...s })));
+    },
 
-  async findAll(): Promise<AppSetting[]> {
-    return this.settings.map((s) => ({ ...s }));
-  }
+    findByKey(key: string): Promise<AppSetting | null> {
+      return Promise.resolve(settings.find((s) => s.key === key) ?? null);
+    },
 
-  async findByKey(key: string): Promise<AppSetting | null> {
-    return this.settings.find((s) => s.key === key) ?? null;
-  }
-
-  async upsert(key: string, value: string): Promise<AppSetting> {
-    const now = new Date();
-    const existing = this.settings.find((s) => s.key === key);
-    if (existing) {
-      existing.value = value;
-      existing.updatedAt = now;
-      return { ...existing };
-    }
-    const entry: AppSetting = { key, value, updatedAt: now };
-    this.settings.push(entry);
-    return { ...entry };
-  }
+    upsert(key: string, value: string): Promise<AppSetting> {
+      const now = new Date();
+      const existing = settings.find((s) => s.key === key);
+      if (existing) {
+        existing.value = value;
+        existing.updatedAt = now;
+        return Promise.resolve({ ...existing });
+      }
+      const entry: AppSetting = { key, value, updatedAt: now };
+      settings.push(entry);
+      return Promise.resolve({ ...entry });
+    },
+  };
 }

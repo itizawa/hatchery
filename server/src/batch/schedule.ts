@@ -61,28 +61,30 @@ const MIN_REARM_DELAY_MS = 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** setTimeout ベースの既定スケジューラ。発火後に翌日分を再登録して日次運用する。 */
-export class SystemScheduler implements SchedulerPort {
-  scheduleDaily(hour: number, minute: number, handler: () => void): () => void {
-    let timer: ReturnType<typeof setTimeout>;
-    let cancelled = false;
+export function createSystemScheduler(): SchedulerPort {
+  return {
+    scheduleDaily(hour: number, minute: number, handler: () => void): () => void {
+      let timer: ReturnType<typeof setTimeout>;
+      let cancelled = false;
 
-    const arm = (): void => {
-      // 早発火による二重発火を防ぐため、極端に短い待機は翌日へ繰り上げる。
-      const delay = msUntilNext(hour, minute);
-      const safeDelay = delay < MIN_REARM_DELAY_MS ? delay + DAY_MS : delay;
-      timer = setTimeout(() => {
-        if (cancelled) return;
-        handler();
-        arm(); // 翌日分を再登録して日次運用する。
-      }, safeDelay);
-    };
+      const arm = (): void => {
+        // 早発火による二重発火を防ぐため、極端に短い待機は翌日へ繰り上げる。
+        const delay = msUntilNext(hour, minute);
+        const safeDelay = delay < MIN_REARM_DELAY_MS ? delay + DAY_MS : delay;
+        timer = setTimeout(() => {
+          if (cancelled) return;
+          handler();
+          arm(); // 翌日分を再登録して日次運用する。
+        }, safeDelay);
+      };
 
-    arm();
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }
+      arm();
+      return () => {
+        cancelled = true;
+        clearTimeout(timer);
+      };
+    },
+  };
 }
 
 /** startMessageBatchScheduler のオプション。 */
@@ -91,7 +93,7 @@ export interface StartSchedulerOptions {
   hours?: readonly number[];
   /** 各定時の分（既定 0）。 */
   minute?: number;
-  /** スケジューラ実装（既定 SystemScheduler）。テストでフェイクを注入する。 */
+  /** スケジューラ実装（既定 createSystemScheduler()）。テストでフェイクを注入する。 */
   scheduler?: SchedulerPort;
 }
 
@@ -106,7 +108,7 @@ export function startMessageBatchScheduler(
 ): () => void {
   const hours = options.hours ?? DEFAULT_BATCH_HOURS;
   const minute = options.minute ?? 0;
-  const scheduler = options.scheduler ?? new SystemScheduler();
+  const scheduler = options.scheduler ?? createSystemScheduler();
 
   const cancels = hours.map((hour) =>
     scheduler.scheduleDaily(hour, minute, () => {

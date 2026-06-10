@@ -21,40 +21,34 @@ export interface SubscriptionRepository {
 }
 
 /** DB 非依存のインメモリ実装。ユースケース/ルートのテストで注入する。 */
-export class InMemorySubscriptionRepository implements SubscriptionRepository {
-  private readonly records: SubscriptionRecord[] = [];
+export function createInMemorySubscriptionRepository(): SubscriptionRepository {
+  const records: SubscriptionRecord[] = [];
 
-  add(userId: string, communityId: string): Promise<void> {
-    const exists = this.records.find(
-      (r) => r.userId === userId && r.communityId === communityId,
-    );
-    if (!exists) {
-      this.records.push({ userId, communityId, createdAt: new Date() });
-    }
-    return Promise.resolve();
-  }
+  return {
+    add(userId: string, communityId: string): Promise<void> {
+      const exists = records.find((r) => r.userId === userId && r.communityId === communityId);
+      if (!exists) {
+        records.push({ userId, communityId, createdAt: new Date() });
+      }
+      return Promise.resolve();
+    },
 
-  remove(userId: string, communityId: string): Promise<void> {
-    const idx = this.records.findIndex(
-      (r) => r.userId === userId && r.communityId === communityId,
-    );
-    if (idx !== -1) {
-      this.records.splice(idx, 1);
-    }
-    return Promise.resolve();
-  }
+    remove(userId: string, communityId: string): Promise<void> {
+      const idx = records.findIndex((r) => r.userId === userId && r.communityId === communityId);
+      if (idx !== -1) {
+        records.splice(idx, 1);
+      }
+      return Promise.resolve();
+    },
 
-  listCommunityIdsByUser(userId: string): Promise<string[]> {
-    const ids = this.records
-      .filter((r) => r.userId === userId)
-      .map((r) => r.communityId);
-    return Promise.resolve(ids);
-  }
+    listCommunityIdsByUser(userId: string): Promise<string[]> {
+      const ids = records.filter((r) => r.userId === userId).map((r) => r.communityId);
+      return Promise.resolve(ids);
+    },
 
-  hasSubscription(userId: string, communityId: string): Promise<boolean> {
-    const exists = this.records.some(
-      (r) => r.userId === userId && r.communityId === communityId,
-    );
-    return Promise.resolve(exists);
-  }
+    hasSubscription(userId: string, communityId: string): Promise<boolean> {
+      const exists = records.some((r) => r.userId === userId && r.communityId === communityId);
+      return Promise.resolve(exists);
+    },
+  };
 }

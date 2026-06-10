@@ -104,7 +104,7 @@ const rootRoute = createRootRoute({
   component: AppShell,
 });
 
-/** ホームフィード（/）= 購読コミュニティの投稿一覧。未ログインは /login へリダイレクト。 */
+/** ホームフィード（/）。認証済みなら購読フィード、未認証ならゲスト向け誘導 UI を表示する（#341）。 */
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
@@ -113,7 +113,6 @@ const indexRoute = createRoute({
       <LazyHomeFeedScene />
     </Suspense>
   ),
-  beforeLoad: requireAuth,
 });
 
 /** コミュニティブラウズ（/communities）。認証不要の公開ページ。 */

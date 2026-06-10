@@ -143,13 +143,14 @@ describe("認証ガード（未ログイン時のリダイレクト）", () => {
     vi.unstubAllGlobals();
   });
 
-  it("未ログインでホーム（/）を開くと /login へリダイレクトする", async () => {
+  it("未ログインでホーム（/）を開いてもリダイレクトせず、ホームフィード（ゲスト UI）が表示される（#341）", async () => {
     const router = createAppRouter({
       history: createMemoryHistory({ initialEntries: ["/"] }),
     });
     render(renderRouter(router));
-    expect(await screen.findByRole("heading", { name: /ログイン/ })).toBeInTheDocument();
-    expect(screen.queryByRole("navigation", { name: /サイドバー/ })).not.toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /ホームフィード/ })).toBeInTheDocument();
+    // ログインページへリダイレクトしていないことを確認
+    expect(screen.queryByRole("heading", { name: /^ログイン$/ })).not.toBeInTheDocument();
   });
 
   // Issue #236: 動的 import 後も認証ガードが正しく機能することを担保する。

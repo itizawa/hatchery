@@ -241,13 +241,14 @@ export function useCommunityFeed(slug: string) {
   });
 }
 
-/** ホームフィードを TanStack Query で取得するフック（認証必須）。 */
-export function useHomeFeed() {
+/** ホームフィードを TanStack Query で取得するフック（認証必須）。未認証時は enabled: false を渡してコールを抑制できる。 */
+export function useHomeFeed(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: homeFeedQueryKey(),
     queryFn: fetchHomeFeed,
     staleTime: 30_000,
     retry: false,
+    enabled: options?.enabled,
   });
 }
 

@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { WorkerImageUpload } from "./WorkerImageUpload.js";
 
 // uploadWorkerImage をモック
-vi.mock("../api/employees.js", () => ({
+vi.mock("../api/workers.js", () => ({
   useUploadWorkerImage: () => ({
     mutateAsync: vi.fn().mockResolvedValue({ id: "haru", imageUrl: "https://example.com/new.png" }),
     isPending: false,
@@ -15,7 +15,7 @@ describe("WorkerImageUpload（#204）", () => {
   it("Avatar が表示される", () => {
     render(
       <WorkerImageUpload
-        employeeId="haru"
+        workerId="haru"
         displayName="haru"
         currentImageUrl={null}
       />,
@@ -27,7 +27,7 @@ describe("WorkerImageUpload（#204）", () => {
   it("imageUrl が設定されている場合は画像 Avatar が表示される", () => {
     render(
       <WorkerImageUpload
-        employeeId="haru"
+        workerId="haru"
         displayName="haru"
         currentImageUrl="https://example.com/avatar.png"
       />,
@@ -39,7 +39,7 @@ describe("WorkerImageUpload（#204）", () => {
   it("ファイル入力が hidden で存在する", () => {
     const { container } = render(
       <WorkerImageUpload
-        employeeId="haru"
+        workerId="haru"
         displayName="haru"
         currentImageUrl={null}
       />,
@@ -52,7 +52,7 @@ describe("WorkerImageUpload（#204）", () => {
     const onSuccess = vi.fn();
     const { container } = render(
       <WorkerImageUpload
-        employeeId="haru"
+        workerId="haru"
         displayName="haru"
         currentImageUrl={null}
         onSuccess={onSuccess}

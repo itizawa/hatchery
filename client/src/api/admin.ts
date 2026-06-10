@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { AppSettingResponse, Employee } from "@hatchery/common";
+import type { AppSettingResponse, Worker } from "@hatchery/common";
 
 import { openApiClient } from "./client.js";
-import { BOT_EMPLOYEES_QUERY_KEY } from "./employees.js";
+import { BOT_WORKERS_QUERY_KEY } from "./workers.js";
 
 export const ADMIN_SETTINGS_QUERY_KEY = ["admin", "settings"] as const;
-export const ADMIN_EMPLOYEES_QUERY_KEY = ["admin", "employees"] as const;
+export const ADMIN_WORKERS_QUERY_KEY = ["admin", "workers"] as const;
 
 export type { AppSettingResponse };
 
@@ -48,78 +48,78 @@ export function useSaveAdminSetting() {
   });
 }
 
-/** DELETE /api/admin/employees/:id で Employee を論理削除する（#218）。
+/** DELETE /api/admin/workers/:id で Worker を論理削除する（#218 / #329）。
  * NOTE: このエンドポイントは openapi.gen.ts に未登録（#305 マージ待ち）のため as any で呼ぶ。
  */
-export async function deleteEmployee(id: string): Promise<{ id: string; deletedAt: string }> {
+export async function deleteWorker(id: string): Promise<{ id: string; deletedAt: string }> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, response } = await (openApiClient as any).DELETE("/api/admin/employees/{id}", {
+  const { data, response } = await (openApiClient as any).DELETE("/api/admin/workers/{id}", {
     params: { path: { id } },
     credentials: "include",
   });
-  if (!response.ok || !data) throw new Error(`DELETE /api/admin/employees/${id} failed: ${response.status}`);
+  if (!response.ok || !data) throw new Error(`DELETE /api/admin/workers/${id} failed: ${response.status}`);
   return data as { id: string; deletedAt: string };
 }
 
-export const BOT_EMPLOYEES_ADMIN_QUERY_KEY = ["admin", "employees"] as const;
+export const BOT_WORKERS_ADMIN_QUERY_KEY = ["admin", "workers"] as const;
 
-/** Employee 論理削除の useMutation フック（#218）。成功時は社員一覧のキャッシュを無効化する。 */
-export function useDeleteEmployee() {
+/** Worker 論理削除の useMutation フック（#218 / #329）。成功時はワーカー一覧のキャッシュを無効化する。 */
+export function useDeleteWorker() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => deleteEmployee(id),
+    mutationFn: (id: string) => deleteWorker(id),
     onSuccess: () => {
-      // 社員一覧を再取得するためキャッシュを無効化
-      void queryClient.invalidateQueries({ queryKey: ["employees"] });
+      // ワーカー一覧を再取得するためキャッシュを無効化
+      void queryClient.invalidateQueries({ queryKey: ["workers"] });
     },
   });
 }
 
-/** GET /api/employees で isBot=true の Employee 一覧を取得する（管理画面ユーザー一覧用・#217）。 */
-export async function fetchAdminEmployees(): Promise<Employee[]> {
-  const { data, error, response } = await openApiClient.GET("/api/employees", {
+/** GET /api/workers で isBot=true の Worker 一覧を取得する（管理画面ユーザー一覧用・#217 / #329）。 */
+export async function fetchAdminWorkers(): Promise<Worker[]> {
+  const { data, error, response } = await openApiClient.GET("/api/workers", {
     credentials: "include",
   });
-  if (error || !response.ok) throw new Error(`GET /api/employees failed: ${response.status}`);
-  return (data ?? []) as unknown as Employee[];
+  if (error || !response.ok) throw new Error(`GET /api/workers failed: ${response.status}`);
+  return (data ?? []) as unknown as Worker[];
 }
 
-/** POST /api/admin/employees で新規 Employee（isBot=true）を作成する（#217）。
+/** POST /api/admin/workers で新規 Worker（isBot=true）を作成する（#217 / #329）。
  * NOTE: このエンドポイントは openapi.gen.ts に未登録（#305 マージ待ち）のため as any で呼ぶ。
  */
-export async function createAdminEmployee(input: {
+export async function createAdminWorker(input: {
   displayName: string;
   role?: string;
   personality?: string;
-}): Promise<Employee> {
+}): Promise<Worker> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, response } = await (openApiClient as any).POST("/api/admin/employees", {
+  const { data, response } = await (openApiClient as any).POST("/api/admin/workers", {
     body: input,
     credentials: "include",
   });
-  if (!response.ok || !data) throw new Error(`POST /api/admin/employees failed: ${response.status}`);
-  return data as unknown as Employee;
+  if (!response.ok || !data) throw new Error(`POST /api/admin/workers failed: ${response.status}`);
+  return data as unknown as Worker;
 }
 
-/** 管理画面のユーザー一覧（isBot=true の全 Employee）を取得するフック（#217）。 */
-export function useAdminEmployees() {
+/** 管理画面のワーカー一覧（isBot=true の全 Worker）を取得するフック（#217 / #329）。 */
+export function useAdminWorkers() {
   return useQuery({
-    queryKey: ADMIN_EMPLOYEES_QUERY_KEY,
-    queryFn: fetchAdminEmployees,
+    queryKey: ADMIN_WORKERS_QUERY_KEY,
+    queryFn: fetchAdminWorkers,
   });
 }
 
-/** 管理画面から新規 AI 社員（isBot=true）を作成するミューテーションフック（#217）。 */
-export function useCreateAdminEmployee() {
+/** 管理画面から新規 AI ワーカー（isBot=true）を作成するミューテーションフック（#217 / #329）。 */
+export function useCreateAdminWorker() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: { displayName: string; role?: string; personality?: string }) =>
-      createAdminEmployee(input),
+      createAdminWorker(input),
     onSuccess: () => {
-      // 管理画面の一覧 + OfficeScene・ChannelScene で共有する Bot Employee キャッシュを両方無効化する。
-      // 両者は同一の GET /api/employees を参照しているが queryKey が異なるため、それぞれ invalidate する。
-      void queryClient.invalidateQueries({ queryKey: ADMIN_EMPLOYEES_QUERY_KEY });
-      void queryClient.invalidateQueries({ queryKey: BOT_EMPLOYEES_QUERY_KEY });
+      // 管理画面の一覧 + OfficeScene・ChannelScene で共有する Bot Worker キャッシュを両方無効化する。
+      // 両者は同一の GET /api/workers を参照しているが queryKey が異なるため、それぞれ invalidate する。
+      void queryClient.invalidateQueries({ queryKey: ADMIN_WORKERS_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: BOT_WORKERS_QUERY_KEY });
     },
   });
 }

@@ -1,11 +1,11 @@
 import { useRef, type ReactElement } from "react";
 import { Avatar, Box, CircularProgress, Tooltip } from "./uiParts";
 
-import { useUploadWorkerImage } from "../api/employees.js";
+import { useUploadWorkerImage } from "../api/workers.js";
 
 export interface WorkerImageUploadProps {
   /** 対象 Worker の ID */
-  employeeId: string;
+  workerId: string;
   /** 表示名（Avatar のイニシャルとalt テキストに使用） */
   displayName: string;
   /** 現在の画像 URL（null の場合はイニシャルフォールバック） */
@@ -18,14 +18,14 @@ const AVATAR_SIZE = 48;
 const ACCEPTED_MIME = "image/png,image/jpeg,image/webp,image/gif";
 
 /**
- * ワーカーのアバター画像アップロードコンポーネント（#204）。
+ * ワーカーのアバター画像アップロードコンポーネント（#204 / #329）。
  * Avatar をクリックするとファイル選択ダイアログが開く。
  * アップロード中はオーバーレイでスピナーを表示する。
  * - admin のみが使用する（管理画面でのみ表示すること）。
  * - 未設定時はイニシャルのフォールバック。
  */
 export const WorkerImageUpload = ({
-  employeeId,
+  workerId,
   displayName,
   currentImageUrl,
   onSuccess,
@@ -43,7 +43,7 @@ export const WorkerImageUpload = ({
     // ファイル入力をリセット（同じファイルの再選択を可能にする）
     e.target.value = "";
 
-    const result = await upload.mutateAsync({ employeeId, file });
+    const result = await upload.mutateAsync({ workerId, file });
     onSuccess?.(result);
   };
 

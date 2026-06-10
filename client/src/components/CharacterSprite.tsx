@@ -1,18 +1,18 @@
 import { Box } from "./uiParts";
 
-import type { Employee } from "@hatchery/common";
+import type { Worker } from "@hatchery/common";
 import type { KeyboardEvent, ReactElement } from "react";
 
 import type { Position } from "../utils/office.js";
 
 type Props = {
-  employee: Employee;
+  worker: Worker;
   position: Position;
   size: number;
   onClick: (el: HTMLElement) => void;
 };
 
-export const CharacterSprite = ({ employee, position, size, onClick }: Props): ReactElement => {
+export const CharacterSprite = ({ worker, position, size, onClick }: Props): ReactElement => {
   const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
@@ -24,7 +24,7 @@ export const CharacterSprite = ({ employee, position, size, onClick }: Props): R
     <Box
       role="button"
       tabIndex={0}
-      aria-label={employee.displayName}
+      aria-label={worker.displayName}
       onClick={(e) => onClick(e.currentTarget)}
       onKeyDown={handleKeyDown}
       sx={{

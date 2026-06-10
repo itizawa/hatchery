@@ -13,7 +13,10 @@ import {
   BatchRunLogSchema,
   CommunitySchema,
   CommentSchema,
+  CreateCommunitySchema,
   CreateInvitationSchema,
+  CreateWorkerSchema,
+  UpdateCommunitySchema,
   WorkerSchema,
   InvitationPublicSchema,
   InvitationSchema,
@@ -64,6 +67,11 @@ const UpdateWorkerComponent = registry.register(
   UpdateWorkerSchema.openapi({ description: "Worker 更新リクエストボディ（#38）" }),
 );
 
+const CreateWorkerComponent = registry.register(
+  "CreateWorker",
+  CreateWorkerSchema.openapi({ description: "Worker 作成リクエストボディ（#217 / #337）" }),
+);
+
 const workerPathIdParam = z.string().openapi({ param: { name: "id", in: "path" } });
 
 registry.registerPath({
@@ -92,6 +100,46 @@ registry.registerPath({
       content: { "application/json": { schema: WorkerComponent } },
     },
     400: { description: "バリデーションエラー（personality 501 文字超など）", ...errorJson },
+    401: { description: "未認証", ...errorJson },
+    403: { description: "admin 権限なし", ...errorJson },
+    404: { description: "Worker が存在しない", ...errorJson },
+  },
+});
+
+// admin: Worker 作成（isBot=true）（#217 / #337）。認証必須・admin のみ。
+registry.registerPath({
+  method: "post",
+  path: "/api/admin/workers",
+  summary: "AI ワーカー（isBot=true）を新規作成（認証必須・admin のみ・#217 / #337）",
+  request: {
+    body: { content: { "application/json": { schema: CreateWorkerComponent } } },
+  },
+  responses: {
+    201: {
+      description: "作成された Worker",
+      content: { "application/json": { schema: WorkerComponent } },
+    },
+    400: { description: "バリデーションエラー（displayName 空など）", ...errorJson },
+    401: { description: "未認証", ...errorJson },
+    403: { description: "admin 権限なし", ...errorJson },
+  },
+});
+
+// admin: Worker 論理削除（#218 / #337）。認証必須・admin のみ。deletedAt をセットして返す。
+registry.registerPath({
+  method: "delete",
+  path: "/api/admin/workers/{id}",
+  summary: "Worker を論理削除（認証必須・admin のみ・#218 / #337）",
+  request: { params: z.object({ id: workerPathIdParam }) },
+  responses: {
+    200: {
+      description: "論理削除された Worker の id と削除日時（ISO 文字列）",
+      content: {
+        "application/json": {
+          schema: z.object({ id: z.string(), deletedAt: z.string() }),
+        },
+      },
+    },
     401: { description: "未認証", ...errorJson },
     403: { description: "admin 権限なし", ...errorJson },
     404: { description: "Worker が存在しない", ...errorJson },
@@ -410,9 +458,77 @@ registry.register(
   SubscriptionSchema.openapi({ description: "コミュニティへの購読。ADR-0019 / ADR-0020" }),
 );
 
+// admin コミュニティ CRUD のリクエストボディ（#310 / #337）。
+const CreateCommunityComponent = registry.register(
+  "CreateCommunity",
+  CreateCommunitySchema.openapi({ description: "コミュニティ作成リクエストボディ（#310 / #337）" }),
+);
+
+const UpdateCommunityComponent = registry.register(
+  "UpdateCommunity",
+  UpdateCommunitySchema.openapi({ description: "コミュニティ更新リクエストボディ（#310 / #337）" }),
+);
+
 const communitySlugParam = z.string().openapi({ param: { name: "slug", in: "path" } });
+const communityIdParam = z.string().openapi({ param: { name: "id", in: "path" } });
 const postIdParam = z.string().openapi({ param: { name: "postId", in: "path" } });
 const commentIdParam = z.string().openapi({ param: { name: "commentId", in: "path" } });
+
+// admin: コミュニティ一覧（認証必須・admin のみ・#310 / #337）
+registry.registerPath({
+  method: "get",
+  path: "/api/admin/communities",
+  summary: "コミュニティ一覧を取得（認証必須・admin のみ・#310 / #337）",
+  responses: {
+    200: {
+      description: "コミュニティ一覧",
+      content: { "application/json": { schema: z.array(CommunityComponent) } },
+    },
+    401: { description: "未認証", ...errorJson },
+    403: { description: "admin 権限なし", ...errorJson },
+  },
+});
+
+// admin: コミュニティ作成（認証必須・admin のみ・#310 / #337）
+registry.registerPath({
+  method: "post",
+  path: "/api/admin/communities",
+  summary: "コミュニティを作成（認証必須・admin のみ・#310 / #337）",
+  request: {
+    body: { content: { "application/json": { schema: CreateCommunityComponent } } },
+  },
+  responses: {
+    201: {
+      description: "作成されたコミュニティ",
+      content: { "application/json": { schema: CommunityComponent } },
+    },
+    400: { description: "バリデーションエラー（slug 不正など）", ...errorJson },
+    401: { description: "未認証", ...errorJson },
+    403: { description: "admin 権限なし", ...errorJson },
+    409: { description: "slug が既に存在する", ...errorJson },
+  },
+});
+
+// admin: コミュニティ更新（認証必須・admin のみ・#310 / #337）
+registry.registerPath({
+  method: "patch",
+  path: "/api/admin/communities/{id}",
+  summary: "コミュニティを更新（認証必須・admin のみ・#310 / #337）",
+  request: {
+    params: z.object({ id: communityIdParam }),
+    body: { content: { "application/json": { schema: UpdateCommunityComponent } } },
+  },
+  responses: {
+    200: {
+      description: "更新後のコミュニティ",
+      content: { "application/json": { schema: CommunityComponent } },
+    },
+    400: { description: "バリデーションエラー", ...errorJson },
+    401: { description: "未認証", ...errorJson },
+    403: { description: "admin 権限なし", ...errorJson },
+    404: { description: "コミュニティが存在しない", ...errorJson },
+  },
+});
 
 // コミュニティ一覧（認証不要）
 registry.registerPath({

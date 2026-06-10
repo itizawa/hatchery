@@ -12,6 +12,7 @@ const sessionStore = env.databaseUrl ? createPgSessionStore(env.databaseUrl) : u
 const app = createApp({
   ...createPrismaDeps(prisma),
   sessionStore,
+  publicBaseUrl: env.publicBaseUrl,
   security: {
     rateLimitWindowMs: env.rateLimitWindowMs,
     rateLimitMax: env.rateLimitMax,

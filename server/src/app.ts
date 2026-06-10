@@ -2,7 +2,7 @@ import express, { type Express } from "express";
 import session, { type Store } from "express-session";
 
 import { createPassport } from "./auth/passport.js";
-import { SECURITY_DEFAULTS } from "./config/env.js";
+import { DEFAULT_PUBLIC_BASE_URL, SECURITY_DEFAULTS } from "./config/env.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { createCors } from "./middleware/cors.js";
 import { createRateLimiter } from "./middleware/rateLimiter.js";
@@ -34,6 +34,7 @@ import { createFeedRouter } from "./routes/feed.js";
 import { healthRouter } from "./routes/health.js";
 import { createInvitationsRouter } from "./routes/invitations.js";
 import { createPostsRouter } from "./routes/posts.js";
+import { createSitemapRouter } from "./routes/sitemap.js";
 
 /** DDoS/過負荷対策（#34）の設定。未指定の項目は安全な既定値を使う。 */
 export interface SecurityOptions {
@@ -118,6 +119,12 @@ export interface AppDeps {
    * 本番（NODE_ENV=production）では必須—省略すると起動時例外。
    */
   sessionStore?: Store;
+  /**
+   * 公開ページの絶対 URL ベース（sitemap.xml 生成に使う・#259）。
+   * 省略時は本番フロント既定値（client/vite.config.ts の DEFAULT_OGP_URL と同じ）。
+   * 本番は server.ts が env（PUBLIC_BASE_URL）から渡す。
+   */
+  publicBaseUrl?: string;
 }
 
 /**
@@ -183,6 +190,11 @@ export function createApp(deps: AppDeps): Express {
   }
 
   app.use("/health", healthRouter);
+  // sitemap.xml は認証不要で公開ページ（トップ + 全 community）を列挙する（#259）。
+  app.use(
+    "/sitemap.xml",
+    createSitemapRouter(communityRepo, deps.publicBaseUrl ?? DEFAULT_PUBLIC_BASE_URL),
+  );
   app.use("/api/auth", createAuthRouter(passportInstance, deps.userRepository));
   app.use("/api/workers", createWorkersRouter(deps.workerRepository));
   app.use("/api/admin/batch-logs", createBatchLogsRouter(deps.batchRunLogRepository));

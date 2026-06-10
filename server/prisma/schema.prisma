@@ -201,12 +201,18 @@ model WorldState {
   updatedAt      DateTime @updatedAt
 }
 
-/// up vote レコード。ADR-0019。
+/// vote レコード。ADR-0019 / ADR-0025（down vote 追加）。
 /// 二重投票防止のため (userId, targetType, targetId) をユニーク制約で保護する。
-/// targetType は "post" または "comment"。
+/// targetType は "post" または "comment"。direction は up/down。
 enum VoteTargetType {
   post
   comment
+}
+
+/// vote 方向（ADR-0025: down vote 追加）。
+enum VoteDirection {
+  up
+  down
 }
 
 /// Vote.targetId は多態参照（Post または Comment の id）のため DB FK を張らない。
@@ -217,6 +223,8 @@ model Vote {
   user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   targetType VoteTargetType
   targetId   String
+  /// vote 方向（ADR-0025）。既存レコードのデフォルトは up。
+  direction  VoteDirection  @default(up)
   createdAt  DateTime       @default(now())
 
   @@unique([userId, targetType, targetId])

@@ -6,6 +6,7 @@ import { useCommunityFeed, useSubscribe, useUnsubscribe, useVotePost, usePublicC
 import { useAuth } from "../api/auth.js";
 import { PostCard } from "../components/PostCard.js";
 import { ShareButton } from "../components/ShareButton.js";
+import type { VoteDirection } from "../components/VoteControl.js";
 import { SubscribeButton } from "../components/SubscribeButton.js";
 import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
 import { useSubscriptionStatus } from "../hooks/useSubscriptionStatus.js";
@@ -87,7 +88,7 @@ export const CommunityScene = (): ReactElement => {
             >
               <PostCard
                 post={post}
-                onVote={() => votePost(post.id)}
+                onVote={(direction: VoteDirection) => votePost({ postId: post.id, direction })}
                 voteStopPropagation
               />
             </RouterLink>

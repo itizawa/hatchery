@@ -5,10 +5,11 @@ import type { ReactElement } from "react";
 import { usePostThread, useVotePost, useVoteComment } from "../api/communities.js";
 import { PostCard } from "../components/PostCard.js";
 import { CommentCard } from "../components/CommentCard.js";
+import type { VoteDirection } from "../components/VoteControl.js";
 
 /**
  * 投稿スレッド（/posts/$postId）。
- * post 本文 + コメント（フラット）を表示する（ADR-0019 / ADR-0020）。
+ * post 本文 + コメント（フラット）を表示する（ADR-0019 / ADR-0025）。
  * 投稿欄・コメント入力欄は置かない（ユーザーは書けない・ADR-0020）。
  */
 export const PostThreadScene = (): ReactElement => {
@@ -40,12 +41,14 @@ export const PostThreadScene = (): ReactElement => {
   }
 
   const { post, comments } = data;
+  const postUrl = `${window.location.origin}/posts/${post.id}`;
 
   return (
     <Box component="section" sx={{ p: 3, maxWidth: 800, mx: "auto" }}>
       <PostCard
         post={post}
-        onVote={() => votePost(post.id)}
+        onVote={(direction: VoteDirection) => votePost({ postId: post.id, direction })}
+        postUrl={postUrl}
       />
 
       {comments.length > 0 && (
@@ -57,7 +60,9 @@ export const PostThreadScene = (): ReactElement => {
             <CommentCard
               key={comment.id}
               comment={comment}
-              onVote={() => voteComment(comment.id)}
+              onVote={(direction: VoteDirection) =>
+                voteComment({ commentId: comment.id, direction })
+              }
             />
           ))}
         </Box>

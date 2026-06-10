@@ -1,23 +1,24 @@
 import { Box, Typography } from "./uiParts";
 import type { ReactElement } from "react";
 import type { Comment } from "../api/communities.js";
-import { UpVoteButton } from "./UpVoteButton.js";
+import { VoteControl } from "./VoteControl.js";
+import type { VoteDirection } from "./VoteControl.js";
 
 interface CommentCardProps {
   comment: Comment;
-  onVote: () => void;
-  voted?: boolean;
+  onVote: (direction: VoteDirection) => void;
+  currentVote?: VoteDirection | null;
   voteDisabled?: boolean;
 }
 
 /**
- * コメントカード。本文・author・score・up vote ボタンを表示する（ADR-0019 / ADR-0020）。
+ * コメントカード。本文・author・score・up/down vote ボタンを表示する（ADR-0019 / ADR-0025）。
  * コメント入力欄は持たない（ユーザーはコメントしない・ADR-0020）。
  */
 export const CommentCard = ({
   comment,
   onVote,
-  voted = false,
+  currentVote = null,
   voteDisabled = false,
 }: CommentCardProps): ReactElement => {
   return (
@@ -34,10 +35,10 @@ export const CommentCard = ({
     >
       <Box sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}>
         <Box sx={{ pt: 0.25 }}>
-          <UpVoteButton
+          <VoteControl
             score={comment.score}
             onVote={onVote}
-            voted={voted}
+            currentVote={currentVote}
             disabled={voteDisabled}
           />
         </Box>

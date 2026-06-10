@@ -29,6 +29,7 @@ import {
   UpdateWorkerSchema,
   UpdateProfileSchema,
   UserRoleSchema,
+  VoteRequestSchema,
   FEED_CURSOR_MAX_LENGTH,
 } from "@hatchery/common";
 
@@ -656,37 +657,49 @@ registry.registerPath({
   },
 });
 
-// post への up vote（認証必須）
+// vote リクエストボディ（ADR-0025: up/down 両対応）
+const VoteRequestComponent = registry.register(
+  "VoteRequest",
+  VoteRequestSchema.openapi({ description: "vote リクエストボディ（direction: up | down）" }),
+);
+
+// post への vote（認証必須・toggle/switch・ADR-0025）
 registry.registerPath({
   method: "post",
   path: "/api/posts/{postId}/vote",
-  summary: "post に up vote（認証必須・二重投票防止・ADR-0020）",
-  request: { params: z.object({ postId: postIdParam }) },
+  summary: "post に up/down vote（認証必須・toggle/switch・ADR-0025）",
+  request: {
+    params: z.object({ postId: postIdParam }),
+    body: { content: { "application/json": { schema: VoteRequestComponent } } },
+  },
   responses: {
     200: {
-      description: "up vote 成功。更新後の post（score 加算済み）を返す",
+      description: "vote 成功。更新後の post（score 加算済み）を返す",
       content: { "application/json": { schema: PostComponent } },
     },
+    400: { description: "direction が無効", ...errorJson },
     401: { description: "未認証", ...errorJson },
     404: { description: "投稿が存在しない", ...errorJson },
-    409: { description: "既に vote 済み（二重投票防止）", ...errorJson },
   },
 });
 
-// comment への up vote（認証必須）
+// comment への vote（認証必須・toggle/switch・ADR-0025）
 registry.registerPath({
   method: "post",
   path: "/api/comments/{commentId}/vote",
-  summary: "comment に up vote（認証必須・二重投票防止・ADR-0020）",
-  request: { params: z.object({ commentId: commentIdParam }) },
+  summary: "comment に up/down vote（認証必須・toggle/switch・ADR-0025）",
+  request: {
+    params: z.object({ commentId: commentIdParam }),
+    body: { content: { "application/json": { schema: VoteRequestComponent } } },
+  },
   responses: {
     200: {
-      description: "up vote 成功。更新後の comment（score 加算済み）を返す",
+      description: "vote 成功。更新後の comment（score 加算済み）を返す",
       content: { "application/json": { schema: CommentComponent } },
     },
+    400: { description: "direction が無効", ...errorJson },
     401: { description: "未認証", ...errorJson },
     404: { description: "コメントが存在しない", ...errorJson },
-    409: { description: "既に vote 済み（二重投票防止）", ...errorJson },
   },
 });
 

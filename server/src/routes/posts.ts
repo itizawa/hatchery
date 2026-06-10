@@ -1,17 +1,17 @@
-import { ConflictError, NotFoundError } from "@hatchery/common";
+import { NotFoundError, VoteRequestSchema } from "@hatchery/common";
 import { Router } from "express";
 
 import { requireAuth } from "../middleware/requireAuth.js";
+import { validateBody } from "../middleware/validateBody.js";
 import type { CommentRepository } from "../persistence/commentRepository.js";
 import type { PostRepository } from "../persistence/postRepository.js";
 import type { VoteRepository } from "../persistence/voteRepository.js";
 
 /**
  * /api/posts・/api/comments ルータ。
- * スレッド（post + comments）の取得、up vote を担う。ADR-0019 / ADR-0020。
+ * スレッド（post + comments）の取得、up/down vote を担う。ADR-0019 / ADR-0025。
  * - 読み取りは認証不要
- * - up vote は認証必須（ユーザーは消費者として up vote のみ・ADR-0020）
- * - 二重投票は 409 を返す
+ * - vote は認証必須（ADR-0025: up/down 両対応、toggle/switch）
  */
 export function createPostsRouter(
   postRepo: PostRepository,
@@ -36,57 +36,59 @@ export function createPostsRouter(
       .catch(next);
   });
 
-  // post への up vote（認証必須・二重投票防止・ADR-0020）
-  router.post("/posts/:postId/vote", requireAuth, (req, res, next) => {
-    const { postId } = req.params as { postId: string };
-    const userId = req.user!.id;
+  // post への vote（認証必須・toggle/switch・ADR-0025）
+  router.post(
+    "/posts/:postId/vote",
+    requireAuth,
+    validateBody(VoteRequestSchema),
+    (req, res, next) => {
+      const { postId } = req.params as { postId: string };
+      const userId = req.user!.id;
+      const { direction } = req.body as { direction: "up" | "down" };
 
-    postRepo
-      .findById(postId)
-      .then((post) => {
-        if (!post) {
-          throw new NotFoundError("PostNotFound");
-        }
-        return voteRepo.hasVoted(userId, "post", postId).then((alreadyVoted) => {
-          if (alreadyVoted) {
-            throw new ConflictError("AlreadyVoted");
+      postRepo
+        .findById(postId)
+        .then((post) => {
+          if (!post) {
+            throw new NotFoundError("PostNotFound");
           }
           return voteRepo
-            .create(userId, "post", postId)
-            .then(() => postRepo.addScore(postId, 1))
+            .vote(userId, "post", postId, direction)
+            .then(({ scoreDelta }) => postRepo.addScore(postId, scoreDelta))
             .then((updated) => {
               res.status(200).json(updated);
             });
-        });
-      })
-      .catch(next);
-  });
+        })
+        .catch(next);
+    },
+  );
 
-  // comment への up vote（認証必須・二重投票防止・ADR-0020）
-  router.post("/comments/:commentId/vote", requireAuth, (req, res, next) => {
-    const { commentId } = req.params as { commentId: string };
-    const userId = req.user!.id;
+  // comment への vote（認証必須・toggle/switch・ADR-0025）
+  router.post(
+    "/comments/:commentId/vote",
+    requireAuth,
+    validateBody(VoteRequestSchema),
+    (req, res, next) => {
+      const { commentId } = req.params as { commentId: string };
+      const userId = req.user!.id;
+      const { direction } = req.body as { direction: "up" | "down" };
 
-    commentRepo
-      .findById(commentId)
-      .then((comment) => {
-        if (!comment) {
-          throw new NotFoundError("CommentNotFound");
-        }
-        return voteRepo.hasVoted(userId, "comment", commentId).then((alreadyVoted) => {
-          if (alreadyVoted) {
-            throw new ConflictError("AlreadyVoted");
+      commentRepo
+        .findById(commentId)
+        .then((comment) => {
+          if (!comment) {
+            throw new NotFoundError("CommentNotFound");
           }
           return voteRepo
-            .create(userId, "comment", commentId)
-            .then(() => commentRepo.addScore(commentId, 1))
+            .vote(userId, "comment", commentId, direction)
+            .then(({ scoreDelta }) => commentRepo.addScore(commentId, scoreDelta))
             .then((updated) => {
               res.status(200).json(updated);
             });
-        });
-      })
-      .catch(next);
-  });
+        })
+        .catch(next);
+    },
+  );
 
   return router;
 }

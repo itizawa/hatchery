@@ -4,6 +4,7 @@ import { useEffect, useRef, type ReactElement } from "react";
 
 import { useInfiniteHomeFeed, useVotePost } from "../api/communities.js";
 import { PostCard } from "../components/PostCard.js";
+import type { VoteDirection } from "../components/VoteControl.js";
 
 /**
  * ホームフィード（/）。
@@ -85,7 +86,8 @@ export const HomeFeedScene = (): ReactElement => {
             <PostCard
               key={post.id}
               post={post}
-              onVote={() => votePost(post.id)}
+              onVote={(direction: VoteDirection) => votePost({ postId: post.id, direction })}
+              voteStopPropagation
             />
           ))}
           <Box ref={sentinelRef} sx={{ py: 1 }}>

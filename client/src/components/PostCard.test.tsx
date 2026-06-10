@@ -37,11 +37,30 @@ describe("PostCard", () => {
     expect(screen.getByText("5")).toBeInTheDocument();
   });
 
-  it("up vote ボタンがあり、クリックすると onVote が呼ばれる", async () => {
+  it("up vote ボタンがあり、クリックすると onVote('up') が呼ばれる", async () => {
     const onVote = vi.fn();
     render(<PostCard post={mockPost} onVote={onVote} />);
     await userEvent.click(screen.getByRole("button", { name: /up vote/i }));
+    expect(onVote).toHaveBeenCalledWith("up");
     expect(onVote).toHaveBeenCalledTimes(1);
+  });
+
+  it("down vote ボタンがあり、クリックすると onVote('down') が呼ばれる", async () => {
+    const onVote = vi.fn();
+    render(<PostCard post={mockPost} onVote={onVote} />);
+    await userEvent.click(screen.getByRole("button", { name: /down vote/i }));
+    expect(onVote).toHaveBeenCalledWith("down");
+    expect(onVote).toHaveBeenCalledTimes(1);
+  });
+
+  it("ShareButton（共有ボタン）が vote コントロールの近くに表示される", () => {
+    render(<PostCard post={mockPost} onVote={vi.fn()} postUrl="https://example.com/posts/post-1" />);
+    expect(screen.getByRole("button", { name: /共有/i })).toBeInTheDocument();
+  });
+
+  it("postUrl が無いときは ShareButton を表示しない", () => {
+    render(<PostCard post={mockPost} onVote={vi.fn()} />);
+    expect(screen.queryByRole("button", { name: /共有/i })).not.toBeInTheDocument();
   });
 
   it("投稿欄・コメント入力欄は表示しない（ADR-0020）", () => {

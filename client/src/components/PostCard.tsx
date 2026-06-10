@@ -2,27 +2,33 @@ import { Box, Typography } from "./uiParts";
 import type { ReactElement } from "react";
 import type React from "react";
 import type { Post } from "../api/communities.js";
-import { UpVoteButton } from "./UpVoteButton.js";
+import { VoteControl } from "./VoteControl.js";
+import { ShareButton } from "./ShareButton.js";
+import type { VoteDirection } from "./VoteControl.js";
 
 interface PostCardProps {
   post: Post;
-  onVote: () => void;
-  voted?: boolean;
+  onVote: (direction: VoteDirection) => void;
+  currentVote?: VoteDirection | null;
   voteDisabled?: boolean;
-  /** up vote ボタンのクリック時に親へのイベント伝播を止める（RouterLink との共存に使用）。 */
+  /** up/down vote ボタンのクリック時に親へのイベント伝播を止める（RouterLink との共存に使用）。 */
   voteStopPropagation?: boolean;
+  /** 共有ボタンに使う post の URL。指定時のみ ShareButton を表示する。 */
+  postUrl?: string;
 }
 
 /**
- * 投稿カード。タイトル・本文・author・score・up vote ボタンを表示する（ADR-0019 / ADR-0020）。
+ * 投稿カード。タイトル・本文・author・score・up/down vote ボタンを表示する（ADR-0019 / ADR-0025）。
+ * post のアクションバーに ShareButton を追加（ADR-0025）。
  * 投稿入力欄は持たない（ユーザーは投稿しない・ADR-0020）。
  */
 export const PostCard = ({
   post,
   onVote,
-  voted = false,
+  currentVote = null,
   voteDisabled = false,
   voteStopPropagation = false,
+  postUrl,
 }: PostCardProps): ReactElement => {
   return (
     <Box
@@ -40,7 +46,12 @@ export const PostCard = ({
           sx={{ pt: 0.5 }}
           onClick={voteStopPropagation ? (e: React.MouseEvent) => e.stopPropagation() : undefined}
         >
-          <UpVoteButton score={post.score} onVote={onVote} voted={voted} disabled={voteDisabled} />
+          <VoteControl
+            score={post.score}
+            onVote={onVote}
+            currentVote={currentVote}
+            disabled={voteDisabled}
+          />
         </Box>
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Typography
@@ -56,6 +67,11 @@ export const PostCard = ({
           <Typography variant="body1">
             {post.text}
           </Typography>
+          {postUrl && (
+            <Box sx={{ mt: 1 }}>
+              <ShareButton shareUrl={postUrl} shareTitle={post.title} />
+            </Box>
+          )}
         </Box>
       </Box>
     </Box>

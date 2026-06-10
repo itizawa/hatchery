@@ -19,7 +19,7 @@ export const CommentSchema = z.object({
   seq: z.number().int().nonnegative(),
   author: z.string().min(1).max(100),
   text: z.string().min(1).max(COMMENT_TEXT_MAX_LENGTH),
-  score: z.number().int().nonnegative().default(0),
+  score: z.number().int().default(0),
   created_at: z.date(),
 });
 

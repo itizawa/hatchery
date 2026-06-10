@@ -9,7 +9,10 @@ import type {
   Community as AdminCommunity,
   CreateCommunityInput,
   UpdateCommunityInput,
+  VoteDirection,
 } from "@hatchery/common";
+
+export type { VoteDirection };
 
 import { openApiClient } from "./client.js";
 import type { components } from "./openapi.gen.js";
@@ -192,11 +195,12 @@ export async function unsubscribeCommunity(slug: string): Promise<void> {
 }
 
 /**
- * POST /api/posts/{postId}/vote — post に up vote する。
+ * POST /api/posts/{postId}/vote — post に up/down vote する（ADR-0025）。
  */
-export async function votePost(postId: string): Promise<Post> {
+export async function votePost(postId: string, direction: VoteDirection): Promise<Post> {
   const { data, response } = await openApiClient.POST("/api/posts/{postId}/vote", {
     params: { path: { postId } },
+    body: { direction },
     credentials: "include",
   });
   if (!response.ok || !data)
@@ -205,11 +209,12 @@ export async function votePost(postId: string): Promise<Post> {
 }
 
 /**
- * POST /api/comments/{commentId}/vote — comment に up vote する。
+ * POST /api/comments/{commentId}/vote — comment に up/down vote する（ADR-0025）。
  */
-export async function voteComment(commentId: string): Promise<Comment> {
+export async function voteComment(commentId: string, direction: VoteDirection): Promise<Comment> {
   const { data, response } = await openApiClient.POST("/api/comments/{commentId}/vote", {
     params: { path: { commentId } },
+    body: { direction },
     credentials: "include",
   });
   if (!response.ok || !data)
@@ -282,31 +287,34 @@ export function useUnsubscribe(slug: string) {
   });
 }
 
-/** post への up vote ミューテーションフック。楽観更新（score 即時インクリメント）+ キャッシュ無効化。 */
+/** post への vote ミューテーションフック。楽観更新 + キャッシュ無効化（ADR-0025）。 */
 export function useVotePost(communitySlug?: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (postId: string) => votePost(postId),
-    onMutate: async (postId: string) => {
-      // 楽観更新: スレッドキャッシュの score を +1
+    mutationFn: ({ postId, direction }: { postId: string; direction: VoteDirection }) =>
+      votePost(postId, direction),
+    onMutate: async ({ postId, direction }: { postId: string; direction: VoteDirection }) => {
+      // 楽観更新: スレッドキャッシュの score を direction に応じて +1 / -1
       const threadKey = postThreadQueryKey(postId);
       await queryClient.cancelQueries({ queryKey: threadKey });
       const previous = queryClient.getQueryData<{ post: Post; comments: Comment[] }>(threadKey);
       if (previous) {
         queryClient.setQueryData(threadKey, {
           ...previous,
-          post: { ...previous.post, score: previous.post.score + 1 },
+          post: {
+            ...previous.post,
+            score: previous.post.score + (direction === "up" ? 1 : -1),
+          },
         });
       }
       return { previous, postId };
     },
-    onError: (_err, postId, context) => {
-      // ロールバック
+    onError: (_err, { postId }, context) => {
       if (context?.previous) {
         queryClient.setQueryData(postThreadQueryKey(postId), context.previous);
       }
     },
-    onSettled: (_data, _err, postId) => {
+    onSettled: (_data, _err, { postId }) => {
       void queryClient.invalidateQueries({ queryKey: postThreadQueryKey(postId) });
       if (communitySlug) {
         void queryClient.invalidateQueries({ queryKey: communityFeedQueryKey(communitySlug) });
@@ -316,13 +324,25 @@ export function useVotePost(communitySlug?: string) {
   });
 }
 
-/** comment への up vote ミューテーションフック。楽観更新（score 即時インクリメント）+ キャッシュ無効化。 */
+/** comment への vote ミューテーションフック。楽観更新 + キャッシュ無効化（ADR-0025）。 */
 export function useVoteComment(postId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (commentId: string) => voteComment(commentId),
-    onMutate: async (commentId: string) => {
-      // 楽観更新: スレッドキャッシュのコメント score を +1
+    mutationFn: ({
+      commentId,
+      direction,
+    }: {
+      commentId: string;
+      direction: VoteDirection;
+    }) => voteComment(commentId, direction),
+    onMutate: async ({
+      commentId,
+      direction,
+    }: {
+      commentId: string;
+      direction: VoteDirection;
+    }) => {
+      // 楽観更新: スレッドキャッシュのコメント score を direction に応じて +1 / -1
       const threadKey = postThreadQueryKey(postId);
       await queryClient.cancelQueries({ queryKey: threadKey });
       const previous = queryClient.getQueryData<{ post: Post; comments: Comment[] }>(threadKey);
@@ -330,14 +350,15 @@ export function useVoteComment(postId: string) {
         queryClient.setQueryData(threadKey, {
           ...previous,
           comments: previous.comments.map((c) =>
-            c.id === commentId ? { ...c, score: c.score + 1 } : c,
+            c.id === commentId
+              ? { ...c, score: c.score + (direction === "up" ? 1 : -1) }
+              : c,
           ),
         });
       }
       return { previous, commentId };
     },
-    onError: (_err, _commentId, context) => {
-      // ロールバック
+    onError: (_err, _vars, context) => {
       if (context?.previous) {
         queryClient.setQueryData(postThreadQueryKey(postId), context.previous);
       }

@@ -66,7 +66,7 @@ describe("WorkerTable", () => {
 
   it("imageUrl が設定された Worker は Avatar として画像を表示する（#220）", () => {
     const workers = [
-      { id: "w1", displayName: "テストワーカー", isBot: true as const, imageUrl: "https://example.com/avatar.png" },
+      { id: "w1", displayName: "テストワーカー", imageUrl: "https://example.com/avatar.png" },
     ];
     renderWithClient(<WorkerTable workers={workers} />);
     const img = screen.getByRole("img", { name: /テストワーカー/ });
@@ -75,7 +75,7 @@ describe("WorkerTable", () => {
   });
 
   it("imageUrl 未設定の Worker はイニシャル Avatar でフォールバック表示される（#220）", () => {
-    const workers = [{ id: "w2", displayName: "フォールバックワーカー", isBot: true as const }];
+    const workers = [{ id: "w2", displayName: "フォールバックワーカー" }];
     renderWithClient(<WorkerTable workers={workers} />);
     expect(screen.getByText("フ")).toBeInTheDocument();
   });
@@ -129,7 +129,7 @@ describe("WorkerTable", () => {
 
   it("確認ダイアログで「削除する」をクリックすると onDelete が呼ばれる（#218）", async () => {
     const handleDelete = vi.fn();
-    const workers = [{ id: "emp-1", displayName: "田中 太郎", isBot: true as const }];
+    const workers = [{ id: "emp-1", displayName: "田中 太郎" }];
     renderWithClient(<WorkerTable workers={workers} onDelete={handleDelete} />);
     const deleteButton = screen.getByRole("button", { name: /削除/ });
     await userEvent.click(deleteButton);

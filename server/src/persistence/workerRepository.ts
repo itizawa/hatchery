@@ -4,7 +4,6 @@ export interface WorkerRecord {
   id: string;
   displayName: string;
   role: string | null;
-  isBot: boolean;
   personality: string | null;
   /** ワーカーの画像 URL（#220）。#204 でアップロード基盤実装後に値が入る。現時点は null。 */
   imageUrl: string | null;
@@ -18,7 +17,6 @@ export interface CreateWorkerInput {
   displayName: string;
   role?: string;
   personality?: string;
-  isBot: boolean;
 }
 
 export interface WorkerRepository {
@@ -26,9 +24,9 @@ export interface WorkerRepository {
   update(id: string, input: UpdateWorkerInput): Promise<WorkerRecord | null>;
   /** 複数 id の Worker をまとめて取得する。存在しない id は除外する（#53・定時バッチの発言者解決）。 */
   listByIds(ids: string[]): Promise<WorkerRecord[]>;
-  /** isBot=true の Worker を全件取得する（#240・仮想オフィス用）。論理削除済は除外。 */
+  /** Worker を全件取得する（#240・仮想オフィス用）。論理削除済は除外（#331: Worker は AI 投稿者のみ）。 */
   listBotWorkers(): Promise<WorkerRecord[]>;
-  /** isBot=true の Worker を論理削除済も含めて全件取得する（#218・メッセージ発言者名解決用）。 */
+  /** Worker を論理削除済も含めて全件取得する（#218・メッセージ発言者名解決用 / #331）。 */
   listAllBotWorkers(): Promise<WorkerRecord[]>;
   /** Worker を論理削除する（#218）。deletedAt をセットする。対象が存在しない場合は null を返す。 */
   softDelete(id: string): Promise<WorkerRecord | null>;
@@ -80,12 +78,12 @@ export function createInMemoryWorkerRepository(
 
     listBotWorkers(): Promise<WorkerRecord[]> {
       return Promise.resolve(
-        workers.filter((w) => w.isBot && w.deletedAt === null).map((w) => ({ ...w })),
+        workers.filter((w) => w.deletedAt === null).map((w) => ({ ...w })),
       );
     },
 
     listAllBotWorkers(): Promise<WorkerRecord[]> {
-      return Promise.resolve(workers.filter((w) => w.isBot).map((w) => ({ ...w })));
+      return Promise.resolve(workers.map((w) => ({ ...w })));
     },
 
     softDelete(id: string): Promise<WorkerRecord | null> {
@@ -112,7 +110,6 @@ export function createInMemoryWorkerRepository(
         id: input.id,
         displayName: input.displayName,
         role: input.role ?? null,
-        isBot: input.isBot,
         personality: input.personality ?? null,
         imageUrl: null,
         deletedAt: null,

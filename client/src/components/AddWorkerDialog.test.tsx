@@ -41,7 +41,7 @@ describe("AddWorkerDialog（#217 / #329）", () => {
   });
 
   it("open=true のときダイアログタイトル「社員を追加」が表示される", async () => {
-    stubFetch(201, { id: "new-id", displayName: "新社員", isBot: true });
+    stubFetch(201, { id: "new-id", displayName: "新社員" });
     const onClose = vi.fn();
     renderWithClient(<AddWorkerDialog open={true} onClose={onClose} />);
     expect(await screen.findByRole("dialog")).toBeInTheDocument();
@@ -96,7 +96,7 @@ describe("AddWorkerDialog（#217 / #329）", () => {
         return Promise.resolve(jsonResponse(200, { id: "u1", displayName: "Admin" }));
       }
       if (url.includes("/admin/workers")) {
-        return Promise.resolve(jsonResponse(201, { id: "new-id", displayName: "テストワーカー", isBot: true }));
+        return Promise.resolve(jsonResponse(201, { id: "new-id", displayName: "テストワーカー" }));
       }
       return Promise.resolve(jsonResponse(200, []));
     });

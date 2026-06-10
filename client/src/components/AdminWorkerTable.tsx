@@ -8,7 +8,7 @@ import { WorkerTable } from "./WorkerTable.js";
 
 /**
  * 管理画面のワーカー一覧タブ用コンポーネント（#217 / #329）。
- * DB から isBot=true の全 Worker を取得して WorkerTable に渡す。
+ * DB から全 Worker を取得して WorkerTable に渡す。
  * 「社員を追加」ボタンをヘッダに配置し、AddWorkerDialog を開く。
  */
 export const AdminWorkerTable = (): ReactElement => {

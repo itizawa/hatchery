@@ -157,7 +157,6 @@ export function createAdminRouter(
           displayName: input.displayName,
           role: input.role,
           personality: input.personality,
-          isBot: true,
         });
         res.status(201).json(worker);
       } catch (err) {

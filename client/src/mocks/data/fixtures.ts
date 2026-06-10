@@ -11,7 +11,6 @@ export const mockAdminUser: AuthUser = {
   displayName: "管理者ユーザー",
   role: "admin",
   avatarUrl: undefined,
-  employeeId: undefined,
 };
 
 export const mockMemberUser: AuthUser = {
@@ -20,7 +19,6 @@ export const mockMemberUser: AuthUser = {
   displayName: "一般ユーザー",
   role: "member",
   avatarUrl: undefined,
-  employeeId: "employee-1",
 };
 
 export const mockCommunities: Community[] = [

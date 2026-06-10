@@ -59,7 +59,7 @@ const errorJson = { content: { "application/json": { schema: ErrorComponent } } 
 // Worker CRUD（#38 / #329）。
 const WorkerComponent = registry.register(
   "Worker",
-  WorkerSchema.openapi({ description: "AI ワーカー（id / displayName / role / isBot / personality）" }),
+  WorkerSchema.openapi({ description: "AI ワーカー（id / displayName / role / personality）" }),
 );
 
 const UpdateWorkerComponent = registry.register(
@@ -77,10 +77,10 @@ const workerPathIdParam = z.string().openapi({ param: { name: "id", in: "path" }
 registry.registerPath({
   method: "get",
   path: "/api/workers",
-  summary: "Bot Worker 一覧を取得（認証不要・#240）",
+  summary: "Worker 一覧を取得（認証不要・#240）",
   responses: {
     200: {
-      description: "isBot=true の Worker 一覧",
+      description: "Worker 一覧（#331: Worker は AI 投稿者のみ）",
       content: { "application/json": { schema: z.array(WorkerComponent) } },
     },
   },
@@ -106,11 +106,11 @@ registry.registerPath({
   },
 });
 
-// admin: Worker 作成（isBot=true）（#217 / #337）。認証必須・admin のみ。
+// admin: Worker 作成（#217 / #337）。認証必須・admin のみ。
 registry.registerPath({
   method: "post",
   path: "/api/admin/workers",
-  summary: "AI ワーカー（isBot=true）を新規作成（認証必須・admin のみ・#217 / #337）",
+  summary: "AI ワーカーを新規作成（認証必須・admin のみ・#217 / #337）",
   request: {
     body: { content: { "application/json": { schema: CreateWorkerComponent } } },
   },

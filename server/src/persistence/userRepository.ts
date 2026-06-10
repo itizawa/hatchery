@@ -8,8 +8,6 @@ export interface User {
   passwordHash: string;
   /** 権限ロール（#136）。 */
   role: UserRole;
-  /** 紐づく Employee の id（#49）。未紐づけなら null。 */
-  employeeId: string | null;
   /** プロフィール画像 URL（#51）。未設定なら null。 */
   avatarUrl: string | null;
 }
@@ -65,7 +63,6 @@ export function createInMemoryUserRepository(initialUsers: User[] = []): UserRep
         displayName: input.displayName,
         passwordHash: input.passwordHash,
         role: "member",
-        employeeId: null,
         avatarUrl: null,
       };
       users.push(user);
@@ -76,11 +73,9 @@ export function createInMemoryUserRepository(initialUsers: User[] = []): UserRep
 
 /**
  * テスト用ユーザー（testuser / testpass）を持つインメモリ UserRepository を生成する。
- * employeeId を渡すと紐づく Employee の id として設定する（#49。既定は未紐づけ＝null）。
  * role を渡すと権限ロールを設定する（#136。既定は admin）。
  */
 export async function createTestUserRepository(
-  employeeId: string | null = null,
   role: UserRole = "admin",
 ): Promise<UserRepository> {
   const passwordHash = await bcrypt.hash("testpass", 10);
@@ -91,7 +86,6 @@ export async function createTestUserRepository(
       displayName: "Test User",
       passwordHash,
       role,
-      employeeId,
       avatarUrl: null,
     },
   ]);

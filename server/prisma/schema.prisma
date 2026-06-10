@@ -30,23 +30,17 @@ model User {
   avatarUrl     String?
   /// 権限ロール（#136）。既定は member。新規登録（招待受諾）は member として登録される。
   role          UserRole       @default(member)
-  /// 1 ユーザー = 1 Worker の任意リレーション（#49 / #329）。
-  worker        Worker?
   subscriptions Subscription[]
   votes         Vote[]
 }
 
 /// AI ワーカー（社員）。ADR-0019: post / comment の author として使う。
 /// #329: Employee → Worker リネーム（@@map("workers") で DB テーブル名は "workers"）。
+/// #331: ADR-0020 後処理。Worker は AI 投稿者のみとなり isBot / userId / user（User 1:1）を撤廃した。
 model Worker {
   id          String    @id @default(uuid(7))
   displayName String
   role        String?
-  /// AI ワーカーは true、ユーザー所有ワーカーは false（#49）。
-  isBot       Boolean   @default(false)
-  /// ユーザー所有ワーカーのみ User と 1:1 で紐づく。AI ワーカーは null（#49）。
-  userId      String?   @unique
-  user        User?     @relation(fields: [userId], references: [id])
   /// AI バッチのプロンプト指針となる性格設定（任意・500 文字以内）（#38）。
   personality String?
   /// 論理削除日時（#218）。null=有効、値=削除済み。物理削除は行わない。

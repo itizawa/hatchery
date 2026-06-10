@@ -24,7 +24,6 @@ describe("AppRoot", () => {
                 id: "testuser",
                 displayName: "Test User",
                 role: "admin",
-                employeeId: "emp-testuser",
               }),
               {
                 status: 200,

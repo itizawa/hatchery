@@ -1,0 +1,6 @@
+User-agent: *
+Disallow: /admin
+Disallow: /account
+Disallow: /office
+
+Sitemap: https://hatchery.pages.dev/sitemap.xml

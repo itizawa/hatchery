@@ -41,6 +41,8 @@ export interface PostRepository {
   addScore(id: string, delta: number): Promise<PostRecord | null>;
   /** 複数の communityId の post を新着順（createdAt 降順）で取得する。ホームフィード用。 */
   listByCommunityIds(communityIds: string[], limit?: number): Promise<PostRecord[]>;
+  /** 全 community の post を新着順（createdAt 降順）で取得する。公開ホームフィード用。limit 省略時は 50 件。 */
+  listLatest(limit?: number): Promise<PostRecord[]>;
 }
 
 function cloneRecord(r: PostRecord): PostRecord {
@@ -111,6 +113,13 @@ export function createInMemoryPostRepository(): PostRepository {
         .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
         .slice(0, limit);
       return Promise.resolve(filtered.map(cloneRecord));
+    },
+
+    listLatest(limit = 50): Promise<PostRecord[]> {
+      const sorted = [...records]
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+        .slice(0, limit);
+      return Promise.resolve(sorted.map(cloneRecord));
     },
   };
 }

@@ -90,5 +90,13 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
       });
       return rows.map(toRecord);
     },
+
+    async listLatest(limit = 50): Promise<PostRecord[]> {
+      const rows = await prisma.post.findMany({
+        orderBy: { createdAt: "desc" },
+        take: limit,
+      });
+      return rows.map(toRecord);
+    },
   };
 }

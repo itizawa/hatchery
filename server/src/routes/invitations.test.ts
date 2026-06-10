@@ -2,15 +2,15 @@ import request from "supertest";
 import { describe, expect, it } from "vitest";
 
 import { createApp } from "../app.js";
-import { InMemoryInvitationLinkRepository } from "../persistence/invitationLinkRepository.js";
-import { InMemoryUserRepository } from "../persistence/userRepository.js";
+import { createInMemoryInvitationLinkRepository } from "../persistence/invitationLinkRepository.js";
+import { createTestUserRepository } from "../persistence/userRepository.js";
 import { createTestDeps } from "../testing/createTestDeps.js";
 
 async function makeApp(
-  invitationRepo = new InMemoryInvitationLinkRepository(),
+  invitationRepo = createInMemoryInvitationLinkRepository(),
   role: "admin" | "member" = "admin",
 ) {
-  const userRepo = await InMemoryUserRepository.createWithTestUser(null, role);
+  const userRepo = await createTestUserRepository(null, role);
   return createApp(
     await createTestDeps({
       userRepository: userRepo,
@@ -43,7 +43,7 @@ describe("POST /api/admin/invitations", () => {
   });
 
   it("member ユーザーは 403 を返す", async () => {
-    const app = await makeApp(new InMemoryInvitationLinkRepository(), "member");
+    const app = await makeApp(createInMemoryInvitationLinkRepository(), "member");
     const agent = await loginAgent(app);
     const res = await agent.post("/api/admin/invitations").send({ expiresInHours: 24 });
     expect(res.status).toBe(403);
@@ -118,7 +118,7 @@ describe("GET /api/admin/invitations", () => {
   });
 
   it("member ユーザーは 403 を返す", async () => {
-    const app = await makeApp(new InMemoryInvitationLinkRepository(), "member");
+    const app = await makeApp(createInMemoryInvitationLinkRepository(), "member");
     const agent = await loginAgent(app);
     const res = await agent.get("/api/admin/invitations");
     expect(res.status).toBe(403);
@@ -155,7 +155,7 @@ describe("POST /api/admin/invitations/:id/revoke", () => {
   });
 
   it("member ユーザーは 403 を返す", async () => {
-    const app = await makeApp(new InMemoryInvitationLinkRepository(), "member");
+    const app = await makeApp(createInMemoryInvitationLinkRepository(), "member");
     const agent = await loginAgent(app);
     const res = await agent.post("/api/admin/invitations/fake-id/revoke");
     expect(res.status).toBe(403);
@@ -209,7 +209,7 @@ describe("GET /api/invitations/:token (#132)", () => {
   });
 
   it("使用済みトークンは 200 と status: used を返す", async () => {
-    const repo = new InMemoryInvitationLinkRepository();
+    const repo = createInMemoryInvitationLinkRepository();
     const app = await makeApp(repo);
     const token = await createInvitationToken(app);
 
@@ -293,7 +293,7 @@ describe("POST /api/invitations/:token/accept (#132)", () => {
   });
 
   it("期限切れトークンは 409 を返す", async () => {
-    const repo = new InMemoryInvitationLinkRepository();
+    const repo = createInMemoryInvitationLinkRepository();
     const pastDate = new Date(Date.now() - 1000);
     await repo.create({
       token: "expired-token",
@@ -308,7 +308,7 @@ describe("POST /api/invitations/:token/accept (#132)", () => {
   });
 
   it("失効済みトークンは 409 を返す", async () => {
-    const repo = new InMemoryInvitationLinkRepository();
+    const repo = createInMemoryInvitationLinkRepository();
     const record = await repo.create({
       token: "revoked-token",
       expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),

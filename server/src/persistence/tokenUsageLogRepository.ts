@@ -17,38 +17,42 @@ export interface TokenUsageLogRepository {
   summarize(): Promise<TokenUsageSummary>;
 }
 
-export class InMemoryTokenUsageLogRepository implements TokenUsageLogRepository {
-  private readonly logs: TokenUsageLog[] = [];
-  private _seq = 0;
+export function createInMemoryTokenUsageLogRepository(): TokenUsageLogRepository {
+  const logs: TokenUsageLog[] = [];
+  let seq = 0;
 
-  async create(entry: Omit<TokenUsageLog, "id" | "occurredAt">): Promise<TokenUsageLog> {
-    const log: TokenUsageLog = {
-      id: `token-log-${++this._seq}`,
-      occurredAt: new Date(),
-      ...entry,
-    };
-    this.logs.push(log);
-    return { ...log };
-  }
+  return {
+    create(entry: Omit<TokenUsageLog, "id" | "occurredAt">): Promise<TokenUsageLog> {
+      const log: TokenUsageLog = {
+        id: `token-log-${++seq}`,
+        occurredAt: new Date(),
+        ...entry,
+      };
+      logs.push(log);
+      return Promise.resolve({ ...log });
+    },
 
-  async findRecent(limit: number): Promise<TokenUsageLog[]> {
-    return [...this.logs]
-      .map((log, index) => ({ log, index }))
-      .sort((a, b) => {
-        const diff = b.log.occurredAt.getTime() - a.log.occurredAt.getTime();
-        return diff !== 0 ? diff : b.index - a.index;
-      })
-      .slice(0, limit)
-      .map(({ log }) => ({ ...log }));
-  }
+    findRecent(limit: number): Promise<TokenUsageLog[]> {
+      return Promise.resolve(
+        [...logs]
+          .map((log, index) => ({ log, index }))
+          .sort((a, b) => {
+            const diff = b.log.occurredAt.getTime() - a.log.occurredAt.getTime();
+            return diff !== 0 ? diff : b.index - a.index;
+          })
+          .slice(0, limit)
+          .map(({ log }) => ({ ...log })),
+      );
+    },
 
-  async summarize(): Promise<TokenUsageSummary> {
-    const totalInputTokens = this.logs.reduce((sum, l) => sum + l.inputTokens, 0);
-    const totalOutputTokens = this.logs.reduce((sum, l) => sum + l.outputTokens, 0);
-    return {
-      totalInputTokens,
-      totalOutputTokens,
-      totalTokens: totalInputTokens + totalOutputTokens,
-    };
-  }
+    summarize(): Promise<TokenUsageSummary> {
+      const totalInputTokens = logs.reduce((sum, l) => sum + l.inputTokens, 0);
+      const totalOutputTokens = logs.reduce((sum, l) => sum + l.outputTokens, 0);
+      return Promise.resolve({
+        totalInputTokens,
+        totalOutputTokens,
+        totalTokens: totalInputTokens + totalOutputTokens,
+      });
+    },
+  };
 }

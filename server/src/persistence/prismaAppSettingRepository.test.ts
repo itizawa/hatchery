@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { PrismaAppSettingRepository } from "./prismaAppSettingRepository.js";
+import { createPrismaAppSettingRepository } from "./prismaAppSettingRepository.js";
 
 const now = new Date("2026-01-01T00:00:00Z");
 
@@ -14,7 +14,7 @@ function makePrismaMock() {
   };
 }
 
-describe("PrismaAppSettingRepository", () => {
+describe("createPrismaAppSettingRepository", () => {
   describe("findAll", () => {
     it("全設定を AppSetting[] に変換して返す", async () => {
       const prismaMock = makePrismaMock();
@@ -22,7 +22,7 @@ describe("PrismaAppSettingRepository", () => {
         { key: "CLAUDE_API_KEY", value: "enc:value", updatedAt: now },
         { key: "SOME_SETTING", value: "other", updatedAt: now },
       ]);
-      const repo = new PrismaAppSettingRepository(prismaMock as never);
+      const repo = createPrismaAppSettingRepository(prismaMock as never);
 
       const result = await repo.findAll();
 
@@ -35,7 +35,7 @@ describe("PrismaAppSettingRepository", () => {
     it("設定が存在しない場合は空配列を返す", async () => {
       const prismaMock = makePrismaMock();
       prismaMock.appSetting.findMany.mockResolvedValue([]);
-      const repo = new PrismaAppSettingRepository(prismaMock as never);
+      const repo = createPrismaAppSettingRepository(prismaMock as never);
 
       const result = await repo.findAll();
       expect(result).toHaveLength(0);
@@ -50,7 +50,7 @@ describe("PrismaAppSettingRepository", () => {
         value: "enc:value",
         updatedAt: now,
       });
-      const repo = new PrismaAppSettingRepository(prismaMock as never);
+      const repo = createPrismaAppSettingRepository(prismaMock as never);
 
       const result = await repo.findByKey("CLAUDE_API_KEY");
 
@@ -63,7 +63,7 @@ describe("PrismaAppSettingRepository", () => {
     it("key が存在しない場合は null を返す", async () => {
       const prismaMock = makePrismaMock();
       prismaMock.appSetting.findUnique.mockResolvedValue(null);
-      const repo = new PrismaAppSettingRepository(prismaMock as never);
+      const repo = createPrismaAppSettingRepository(prismaMock as never);
 
       const result = await repo.findByKey("NON_EXISTENT");
       expect(result).toBeNull();
@@ -78,7 +78,7 @@ describe("PrismaAppSettingRepository", () => {
         value: "new_value",
         updatedAt: now,
       });
-      const repo = new PrismaAppSettingRepository(prismaMock as never);
+      const repo = createPrismaAppSettingRepository(prismaMock as never);
 
       const result = await repo.upsert("NEW_KEY", "new_value");
 
@@ -97,7 +97,7 @@ describe("PrismaAppSettingRepository", () => {
         value: "updated_enc",
         updatedAt: now,
       });
-      const repo = new PrismaAppSettingRepository(prismaMock as never);
+      const repo = createPrismaAppSettingRepository(prismaMock as never);
 
       const result = await repo.upsert("CLAUDE_API_KEY", "updated_enc");
 

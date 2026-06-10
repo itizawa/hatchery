@@ -17,10 +17,10 @@ describe("createApp: 純粋ファクトリ（Issue #137）", () => {
   });
 
   it("createTestDeps が注入した community / post 系リポジトリを createApp が配線する（フォールバック非依存・#290）", async () => {
-    // createApp 内の `?? new InMemoryX()` フォールバックを撤去した後も、
+    // createApp 内の `?? createInMemoryX()` フォールバックを撤去した後も、
     // createTestDeps が供給する 6 リポジトリで community/post/feed ルートが動作することを確認する。
-    const { InMemoryPostRepository } = await import("./persistence/postRepository.js");
-    const seededPostRepo = new InMemoryPostRepository();
+    const { createInMemoryPostRepository } = await import("./persistence/postRepository.js");
+    const seededPostRepo = createInMemoryPostRepository();
     const [post] = await seededPostRepo.createMany("community-1", [
       { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "Wired", text: "Body" },
     ]);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { InMemoryWorkerRepository } from "../persistence/workerRepository.js";
+import { createInMemoryWorkerRepository } from "../persistence/workerRepository.js";
 
 import { createTestDeps } from "./createTestDeps.js";
 
@@ -24,12 +24,12 @@ describe("createTestDeps", () => {
   });
 
   it("overrides で特定のリポジトリを上書きできる", async () => {
-    const customWorkerRepo = new InMemoryWorkerRepository();
+    const customWorkerRepo = createInMemoryWorkerRepository();
     const deps = await createTestDeps({ workerRepository: customWorkerRepo });
     expect(deps.workerRepository).toBe(customWorkerRepo);
   });
 
-  it("デフォルト userRepository には testuser が存在する（createWithTestUser）", async () => {
+  it("デフォルト userRepository には testuser が存在する（createTestUserRepository）", async () => {
     const deps = await createTestDeps();
     const user = await deps.userRepository.findByLoginId("testuser");
     expect(user).not.toBeNull();

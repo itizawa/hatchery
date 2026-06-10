@@ -47,47 +47,47 @@ function cloneRecord(r: CommunityRecord): CommunityRecord {
 }
 
 /** DB 非依存のインメモリ実装。ユースケース/ルートのテストで注入する。 */
-export class InMemoryCommunityRepository implements CommunityRepository {
-  private readonly records: CommunityRecord[];
+export function createInMemoryCommunityRepository(
+  initialRecords: CommunityRecord[] = [],
+): CommunityRepository {
+  const records: CommunityRecord[] = initialRecords.map(cloneRecord);
 
-  constructor(records: CommunityRecord[] = []) {
-    this.records = records.map(cloneRecord);
-  }
+  return {
+    findById(id: string): Promise<CommunityRecord | null> {
+      const found = records.find((r) => r.id === id);
+      return Promise.resolve(found ? cloneRecord(found) : null);
+    },
 
-  findById(id: string): Promise<CommunityRecord | null> {
-    const found = this.records.find((r) => r.id === id);
-    return Promise.resolve(found ? cloneRecord(found) : null);
-  }
+    findBySlug(slug: string): Promise<CommunityRecord | null> {
+      const found = records.find((r) => r.slug === slug);
+      return Promise.resolve(found ? cloneRecord(found) : null);
+    },
 
-  findBySlug(slug: string): Promise<CommunityRecord | null> {
-    const found = this.records.find((r) => r.slug === slug);
-    return Promise.resolve(found ? cloneRecord(found) : null);
-  }
+    list(): Promise<CommunityRecord[]> {
+      const sorted = [...records].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+      return Promise.resolve(sorted.map(cloneRecord));
+    },
 
-  list(): Promise<CommunityRecord[]> {
-    const sorted = [...this.records].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
-    return Promise.resolve(sorted.map(cloneRecord));
-  }
+    create(input: CreateCommunityRecordInput): Promise<CommunityRecord> {
+      const record: CommunityRecord = {
+        id: randomUUID(),
+        slug: input.slug,
+        name: input.name,
+        description: input.description,
+        synopsis: null,
+        lastSlotKey: null,
+        createdAt: new Date(),
+      };
+      records.push(record);
+      return Promise.resolve(cloneRecord(record));
+    },
 
-  create(input: CreateCommunityRecordInput): Promise<CommunityRecord> {
-    const record: CommunityRecord = {
-      id: randomUUID(),
-      slug: input.slug,
-      name: input.name,
-      description: input.description,
-      synopsis: null,
-      lastSlotKey: null,
-      createdAt: new Date(),
-    };
-    this.records.push(record);
-    return Promise.resolve(cloneRecord(record));
-  }
-
-  update(id: string, input: UpdateCommunityRecordInput): Promise<CommunityRecord | null> {
-    const record = this.records.find((r) => r.id === id);
-    if (!record) return Promise.resolve(null);
-    if (input.name !== undefined) record.name = input.name;
-    if (input.description !== undefined) record.description = input.description;
-    return Promise.resolve(cloneRecord(record));
-  }
+    update(id: string, input: UpdateCommunityRecordInput): Promise<CommunityRecord | null> {
+      const record = records.find((r) => r.id === id);
+      if (!record) return Promise.resolve(null);
+      if (input.name !== undefined) record.name = input.name;
+      if (input.description !== undefined) record.description = input.description;
+      return Promise.resolve(cloneRecord(record));
+    },
+  };
 }

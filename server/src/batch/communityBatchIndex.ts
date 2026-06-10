@@ -1,9 +1,9 @@
 import { prisma } from "../persistence/prismaClient.js";
-import { PrismaAppSettingRepository } from "../persistence/prismaAppSettingRepository.js";
-import { PrismaBatchRunLogRepository } from "../persistence/prismaBatchRunLogRepository.js";
-import { PrismaCommunityRepository } from "../persistence/prismaCommunityRepository.js";
-import { PrismaPostRepository } from "../persistence/prismaPostRepository.js";
-import { PrismaCommentRepository } from "../persistence/prismaCommentRepository.js";
+import { createPrismaAppSettingRepository } from "../persistence/prismaAppSettingRepository.js";
+import { createPrismaBatchRunLogRepository } from "../persistence/prismaBatchRunLogRepository.js";
+import { createPrismaCommunityRepository } from "../persistence/prismaCommunityRepository.js";
+import { createPrismaPostRepository } from "../persistence/prismaPostRepository.js";
+import { createPrismaCommentRepository } from "../persistence/prismaCommentRepository.js";
 
 import { runCommunityBatch } from "./runCommunityBatch.js";
 
@@ -13,11 +13,11 @@ import { runCommunityBatch } from "./runCommunityBatch.js";
  * 全 community に対して 1 コミュニティ = 1 API コールで Post + Comment を生成・永続化する。
  */
 async function main(): Promise<void> {
-  const communityRepo = new PrismaCommunityRepository(prisma);
-  const postRepo = new PrismaPostRepository(prisma);
-  const commentRepo = new PrismaCommentRepository(prisma);
-  const appSettingRepo = new PrismaAppSettingRepository(prisma);
-  const batchRunLogRepository = new PrismaBatchRunLogRepository(prisma);
+  const communityRepo = createPrismaCommunityRepository(prisma);
+  const postRepo = createPrismaPostRepository(prisma);
+  const commentRepo = createPrismaCommentRepository(prisma);
+  const appSettingRepo = createPrismaAppSettingRepository(prisma);
+  const batchRunLogRepository = createPrismaBatchRunLogRepository(prisma);
 
   try {
     const result = await runCommunityBatch({

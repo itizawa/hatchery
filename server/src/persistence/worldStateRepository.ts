@@ -20,19 +20,21 @@ export interface WorldStateRepository {
 }
 
 /** DB 非依存のインメモリ実装。ユースケース/ルートのテストで注入する。 */
-export class InMemoryWorldStateRepository implements WorldStateRepository {
-  private record: WorldStateRecord | null = null;
+export function createInMemoryWorldStateRepository(): WorldStateRepository {
+  let record: WorldStateRecord | null = null;
 
-  get(): Promise<WorldStateRecord | null> {
-    return Promise.resolve(this.record ? { ...this.record } : null);
-  }
+  return {
+    get(): Promise<WorldStateRecord | null> {
+      return Promise.resolve(record ? { ...record } : null);
+    },
 
-  upsert(state: Omit<WorldStateRecord, "id" | "updatedAt">): Promise<WorldStateRecord> {
-    this.record = {
-      id: "singleton",
-      ...state,
-      updatedAt: new Date(),
-    };
-    return Promise.resolve({ ...this.record });
-  }
+    upsert(state: Omit<WorldStateRecord, "id" | "updatedAt">): Promise<WorldStateRecord> {
+      record = {
+        id: "singleton",
+        ...state,
+        updatedAt: new Date(),
+      };
+      return Promise.resolve({ ...record });
+    },
+  };
 }

@@ -1,16 +1,16 @@
 import type { AppDeps } from "../app.js";
-import { InMemoryAppSettingRepository } from "../persistence/appSettingRepository.js";
-import { InMemoryBatchRunLogRepository } from "../persistence/batchRunLogRepository.js";
-import { InMemoryCommentRepository } from "../persistence/commentRepository.js";
-import { InMemoryCommunityRepository } from "../persistence/communityRepository.js";
-import { InMemoryWorkerRepository } from "../persistence/workerRepository.js";
-import { InMemoryInvitationLinkRepository } from "../persistence/invitationLinkRepository.js";
-import { InMemoryPostRepository } from "../persistence/postRepository.js";
-import { InMemorySubscriptionRepository } from "../persistence/subscriptionRepository.js";
-import { InMemoryTokenUsageLogRepository } from "../persistence/tokenUsageLogRepository.js";
-import { InMemoryUserRepository } from "../persistence/userRepository.js";
-import { InMemoryVoteRepository } from "../persistence/voteRepository.js";
-import { InMemoryWorldStateRepository } from "../persistence/worldStateRepository.js";
+import { createInMemoryAppSettingRepository } from "../persistence/appSettingRepository.js";
+import { createInMemoryBatchRunLogRepository } from "../persistence/batchRunLogRepository.js";
+import { createInMemoryCommentRepository } from "../persistence/commentRepository.js";
+import { createInMemoryCommunityRepository } from "../persistence/communityRepository.js";
+import { createInMemoryWorkerRepository } from "../persistence/workerRepository.js";
+import { createInMemoryInvitationLinkRepository } from "../persistence/invitationLinkRepository.js";
+import { createInMemoryPostRepository } from "../persistence/postRepository.js";
+import { createInMemorySubscriptionRepository } from "../persistence/subscriptionRepository.js";
+import { createInMemoryTokenUsageLogRepository } from "../persistence/tokenUsageLogRepository.js";
+import { createTestUserRepository } from "../persistence/userRepository.js";
+import { createInMemoryVoteRepository } from "../persistence/voteRepository.js";
+import { createInMemoryWorldStateRepository } from "../persistence/worldStateRepository.js";
 import { InMemoryStorageService } from "../services/storageService.js";
 
 /** テスト用の依存注入オーバーライド。各フィールドを省略すると InMemory 実装のデフォルトが使われる。 */
@@ -22,21 +22,20 @@ export type TestDepsOverrides = Partial<AppDeps>;
  * overrides で任意のリポジトリを上書きできる。
  */
 export async function createTestDeps(overrides?: TestDepsOverrides): Promise<AppDeps> {
-  const defaultUserRepo =
-    overrides?.userRepository ?? (await InMemoryUserRepository.createWithTestUser());
+  const defaultUserRepo = overrides?.userRepository ?? (await createTestUserRepository());
   return {
     userRepository: defaultUserRepo,
-    workerRepository: new InMemoryWorkerRepository(),
-    appSettingRepository: new InMemoryAppSettingRepository(),
-    batchRunLogRepository: new InMemoryBatchRunLogRepository(),
-    invitationLinkRepository: new InMemoryInvitationLinkRepository(),
-    tokenUsageLogRepository: new InMemoryTokenUsageLogRepository(),
-    communityRepository: new InMemoryCommunityRepository(),
-    postRepository: new InMemoryPostRepository(),
-    commentRepository: new InMemoryCommentRepository(),
-    subscriptionRepository: new InMemorySubscriptionRepository(),
-    voteRepository: new InMemoryVoteRepository(),
-    worldStateRepository: new InMemoryWorldStateRepository(),
+    workerRepository: createInMemoryWorkerRepository(),
+    appSettingRepository: createInMemoryAppSettingRepository(),
+    batchRunLogRepository: createInMemoryBatchRunLogRepository(),
+    invitationLinkRepository: createInMemoryInvitationLinkRepository(),
+    tokenUsageLogRepository: createInMemoryTokenUsageLogRepository(),
+    communityRepository: createInMemoryCommunityRepository(),
+    postRepository: createInMemoryPostRepository(),
+    commentRepository: createInMemoryCommentRepository(),
+    subscriptionRepository: createInMemorySubscriptionRepository(),
+    voteRepository: createInMemoryVoteRepository(),
+    worldStateRepository: createInMemoryWorldStateRepository(),
     storageService: new InMemoryStorageService(),
     ...overrides,
   };

@@ -35,58 +35,64 @@ export interface UserRepository {
 }
 
 /** インメモリ実装（テスト用）。 */
-export class InMemoryUserRepository implements UserRepository {
-  private users: User[] = [];
+export function createInMemoryUserRepository(initialUsers: User[] = []): UserRepository {
+  const users: User[] = initialUsers;
 
-  constructor(users: User[] = []) {
-    this.users = users;
-  }
+  return {
+    findById(id: string): Promise<User | null> {
+      return Promise.resolve(users.find((u) => u.id === id) ?? null);
+    },
 
-  async findById(id: string): Promise<User | null> {
-    return this.users.find((u) => u.id === id) ?? null;
-  }
+    findByLoginId(loginId: string): Promise<User | null> {
+      return Promise.resolve(users.find((u) => u.loginId === loginId) ?? null);
+    },
 
-  async findByLoginId(loginId: string): Promise<User | null> {
-    return this.users.find((u) => u.loginId === loginId) ?? null;
-  }
+    updateProfile(id: string, data: { displayName: string; avatarUrl?: string }): Promise<User> {
+      const user = users.find((u) => u.id === id);
+      if (!user) throw new Error(`User not found: ${id}`);
+      user.displayName = data.displayName;
+      user.avatarUrl = data.avatarUrl ?? user.avatarUrl;
+      return Promise.resolve(user);
+    },
 
-  async updateProfile(id: string, data: { displayName: string; avatarUrl?: string }): Promise<User> {
-    const user = this.users.find((u) => u.id === id);
-    if (!user) throw new Error(`User not found: ${id}`);
-    user.displayName = data.displayName;
-    user.avatarUrl = data.avatarUrl ?? user.avatarUrl;
-    return user;
-  }
+    create(input: { loginId: string; displayName: string; passwordHash: string }): Promise<User> {
+      if (users.some((u) => u.loginId === input.loginId)) {
+        throw new LoginIdAlreadyExistsError(input.loginId);
+      }
+      const user: User = {
+        id: input.loginId,
+        loginId: input.loginId,
+        displayName: input.displayName,
+        passwordHash: input.passwordHash,
+        role: "member",
+        employeeId: null,
+        avatarUrl: null,
+      };
+      users.push(user);
+      return Promise.resolve({ ...user });
+    },
+  };
+}
 
-  async create(input: { loginId: string; displayName: string; passwordHash: string }): Promise<User> {
-    if (this.users.some((u) => u.loginId === input.loginId)) {
-      throw new LoginIdAlreadyExistsError(input.loginId);
-    }
-    const user: User = {
-      id: input.loginId,
-      loginId: input.loginId,
-      displayName: input.displayName,
-      passwordHash: input.passwordHash,
-      role: "member",
-      employeeId: null,
+/**
+ * テスト用ユーザー（testuser / testpass）を持つインメモリ UserRepository を生成する。
+ * employeeId を渡すと紐づく Employee の id として設定する（#49。既定は未紐づけ＝null）。
+ * role を渡すと権限ロールを設定する（#136。既定は admin）。
+ */
+export async function createTestUserRepository(
+  employeeId: string | null = null,
+  role: UserRole = "admin",
+): Promise<UserRepository> {
+  const passwordHash = await bcrypt.hash("testpass", 10);
+  return createInMemoryUserRepository([
+    {
+      id: "testuser",
+      loginId: "testuser",
+      displayName: "Test User",
+      passwordHash,
+      role,
+      employeeId,
       avatarUrl: null,
-    };
-    this.users.push(user);
-    return { ...user };
-  }
-
-  /**
-   * テスト用ユーザー（testuser / testpass）を持つインスタンスを生成する。
-   * employeeId を渡すと紐づく Employee の id として設定する（#49。既定は未紐づけ＝null）。
-   * role を渡すと権限ロールを設定する（#136。既定は admin）。
-   */
-  static async createWithTestUser(
-    employeeId: string | null = null,
-    role: UserRole = "admin",
-  ): Promise<InMemoryUserRepository> {
-    const passwordHash = await bcrypt.hash("testpass", 10);
-    return new InMemoryUserRepository([
-      { id: "testuser", loginId: "testuser", displayName: "Test User", passwordHash, role, employeeId, avatarUrl: null },
-    ]);
-  }
+    },
+  ]);
 }

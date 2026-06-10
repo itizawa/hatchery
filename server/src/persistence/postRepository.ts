@@ -48,66 +48,69 @@ function cloneRecord(r: PostRecord): PostRecord {
 }
 
 /** DB 非依存のインメモリ実装。ユースケース/ルートのテストで注入する。 */
-export class InMemoryPostRepository implements PostRepository {
-  private readonly records: PostRecord[] = [];
-  private seq = 0;
+export function createInMemoryPostRepository(): PostRepository {
+  const records: PostRecord[] = [];
+  let seq = 0;
 
-  createMany(communityId: string, inputs: PostCreateInput[]): Promise<PostRecord[]> {
-    const created: PostRecord[] = [];
-    for (const input of inputs) {
-      // 重複チェック（(communityId, slotKey, seq) ユニーク）
-      const exists = this.records.find(
-        (r) => r.communityId === communityId && r.slotKey === input.slotKey && r.seq === input.seq,
-      );
-      if (exists) {
-        // 既存レコードをそのまま返す（upsert で skip）
-        created.push(cloneRecord(exists));
-        continue;
+  return {
+    createMany(communityId: string, inputs: PostCreateInput[]): Promise<PostRecord[]> {
+      const created: PostRecord[] = [];
+      for (const input of inputs) {
+        // 重複チェック（(communityId, slotKey, seq) ユニーク）
+        const exists = records.find(
+          (r) =>
+            r.communityId === communityId && r.slotKey === input.slotKey && r.seq === input.seq,
+        );
+        if (exists) {
+          // 既存レコードをそのまま返す（upsert で skip）
+          created.push(cloneRecord(exists));
+          continue;
+        }
+        seq += 1;
+        const record: PostRecord = {
+          id: `post-${seq}`,
+          communityId,
+          slotKey: input.slotKey,
+          seq: input.seq,
+          author: input.author,
+          title: input.title,
+          text: input.text,
+          score: 0,
+          createdAt: new Date(),
+        };
+        records.push(record);
+        created.push(cloneRecord(record));
       }
-      this.seq += 1;
-      const record: PostRecord = {
-        id: `post-${this.seq}`,
-        communityId,
-        slotKey: input.slotKey,
-        seq: input.seq,
-        author: input.author,
-        title: input.title,
-        text: input.text,
-        score: 0,
-        createdAt: new Date(),
-      };
-      this.records.push(record);
-      created.push(cloneRecord(record));
-    }
-    return Promise.resolve(created);
-  }
+      return Promise.resolve(created);
+    },
 
-  listByCommunity(communityId: string, limit = 50): Promise<PostRecord[]> {
-    const filtered = this.records
-      .filter((r) => r.communityId === communityId)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-      .slice(0, limit);
-    return Promise.resolve(filtered.map(cloneRecord));
-  }
+    listByCommunity(communityId: string, limit = 50): Promise<PostRecord[]> {
+      const filtered = records
+        .filter((r) => r.communityId === communityId)
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+        .slice(0, limit);
+      return Promise.resolve(filtered.map(cloneRecord));
+    },
 
-  findById(id: string): Promise<PostRecord | null> {
-    const found = this.records.find((r) => r.id === id);
-    return Promise.resolve(found ? cloneRecord(found) : null);
-  }
+    findById(id: string): Promise<PostRecord | null> {
+      const found = records.find((r) => r.id === id);
+      return Promise.resolve(found ? cloneRecord(found) : null);
+    },
 
-  addScore(id: string, delta: number): Promise<PostRecord | null> {
-    const record = this.records.find((r) => r.id === id);
-    if (!record) return Promise.resolve(null);
-    record.score += delta;
-    return Promise.resolve(cloneRecord(record));
-  }
+    addScore(id: string, delta: number): Promise<PostRecord | null> {
+      const record = records.find((r) => r.id === id);
+      if (!record) return Promise.resolve(null);
+      record.score += delta;
+      return Promise.resolve(cloneRecord(record));
+    },
 
-  listByCommunityIds(communityIds: string[], limit = 50): Promise<PostRecord[]> {
-    const idSet = new Set(communityIds);
-    const filtered = this.records
-      .filter((r) => idSet.has(r.communityId))
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-      .slice(0, limit);
-    return Promise.resolve(filtered.map(cloneRecord));
-  }
+    listByCommunityIds(communityIds: string[], limit = 50): Promise<PostRecord[]> {
+      const idSet = new Set(communityIds);
+      const filtered = records
+        .filter((r) => idSet.has(r.communityId))
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+        .slice(0, limit);
+      return Promise.resolve(filtered.map(cloneRecord));
+    },
+  };
 }

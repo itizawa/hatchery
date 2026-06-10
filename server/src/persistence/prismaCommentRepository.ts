@@ -27,66 +27,66 @@ function toRecord(row: {
 }
 
 /** CommentRepository の Prisma / PostgreSQL 実装（ADR-0019 / #305）。 */
-export class PrismaCommentRepository implements CommentRepository {
-  constructor(private readonly prisma: PrismaClient) {}
-
-  async createMany(communityId: string, inputs: CommentCreateInput[]): Promise<CommentRecord[]> {
-    const rows = await this.prisma.$transaction(
-      inputs.map((input) =>
-        this.prisma.comment.upsert({
-          where: {
-            communityId_slotKey_seq: {
+export function createPrismaCommentRepository(prisma: PrismaClient): CommentRepository {
+  return {
+    async createMany(communityId: string, inputs: CommentCreateInput[]): Promise<CommentRecord[]> {
+      const rows = await prisma.$transaction(
+        inputs.map((input) =>
+          prisma.comment.upsert({
+            where: {
+              communityId_slotKey_seq: {
+                communityId,
+                slotKey: input.slotKey,
+                seq: input.seq,
+              },
+            },
+            update: {},
+            create: {
               communityId,
+              postId: input.postId,
               slotKey: input.slotKey,
               seq: input.seq,
+              author: input.author,
+              text: input.text,
             },
-          },
-          update: {},
-          create: {
-            communityId,
-            postId: input.postId,
-            slotKey: input.slotKey,
-            seq: input.seq,
-            author: input.author,
-            text: input.text,
-          },
-        }),
-      ),
-    );
-    return rows.map(toRecord);
-  }
+          }),
+        ),
+      );
+      return rows.map(toRecord);
+    },
 
-  async listByPost(postId: string): Promise<CommentRecord[]> {
-    const rows = await this.prisma.comment.findMany({
-      where: { postId },
-      orderBy: { createdAt: "asc" },
-    });
-    return rows.map(toRecord);
-  }
-
-  async listByCommunity(communityId: string, limit = 50): Promise<CommentRecord[]> {
-    const rows = await this.prisma.comment.findMany({
-      where: { communityId },
-      orderBy: { createdAt: "asc" },
-      take: limit,
-    });
-    return rows.map(toRecord);
-  }
-
-  async findById(id: string): Promise<CommentRecord | null> {
-    const row = await this.prisma.comment.findUnique({ where: { id } });
-    return row ? toRecord(row) : null;
-  }
-
-  async addScore(id: string, delta: number): Promise<CommentRecord | null> {
-    try {
-      const row = await this.prisma.comment.update({
-        where: { id },
-        data: { score: { increment: delta } },
+    async listByPost(postId: string): Promise<CommentRecord[]> {
+      const rows = await prisma.comment.findMany({
+        where: { postId },
+        orderBy: { createdAt: "asc" },
       });
-      return toRecord(row);
-    } catch {
-      return null;
-    }
-  }
+      return rows.map(toRecord);
+    },
+
+    async listByCommunity(communityId: string, limit = 50): Promise<CommentRecord[]> {
+      const rows = await prisma.comment.findMany({
+        where: { communityId },
+        orderBy: { createdAt: "asc" },
+        take: limit,
+      });
+      return rows.map(toRecord);
+    },
+
+    async findById(id: string): Promise<CommentRecord | null> {
+      const row = await prisma.comment.findUnique({ where: { id } });
+      return row ? toRecord(row) : null;
+    },
+
+    async addScore(id: string, delta: number): Promise<CommentRecord | null> {
+      try {
+        const row = await prisma.comment.update({
+          where: { id },
+          data: { score: { increment: delta } },
+        });
+        return toRecord(row);
+      } catch {
+        return null;
+      }
+    },
+  };
 }

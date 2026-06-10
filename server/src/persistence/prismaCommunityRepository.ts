@@ -28,49 +28,49 @@ function toRecord(row: {
 }
 
 /** CommunityRepository の Prisma / PostgreSQL 実装（ADR-0019 / #305）。 */
-export class PrismaCommunityRepository implements CommunityRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export function createPrismaCommunityRepository(prisma: PrismaClient): CommunityRepository {
+  return {
+    async findById(id: string): Promise<CommunityRecord | null> {
+      const row = await prisma.community.findUnique({ where: { id } });
+      return row ? toRecord(row) : null;
+    },
 
-  async findById(id: string): Promise<CommunityRecord | null> {
-    const row = await this.prisma.community.findUnique({ where: { id } });
-    return row ? toRecord(row) : null;
-  }
+    async findBySlug(slug: string): Promise<CommunityRecord | null> {
+      const row = await prisma.community.findUnique({ where: { slug } });
+      return row ? toRecord(row) : null;
+    },
 
-  async findBySlug(slug: string): Promise<CommunityRecord | null> {
-    const row = await this.prisma.community.findUnique({ where: { slug } });
-    return row ? toRecord(row) : null;
-  }
+    async list(): Promise<CommunityRecord[]> {
+      const rows = await prisma.community.findMany({
+        orderBy: { createdAt: "asc" },
+      });
+      return rows.map(toRecord);
+    },
 
-  async list(): Promise<CommunityRecord[]> {
-    const rows = await this.prisma.community.findMany({
-      orderBy: { createdAt: "asc" },
-    });
-    return rows.map(toRecord);
-  }
-
-  async create(input: CreateCommunityRecordInput): Promise<CommunityRecord> {
-    const row = await this.prisma.community.create({
-      data: {
-        slug: input.slug,
-        name: input.name,
-        description: input.description,
-      },
-    });
-    return toRecord(row);
-  }
-
-  async update(id: string, input: UpdateCommunityRecordInput): Promise<CommunityRecord | null> {
-    try {
-      const row = await this.prisma.community.update({
-        where: { id },
+    async create(input: CreateCommunityRecordInput): Promise<CommunityRecord> {
+      const row = await prisma.community.create({
         data: {
-          ...(input.name !== undefined && { name: input.name }),
-          ...(input.description !== undefined && { description: input.description }),
+          slug: input.slug,
+          name: input.name,
+          description: input.description,
         },
       });
       return toRecord(row);
-    } catch {
-      return null;
-    }
-  }
+    },
+
+    async update(id: string, input: UpdateCommunityRecordInput): Promise<CommunityRecord | null> {
+      try {
+        const row = await prisma.community.update({
+          where: { id },
+          data: {
+            ...(input.name !== undefined && { name: input.name }),
+            ...(input.description !== undefined && { description: input.description }),
+          },
+        });
+        return toRecord(row);
+      } catch {
+        return null;
+      }
+    },
+  };
 }

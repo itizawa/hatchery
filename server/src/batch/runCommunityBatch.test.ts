@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { InMemoryAppSettingRepository } from "../persistence/appSettingRepository.js";
-import { InMemoryBatchRunLogRepository } from "../persistence/batchRunLogRepository.js";
-import { InMemoryCommentRepository } from "../persistence/commentRepository.js";
-import { InMemoryCommunityRepository, type CommunityRecord } from "../persistence/communityRepository.js";
-import { InMemoryPostRepository } from "../persistence/postRepository.js";
+import { createInMemoryAppSettingRepository } from "../persistence/appSettingRepository.js";
+import { createInMemoryBatchRunLogRepository } from "../persistence/batchRunLogRepository.js";
+import { createInMemoryCommentRepository } from "../persistence/commentRepository.js";
+import { createInMemoryCommunityRepository, type CommunityRecord } from "../persistence/communityRepository.js";
+import { createInMemoryPostRepository } from "../persistence/postRepository.js";
 
 import { runCommunityBatch } from "./runCommunityBatch.js";
 
@@ -67,11 +67,11 @@ describe("runCommunityBatch (#306)", () => {
   });
 
   const buildDeps = (communities: CommunityRecord[]) => {
-    const communityRepo = new InMemoryCommunityRepository(communities);
-    const postRepo = new InMemoryPostRepository();
-    const commentRepo = new InMemoryCommentRepository();
-    const appSettingRepo = new InMemoryAppSettingRepository();
-    const batchRunLogRepository = new InMemoryBatchRunLogRepository();
+    const communityRepo = createInMemoryCommunityRepository(communities);
+    const postRepo = createInMemoryPostRepository();
+    const commentRepo = createInMemoryCommentRepository();
+    const appSettingRepo = createInMemoryAppSettingRepository();
+    const batchRunLogRepository = createInMemoryBatchRunLogRepository();
     return { communityRepo, postRepo, commentRepo, appSettingRepo, batchRunLogRepository };
   };
 

@@ -48,17 +48,14 @@ export function useSaveAdminSetting() {
   });
 }
 
-/** DELETE /api/admin/workers/:id で Worker を論理削除する（#218 / #329）。
- * NOTE: このエンドポイントは openapi.gen.ts に未登録（#305 マージ待ち）のため as any で呼ぶ。
- */
+/** DELETE /api/admin/workers/:id で Worker を論理削除する（#218 / #329）。 */
 export async function deleteWorker(id: string): Promise<{ id: string; deletedAt: string }> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, response } = await (openApiClient as any).DELETE("/api/admin/workers/{id}", {
+  const { data, response } = await openApiClient.DELETE("/api/admin/workers/{id}", {
     params: { path: { id } },
     credentials: "include",
   });
   if (!response.ok || !data) throw new Error(`DELETE /api/admin/workers/${id} failed: ${response.status}`);
-  return data as { id: string; deletedAt: string };
+  return data;
 }
 
 export const BOT_WORKERS_ADMIN_QUERY_KEY = ["admin", "workers"] as const;
@@ -84,20 +81,19 @@ export async function fetchAdminWorkers(): Promise<Worker[]> {
   return (data ?? []) as unknown as Worker[];
 }
 
-/** POST /api/admin/workers で新規 Worker（isBot=true）を作成する（#217 / #329）。
- * NOTE: このエンドポイントは openapi.gen.ts に未登録（#305 マージ待ち）のため as any で呼ぶ。
- */
+/** POST /api/admin/workers で新規 Worker（isBot=true）を作成する（#217 / #329）。 */
 export async function createAdminWorker(input: {
   displayName: string;
   role?: string;
   personality?: string;
 }): Promise<Worker> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, response } = await (openApiClient as any).POST("/api/admin/workers", {
+  const { data, response } = await openApiClient.POST("/api/admin/workers", {
     body: input,
     credentials: "include",
   });
   if (!response.ok || !data) throw new Error(`POST /api/admin/workers failed: ${response.status}`);
+  // 生成型（openapi.gen）の Worker は deletedAt の表現が common の Worker と異なるため、
+  // 構造互換であることを前提に common 型へ橋渡しする（/api/workers の fetchAdminWorkers と同様）。
   return data as unknown as Worker;
 }
 

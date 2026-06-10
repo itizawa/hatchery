@@ -36,20 +36,17 @@ export const communitySubscriptionQueryKey = (slug: string) =>
 
 // ─── 管理者向け API 関数（/api/admin/communities）─────────────────────────
 
-/** GET /api/admin/communities — コミュニティ一覧を取得する（admin のみ）。
- * NOTE: このエンドポイントは openapi.gen.ts に未登録（#305 マージ待ち）のため as any で呼ぶ。
- */
+/** GET /api/admin/communities — コミュニティ一覧を取得する（admin のみ）。 */
 export async function fetchAdminCommunities(): Promise<AdminCommunity[]> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error, response } = await (openApiClient as any).GET("/api/admin/communities", {
+  const { data, error, response } = await openApiClient.GET("/api/admin/communities", {
     credentials: "include",
   });
   if (error || !response.ok || !data)
     throw new Error(`GET /api/admin/communities failed: ${response.status}`);
   return CommunitySchema.array().parse(
-    (data as Array<unknown>).map((c) => ({
-      ...(c as object),
-      created_at: new Date((c as { created_at: string }).created_at),
+    data.map((c) => ({
+      ...c,
+      created_at: new Date(c.created_at),
     })),
   );
 }
@@ -57,32 +54,26 @@ export async function fetchAdminCommunities(): Promise<AdminCommunity[]> {
 /** 後方互換: CommunitiesTab.tsx などが参照する fetchCommunities は管理者向けを指す。 */
 export const fetchCommunities = fetchAdminCommunities;
 
-/** POST /api/admin/communities — コミュニティを作成する（admin のみ）。
- * NOTE: このエンドポイントは openapi.gen.ts に未登録（#305 マージ待ち）のため as any で呼ぶ。
- */
+/** POST /api/admin/communities — コミュニティを作成する（admin のみ）。 */
 export async function createCommunity(input: CreateCommunityInput): Promise<AdminCommunity> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error, response } = await (openApiClient as any).POST("/api/admin/communities", {
+  const { data, error, response } = await openApiClient.POST("/api/admin/communities", {
     body: input,
     credentials: "include",
   });
   if (error || !response.ok || !data)
     throw new Error(`POST /api/admin/communities failed: ${response.status}`);
   return CommunitySchema.parse({
-    ...(data as object),
-    created_at: new Date((data as { created_at: string }).created_at),
+    ...data,
+    created_at: new Date(data.created_at),
   });
 }
 
-/** PATCH /api/admin/communities/:id — コミュニティを更新する（admin のみ）。
- * NOTE: このエンドポイントは openapi.gen.ts に未登録（#305 マージ待ち）のため as any で呼ぶ。
- */
+/** PATCH /api/admin/communities/:id — コミュニティを更新する（admin のみ）。 */
 export async function updateCommunity(
   id: string,
   input: UpdateCommunityInput,
 ): Promise<AdminCommunity> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error, response } = await (openApiClient as any).PATCH("/api/admin/communities/{id}", {
+  const { data, error, response } = await openApiClient.PATCH("/api/admin/communities/{id}", {
     params: { path: { id } },
     body: input,
     credentials: "include",
@@ -90,8 +81,8 @@ export async function updateCommunity(
   if (error || !response.ok || !data)
     throw new Error(`PATCH /api/admin/communities/${id} failed: ${response.status}`);
   return CommunitySchema.parse({
-    ...(data as object),
-    created_at: new Date((data as { created_at: string }).created_at),
+    ...data,
+    created_at: new Date(data.created_at),
   });
 }
 

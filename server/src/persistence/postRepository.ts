@@ -41,10 +41,49 @@ export interface PostRepository {
   addScore(id: string, delta: number): Promise<PostRecord | null>;
   /** 全 community の post を新着順（createdAt 降順）で取得する。公開ホームフィード用。limit 省略時は 50 件。 */
   listLatest(limit?: number): Promise<PostRecord[]>;
+  /**
+   * 全 community の post をカーソルベースのページネーションで取得する（#367）。
+   * cursor は base64(JSON{ createdAt: ISO文字列, id: string })。
+   * nextCursor が null の場合は末尾（追加ページなし）。
+   */
+  listLatestPaged(
+    cursor?: string,
+    limit?: number,
+  ): Promise<{ posts: PostRecord[]; nextCursor: string | null }>;
 }
 
 function cloneRecord(r: PostRecord): PostRecord {
   return { ...r };
+}
+
+interface CursorPayload {
+  createdAt: string;
+  id: string;
+}
+
+export function encodeCursor(record: PostRecord): string {
+  const payload: CursorPayload = { createdAt: record.createdAt.toISOString(), id: record.id };
+  return Buffer.from(JSON.stringify(payload)).toString("base64");
+}
+
+export function decodeCursor(cursor: string): CursorPayload | null {
+  try {
+    const json = Buffer.from(cursor, "base64").toString("utf8");
+    const parsed: unknown = JSON.parse(json);
+    if (
+      typeof parsed === "object" &&
+      parsed !== null &&
+      "createdAt" in parsed &&
+      "id" in parsed &&
+      typeof (parsed as Record<string, unknown>).createdAt === "string" &&
+      typeof (parsed as Record<string, unknown>).id === "string"
+    ) {
+      return parsed as CursorPayload;
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 /** DB 非依存のインメモリ実装。ユースケース/ルートのテストで注入する。 */
@@ -109,6 +148,44 @@ export function createInMemoryPostRepository(): PostRepository {
         .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
         .slice(0, limit);
       return Promise.resolve(sorted.map(cloneRecord));
+    },
+
+    listLatestPaged(
+      cursor?: string,
+      limit = 20,
+    ): Promise<{ posts: PostRecord[]; nextCursor: string | null }> {
+      let cursorPayload: CursorPayload | null = null;
+      if (cursor !== undefined) {
+        cursorPayload = decodeCursor(cursor);
+        if (!cursorPayload) {
+          return Promise.reject(new Error("INVALID_CURSOR"));
+        }
+      }
+
+      const sorted = [...records].sort((a, b) => {
+        const timeDiff = b.createdAt.getTime() - a.createdAt.getTime();
+        if (timeDiff !== 0) return timeDiff;
+        return b.id < a.id ? -1 : b.id > a.id ? 1 : 0;
+      });
+
+      let filtered = sorted;
+      if (cursorPayload) {
+        const cursorTime = new Date(cursorPayload.createdAt).getTime();
+        const cursorId = cursorPayload.id;
+        filtered = sorted.filter((r) => {
+          const rTime = r.createdAt.getTime();
+          if (rTime < cursorTime) return true;
+          if (rTime === cursorTime) return r.id < cursorId;
+          return false;
+        });
+      }
+
+      const fetched = filtered.slice(0, limit + 1);
+      const hasMore = fetched.length > limit;
+      const posts = hasMore ? fetched.slice(0, limit) : fetched;
+      const nextCursor = hasMore ? encodeCursor(posts[posts.length - 1]) : null;
+
+      return Promise.resolve({ posts: posts.map(cloneRecord), nextCursor });
     },
   };
 }

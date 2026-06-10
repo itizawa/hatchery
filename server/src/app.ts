@@ -23,6 +23,7 @@ import type { UserRepository } from "./persistence/userRepository.js";
 import type { VoteRepository } from "./persistence/voteRepository.js";
 import type { WorldStateRepository } from "./persistence/worldStateRepository.js";
 import { createAdminRouter } from "./routes/admin.js";
+import { createApiDocsRouter, isApiDocsEnabled } from "./routes/apiDocs.js";
 import { createAdminWorkerImageRouter } from "./routes/adminWorkerImage.js";
 import { createBatchLogsRouter } from "./routes/batch-logs.js";
 import { createTokenUsageRouter } from "./routes/token-usage.js";
@@ -174,6 +175,12 @@ export function createApp(deps: AppDeps): Express {
   const subscriptionRepo = deps.subscriptionRepository;
   const voteRepo = deps.voteRepository;
   const worldStateRepo = deps.worldStateRepository;
+
+  // API 仕様の閲覧（#106 / ADR-0006）。トグルが有効なときだけ配線する。
+  // 無効時（本番既定）はルート未登録＝404。生成 OpenAPI（registry）を単一情報源として配信する。
+  if (isApiDocsEnabled(process.env)) {
+    app.use("/", createApiDocsRouter());
+  }
 
   app.use("/health", healthRouter);
   app.use("/api/auth", createAuthRouter(passportInstance, deps.userRepository));

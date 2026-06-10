@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 
 /**
  * チャンネル会話を生成する関数（#53）。プロンプトと API キーを受け、モデルの生テキストを返す。
- * テストではスタブを注入し、本番は Claude を使う（planningBatch.ts と同じ注入パターン）。
+ * テストではスタブを注入し、本番は Claude を使う（依存注入パターン）。
  */
 export type ConversationGenerator = (prompt: string, apiKey: string) => Promise<string>;
 

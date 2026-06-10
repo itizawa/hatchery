@@ -7,7 +7,7 @@ import {
   UpdateAppSettingSchema,
   UpdateCommunitySchema,
 } from "@hatchery/common";
-import type { ArtifactConfig, UpdateCommunityInput } from "@hatchery/common";
+import type { UpdateCommunityInput } from "@hatchery/common";
 import { randomBytes, randomUUID } from "crypto";
 import { Router } from "express";
 
@@ -217,7 +217,7 @@ export function createAdminRouter(
           name: input.name,
           description: input.description,
           ...("artifact_config" in input && {
-            artifactConfig: (input.artifact_config as ArtifactConfig | null | undefined) ?? null,
+            artifactConfig: input.artifact_config ?? null,
           }),
         });
         if (!community) {

@@ -47,7 +47,12 @@ export interface CommunityRepository {
 }
 
 function cloneRecord(r: CommunityRecord): CommunityRecord {
-  return { ...r, artifactConfig: r.artifactConfig ? { ...r.artifactConfig } : null };
+  return {
+    ...r,
+    artifactConfig: r.artifactConfig
+      ? { ...r.artifactConfig, skills: [...r.artifactConfig.skills] }
+      : null,
+  };
 }
 
 /** DB 非依存のインメモリ実装。ユースケース/ルートのテストで注入する。 */

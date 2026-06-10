@@ -1,4 +1,4 @@
-import type { ArtifactConfig } from "@hatchery/common";
+import { ArtifactConfigSchema } from "@hatchery/common";
 import type { PrismaClient } from "@prisma/client";
 
 import type {
@@ -25,7 +25,7 @@ function toRecord(row: {
     description: row.description,
     synopsis: row.synopsis,
     lastSlotKey: row.lastSlotKey,
-    artifactConfig: row.artifactConfig as ArtifactConfig | null,
+    artifactConfig: ArtifactConfigSchema.nullable().parse(row.artifactConfig),
     createdAt: row.createdAt,
   };
 }

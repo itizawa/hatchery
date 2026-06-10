@@ -18,19 +18,16 @@ const STRING_FORMAT_KINDS = new Set([
   "regex",
 ]);
 
+const WRAPPER_TYPE_NAMES = new Set(["ZodOptional", "ZodNullable", "ZodDefault"]);
+
 /** Optional / Default / Nullable のラッパーを剥がして基底スキーマを返す。 */
 function unwrap(schema: ZodTypeAny): ZodTypeAny {
   let current = schema;
   // 多重ラップ（例: .optional().nullable()）にも耐える。
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
-    const typeName = current._def?.typeName as string | undefined;
-    if (typeName === "ZodOptional" || typeName === "ZodNullable" || typeName === "ZodDefault") {
-      current = current._def.innerType as ZodTypeAny;
-      continue;
-    }
-    return current;
+  while (WRAPPER_TYPE_NAMES.has(current._def?.typeName as string)) {
+    current = current._def.innerType as ZodTypeAny;
   }
+  return current;
 }
 
 /** Zod の typeName を表示用の基底型名へ写す。 */

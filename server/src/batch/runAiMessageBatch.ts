@@ -10,7 +10,7 @@ import type { AppSettingRepository } from "../persistence/appSettingRepository.j
 import type { BatchRunLogRepository } from "../persistence/batchRunLogRepository.js";
 import type { ChannelMembershipRepository } from "../persistence/channelMembershipRepository.js";
 import type { ChannelRepository } from "../persistence/channelRepository.js";
-import type { EmployeeRepository } from "../persistence/employeeRepository.js";
+import type { WorkerRepository } from "../persistence/workerRepository.js";
 import type { MessageRecord, MessageRepository } from "../persistence/messageRepository.js";
 import { getApiKey } from "../utils/apiKey.js";
 
@@ -24,7 +24,7 @@ export interface RunAiMessageBatchDeps {
   channelRepo: ChannelRepository;
   messageRepo: MessageRepository;
   membershipRepo: ChannelMembershipRepository;
-  employeeRepo: EmployeeRepository;
+  workerRepo: WorkerRepository;
   appSettingRepo: AppSettingRepository;
   /** バッチ実行ログの永続化（省略時はログ保存しない）。 */
   batchRunLogRepository?: BatchRunLogRepository;
@@ -61,7 +61,7 @@ export async function runAiMessageBatch(deps: RunAiMessageBatchDeps): Promise<Me
   for (const channel of chatChannels) {
     try {
       const memberIds = await deps.membershipRepo.listEmployeeIdsByChannel(channel.id);
-      const members = await deps.employeeRepo.listByIds(memberIds);
+      const members = await deps.workerRepo.listByIds(memberIds);
       const bots = members.filter((e) => e.isBot);
       if (bots.length === 0) continue;
 
@@ -80,7 +80,7 @@ export async function runAiMessageBatch(deps: RunAiMessageBatchDeps): Promise<Me
 
       const prompt = buildChannelConversationPrompt({
         channelLabel: channel.label,
-        employees: bots.map((e) => ({
+        workers: bots.map((e) => ({
           id: e.id,
           displayName: e.displayName,
           role: e.role,

@@ -1,19 +1,22 @@
 import { MAX_MESSAGE_LENGTH } from "../domain/message/index.js";
 
-/** プロンプトに載せる社員ロスターの 1 要素（#53）。 */
-export interface ConversationPromptEmployee {
+/** プロンプトに載せるワーカーロスターの 1 要素（#53 / #329）。 */
+export interface ConversationPromptWorker {
   id: string;
   displayName: string;
   role?: string | null;
   personality?: string | null;
 }
 
-/** buildChannelConversationPrompt の入力（#53）。 */
+/** @deprecated Use ConversationPromptWorker instead */
+export type ConversationPromptEmployee = ConversationPromptWorker;
+
+/** buildChannelConversationPrompt の入力（#53 / #329）。 */
 export interface BuildChannelConversationPromptInput {
   /** チャンネルの表示名（例: 雑談）。 */
   channelLabel: string;
-  /** 発言候補の社員ロスター（id / displayName / role / personality）。 */
-  employees: readonly ConversationPromptEmployee[];
+  /** 発言候補のワーカーロスター（id / displayName / role / personality）。 */
+  workers: readonly ConversationPromptWorker[];
   /** 直近ログ（formatRecentLog の出力想定。新しい順ではなく時系列昇順の行配列）。 */
   recentLog: readonly string[];
   /** それ以前の文脈を圧縮したあらすじ。無ければ null。 */
@@ -32,11 +35,11 @@ export const buildChannelConversationPrompt = (
 ): string => {
   const maxLen = input.maxMessageLength ?? MAX_MESSAGE_LENGTH;
 
-  const roster = input.employees
-    .map((e) => {
-      const role = e.role ? `・役割: ${e.role}` : "";
-      const personality = e.personality ? `・性格: ${e.personality}` : "";
-      return `- ${e.id}（表示名: ${e.displayName}${role}${personality}）`;
+  const roster = input.workers
+    .map((w) => {
+      const role = w.role ? `・役割: ${w.role}` : "";
+      const personality = w.personality ? `・性格: ${w.personality}` : "";
+      return `- ${w.id}（表示名: ${w.displayName}${role}${personality}）`;
     })
     .join("\n");
 

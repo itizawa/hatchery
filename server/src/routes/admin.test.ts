@@ -10,7 +10,7 @@ import { getApiKey } from "./admin.js";
 import { encrypt } from "../utils/crypto.js";
 
 async function makeApp(appSettingRepo = createInMemoryAppSettingRepository(), role: "admin" | "member" = "admin", workerRepository = createInMemoryWorkerRepository()) {
-  const userRepo = await createTestUserRepository(null, role);
+  const userRepo = await createTestUserRepository(role);
   return createApp(
     await createTestDeps({
       userRepository: userRepo,
@@ -144,9 +144,9 @@ describe("getApiKey", () => {
 
 describe("DELETE /api/admin/workers/:id (#218)", () => {
   async function makeAppWithWorker(role: "admin" | "member" = "admin") {
-    const userRepo = await createTestUserRepository(null, role);
+    const userRepo = await createTestUserRepository(role);
     const workerRepo = createInMemoryWorkerRepository([
-      { id: "emp-1", displayName: "田中 太郎", role: "エンジニア", isBot: true, personality: null },
+      { id: "emp-1", displayName: "田中 太郎", role: "エンジニア", personality: null },
     ]);
     return {
       app: createApp(
@@ -221,12 +221,15 @@ describe("POST /api/admin/workers (#217)", () => {
     expect(res.body.id.length).toBeGreaterThan(0);
   });
 
-  it("作成した Worker は isBot=true になる", async () => {
-    const app = await makeApp();
-    const agent = await loginAgent(app);
-    const res = await agent.post("/api/admin/workers").send({ displayName: "ボット社員" });
-    expect(res.status).toBe(201);
-    expect(res.body.isBot).toBe(true);
+  // #331: ADR-0020 後処理。Worker は AI 投稿者のみとなり isBot を撤廃した。
+  it("作成した Worker は isBot フィールドを持たない（#331）", () => {
+    return (async () => {
+      const app = await makeApp();
+      const agent = await loginAgent(app);
+      const res = await agent.post("/api/admin/workers").send({ displayName: "ボット社員" });
+      expect(res.status).toBe(201);
+      expect(res.body).not.toHaveProperty("isBot");
+    })();
   });
 
   it("role を指定して作成できる", async () => {

@@ -9,7 +9,7 @@ export const BOT_WORKERS_ALL_QUERY_KEY = ["workers", "bots", "all"] as const;
 
 /**
  * GET /api/workers を openapi-fetch 経由で取得するフック（ADR-0006）。
- * isBot=true の Worker 一覧を返す（#240・仮想オフィス用）。
+ * Worker 一覧を返す（#240・仮想オフィス用）。
  * useQuery（非 Suspense）を使い、呼び出し元でローディング・エラー状態を処理する。
  */
 export function useBotWorkers() {
@@ -54,7 +54,7 @@ export function useUpdateWorker() {
 
 /**
  * GET /api/workers?includeDeleted=true を openapi-fetch 経由で取得するフック（#218）。
- * 論理削除済みワーカーも含む isBot=true の Worker 一覧を返す（メッセージ発言者名解決用）。
+ * 論理削除済みワーカーも含む Worker 一覧を返す（メッセージ発言者名解決用）。
  *
  * NOTE: #307 移行後、旧 ChannelScene が参照していたが現在は未使用。
  * openapi.json が includeDeleted クエリパラメータを定義していないため、fetch 直呼びに変更。

@@ -10,7 +10,6 @@ function mapRow(row: {
   passwordHash: string;
   role: string;
   avatarUrl: string | null;
-  worker: { id: string } | null;
 }): User {
   return {
     id: row.id,
@@ -18,7 +17,6 @@ function mapRow(row: {
     displayName: row.displayName,
     passwordHash: row.passwordHash,
     role: UserRoleSchema.parse(row.role ?? "member"),
-    employeeId: row.worker?.id ?? null,
     avatarUrl: row.avatarUrl ?? null,
   };
 }
@@ -28,7 +26,6 @@ export function createPrismaUserRepository(prisma: PrismaClient): UserRepository
     async findById(id: string): Promise<User | null> {
       const row = await prisma.user.findUnique({
         where: { id },
-        include: { worker: { select: { id: true } } },
       });
       if (!row) return null;
       return mapRow(row);
@@ -37,7 +34,6 @@ export function createPrismaUserRepository(prisma: PrismaClient): UserRepository
     async findByLoginId(loginId: string): Promise<User | null> {
       const row = await prisma.user.findUnique({
         where: { loginId },
-        include: { worker: { select: { id: true } } },
       });
       if (!row) return null;
       return mapRow(row);
@@ -54,7 +50,6 @@ export function createPrismaUserRepository(prisma: PrismaClient): UserRepository
             displayName: data.displayName,
             ...(data.avatarUrl !== undefined ? { avatarUrl: data.avatarUrl } : {}),
           },
-          include: { worker: { select: { id: true } } },
         });
         return mapRow(row);
       } catch (err) {
@@ -78,7 +73,6 @@ export function createPrismaUserRepository(prisma: PrismaClient): UserRepository
             passwordHash: input.passwordHash,
             role: "member",
           },
-          include: { worker: { select: { id: true } } },
         });
         return mapRow(row);
       } catch (err) {

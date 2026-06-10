@@ -121,8 +121,8 @@ describe("runCommunityBatch (#306)", () => {
       ...deps,
       generate,
       workers: [
-        { id: "haru", displayName: "haru", role: "ムードメーカー", isBot: true as const },
-        { id: "ken", displayName: "ken", role: "ベテラン", isBot: true as const },
+        { id: "haru", displayName: "haru", role: "ムードメーカー" },
+        { id: "ken", displayName: "ken", role: "ベテラン" },
       ],
     });
 
@@ -204,7 +204,7 @@ describe("runCommunityBatch (#306)", () => {
     const result = await runCommunityBatch({
       ...deps,
       generate,
-      workers: [{ id: "haru", displayName: "haru", role: "ムードメーカー", isBot: true as const }],
+      workers: [{ id: "haru", displayName: "haru", role: "ムードメーカー" }],
     });
 
     expect(result.posts[0]?.score).toBe(0);

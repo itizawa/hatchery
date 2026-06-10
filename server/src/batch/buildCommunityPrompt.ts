@@ -5,7 +5,6 @@ export interface WorkerDef {
   id: string;
   displayName: string;
   role?: string | null;
-  isBot: boolean;
   personality?: string | null;
 }
 

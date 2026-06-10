@@ -21,7 +21,7 @@ interface AddWorkerDialogProps {
 }
 
 /**
- * 管理画面のワーカー一覧タブで AI ワーカー（isBot=true）を追加するモーダル（#217 / #329）。
+ * 管理画面のワーカー一覧タブで AI ワーカーを追加するモーダル（#217 / #329）。
  * フォームは @tanstack/react-form の useForm を使用（useState によるフォーム管理禁止）。
  */
 export const AddWorkerDialog = ({ open, onClose }: AddWorkerDialogProps): ReactElement => {

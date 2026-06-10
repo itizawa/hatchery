@@ -9,7 +9,6 @@ export const WorkerSchema = z.object({
   id: z.string().min(1),
   displayName: z.string().min(1).max(WORKER_DISPLAY_NAME_MAX_LENGTH),
   role: z.string().min(1).max(WORKER_ROLE_MAX_LENGTH).optional(),
-  isBot: z.boolean().default(false),
   personality: z.string().max(500).optional(),
   imageUrl: z.string().url().max(WORKER_IMAGE_URL_MAX_LENGTH).optional(),
   avatarUrl: z.string().url().max(2048).optional(),
@@ -35,9 +34,9 @@ export const CreateWorkerSchema = z.object({
 export type CreateWorkerInput = z.infer<typeof CreateWorkerSchema>;
 
 export const DEFAULT_WORKERS: readonly Worker[] = [
-  { id: "haru", displayName: "haru", role: "ムードメーカー", isBot: true },
-  { id: "ken", displayName: "ken", role: "ベテラン", isBot: true },
-  { id: "mei", displayName: "mei", role: "新人", isBot: true },
+  { id: "haru", displayName: "haru", role: "ムードメーカー" },
+  { id: "ken", displayName: "ken", role: "ベテラン" },
+  { id: "mei", displayName: "mei", role: "新人" },
 ];
 
 export const formatWorkerDisplayName = (worker: {

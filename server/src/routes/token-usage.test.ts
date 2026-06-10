@@ -10,7 +10,7 @@ async function makeApp(
   tokenRepo = createInMemoryTokenUsageLogRepository(),
   role: "admin" | "member" = "admin",
 ) {
-  const userRepo = await createTestUserRepository(undefined, role);
+  const userRepo = await createTestUserRepository(role);
   return createApp(
     await createTestDeps({
       userRepository: userRepo,

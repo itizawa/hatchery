@@ -25,14 +25,15 @@ describe("WorkerSchema (A-1 / A-2)", () => {
     expect(WorkerSchema.safeParse({ id: "haru", displayName: "" }).success).toBe(false);
   });
 
-  it("isBot を省略すると既定で false になる（AC-4）", () => {
+  // #331: ADR-0020 後処理。Worker は AI 投稿者のみとなり isBot 概念を撤廃した。
+  it("isBot フィールドを持たない（#331）", () => {
     const parsed = WorkerSchema.parse({ id: "haru", displayName: "haru" });
-    expect(parsed.isBot).toBe(false);
+    expect(parsed).not.toHaveProperty("isBot");
   });
 
-  it("isBot: true を指定するとそのまま反映される（AC-5）", () => {
+  it("isBot を渡してもパース結果に含まれない（#331・未知キーは無視）", () => {
     const parsed = WorkerSchema.parse({ id: "haru", displayName: "haru", isBot: true });
-    expect(parsed.isBot).toBe(true);
+    expect(parsed).not.toHaveProperty("isBot");
   });
 });
 
@@ -52,8 +53,8 @@ describe("DEFAULT_WORKERS (#25)", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("全員が isBot=true（AC-7）", () => {
-    expect(DEFAULT_WORKERS.every((w) => w.isBot === true)).toBe(true);
+  it("全員が isBot フィールドを持たない（#331）", () => {
+    expect(DEFAULT_WORKERS.every((w) => !("isBot" in w))).toBe(true);
   });
 });
 
@@ -263,8 +264,8 @@ describe("createDisplayNameResolver", () => {
 
 describe("createAvatarUrlResolver (#300)", () => {
   const workers = [
-    { id: "haru", displayName: "ハル", imageUrl: "https://example.com/haru.png", isBot: true as const },
-    { id: "ken", displayName: "ケン", isBot: true as const },
+    { id: "haru", displayName: "ハル", imageUrl: "https://example.com/haru.png" },
+    { id: "ken", displayName: "ケン" },
   ];
 
   it("imageUrl が設定されている worker ID は URL を返す", () => {

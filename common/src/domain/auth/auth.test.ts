@@ -118,20 +118,12 @@ describe("AuthUserSchema", () => {
     }
   });
 
-  // #49: 自身の Employee を指す employeeId（任意）。
-  it("employeeId を付与してもパースが成功する（AC-8）", () => {
+  // #331: ADR-0020 後処理。User ↔ Worker の 1:1 リレーションを撤廃し employeeId を削除した。
+  it("employeeId を渡してもパース結果に含まれない（#331・未知キーは無視）", () => {
     const result = AuthUserSchema.safeParse({ id: "user1", loginId: "user1", displayName: "Alice", role: "admin", employeeId: "emp1" });
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data.employeeId).toBe("emp1");
-    }
-  });
-
-  it("employeeId を省略してもパースが成功する（AC-8 / 任意フィールド）", () => {
-    const result = AuthUserSchema.safeParse({ id: "user1", loginId: "user1", displayName: "Alice", role: "member" });
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.employeeId).toBeUndefined();
+      expect(result.data).not.toHaveProperty("employeeId");
     }
   });
 

@@ -8,7 +8,6 @@ function toRecord(row: {
   id: string;
   displayName: string;
   role: string | null;
-  isBot: boolean;
   personality: string | null;
   deletedAt: Date | null;
   imageUrl: string | null;
@@ -17,7 +16,6 @@ function toRecord(row: {
     id: row.id,
     displayName: row.displayName,
     role: row.role,
-    isBot: row.isBot,
     personality: row.personality,
     imageUrl: row.imageUrl,
     deletedAt: row.deletedAt,
@@ -62,12 +60,12 @@ export function createPrismaWorkerRepository(prisma: PrismaClient): WorkerReposi
     },
 
     async listBotWorkers(): Promise<WorkerRecord[]> {
-      const rows = await prisma.worker.findMany({ where: { isBot: true, deletedAt: null } });
+      const rows = await prisma.worker.findMany({ where: { deletedAt: null } });
       return rows.map((row) => toRecord(row));
     },
 
     async listAllBotWorkers(): Promise<WorkerRecord[]> {
-      const rows = await prisma.worker.findMany({ where: { isBot: true } });
+      const rows = await prisma.worker.findMany();
       return rows.map((row) => toRecord(row));
     },
 
@@ -113,7 +111,6 @@ export function createPrismaWorkerRepository(prisma: PrismaClient): WorkerReposi
           id: input.id,
           displayName: input.displayName,
           role: input.role ?? null,
-          isBot: input.isBot,
           personality: input.personality ?? null,
         },
       });

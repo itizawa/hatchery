@@ -74,18 +74,8 @@ describe("GET /api/auth/me", () => {
     expect(res.status).toBe(401);
   });
 
-  // #49: User ↔ Employee を JOIN し、自身の employeeId を返す。
-  it("Employee が紐づくユーザーでは employeeId を含む（AC-9）", async () => {
-    const repo = await createTestUserRepository("emp-testuser");
-    const app = await buildApp(repo);
-    const agent = request.agent(app);
-    await agent.post("/api/auth/login").send({ loginId: "testuser", password: "testpass" });
-    const res = await agent.get("/api/auth/me");
-    expect(res.status).toBe(200);
-    expect(res.body).toMatchObject({ id: "testuser", employeeId: "emp-testuser" });
-  });
-
-  it("Employee が紐づかないユーザーでは employeeId を含めない（AC-10）", async () => {
+  // #331: ADR-0020 後処理。User ↔ Worker の 1:1 リレーションを撤廃したため employeeId は返さない。
+  it("レスポンスに employeeId を含めない（#331）", async () => {
     const app = await buildApp();
     const agent = request.agent(app);
     await agent.post("/api/auth/login").send({ loginId: "testuser", password: "testpass" });

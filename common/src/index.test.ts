@@ -31,7 +31,7 @@ describe("@hatchery/common 公開 API", () => {
   });
 
   it("z.infer 由来の型に最小オブジェクトを代入できる（型レベルは tsc が担保）", () => {
-    const worker: Worker = { id: "haru", displayName: "haru", isBot: true };
+    const worker: Worker = { id: "haru", displayName: "haru" };
     const community: Community = {
       id: "comm-1",
       slug: "ai-workers",

@@ -18,7 +18,7 @@ async function makeApp(
   communityRepo = createInMemoryCommunityRepository(),
   role: "admin" | "member" = "admin",
 ) {
-  const userRepo = await createTestUserRepository(null, role);
+  const userRepo = await createTestUserRepository(role);
   return createApp(
     await createTestDeps({
       userRepository: userRepo,

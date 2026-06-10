@@ -8,11 +8,11 @@ import { createTestDeps } from "../testing/createTestDeps.js";
 import { InMemoryStorageService } from "../services/storageService.js";
 
 const defaultWorkers = [
-  { id: "haru", displayName: "haru", role: "ムードメーカー", isBot: true, personality: null, imageUrl: null },
+  { id: "haru", displayName: "haru", role: "ムードメーカー", personality: null, imageUrl: null },
 ];
 
 async function makeApp(role: "admin" | "member" = "admin") {
-  const userRepo = await createTestUserRepository(null, role);
+  const userRepo = await createTestUserRepository(role);
   const workerRepo = createInMemoryWorkerRepository(defaultWorkers);
   const storageService = new InMemoryStorageService();
   return createApp(

@@ -15,7 +15,6 @@ const AUTH_USER = {
   id: "testuser",
   displayName: "Test User",
   role: "admin",
-  employeeId: "emp-testuser",
 };
 
 /**

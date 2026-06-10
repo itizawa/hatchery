@@ -10,7 +10,7 @@ async function makeApp(
   invitationRepo = createInMemoryInvitationLinkRepository(),
   role: "admin" | "member" = "admin",
 ) {
-  const userRepo = await createTestUserRepository(null, role);
+  const userRepo = await createTestUserRepository(role);
   return createApp(
     await createTestDeps({
       userRepository: userRepo,

@@ -24,14 +24,13 @@ describe("generateOpenApiDocument", () => {
     expect(doc.components?.schemas).toHaveProperty("LoginRequest");
   });
 
-  // #49: AuthUser に自身の employeeId（任意）が含まれる。
-  it("AuthUser スキーマに employeeId プロパティが含まれる（AC-11）", () => {
+  // #331: ADR-0020 後処理。AuthUser から employeeId を削除した。
+  it("AuthUser スキーマに employeeId プロパティが含まれない（#331）", () => {
     const doc = generateOpenApiDocument();
     const authUser = doc.components?.schemas?.AuthUser as
       | { properties?: Record<string, unknown>; required?: string[] }
       | undefined;
-    expect(authUser?.properties).toHaveProperty("employeeId");
-    expect(authUser?.required ?? []).not.toContain("employeeId");
+    expect(authUser?.properties).not.toHaveProperty("employeeId");
   });
 
   it("/auth/login(post) は LoginRequest を受け取り 200 で AuthUser を返す", () => {

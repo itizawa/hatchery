@@ -14,8 +14,8 @@ describe("buildCommunityPrompt (#306)", () => {
       createdAt: new Date("2026-01-01"),
     },
     workers: [
-      { id: "haru", displayName: "haru", role: "ムードメーカー", isBot: true as const, personality: "明るく前向き" },
-      { id: "ken", displayName: "ken", role: "ベテラン", isBot: true as const, personality: "落ち着いた物知り" },
+      { id: "haru", displayName: "haru", role: "ムードメーカー", personality: "明るく前向き" },
+      { id: "ken", displayName: "ken", role: "ベテラン", personality: "落ち着いた物知り" },
     ],
     recentLog: ["[technology] haru: 最近の AI トレンド面白いですね", "[technology] ken: 確かに、LLM の進歩は速い"],
   };

@@ -72,7 +72,7 @@ export function useDeleteWorker() {
   });
 }
 
-/** GET /api/workers で isBot=true の Worker 一覧を取得する（管理画面ユーザー一覧用・#217 / #329）。 */
+/** GET /api/workers で Worker 一覧を取得する（管理画面ユーザー一覧用・#217 / #329）。 */
 export async function fetchAdminWorkers(): Promise<Worker[]> {
   const { data, error, response } = await openApiClient.GET("/api/workers", {
     credentials: "include",
@@ -81,7 +81,7 @@ export async function fetchAdminWorkers(): Promise<Worker[]> {
   return (data ?? []) as unknown as Worker[];
 }
 
-/** POST /api/admin/workers で新規 Worker（isBot=true）を作成する（#217 / #329）。 */
+/** POST /api/admin/workers で新規 Worker を作成する（#217 / #329）。 */
 export async function createAdminWorker(input: {
   displayName: string;
   role?: string;
@@ -97,7 +97,7 @@ export async function createAdminWorker(input: {
   return data as unknown as Worker;
 }
 
-/** 管理画面のワーカー一覧（isBot=true の全 Worker）を取得するフック（#217 / #329）。 */
+/** 管理画面のワーカー一覧（全 Worker）を取得するフック（#217 / #329）。 */
 export function useAdminWorkers() {
   return useQuery({
     queryKey: ADMIN_WORKERS_QUERY_KEY,
@@ -105,7 +105,7 @@ export function useAdminWorkers() {
   });
 }
 
-/** 管理画面から新規 AI ワーカー（isBot=true）を作成するミューテーションフック（#217 / #329）。 */
+/** 管理画面から新規 AI ワーカーを作成するミューテーションフック（#217 / #329）。 */
 export function useCreateAdminWorker() {
   const queryClient = useQueryClient();
   return useMutation({

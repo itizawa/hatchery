@@ -19,7 +19,6 @@ const mockWorker: Worker = {
   id: "haru",
   displayName: "ハル",
   role: "ムードメーカー",
-  isBot: true,
   personality: "明るく元気",
 };
 

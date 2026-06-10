@@ -5,7 +5,7 @@ import { Strategy as LocalStrategy } from "passport-local";
 
 import type { User, UserRepository } from "../persistence/userRepository.js";
 
-/** 認証ユーザー（DB の User）をセッションに載せる公開情報（AuthUser）へ写す（#49, #51, #136, #185）。 */
+/** 認証ユーザー（DB の User）をセッションに載せる公開情報（AuthUser）へ写す（#51, #136, #185, #331）。 */
 export function toAuthUser(user: User): AuthUser {
   const authUser: AuthUser = {
     id: user.id,
@@ -13,7 +13,6 @@ export function toAuthUser(user: User): AuthUser {
     displayName: user.displayName,
     role: user.role,
   };
-  if (user.employeeId) authUser.employeeId = user.employeeId;
   if (user.avatarUrl) authUser.avatarUrl = user.avatarUrl;
   return authUser;
 }

@@ -1,5 +1,5 @@
 import MenuIcon from "@mui/icons-material/Menu";
-import { Avatar, Box, ButtonBase, IconButton, Link, Menu, MenuItem, Skeleton } from "./uiParts";
+import { Avatar, Box, ButtonBase, IconButton, Link, Menu, MenuItem, Skeleton, useMediaQuery } from "./uiParts";
 
 import { Link as RouterLink, useNavigate } from "@tanstack/react-router";
 import { type ReactElement, useState } from "react";
@@ -9,12 +9,20 @@ import { SLACK_COLORS } from "../theme.js";
 
 const ACCOUNT_ICON_SIZE = 32;
 
+/** ヘッダ表示／非表示アニメーションの所要時間（ms）。調整可能な定数。 */
+export const HEADER_TRANSITION_MS = 200;
+
 export interface AppHeaderProps {
   /** モバイル幅でサイドバードロワーを開くコールバック。未指定の場合はハンバーガーボタンを表示しない。 */
   onMenuOpen?: () => void;
+  /** スクロール方向に応じてヘッダを隠すか。`prefers-reduced-motion` 時は無視され常に表示する。 */
+  hidden?: boolean;
 }
 
-export const AppHeader = ({ onMenuOpen }: AppHeaderProps): ReactElement => {
+export const AppHeader = ({ onMenuOpen, hidden = false }: AppHeaderProps): ReactElement => {
+  const prefersReducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
+  // アニメーション抑制選好時は自動非表示を無効化し常時表示する
+  const isHidden = hidden && !prefersReducedMotion;
   const { data: user, isPending } = useAuth();
   const { mutate: logout } = useLogout();
   const navigate = useNavigate();
@@ -45,6 +53,13 @@ export const AppHeader = ({ onMenuOpen }: AppHeaderProps): ReactElement => {
         px: 2,
         py: 1,
         boxShadow: 1,
+        // スクロール方向に応じてふわっと出し入れする（#302）。
+        // prefers-reduced-motion 時は transition を無効化し常時表示する。
+        transform: isHidden ? "translateY(-100%)" : "translateY(0)",
+        opacity: isHidden ? 0 : 1,
+        transition: prefersReducedMotion
+          ? "none"
+          : `transform ${HEADER_TRANSITION_MS}ms ease, opacity ${HEADER_TRANSITION_MS}ms ease`,
       }}
     >
       {onMenuOpen && (

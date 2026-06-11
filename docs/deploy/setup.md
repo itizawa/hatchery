@@ -5,8 +5,8 @@
 
 ## 事前準備チェックリスト
 
-- [ ] Google Cloud アカウント（無料枠可）
-- [ ] Cloudflare アカウント（無料枠可）
+- [ ] Google Cloud アカウント（無料枚可）
+- [ ] Cloudflare アカウント（無料枚可）
 - [ ] GitHub リポジトリへの Admin 権限
 - [ ] `gcloud` CLI のインストール（[公式ガイド](https://cloud.google.com/sdk/docs/install)）
 
@@ -93,7 +93,7 @@ gcloud iam workload-identity-pools providers describe github-provider \
 
 ### 1-5. PostgreSQL の準備
 
-**Neon（推奨・無料枠あり）** を使う場合:
+**Neon（推奨・無料枚あり）** を使う場合:
 1. https://neon.tech にサインアップ
 2. プロジェクト `hatchery-dev` を作成
 3. Connection string を取得（`postgresql://user:pass@host/db?sslmode=require`）
@@ -127,7 +127,7 @@ pnpm --filter @hatchery/server db:migrate
 3. リポジトリ `itizawa/ai-workspace` を選択し、以下を設定:
    - **Production branch**: `main`
    - **Preview branches**: `develop`
-   - **Build command**: *(GitHub Actions でビルドするため空白でよい)*
+   - **Build command**: *(　GitHub Actions でビルドするため空白でよい)*
    - **Build output directory**: `client/dist/web`
 4. **API Token** を取得:
    - My Profile → API Tokens → Create Token
@@ -156,7 +156,7 @@ pnpm --filter @hatchery/server db:migrate
 
 > **セキュリティ注意**: `SESSION_SECRET` は `openssl rand -base64 32` で生成する。
 
-また、**Repository Variables**（Secrets ではない通常の変数）として以下も設定します:
+また、**Repository Variables**（Secrets ではない送常の変数）として以下も設定します:
 
 | Variable 名 | 値 | 説明 |
 |------------|-----|------|
@@ -191,21 +191,77 @@ dev 環境（`develop` ブランチのデプロイ）には HTTP Basic 認証が
 - `client/functions/_middleware.ts` が全リクエストをインターセプトし、Basic 認証を検証する
 - `BASIC_AUTH_USER` / `BASIC_AUTH_PASSWORD` が**どちらか未設定の場合はスキップ**（= 本番無効化）
 - タイミング攻撃に配慮した定数時間比較を使用（XOR ビット演算）
-- あくまで「dev 画面の覗き見防止」目的。API サーバ（Cloud Run）のアクセス制御は別途必要
+- あくまで「dev 画面の詪き見防止」目的。API サーバ（Cloud Run）のアクセス制御は別途必要
 
 ---
 
-## 4. 動作確認
+## 4. 定時バッチ（シーン生成）の設定（#388）
+
+定時バッチは `.github/workflows/run-batch.yml` の GitHub Actions scheduled workflow で
+自動実行されます。Express サーバとは独立したプロセスで起動します（ADR-0009 / ADR-0018）。
+
+### 4-1. 必要な Secrets の確認
+
+バッチ実行に以下の Secrets が必要です。セクション 3 で設定済みの場合は追加不要です。
+
+| Secret 名 | 説明 |
+|-----------|------|
+| `DATABASE_URL` | バッチ処理で post/comment を永続化するのに使用 |
+| `ANTHROPIC_API_KEY` | Claude API でシーンを生成するのに使用 |
+
+> **注意**: `ANTHROPIC_API_KEY` が未設定の場合、バッチは安全にスキップします（エラーにはなりません）。
+
+### 4-2. cron スケジュールとタイムゾーン
+
+GitHub Actions の `schedule: cron` は **UTC 固定** です。
+
+| JST（表示時刻） | UTC（cron で指定） |
+|---------------|---------------|
+| 9:00 | 0:00 |
+| 12:00 | 3:00 |
+| 15:00 | 6:00 |
+| 18:00 | 9:00 |
+
+cron 式: `0 0,3,6,9 * * *`（UTC 0/3/6/9 時の 0 分に起動）
+
+> **注意**: GitHub Actions の cron は最大数十分の遅延が発生する場合があります。
+> slot_key による二重発火ガードにより、遅延があっても同一定時での重複生成を防いでいます。
+
+### 4-3. `BATCH_SCHEDULE` 環境変数（時刻変更）
+
+バッチの起動時刻を変更する場合は、workflow の `env` に `BATCH_SCHEDULE` を追加し、
+cron の UTC 時刻を JST 逆算で更新してください。
+
+```yaml
+# run-batch.yml 内の batch ステップへ追加
+env:
+  BATCH_SCHEDULE: "8,11,14,17"  # JST 8/11/14/17 時に変更する例
+  DATABASE_URL: ${{ secrets.DATABASE_URL }}
+  ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+```
+
+### 4-4. 手動実行
+
+`.github/workflows/run-batch.yml` は `workflow_dispatch` トリガーも持っています。
+GitHub Actions タブ → **Run Batch (Scene Generation)** → **Run workflow** で即時実行できます。
+
+---
+
+## 5. 動作確認
 
 1. `develop` ブランチに何かコミット・push する
 2. GitHub Actions タブで `Deploy Server (dev)` と `Deploy Client (dev)` が緑になることを確認
 3. Cloud Run のコンソールで表示される URL にアクセスして API が応答することを確認
 4. Cloudflare Pages の URL（`https://develop.hatchery-XXXX.pages.dev`）にアクセス
+5. GitHub Actions タブで **Run Batch (Scene Generation)** を手動実行し、post/comment が生成されることを確認
 
 ---
 
 ## 関連
 
+- ADR-0009: 定時バッチ方式（常時稼働せず外部スケジューラから起動）
 - ADR-0011: サーバホスティング選定の記録
+- ADR-0018: Reddit 風公共コミュニティへのピボット
 - `.github/workflows/deploy-server-dev.yml`: サーバデプロイ用ワークフロー
 - `.github/workflows/deploy-client-dev.yml`: クライアントデプロイ用ワークフロー
+- `.github/workflows/run-batch.yml`: 定時バッチワークフロー（#388）

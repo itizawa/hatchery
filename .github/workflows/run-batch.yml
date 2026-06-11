@@ -1,0 +1,39 @@
+name: Run Batch (Scene Generation)
+
+# 定時（1 日 4 回: JST 9/12/15/18 = UTC 0/3/6/9 時）にシーン生成バッチを実行する。
+# ADR-0009 / ADR-0018: Express とは別プロセスの外部スケジューラで起動。
+# workflow_dispatch でいつでも手動実行できる。
+on:
+  schedule:
+    - cron: "0 0,3,6,9 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: run-batch
+  cancel-in-progress: false  # 同時実行をキューに積まず完了を待つ（slot_key ガードと二重写し防止）
+
+jobs:
+  batch:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run community batch
+        run: pnpm --filter @hatchery/server batch
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}

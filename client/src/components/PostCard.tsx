@@ -11,7 +11,7 @@ interface PostCardProps {
   onVote: (direction: VoteDirection) => void;
   currentVote?: VoteDirection | null;
   voteDisabled?: boolean;
-  /** up/down vote ボタンのクリック時に親へのイベント伝播を止める（RouterLink との共存に使用）。 */
+  /** up/down vote ボタンのクリック時に親へのイベント伝播を止め、リンクのデフォルト遷移も抑止する（RouterLink との共存に使用）。 */
   voteStopPropagation?: boolean;
   /** 共有ボタンに使う post の URL。指定時のみ ShareButton を表示する。 */
   postUrl?: string;
@@ -30,6 +30,13 @@ export const PostCard = ({
   voteStopPropagation = false,
   postUrl,
 }: PostCardProps): ReactElement => {
+  const handleVoteClick = voteStopPropagation
+    ? (e: React.MouseEvent) => {
+        e.stopPropagation();
+        e.preventDefault();
+      }
+    : undefined;
+
   return (
     <Box
       sx={{
@@ -44,7 +51,7 @@ export const PostCard = ({
       <Box sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}>
         <Box
           sx={{ pt: 0.5 }}
-          onClick={voteStopPropagation ? (e: React.MouseEvent) => e.stopPropagation() : undefined}
+          onClick={handleVoteClick}
         >
           <VoteControl
             score={post.score}

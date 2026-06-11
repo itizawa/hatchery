@@ -1,4 +1,4 @@
-import { Box, Typography } from "../components/uiParts";
+import { Box, Typography, Skeleton } from "../components/uiParts";
 import { useParams } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 
@@ -32,7 +32,7 @@ export const PostThreadScene = (): ReactElement => {
   const { mutate: voteComment } = useVoteComment(id);
 
   // post.community_id から所属コミュニティを特定する（API 追加なし・#390）
-  const { data: communities } = usePublicCommunities();
+  const { data: communities, isLoading: isCommunitiesLoading } = usePublicCommunities();
   const community = communities?.find((c) => c.id === data?.post.community_id);
   const communitySlug = community?.slug ?? "";
 
@@ -43,10 +43,22 @@ export const PostThreadScene = (): ReactElement => {
 
   if (isLoading) {
     return (
-      <Box component="section" sx={{ p: 3 }}>
-        <Typography variant="body2" color="text.secondary">
-          読み込み中...
-        </Typography>
+      <Box
+        component="section"
+        data-testid="post-thread-skeleton"
+        sx={{ p: 3, maxWidth: 1200, mx: "auto" }}
+      >
+        <Box sx={{ display: "flex", gap: 3, alignItems: "flex-start" }}>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Skeleton variant="rectangular" height={200} sx={{ borderRadius: 1, mb: 2 }} />
+            <Skeleton variant="text" sx={{ mb: 1 }} />
+            <Skeleton variant="text" sx={{ mb: 1 }} />
+            <Skeleton variant="text" width="60%" />
+          </Box>
+          <Box sx={{ width: 312, flexShrink: 0, display: { xs: "none", md: "block" } }}>
+            <Skeleton variant="rectangular" height={300} sx={{ borderRadius: 1 }} />
+          </Box>
+        </Box>
       </Box>
     );
   }
@@ -104,8 +116,8 @@ export const PostThreadScene = (): ReactElement => {
           )}
         </Box>
 
-        {/* 右カラム: コミュニティ詳細 sticky サイドバー（md 未満で非表示・未特定時は描画しない） */}
-        {community && (
+        {/* 右カラム: communities ローディング中は幅を確保しスケルトンを表示、確定後は CommunitySidebarCard */}
+        {(isCommunitiesLoading || community) && (
           <Box
             sx={{
               width: 312,
@@ -115,17 +127,28 @@ export const PostThreadScene = (): ReactElement => {
               top: 80,
             }}
           >
-            <CommunitySidebarCard
-              community={community}
-              shareUrl={communityUrl}
-              shareTitle={community.name}
-              showSubscribe={Boolean(authUser)}
-              subscribed={subscribed}
-              subscriptionPending={isSubscribing || isUnsubscribing}
-              onSubscribe={() => subscribe()}
-              onUnsubscribe={() => unsubscribe()}
-              nameLink
-            />
+            {isCommunitiesLoading ? (
+              <Skeleton
+                data-testid="community-sidebar-skeleton"
+                variant="rectangular"
+                height={300}
+                sx={{ borderRadius: 1 }}
+              />
+            ) : (
+              community && (
+                <CommunitySidebarCard
+                  community={community}
+                  shareUrl={communityUrl}
+                  shareTitle={community.name}
+                  showSubscribe={Boolean(authUser)}
+                  subscribed={subscribed}
+                  subscriptionPending={isSubscribing || isUnsubscribing}
+                  onSubscribe={() => subscribe()}
+                  onUnsubscribe={() => unsubscribe()}
+                  nameLink
+                />
+              )
+            )}
           </Box>
         )}
       </Box>

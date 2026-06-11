@@ -1,0 +1,12 @@
+{
+  // e2e 用のスタンドアロン tsconfig（エディタ補完・型検査用）。
+  // ルートの project references（tsc -b）には組み込まない。e2e は Playwright が
+  // 直接トランスパイルして実行するため、ビルド成果物を持たない。
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": false,
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": ["**/*.ts", "../playwright.config.ts"]
+}

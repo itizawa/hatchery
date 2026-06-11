@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -66,5 +66,44 @@ describe("PostCard", () => {
   it("投稿欄・コメント入力欄は表示しない（ADR-0020）", () => {
     render(<PostCard post={mockPost} onVote={vi.fn()} />);
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+  });
+
+  describe("voteStopPropagation", () => {
+    it("有効時の up vote クリックで stopPropagation と preventDefault の両方が呼ばれる", () => {
+      render(<PostCard post={mockPost} onVote={vi.fn()} voteStopPropagation={true} />);
+
+      const event = new MouseEvent("click", { bubbles: true, cancelable: true });
+      const stopPropagationSpy = vi.spyOn(event, "stopPropagation");
+      const preventDefaultSpy = vi.spyOn(event, "preventDefault");
+
+      fireEvent(screen.getByRole("button", { name: /up vote/i }), event);
+
+      expect(stopPropagationSpy).toHaveBeenCalled();
+      expect(preventDefaultSpy).toHaveBeenCalled();
+    });
+
+    it("有効時の down vote クリックで stopPropagation と preventDefault の両方が呼ばれる", () => {
+      render(<PostCard post={mockPost} onVote={vi.fn()} voteStopPropagation={true} />);
+
+      const event = new MouseEvent("click", { bubbles: true, cancelable: true });
+      const stopPropagationSpy = vi.spyOn(event, "stopPropagation");
+      const preventDefaultSpy = vi.spyOn(event, "preventDefault");
+
+      fireEvent(screen.getByRole("button", { name: /down vote/i }), event);
+
+      expect(stopPropagationSpy).toHaveBeenCalled();
+      expect(preventDefaultSpy).toHaveBeenCalled();
+    });
+
+    it("有効時でも onVote が正しい direction で呼ばれる（回帰確認）", async () => {
+      const onVote = vi.fn();
+      render(<PostCard post={mockPost} onVote={onVote} voteStopPropagation={true} />);
+
+      await userEvent.click(screen.getByRole("button", { name: /up vote/i }));
+      expect(onVote).toHaveBeenCalledWith("up");
+
+      await userEvent.click(screen.getByRole("button", { name: /down vote/i }));
+      expect(onVote).toHaveBeenCalledWith("down");
+    });
   });
 });

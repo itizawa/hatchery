@@ -44,7 +44,7 @@ export const PostCard = ({
       <Box sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}>
         <Box
           sx={{ pt: 0.5 }}
-          onClick={voteStopPropagation ? (e: React.MouseEvent) => e.stopPropagation() : undefined}
+          onClick={voteStopPropagation ? (e: React.MouseEvent) => { e.stopPropagation(); e.preventDefault(); } : undefined}
         >
           <VoteControl
             score={post.score}

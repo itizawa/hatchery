@@ -68,14 +68,14 @@ describe("schedule トリガー (受け入れ条件 #2)", () => {
     // UTC 0,3,6,9 時のいずれかを含む
     const utcHours = [0, 3, 6, 9];
     for (const h of utcHours) {
+      // includes チェックで全ポジション（先頭/中間/末尾）をカバーする。
+      // 正規表現は使わない: `[0-9,]*9[0-9,]*` のような桁包含パターンは
+      // 19 や 29 など意図しない時刻にもマッチするため false positive を生む。
       const hasHour =
-        combined.includes(`0 ${h} `) ||
-        combined.includes(`0 ${h},`) ||
-        combined.includes(`,${h} `) ||
-        combined.includes(`,${h},`) ||
-        combined.includes(`,${h}*`) ||
-        new RegExp(`0 [0-9,]*${h}[0-9,]* \\* \\* \\*`).test(combined) ||
-        new RegExp(`0 ${h} \\* \\* \\*`).test(combined);
+        combined.includes(`0 ${h} `) || // 単独（例: "0 9 * * *"）
+        combined.includes(`0 ${h},`) || // 先頭（例: "0 9,12,..."）
+        combined.includes(`,${h} `) || // 末尾（例: "...,9 * * *"）
+        combined.includes(`,${h},`); // 中間（例: "...,9,..."）
       expect(hasHour, `UTC ${h}:00 (JST ${h + 9}:00) の cron を含む`).toBe(true);
     }
   });

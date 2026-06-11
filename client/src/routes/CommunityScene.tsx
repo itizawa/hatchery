@@ -1,9 +1,10 @@
-import { Box, Divider, Stack, Typography } from "../components/uiParts";
+import { Box, Stack, Typography } from "../components/uiParts";
 import { Link as RouterLink, useParams } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 
 import { useCommunityFeed, useSubscribe, useUnsubscribe, useVotePost, usePublicCommunities, useRecentWorkers } from "../api/communities.js";
 import { useAuth } from "../api/auth.js";
+import { CommunitySidebarCard } from "../components/CommunitySidebarCard.js";
 import { PostCard } from "../components/PostCard.js";
 import { RecentWorkersSection } from "../components/RecentWorkersSection.js";
 import { ShareButton } from "../components/ShareButton.js";
@@ -11,11 +12,6 @@ import type { VoteDirection } from "../components/VoteControl.js";
 import { SubscribeButton } from "../components/SubscribeButton.js";
 import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
 import { useSubscriptionStatus } from "../hooks/useSubscriptionStatus.js";
-
-const formatCreatedAt = (dateStr: string): string => {
-  const d = new Date(dateStr);
-  return `${d.getUTCFullYear()}年${d.getUTCMonth() + 1}月${d.getUTCDate()}日 作成`;
-};
 
 /**
  * コミュニティページ（/communities/$slug）。
@@ -110,61 +106,40 @@ export const CommunityScene = (): ReactElement => {
           )}
         </Box>
 
-        {/* 右カラム: コミュニティ詳細 sticky サイドバー（md 未満で非表示） */}
-        <Box
-          sx={{
-            width: 312,
-            flexShrink: 0,
-            display: { xs: "none", md: "block" },
-            position: "sticky",
-            top: 80,
-          }}
-        >
+        {/* 右カラム: コミュニティ詳細 sticky サイドバー（md 未満で非表示・未取得時は描画しない） */}
+        {community && (
           <Box
             sx={{
-              border: 1,
-              borderColor: "divider",
-              borderRadius: 1,
-              p: 2,
+              width: 312,
+              flexShrink: 0,
+              display: { xs: "none", md: "block" },
+              position: "sticky",
+              top: 80,
             }}
           >
-            <Typography variant="h6" component="h2" gutterBottom>
-              {community?.name}
-            </Typography>
-            <Divider sx={{ mb: 1 }} />
-            {community?.description && (
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                {community.description}
+            <CommunitySidebarCard
+              community={community}
+              shareUrl={shareUrl}
+              shareTitle={shareTitle}
+              showSubscribe={Boolean(authUser)}
+              subscribed={subscribed}
+              subscriptionPending={isSubscriptionPending}
+              onSubscribe={() => subscribe()}
+              onUnsubscribe={() => unsubscribe()}
+            >
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                最近投稿したワーカー
               </Typography>
-            )}
-            {community?.created_at && (
-              <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 2 }}>
-                {formatCreatedAt(community.created_at)}
-              </Typography>
-            )}
-            <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              最近投稿したワーカー
-            </Typography>
-            <Box sx={{ mb: 2 }}>
-              <RecentWorkersSection
-                workers={recentWorkers ?? []}
-                isLoading={isRecentWorkersLoading}
-                isError={isRecentWorkersError}
-              />
-            </Box>
-            <Stack spacing={1}>
-              <ShareButton shareUrl={shareUrl} shareTitle={shareTitle} />
-              {authUser && (
-                <SubscribeButton
-                  subscribed={subscribed}
-                  onSubscribe={() => subscribe()}
-                  onUnsubscribe={() => unsubscribe()}
-                  disabled={isSubscriptionPending}
+              <Box sx={{ mb: 2 }}>
+                <RecentWorkersSection
+                  workers={recentWorkers ?? []}
+                  isLoading={isRecentWorkersLoading}
+                  isError={isRecentWorkersError}
                 />
-              )}
-            </Stack>
+              </Box>
+            </CommunitySidebarCard>
           </Box>
-        </Box>
+        )}
       </Box>
     </Box>
   );

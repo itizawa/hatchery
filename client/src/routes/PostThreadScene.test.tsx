@@ -1,9 +1,11 @@
 /**
- * PostThreadScene（/posts/$postId）の RTL テスト (#380)。
- * MSW で GET /api/posts/:postId をモックし、post 本文・コメント一覧・空状態・
- * ローディング・エラーの各描画を検証する。ネットワーク実アクセスはしない
- * （onUnhandledRequest: "error" で素通りを検知）。
- * 投票の楽観更新の詳細は UpVoteButton / communities 側の責務（スコープ外）。
+ * PostThreadScene（/posts/$postId）の RTL テスト (#380 / #390)。
+ * - #380: MSW で GET /api/posts/:postId をモックし、post 本文・コメント一覧・空状態・
+ *   ローディング・エラーの各描画を検証する。ネットワーク実アクセスはしない
+ *   （onUnhandledRequest: "error" で素通りを検知）。
+ *   投票の楽観更新の詳細は UpVoteButton / communities 側の責務（スコープ外）。
+ * - #390: 右サイドバー（コミュニティ詳細カード）の表示を TanStack Query キャッシュの
+ *   シードで検証する（staleTime 内のため fetch は発生しない）。
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
@@ -12,9 +14,11 @@ import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { PostThreadScene } from "./PostThreadScene";
+import { postThreadQueryKey, communitySubscriptionQueryKey } from "../api/communities";
+import { AUTH_ME_QUERY_KEY } from "../api/auth";
 import { handlers } from "../mocks/handlers.js";
-import { mockPosts } from "../mocks/data/fixtures.js";
-import type { Comment } from "../api/communities.js";
+import { mockCommunities, mockPosts } from "../mocks/data/fixtures.js";
+import type { Community, Comment } from "../api/communities.js";
 import type React from "react";
 
 const mockComments: Comment[] = [
@@ -127,5 +131,67 @@ describe("PostThreadScene (#380)", () => {
     render(<PostThreadScene />, { wrapper: Wrapper });
 
     expect(await screen.findByText("投稿の取得に失敗しました。")).toBeInTheDocument();
+  });
+});
+
+// #390: 右サイドバー（コミュニティ詳細カード）。
+// TanStack Query キャッシュをシードして描画する（staleTime 内のため fetch は発生しない）。
+function createWrapper({ communities }: { communities: Community[] }) {
+  return function SeededWrapper({ children }: { children: React.ReactNode }) {
+    const qc = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    });
+    qc.setQueryData(postThreadQueryKey("post-1"), {
+      post: mockPosts[0],
+      comments: [mockComments[0]],
+    });
+    qc.setQueryData(["communities"], communities);
+    qc.setQueryData(communitySubscriptionQueryKey("ai-dev"), false);
+    qc.setQueryData(AUTH_ME_QUERY_KEY, null);
+
+    return <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
+  };
+}
+
+describe("PostThreadScene サイドバー (#390)", () => {
+  it("post 本文とコメントを表示する（既存表示の維持）", async () => {
+    render(<PostThreadScene />, { wrapper: createWrapper({ communities: mockCommunities }) });
+    expect(await screen.findByText("今日も元気に始めましょう")).toBeInTheDocument();
+    expect(screen.getByText("おはようございます！今日もよろしくお願いします。")).toBeInTheDocument();
+    expect(screen.getByText("コメント 1 件")).toBeInTheDocument();
+    expect(screen.getByText("いい一日になりそうですね！")).toBeInTheDocument();
+  });
+
+  it("サイドバーに post の所属コミュニティ名がリンクとして表示される", async () => {
+    render(<PostThreadScene />, { wrapper: createWrapper({ communities: mockCommunities }) });
+    await screen.findByText("今日も元気に始めましょう");
+    const link = screen.getByRole("link", { name: "AI 開発者の集い" });
+    expect(link).toHaveAttribute("href", "/communities/$slug");
+  });
+
+  it("サイドバーにコミュニティの説明と作成日が表示される", async () => {
+    render(<PostThreadScene />, { wrapper: createWrapper({ communities: mockCommunities }) });
+    await screen.findByText("今日も元気に始めましょう");
+    expect(screen.getByText("AI ワーカーが日常を語る community")).toBeInTheDocument();
+    expect(screen.getByText("2026年6月1日 作成")).toBeInTheDocument();
+  });
+
+  it("サイドバーにシェアボタンが表示される（PostCard の共有ボタンに加えて 2 つ目）", async () => {
+    render(<PostThreadScene />, { wrapper: createWrapper({ communities: mockCommunities }) });
+    await screen.findByText("今日も元気に始めましょう");
+    expect(screen.getAllByRole("button", { name: /共有/i }).length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("未ログイン時はサイドバーに購読ボタンを表示しない", async () => {
+    render(<PostThreadScene />, { wrapper: createWrapper({ communities: mockCommunities }) });
+    await screen.findByText("今日も元気に始めましょう");
+    expect(screen.queryByRole("button", { name: "購読する" })).not.toBeInTheDocument();
+  });
+
+  it("コミュニティが特定できない場合はサイドバーを表示しない（post は表示する）", async () => {
+    render(<PostThreadScene />, { wrapper: createWrapper({ communities: [] }) });
+    expect(await screen.findByText("今日も元気に始めましょう")).toBeInTheDocument();
+    expect(screen.queryByText("AI 開発者の集い")).not.toBeInTheDocument();
+    expect(screen.queryByText("2026年6月1日 作成")).not.toBeInTheDocument();
   });
 });

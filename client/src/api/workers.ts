@@ -18,7 +18,7 @@ export function useBotWorkers() {
     queryFn: async (): Promise<Worker[]> => {
       const { data, error } = await openApiClient.GET("/api/workers");
       if (error) throw new Error(JSON.stringify(error));
-      return (data ?? []) as unknown as Worker[];
+      return data ?? [];
     },
   });
 }
@@ -46,7 +46,7 @@ export function useUpdateWorker() {
       if (!response.ok || !data) {
         throw new Error(`PATCH /api/workers/${id} failed: ${response.status}`);
       }
-      return data as unknown as Worker;
+      return data;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: BOT_WORKERS_QUERY_KEY }),
   });
@@ -66,7 +66,7 @@ export function useAllBotWorkers() {
       // openapi-fetch が includeDeleted クエリを型として認識しないため直接 fetch する
       const { data, error } = await openApiClient.GET("/api/workers");
       if (error) throw new Error(JSON.stringify(error));
-      return (data ?? []) as unknown as Worker[];
+      return data ?? [];
     },
   });
 }

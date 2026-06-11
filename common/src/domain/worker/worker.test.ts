@@ -189,7 +189,7 @@ describe("formatWorkerDisplayName (#218)", () => {
     expect(formatWorkerDisplayName({ displayName: "田中 太郎" })).toBe("田中 太郎");
   });
 
-  it("deletedAt が Date の場合は【削除済み】プレフィックスを付ける", () => {
+  it("deletedAt が Date の場合は《削除済み》プレフィックスを付ける", () => {
     expect(formatWorkerDisplayName({ displayName: "田中 太郎", deletedAt: new Date("2024-01-01") })).toBe("【削除済み】田中 太郎");
   });
 });
@@ -286,5 +286,23 @@ describe("createAvatarUrlResolver (#300)", () => {
   it("引数省略時は DEFAULT_WORKERS で解決する（全員 imageUrl 未設定 → undefined）", () => {
     const resolve = createAvatarUrlResolver();
     expect(resolve("haru")).toBeUndefined();
+  });
+});
+
+describe("WorkerSchema: deletedAt フィールド（#372 HTTP 境界型整合）", () => {
+  it("deletedAt に Date オブジェクトを渡すと parse 失敗する（HTTP 境界では文字列のみ）", () => {
+    expect(WorkerSchema.safeParse({ id: "w1", displayName: "Alice", deletedAt: new Date() }).success).toBe(false);
+  });
+
+  it("deletedAt に ISO 文字列を渡すと parse 成功する", () => {
+    expect(WorkerSchema.safeParse({ id: "w1", displayName: "Alice", deletedAt: "2024-01-01T00:00:00.000Z" }).success).toBe(true);
+  });
+
+  it("deletedAt に null を渡すと parse 成功する", () => {
+    expect(WorkerSchema.safeParse({ id: "w1", displayName: "Alice", deletedAt: null }).success).toBe(true);
+  });
+
+  it("deletedAt を省略しても parse 成功する（optional）", () => {
+    expect(WorkerSchema.safeParse({ id: "w1", displayName: "Alice" }).success).toBe(true);
   });
 });

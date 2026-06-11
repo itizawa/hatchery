@@ -78,7 +78,7 @@ export async function fetchAdminWorkers(): Promise<Worker[]> {
     credentials: "include",
   });
   if (error || !response.ok) throw new Error(`GET /api/workers failed: ${response.status}`);
-  return (data ?? []) as unknown as Worker[];
+  return data ?? [];
 }
 
 /** POST /api/admin/workers で新規 Worker を作成する（#217 / #329）。 */
@@ -92,9 +92,7 @@ export async function createAdminWorker(input: {
     credentials: "include",
   });
   if (!response.ok || !data) throw new Error(`POST /api/admin/workers failed: ${response.status}`);
-  // 生成型（openapi.gen）の Worker は deletedAt の表現が common の Worker と異なるため、
-  // 構造互換であることを前提に common 型へ橋渡しする（/api/workers の fetchAdminWorkers と同様）。
-  return data as unknown as Worker;
+  return data;
 }
 
 /** 管理画面のワーカー一覧（全 Worker）を取得するフック（#217 / #329）。 */

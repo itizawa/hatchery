@@ -12,7 +12,7 @@ export const WorkerSchema = z.object({
   personality: z.string().max(500).optional(),
   imageUrl: z.string().url().max(WORKER_IMAGE_URL_MAX_LENGTH).optional(),
   avatarUrl: z.string().url().max(2048).optional(),
-  deletedAt: z.union([z.string().datetime(), z.date()]).nullable().optional(),
+  deletedAt: z.string().datetime().nullable().optional(),
 });
 
 export type Worker = z.infer<typeof WorkerSchema>;

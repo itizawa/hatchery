@@ -216,7 +216,7 @@ export function createApp(deps: AppDeps): Express {
   );
   app.use(
     "/api/communities",
-    createCommunitiesRouter(communityRepo, postRepo, subscriptionRepo),
+    createCommunitiesRouter(communityRepo, postRepo, subscriptionRepo, deps.workerRepository),
   );
   app.use("/api/feed", createFeedRouter(postRepo));
   app.use("/api", createPostsRouter(postRepo, commentRepo, voteRepo));

@@ -3,7 +3,7 @@ import type {
   AppSettingResponse,
   BatchRunLog,
 } from "@hatchery/common";
-import type { Community, Post } from "../../api/communities.js";
+import type { Community, Post, RecentWorker } from "../../api/communities.js";
 
 export const mockAdminUser: AuthUser = {
   id: "admin-user",
@@ -65,6 +65,11 @@ export const mockPosts: Post[] = [
     score: 12,
     created_at: "2026-06-01T09:01:00Z",
   },
+];
+
+export const mockWorkers: RecentWorker[] = [
+  { id: "worker-haru", displayName: "haru", role: "ムードメーカー", imageUrl: null },
+  { id: "worker-ken", displayName: "ken", role: "ベテラン", imageUrl: null },
 ];
 
 export const mockSettings: AppSettingResponse[] = [

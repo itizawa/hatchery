@@ -6,6 +6,7 @@ import { createInMemoryCommunityRepository } from "../persistence/communityRepos
 import type { CommunityRecord } from "../persistence/communityRepository.js";
 import { createInMemoryPostRepository } from "../persistence/postRepository.js";
 import { createInMemorySubscriptionRepository } from "../persistence/subscriptionRepository.js";
+import { createInMemoryWorkerRepository } from "../persistence/workerRepository.js";
 import { createTestDeps } from "../testing/createTestDeps.js";
 
 const makeCommunity = (overrides: Partial<CommunityRecord> = {}): CommunityRecord => ({
@@ -141,5 +142,68 @@ describe("DELETE /api/communities/:slug/subscribe", () => {
     const app = createApp(deps);
     const res = await request(app).delete("/api/communities/technology/subscribe");
     expect(res.status).toBe(401);
+  });
+});
+
+describe("GET /api/communities/:slug/recent-workers", () => {
+  it("投稿があるとき distinct ワーカーを返す", async () => {
+    const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
+    const postRepo = createInMemoryPostRepository();
+    const workerRepo = createInMemoryWorkerRepository([
+      { id: "worker-1", displayName: "Haru", role: "ムードメーカー" },
+      { id: "worker-2", displayName: "Ken", role: "ベテラン" },
+    ]);
+    await postRepo.createMany("community-1", [
+      { slotKey: "slot-1", seq: 1, author: "worker-1", title: "T1", text: "X" },
+      { slotKey: "slot-1", seq: 2, author: "worker-2", title: "T2", text: "X" },
+    ]);
+    const deps = await createTestDeps({
+      communityRepository: communityRepo,
+      postRepository: postRepo,
+      workerRepository: workerRepo,
+    });
+    const app = createApp(deps);
+    const res = await request(app).get("/api/communities/technology/recent-workers");
+    expect(res.status).toBe(200);
+    const ids = (res.body as { id: string }[]).map((w) => w.id);
+    expect(ids).toContain("worker-1");
+    expect(ids).toContain("worker-2");
+  });
+
+  it("同じワーカーが複数投稿しても 1 件だけ返す", async () => {
+    const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
+    const postRepo = createInMemoryPostRepository();
+    const workerRepo = createInMemoryWorkerRepository([
+      { id: "worker-1", displayName: "Haru", role: "ムードメーカー" },
+    ]);
+    await postRepo.createMany("community-1", [
+      { slotKey: "slot-1", seq: 1, author: "worker-1", title: "T1", text: "X" },
+      { slotKey: "slot-1", seq: 2, author: "worker-1", title: "T2", text: "X" },
+    ]);
+    const deps = await createTestDeps({
+      communityRepository: communityRepo,
+      postRepository: postRepo,
+      workerRepository: workerRepo,
+    });
+    const app = createApp(deps);
+    const res = await request(app).get("/api/communities/technology/recent-workers");
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(1);
+  });
+
+  it("投稿がない community は空配列を返す", async () => {
+    const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
+    const deps = await createTestDeps({ communityRepository: communityRepo });
+    const app = createApp(deps);
+    const res = await request(app).get("/api/communities/technology/recent-workers");
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([]);
+  });
+
+  it("存在しない slug は 404 を返す", async () => {
+    const deps = await createTestDeps();
+    const app = createApp(deps);
+    const res = await request(app).get("/api/communities/not-exists/recent-workers");
+    expect(res.status).toBe(404);
   });
 });

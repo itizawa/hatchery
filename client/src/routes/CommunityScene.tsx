@@ -2,9 +2,10 @@ import { Box, Divider, Stack, Typography } from "../components/uiParts";
 import { Link as RouterLink, useParams } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 
-import { useCommunityFeed, useSubscribe, useUnsubscribe, useVotePost, usePublicCommunities } from "../api/communities.js";
+import { useCommunityFeed, useSubscribe, useUnsubscribe, useVotePost, usePublicCommunities, useRecentWorkers } from "../api/communities.js";
 import { useAuth } from "../api/auth.js";
 import { PostCard } from "../components/PostCard.js";
+import { RecentWorkersSection } from "../components/RecentWorkersSection.js";
 import { ShareButton } from "../components/ShareButton.js";
 import type { VoteDirection } from "../components/VoteControl.js";
 import { SubscribeButton } from "../components/SubscribeButton.js";
@@ -37,6 +38,7 @@ export const CommunityScene = (): ReactElement => {
   const { mutate: subscribe, isPending: isSubscribing } = useSubscribe(communitySlug);
   const { mutate: unsubscribe, isPending: isUnsubscribing } = useUnsubscribe(communitySlug);
   const { mutate: votePost } = useVotePost(communitySlug);
+  const { data: recentWorkers, isLoading: isRecentWorkersLoading, isError: isRecentWorkersError } = useRecentWorkers(communitySlug);
 
   const isSubscriptionPending = isSubscribing || isUnsubscribing;
 
@@ -140,6 +142,16 @@ export const CommunityScene = (): ReactElement => {
                 {formatCreatedAt(community.created_at)}
               </Typography>
             )}
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>
+              最近投稿したワーカー
+            </Typography>
+            <Box sx={{ mb: 2 }}>
+              <RecentWorkersSection
+                workers={recentWorkers ?? []}
+                isLoading={isRecentWorkersLoading}
+                isError={isRecentWorkersError}
+              />
+            </Box>
             <Stack spacing={1}>
               <ShareButton shareUrl={shareUrl} shareTitle={shareTitle} />
               {authUser && (

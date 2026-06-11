@@ -560,6 +560,21 @@ registry.registerPath({
   },
 });
 
+// community の最近投稿したワーカー一覧（認証不要・#207）
+registry.registerPath({
+  method: "get",
+  path: "/api/communities/{slug}/recent-workers",
+  summary: "community の最近投稿したワーカー一覧を取得（認証不要・distinct・最大 10 件）",
+  request: { params: z.object({ slug: communitySlugParam }) },
+  responses: {
+    200: {
+      description: "最近投稿したワーカー一覧（新着投稿順・distinct）",
+      content: { "application/json": { schema: z.array(WorkerComponent) } },
+    },
+    404: { description: "コミュニティが存在しない", ...errorJson },
+  },
+});
+
 // 購読（認証必須）
 registry.registerPath({
   method: "post",

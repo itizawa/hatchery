@@ -1,6 +1,6 @@
 import { http, HttpResponse } from "msw";
 
-import { mockAdminUser, mockCommunities, mockPosts, mockSettings, mockBatchLogs } from "./data/fixtures.js";
+import { mockAdminUser, mockCommunities, mockPosts, mockSettings, mockBatchLogs, mockWorkers } from "./data/fixtures.js";
 
 /** MSW デフォルトハンドラ。各ストーリーで `parameters.msw.handlers` で上書き可能。 */
 export const handlers = [
@@ -9,6 +9,8 @@ export const handlers = [
   http.get("/api/communities", () => HttpResponse.json(mockCommunities)),
 
   http.get("/api/communities/:slug/feed", () => HttpResponse.json(mockPosts)),
+
+  http.get("/api/communities/:slug/recent-workers", () => HttpResponse.json(mockWorkers)),
 
   http.post("/api/communities/:slug/subscribe", () =>
     HttpResponse.json({ userId: "user-1", communityId: "community-1" }, { status: 201 }),

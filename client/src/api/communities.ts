@@ -22,6 +22,14 @@ export type Community = components["schemas"]["Community"];
 export type Post = components["schemas"]["Post"];
 export type Comment = components["schemas"]["Comment"];
 
+/** 最近投稿したワーカーの表示用最小型（#207）。`GET /api/communities/{slug}/recent-workers` の戻り値。 */
+export type RecentWorker = {
+  id: string;
+  displayName: string;
+  role?: string | null;
+  imageUrl?: string | null;
+};
+
 // ─── 管理者 API 向け型 re-export（@hatchery/common より）────────────────────────
 export type { AdminCommunity, CreateCommunityInput, UpdateCommunityInput };
 
@@ -32,6 +40,8 @@ export const ADMIN_COMMUNITIES_QUERY_KEY = ["admin", "communities"] as const;
 export const COMMUNITIES_QUERY_KEY = ADMIN_COMMUNITIES_QUERY_KEY;
 
 export const communityFeedQueryKey = (slug: string) => ["communities", slug, "feed"] as const;
+export const communityRecentWorkersQueryKey = (slug: string) =>
+  ["communities", slug, "recent-workers"] as const;
 export const homeFeedQueryKey = () => ["feed"] as const;
 export const postThreadQueryKey = (postId: string) => ["posts", postId] as const;
 export const communitySubscriptionQueryKey = (slug: string) =>
@@ -220,6 +230,28 @@ export async function voteComment(commentId: string, direction: VoteDirection): 
   if (!response.ok || !data)
     throw new Error(`POST /api/comments/${commentId}/vote failed: ${response.status}`);
   return data;
+}
+
+/**
+ * GET /api/communities/{slug}/recent-workers — community の最近投稿したワーカー一覧を取得（#207）。
+ * openapi.gen.ts はビルド時に生成されるためコミット対象外。CI パイプラインで再生成後に
+ * openApiClient.GET に移行すること（#372 型整合修正と合わせて対応予定）。
+ */
+export async function fetchRecentWorkers(slug: string): Promise<RecentWorker[]> {
+  const res = await fetch(`/api/communities/${encodeURIComponent(slug)}/recent-workers`, {
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error(`GET /api/communities/${slug}/recent-workers failed: ${res.status}`);
+  return res.json() as Promise<RecentWorker[]>;
+}
+
+/** community の最近投稿したワーカー一覧を TanStack Query で取得するフック（#207）。 */
+export function useRecentWorkers(slug: string) {
+  return useQuery({
+    queryKey: communityRecentWorkersQueryKey(slug),
+    queryFn: () => fetchRecentWorkers(slug),
+    staleTime: 60_000,
+  });
 }
 
 /** 公開コミュニティ一覧を TanStack Query で取得するフック（ブラウズ・サイドバー向け）。 */

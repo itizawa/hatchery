@@ -31,7 +31,6 @@ describe("aiMessageGenerator (#401)", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
-    vi.clearAllMocks();
   });
 
   describe("generateConversationWithClaude", () => {

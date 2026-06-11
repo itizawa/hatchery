@@ -21,8 +21,10 @@ async function callClaudeText(prompt: string, apiKey: string, maxTokens: number)
     messages: [{ role: "user", content: prompt }],
   });
   if (message.stop_reason === "max_tokens") {
+    const snippet =
+      prompt.length > 100 ? `"${prompt.slice(0, 100)}..."` : `"${prompt}"`;
     console.warn(
-      `[aiMessageGenerator] 出力が max_tokens (${maxTokens}) で切り詰められました。プロンプト先頭: "${prompt.slice(0, 100)}..."`,
+      `[aiMessageGenerator] 出力が max_tokens (${maxTokens}) で切り詰められました。プロンプト先頭: ${snippet}`,
     );
   }
   const textContent = message.content.find((c) => c.type === "text");

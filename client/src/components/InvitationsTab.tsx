@@ -1,5 +1,6 @@
 import { Alert, Box, Button, Chip, FormControl, InputLabel, MenuItem, Select, Skeleton, Snackbar, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from "./uiParts";
 
+import { useForm } from "@tanstack/react-form";
 import type { ReactElement } from "react";
 import { useState } from "react";
 
@@ -86,24 +87,27 @@ export function InvitationsTab(): ReactElement {
   const { data: invitations = [], isLoading } = useInvitations();
   const createMutation = useCreateInvitation();
 
-  const [expiresInHours, setExpiresInHours] = useState<number>(24);
-  const [memo, setMemo] = useState("");
   const [createdInvitation, setCreatedInvitation] = useState<Invitation | null>(null);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [createErrorOpen, setCreateErrorOpen] = useState(false);
 
-  const handleCreate = async () => {
-    try {
-      const result = await createMutation.mutateAsync({
-        expiresInHours,
-        ...(memo.trim() ? { memo: memo.trim() } : {}),
-      });
-      setCreatedInvitation(result);
-      setMemo("");
-    } catch {
-      setCreateErrorOpen(true);
-    }
-  };
+  const form = useForm({
+    defaultValues: { expiresInHours: 24, memo: "" },
+    onSubmit: async ({ value }) => {
+      if (createMutation.isPending) return;
+      setCreatedInvitation(null);
+      try {
+        const result = await createMutation.mutateAsync({
+          expiresInHours: value.expiresInHours,
+          ...(value.memo.trim() ? { memo: value.memo.trim() } : {}),
+        });
+        setCreatedInvitation(result);
+        form.setFieldValue("memo", "");
+      } catch {
+        setCreateErrorOpen(true);
+      }
+    },
+  });
 
   const handleCopyCreated = async () => {
     if (!createdInvitation) return;
@@ -121,34 +125,51 @@ export function InvitationsTab(): ReactElement {
         <Typography variant="subtitle1" gutterBottom>
           招待リンクを発行
         </Typography>
-        <Box sx={{ display: "flex", gap: 2, alignItems: "flex-start", flexWrap: "wrap" }}>
-          <FormControl size="small" sx={{ minWidth: 140 }}>
-            <InputLabel id="expiry-label">有効期限</InputLabel>
-            <Select
-              labelId="expiry-label"
-              label="有効期限"
-              value={expiresInHours}
-              onChange={(e) => setExpiresInHours(Number(e.target.value))}
-            >
-              {EXPIRY_PRESETS.map((preset) => (
-                <MenuItem key={preset.value} value={preset.value}>
-                  {preset.label}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <TextField
-            label="メモ（任意）"
-            size="small"
-            value={memo}
-            onChange={(e) => setMemo(e.target.value)}
-            inputProps={{ maxLength: 200 }}
-            sx={{ minWidth: 200 }}
-          />
+        <Box
+          component="form"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            await form.handleSubmit();
+          }}
+          sx={{ display: "flex", gap: 2, alignItems: "flex-start", flexWrap: "wrap" }}
+        >
+          <form.Field name="expiresInHours">
+            {(field) => (
+              <FormControl size="small" sx={{ minWidth: 140 }}>
+                <InputLabel id="expiry-label">有効期限</InputLabel>
+                <Select
+                  labelId="expiry-label"
+                  label="有効期限"
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(Number(e.target.value))}
+                  onBlur={field.handleBlur}
+                >
+                  {EXPIRY_PRESETS.map((preset) => (
+                    <MenuItem key={preset.value} value={preset.value}>
+                      {preset.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            )}
+          </form.Field>
+          <form.Field name="memo">
+            {(field) => (
+              <TextField
+                label="メモ（任意）"
+                size="small"
+                value={field.state.value}
+                onChange={(e) => field.handleChange(e.target.value)}
+                onBlur={field.handleBlur}
+                inputProps={{ maxLength: 200 }}
+                sx={{ minWidth: 200 }}
+              />
+            )}
+          </form.Field>
           <Button
+            type="submit"
             variant="contained"
-            onClick={handleCreate}
-            disabled={createMutation.isPending}
+            disabled={createMutation.isPending || form.state.isSubmitting}
           >
             発行
           </Button>
@@ -178,7 +199,7 @@ export function InvitationsTab(): ReactElement {
           </Box>
         ) : invitations.length === 0 ? (
           <Typography variant="body2" color="text.secondary">
-            招待がありません。
+            招待がありまぜん。
           </Typography>
         ) : (
           <Table size="small">

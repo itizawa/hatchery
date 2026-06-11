@@ -162,6 +162,33 @@ describe("InvitationsTab", () => {
       await waitFor(() => expect(createMock).toHaveBeenCalledTimes(1));
     });
 
+    it("メモを入力して発行すると mutateAsync に memo が含まれる", async () => {
+      const createMock = vi.fn().mockResolvedValue(makeInvitation());
+      mockUseCreateInvitation.mockReturnValue({ mutateAsync: createMock, isPending: false });
+      renderTab();
+
+      const memoInput = await screen.findByLabelText(/メモ/);
+      await userEvent.type(memoInput, "テストメモ");
+
+      await userEvent.click(await screen.findByRole("button", { name: "発行" }));
+      await waitFor(() =>
+        expect(createMock).toHaveBeenCalledWith(
+          expect.objectContaining({ memo: "テストメモ" }),
+        ),
+      );
+    });
+
+    it("メモを入力せずに発行すると mutateAsync に memo が含まれない", async () => {
+      const createMock = vi.fn().mockResolvedValue(makeInvitation());
+      mockUseCreateInvitation.mockReturnValue({ mutateAsync: createMock, isPending: false });
+      renderTab();
+
+      await userEvent.click(await screen.findByRole("button", { name: "発行" }));
+      await waitFor(() => expect(createMock).toHaveBeenCalledTimes(1));
+      const calledWith = createMock.mock.calls[0][0] as Record<string, unknown>;
+      expect(calledWith).not.toHaveProperty("memo");
+    });
+
     it("発行後に招待 URL が表示される", async () => {
       const newInvitation = makeInvitation({ token: "new-token-xyz" });
       const createMock = vi.fn().mockResolvedValue(newInvitation);

@@ -1,11 +1,10 @@
 name: Run Batch (Scene Generation)
 
-# 定時（1 日 4 回: JST 9/12/15/18 = UTC 0/3/6/9 時）にシーン生成バッチを実行する。
-# ADR-0009 / ADR-0018: Express とは別プロセスの外部スケジューラで起動。
-# workflow_dispatch でいつでも手動実行できる。
+# 定時起動は Cloud Scheduler + Cloud Run Jobs に移行済み（ADR-0028）。
+# このワークフローは緊急時の手動実行のみを目的として残す。
+# 通常のバッチ実行: gcloud run jobs execute hatchery-batch --region=<REGION>
+# セットアップ手順: docs/cloud-run-batch-setup.md
 on:
-  schedule:
-    - cron: "0 0,3,6,9 * * *"
   workflow_dispatch:
 
 concurrency:

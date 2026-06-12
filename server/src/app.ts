@@ -71,7 +71,7 @@ const DEFAULT_SECURITY: Required<SecurityOptions> = {
 /**
  * セッション cookie の属性を組み立てる（#78）。
  * crossSiteCookie=true（別ドメイン配信）では SameSite=None + Secure とし、ブラウザが
- * クロスサイトでも cookie を送信できるようにする（Secure は HTTPS 必須＝ Cloud Run 前提）。
+ * クロスサイトでも cookie を送信できるようにする（Secure は HTTPS 必須＝Cloud Run 前提）。
  * false（ローカル同一オリジン）では SameSite=Lax + 非 Secure（http://localhost で送信可能）。
  */
 export function buildSessionCookieOptions(crossSiteCookie: boolean) {
@@ -84,7 +84,7 @@ export function buildSessionCookieOptions(crossSiteCookie: boolean) {
 }
 
 /**
- * createApp の依存（永続化は注入する＝ Express/Prisma からドメインを独立させる）。
+ * createApp の依存（永続化は注入する＝Express/Prisma からドメインを独立させる）。
  * テスト用合成は server/src/testing/createTestDeps.ts、
  * 本番用合成は server/src/composition/createPrismaDeps.ts を使う。
  */
@@ -131,7 +131,7 @@ export interface AppDeps {
 }
 
 /**
- * Express アプリを生成する（listen はしない＝ supertest でテスト可能）。
+ * Express アプリを生成する（listen はしない＝supertest でテスト可能）。
  * 層分離: routes → usecases → persistence(IF)。ドメイン型は common。
  * 純粋ファクトリ（Issue #137）: 受け取った依存をそのまま配線するだけ。
  * どの実装を使うかの決定は呼び出し側（composition root）に委ねる。
@@ -176,87 +176,56 @@ export function createApp(deps: AppDeps): Express {
 
   app.use(
     session({
-      secret: sessionSecret ?? "hatchery-dev-secret",
+      secret: sessionSecret ?? DEFAULT_SECURITY.sessionSecret,
       resave: false,
       saveUninitialized: false,
-      store: deps.sessionStore,
       cookie: buildSessionCookieOptions(security.crossSiteCookie),
+      ...(deps.sessionStore ? { store: deps.sessionStore } : {}),
     }),
   );
 
-  const passport = createPassport(deps.userRepository);
-  app.use(passport.initialize());
-  app.use(passport.session());
+  const passportInstance = createPassport(deps.userRepository);
+  app.use(passportInstance.initialize());
+  app.use(passportInstance.session());
 
-  const publicBaseUrl = deps.publicBaseUrl ?? DEFAULT_PUBLIC_BASE_URL;
-
-  app.use("/", healthRouter);
-  app.use("/", createSitemapRouter({ communityRepository: deps.communityRepository, publicBaseUrl }));
+  const communityRepo = deps.communityRepository;
+  const postRepo = deps.postRepository;
+  const commentRepo = deps.commentRepository;
+  const subscriptionRepo = deps.subscriptionRepository;
+  const voteRepo = deps.voteRepository;
+  const worldStateRepo = deps.worldStateRepository;
 
   if (isApiDocsEnabled(process.env)) {
     app.use("/", createApiDocsRouter());
   }
 
-  app.use("/api/auth", createAuthRouter({ userRepository: deps.userRepository, passport }));
+  app.use("/health", healthRouter);
   app.use(
-    "/api/workers",
-    createWorkersRouter({ workerRepository: deps.workerRepository }),
+    "/sitemap.xml",
+    createSitemapRouter(communityRepo, deps.publicBaseUrl ?? DEFAULT_PUBLIC_BASE_URL),
+  );
+  app.use("/api/auth", createAuthRouter(passportInstance, deps.userRepository));
+  app.use("/api/workers", createWorkersRouter(deps.workerRepository));
+  app.use("/api/admin/batch-logs", createBatchLogsRouter(deps.batchRunLogRepository));
+  app.use("/api/admin/token-usage", createTokenUsageRouter(deps.tokenUsageLogRepository));
+  app.use("/api/admin", createAdminRouter(deps.appSettingRepository, deps.invitationLinkRepository, deps.workerRepository, communityRepo));
+  app.use(
+    "/api/admin",
+    createAdminWorkerImageRouter(deps.workerRepository, deps.storageService),
   );
   app.use(
-    "/api/feed",
-    createFeedRouter({
-      postRepository: deps.postRepository,
-      communityRepository: deps.communityRepository,
-    }),
+    "/api/invitations",
+    createInvitationsRouter(deps.invitationLinkRepository, deps.userRepository),
   );
   app.use(
     "/api/communities",
-    createCommunitiesRouter({
-      communityRepository: deps.communityRepository,
-      subscriptionRepository: deps.subscriptionRepository,
-      postRepository: deps.postRepository,
-    }),
+    createCommunitiesRouter(communityRepo, postRepo, subscriptionRepo, deps.workerRepository),
   );
-  app.use(
-    "/api/posts",
-    createPostsRouter({
-      postRepository: deps.postRepository,
-      commentRepository: deps.commentRepository,
-      voteRepository: deps.voteRepository,
-      communityRepository: deps.communityRepository,
-    }),
-  );
-  app.use(
-    "/api/admin",
-    createAdminRouter({
-      workerRepository: deps.workerRepository,
-      appSettingRepository: deps.appSettingRepository,
-      batchRunLogRepository: deps.batchRunLogRepository,
-      invitationLinkRepository: deps.invitationLinkRepository,
-      communityRepository: deps.communityRepository,
-    }),
-  );
-  app.use(
-    "/api/admin",
-    createAdminWorkerImageRouter({
-      workerRepository: deps.workerRepository,
-      storageService: deps.storageService,
-    }),
-  );
-  app.use("/api/invitations", createInvitationsRouter({
-    invitationLinkRepository: deps.invitationLinkRepository,
-    userRepository: deps.userRepository,
-  }));
-  app.use(
-    "/api/batch-logs",
-    createBatchLogsRouter({ batchRunLogRepository: deps.batchRunLogRepository }),
-  );
-  app.use(
-    "/api/token-usage",
-    createTokenUsageRouter({ tokenUsageLogRepository: deps.tokenUsageLogRepository }),
-  );
+  app.use("/api/feed", createFeedRouter(postRepo));
+  app.use("/api", createPostsRouter(postRepo, commentRepo, voteRepo));
+
+  void worldStateRepo;
 
   app.use(errorHandler);
-
   return app;
 }

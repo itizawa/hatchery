@@ -258,3 +258,48 @@ describe("PATCH /api/auth/me (#51)", () => {
     expect(res.body.role).toBe(originalRole);
   });
 });
+
+describe("GET /api/auth/google (#343)", () => {
+  it("Google 認証設定がある場合は 302 で Google OAuth URL へリダイレクトする", async () => {
+    const app = createApp(
+      await createTestDeps({
+        googleAuth: {
+          clientId: "test-client-id",
+          clientSecret: "test-client-secret",
+          callbackUrl: "http://localhost/api/auth/google/callback",
+        },
+      }),
+    );
+    const res = await request(app).get("/api/auth/google");
+    expect(res.status).toBe(302);
+    expect(res.headers["location"]).toMatch(/accounts\.google\.com/);
+  });
+
+  it("Google 認証設定がない場合は 404 が返る", async () => {
+    const app = await buildApp();
+    const res = await request(app).get("/api/auth/google");
+    expect(res.status).toBe(404);
+  });
+});
+
+describe("passport-local: Google ユーザー（passwordHash=null）のパスワード認証拒否 (#343)", () => {
+  it("passwordHash が null のユーザーは local 認証を通過しない", async () => {
+    const { createInMemoryUserRepository } = await import("../persistence/userRepository.js");
+    const googleOnlyRepo = createInMemoryUserRepository([
+      {
+        id: "google-user-1",
+        loginId: "google_123456789",
+        displayName: "Google User",
+        passwordHash: null,
+        role: "member",
+        avatarUrl: null,
+        googleId: "123456789",
+      },
+    ]);
+    const app = createApp(await createTestDeps({ userRepository: googleOnlyRepo }));
+    const res = await request(app)
+      .post("/api/auth/login")
+      .send({ loginId: "google_123456789", password: "anypassword" });
+    expect(res.status).toBe(401);
+  });
+});

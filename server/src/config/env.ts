@@ -22,6 +22,12 @@ export interface ServerEnv {
   sessionSecret: string | undefined;
   /** AES-256-GCM 暗号鍵の元になるシークレット（#418）。本番では必須。未設定なら undefined。 */
   appSecret: string | undefined;
+  /** Google OAuth クライアント ID（#343）。未設定なら Google 認証エンドポイントを無効化。 */
+  googleClientId: string | undefined;
+  /** Google OAuth クライアントシークレット（#343）。未設定なら Google 認証エンドポイントを無効化。 */
+  googleClientSecret: string | undefined;
+  /** Google OAuth コールバック URL（#343）。未設定なら Google 認証エンドポイントを無効化。 */
+  googleCallbackUrl: string | undefined;
 }
 
 /** 公開ページのベース URL の既定値（#259）。client の DEFAULT_OGP_URL と同じドメイン。 */
@@ -62,6 +68,9 @@ const EnvSchema = z.object({
     ),
   SESSION_SECRET: z.string().min(1).optional(),
   APP_SECRET: z.string().min(1).optional(),
+  GOOGLE_CLIENT_ID: z.string().min(1).optional(),
+  GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
+  GOOGLE_CALLBACK_URL: z.string().url().optional(),
 });
 
 /** 環境変数から ServerEnv を構築する。不正な値は ZodError を投げて起動時に気付けるようにする。 */
@@ -77,6 +86,9 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): ServerEnv {
     CORS_ALLOWED_ORIGINS: source.CORS_ALLOWED_ORIGINS,
     SESSION_SECRET: source.SESSION_SECRET,
     APP_SECRET: source.APP_SECRET,
+    GOOGLE_CLIENT_ID: source.GOOGLE_CLIENT_ID,
+    GOOGLE_CLIENT_SECRET: source.GOOGLE_CLIENT_SECRET,
+    GOOGLE_CALLBACK_URL: source.GOOGLE_CALLBACK_URL,
   });
   return {
     port: parsed.PORT,
@@ -89,5 +101,8 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): ServerEnv {
     publicBaseUrl: parsed.PUBLIC_BASE_URL,
     sessionSecret: parsed.SESSION_SECRET,
     appSecret: parsed.APP_SECRET,
+    googleClientId: parsed.GOOGLE_CLIENT_ID,
+    googleClientSecret: parsed.GOOGLE_CLIENT_SECRET,
+    googleCallbackUrl: parsed.GOOGLE_CALLBACK_URL,
   };
 }

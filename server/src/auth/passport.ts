@@ -2,6 +2,7 @@ import type { AuthUser } from "@hatchery/common";
 import bcrypt from "bcrypt";
 import { Passport } from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
+import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 
 import type { User, UserRepository } from "../persistence/userRepository.js";
 
@@ -24,8 +25,15 @@ export function toAuthUser(user: User): AuthUser {
  */
 export type PassportInstance = InstanceType<typeof Passport>;
 
+/** Google OAuth 設定（#343）。GOOGLE_CLIENT_ID 等の環境変数から組み立てる。 */
+export interface GoogleAuthConfig {
+  clientId: string;
+  clientSecret: string;
+  callbackUrl: string;
+}
+
 /** userRepo に束縛された独立した Passport インスタンスを生成する（グローバル汚染回避）。 */
-export function createPassport(userRepo: UserRepository): PassportInstance {
+export function createPassport(userRepo: UserRepository, googleConfig?: GoogleAuthConfig): PassportInstance {
   const p = new Passport();
 
   p.use(
@@ -33,6 +41,8 @@ export function createPassport(userRepo: UserRepository): PassportInstance {
       try {
         const user = await userRepo.findByLoginId(loginId);
         if (!user) return done(null, false);
+        // Google SSO ユーザーは passwordHash が null なのでパスワード認証を拒否する（#343）
+        if (!user.passwordHash) return done(null, false);
         const match = await bcrypt.compare(password, user.passwordHash);
         if (!match) return done(null, false);
         return done(null, toAuthUser(user));
@@ -41,6 +51,32 @@ export function createPassport(userRepo: UserRepository): PassportInstance {
       }
     }),
   );
+
+  if (googleConfig) {
+    p.use(
+      new GoogleStrategy(
+        {
+          clientID: googleConfig.clientId,
+          clientSecret: googleConfig.clientSecret,
+          callbackURL: googleConfig.callbackUrl,
+        },
+        async (_accessToken, _refreshToken, profile, done) => {
+          try {
+            const googleId = profile.id;
+            const existing = await userRepo.findByGoogleId(googleId);
+            if (existing) return done(null, toAuthUser(existing));
+
+            const displayName = profile.displayName || `user_${googleId}`;
+            const loginId = `google_${googleId}`;
+            const newUser = await userRepo.create({ loginId, displayName, googleId, passwordHash: null });
+            return done(null, toAuthUser(newUser));
+          } catch (err) {
+            return done(err as Error);
+          }
+        },
+      ),
+    );
+  }
 
   p.serializeUser((user, done) => {
     done(null, user.id);

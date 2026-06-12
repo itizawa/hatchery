@@ -25,11 +25,14 @@ model User {
   /// 人間可読なログイン識別子（#185）。認証は loginId ベースで行う。
   loginId       String         @unique
   displayName   String
-  passwordHash  String
+  /// bcrypt ハッシュ。Google SSO ユーザーは null（#343）。
+  passwordHash  String?
   /// プロフィール画像 URL（#51）。nullable。
   avatarUrl     String?
   /// 権限ロール（#136）。既定は member。新規登録（招待受諾）は member として登録される。
   role          UserRole       @default(member)
+  /// Google OAuth の sub claim（profile.id）。Google SSO ユーザーのみ設定される（#343）。
+  googleId      String?        @unique
   subscriptions Subscription[]
   votes         Vote[]
 }

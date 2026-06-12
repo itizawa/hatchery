@@ -9,10 +9,20 @@ const env = loadEnv();
 
 const sessionStore = env.databaseUrl ? createPgSessionStore(env.databaseUrl) : undefined;
 
+const googleAuth =
+  env.googleClientId && env.googleClientSecret && env.googleCallbackUrl
+    ? {
+        clientId: env.googleClientId,
+        clientSecret: env.googleClientSecret,
+        callbackUrl: env.googleCallbackUrl,
+      }
+    : undefined;
+
 const app = createApp({
   ...createPrismaDeps(prisma),
   sessionStore,
   publicBaseUrl: env.publicBaseUrl,
+  googleAuth,
   security: {
     rateLimitWindowMs: env.rateLimitWindowMs,
     rateLimitMax: env.rateLimitMax,

@@ -1,5 +1,6 @@
 import { Alert, Box, Button, Chip, Skeleton, Snackbar, Tab, Table, TableBody, TableCell, TableHead, TableRow, Tabs, TextField, Typography } from "../components/uiParts";
 
+import { useForm } from "@tanstack/react-form";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { type SyntheticEvent, useState, type ReactElement, type ReactNode } from "react";
 
@@ -16,22 +17,24 @@ import { type SettingsTabValue } from "./settingsTabValues.js";
 const ApiTokenSettings = (): ReactElement => {
   const { data: settings, isLoading: isSettingsLoading } = useAdminSettings();
   const saveMutation = useSaveAdminSetting();
-  const [apiKey, setApiKey] = useState("");
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [errorOpen, setErrorOpen] = useState(false);
 
   const currentMasked =
     settings?.find((s) => s.key === "CLAUDE_API_KEY")?.maskedValue ?? null;
 
-  const handleSave = async () => {
-    try {
-      await saveMutation.mutateAsync({ key: "CLAUDE_API_KEY", value: apiKey });
-      setApiKey("");
-      setSnackbarOpen(true);
-    } catch {
-      setErrorOpen(true);
-    }
-  };
+  const form = useForm({
+    defaultValues: { apiKey: "" },
+    onSubmit: async ({ value }) => {
+      try {
+        await saveMutation.mutateAsync({ key: "CLAUDE_API_KEY", value: value.apiKey });
+        form.reset();
+        setSnackbarOpen(true);
+      } catch {
+        setErrorOpen(true);
+      }
+    },
+  });
 
   if (isSettingsLoading) {
     return (
@@ -43,7 +46,14 @@ const ApiTokenSettings = (): ReactElement => {
   }
 
   return (
-    <Box sx={{ maxWidth: 480, display: "flex", flexDirection: "column", gap: 2 }}>
+    <Box
+      component="form"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        await form.handleSubmit();
+      }}
+      sx={{ maxWidth: 480, display: "flex", flexDirection: "column", gap: 2 }}
+    >
       <Typography variant="body2" color="text.secondary">
         Claude API キーを設定します。設定済みの場合はマスク表示で確認できます。
       </Typography>
@@ -52,20 +62,25 @@ const ApiTokenSettings = (): ReactElement => {
           現在の設定: <strong>{currentMasked}</strong>
         </Typography>
       )}
-      <TextField
-        label="Claude API キー"
-        type="password"
-        value={apiKey}
-        onChange={(e) => setApiKey(e.target.value)}
-        placeholder="sk-ant-api03-..."
-        fullWidth
-        size="small"
-        inputProps={{ maxLength: APP_SETTING_VALUE_MAX_LENGTH, autoComplete: "off" }}
-      />
+      <form.Field name="apiKey">
+        {(field) => (
+          <TextField
+            label="Claude API キー"
+            type="password"
+            value={field.state.value}
+            onChange={(e) => field.handleChange(e.target.value)}
+            onBlur={field.handleBlur}
+            placeholder="sk-ant-api03-..."
+            fullWidth
+            size="small"
+            inputProps={{ maxLength: APP_SETTING_VALUE_MAX_LENGTH, autoComplete: "off" }}
+          />
+        )}
+      </form.Field>
       <Button
+        type="submit"
         variant="contained"
-        onClick={handleSave}
-        disabled={saveMutation.isPending}
+        disabled={saveMutation.isPending || form.state.isSubmitting}
       >
         保存
       </Button>

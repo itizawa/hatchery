@@ -152,6 +152,9 @@ export function createApp(deps: AppDeps): Express {
     if (!sessionSecret) {
       throw new Error("SESSION_SECRET 環境変数が設定されていません。本番環境では必須です。");
     }
+    if (!process.env.APP_SECRET) {
+      throw new Error("APP_SECRET 環境変数が設定されていません。本番環境では必須です（#418）。");
+    }
     if (!deps.sessionStore) {
       throw new Error(
         "sessionStore が必須です。本番環境では connect-pg-simple 等の永続ストアを AppDeps.sessionStore に渡してください（#186）。",

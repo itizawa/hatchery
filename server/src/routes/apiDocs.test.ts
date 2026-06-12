@@ -80,9 +80,11 @@ describe("API ドキュメント配信ルート（本番無効 = 404）", () => 
     process.env.NODE_ENV = "production";
     delete process.env.ENABLE_API_DOCS;
     process.env.SESSION_SECRET = "test-secret-for-api-docs-prod-test";
+    process.env.APP_SECRET = "test-app-secret-for-api-docs-prod-test";
   });
   afterEach(() => {
     delete process.env.SESSION_SECRET;
+    delete process.env.APP_SECRET;
   });
 
   it("本番かつトグル無効では /openapi.json は 404", async () => {

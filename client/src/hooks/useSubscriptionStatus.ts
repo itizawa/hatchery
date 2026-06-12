@@ -8,6 +8,7 @@ export function useSubscriptionStatus(communitySlug: string): { subscribed: bool
     queryKey: communitySubscriptionQueryKey(communitySlug),
     queryFn: () => fetchSubscriptionStatus(communitySlug),
     staleTime: 30_000,
+    enabled: !!communitySlug,
   });
 
   return { subscribed: data?.subscribed ?? false };

@@ -4,7 +4,7 @@ import { Passport } from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 
-import type { User, UserRepository } from "../persistence/userRepository.js";
+import { LoginIdAlreadyExistsError, type User, type UserRepository } from "../persistence/userRepository.js";
 
 /** 認証ユーザー（DB の User）をセッションに載せる公開情報（AuthUser）へ写す（#51, #136, #185, #331）。 */
 export function toAuthUser(user: User): AuthUser {
@@ -59,6 +59,8 @@ export function createPassport(userRepo: UserRepository, googleConfig?: GoogleAu
           clientID: googleConfig.clientId,
           clientSecret: googleConfig.clientSecret,
           callbackURL: googleConfig.callbackUrl,
+          // state: true で OAuth2 state パラメータを有効化し Login CSRF を防ぐ（#343）
+          state: true,
         },
         async (_accessToken, _refreshToken, profile, done) => {
           try {
@@ -68,8 +70,20 @@ export function createPassport(userRepo: UserRepository, googleConfig?: GoogleAu
 
             const displayName = profile.displayName || `user_${googleId}`;
             const loginId = `google_${googleId}`;
-            const newUser = await userRepo.create({ loginId, displayName, googleId, passwordHash: null });
-            return done(null, toAuthUser(newUser));
+            try {
+              const newUser = await userRepo.create({ loginId, displayName, googleId, passwordHash: null });
+              return done(null, toAuthUser(newUser));
+            } catch (createErr) {
+              if (createErr instanceof LoginIdAlreadyExistsError) {
+                // TOCTOU: 並行リクエストが先に同じ googleId でユーザーを作成した場合はリトライ。
+                // loginId 衝突（既存ローカルアカウントの loginId が google_<id> と重複）の場合は
+                // findByGoogleId が null を返すため done(null, false) で認証失敗として扱う。
+                const retried = await userRepo.findByGoogleId(googleId);
+                if (retried) return done(null, toAuthUser(retried));
+                return done(null, false);
+              }
+              throw createErr;
+            }
           } catch (err) {
             return done(err as Error);
           }

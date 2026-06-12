@@ -72,4 +72,14 @@ describe("loadEnv", () => {
     const env = loadEnv({});
     expect(env.sessionSecret).toBeUndefined();
   });
+
+  it("APP_SECRET が設定されている場合に ServerEnv.appSecret として返す", () => {
+    const env = loadEnv({ APP_SECRET: "test-app-secret" });
+    expect(env.appSecret).toBe("test-app-secret");
+  });
+
+  it("APP_SECRET 未設定なら appSecret が undefined を返す", () => {
+    const env = loadEnv({});
+    expect(env.appSecret).toBeUndefined();
+  });
 });

@@ -20,6 +20,8 @@ export interface ServerEnv {
   publicBaseUrl: string;
   /** express-session の署名秘密鍵（#344）。本番では必須。未設定なら undefined。 */
   sessionSecret: string | undefined;
+  /** AES-256-GCM 暗号鍵の元になるシークレット（#418）。本番では必須。未設定なら undefined。 */
+  appSecret: string | undefined;
 }
 
 /** 公開ページのベース URL の既定値（#259）。client の DEFAULT_OGP_URL と同じドメイン。 */
@@ -59,6 +61,7 @@ const EnvSchema = z.object({
         .filter((origin) => origin.length > 0),
     ),
   SESSION_SECRET: z.string().min(1).optional(),
+  APP_SECRET: z.string().min(1).optional(),
 });
 
 /** 環境変数から ServerEnv を構築する。不正な値は ZodError を投げて起動時に気付けるようにする。 */
@@ -73,6 +76,7 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): ServerEnv {
     PUBLIC_BASE_URL: source.PUBLIC_BASE_URL,
     CORS_ALLOWED_ORIGINS: source.CORS_ALLOWED_ORIGINS,
     SESSION_SECRET: source.SESSION_SECRET,
+    APP_SECRET: source.APP_SECRET,
   });
   return {
     port: parsed.PORT,
@@ -84,5 +88,6 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): ServerEnv {
     corsAllowedOrigins: parsed.CORS_ALLOWED_ORIGINS,
     publicBaseUrl: parsed.PUBLIC_BASE_URL,
     sessionSecret: parsed.SESSION_SECRET,
+    appSecret: parsed.APP_SECRET,
   };
 }

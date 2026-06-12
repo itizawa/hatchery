@@ -3,9 +3,25 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:
 const ALGORITHM = "aes-256-gcm";
 const IV_LENGTH = 12;
 
+/**
+ * APP_SECRET を解決する。production で未設定なら明確なエラーを投げる。
+ * それ以外で未設定なら開発用フォールバックを返す（#418）。
+ */
+export function resolveAppSecret(source: NodeJS.ProcessEnv = process.env): string {
+  const secret = source.APP_SECRET;
+  if (!secret) {
+    if (source.NODE_ENV === "production") {
+      throw new Error(
+        "APP_SECRET 環境変数が設定されていません。本番環境では必須です（#418）。",
+      );
+    }
+    return "hatchery-dev-secret";
+  }
+  return secret;
+}
+
 function getKey(): Buffer {
-  const secret = process.env.APP_SECRET ?? "hatchery-dev-secret";
-  return createHash("sha256").update(secret).digest();
+  return createHash("sha256").update(resolveAppSecret()).digest();
 }
 
 /** 平文を AES-256-GCM で暗号化して "iv:authTag:ciphertext"（base64）形式の文字列を返す。 */

@@ -208,7 +208,7 @@ registry.registerPath({
       description: "更新後の認証済みユーザー",
       content: { "application/json": { schema: AuthUserComponent } },
     },
-    400: { description: "リクエストボディが不正（displayName 空ゾavtarUrl 不正など）", ...errorJson },
+    400: { description: "リクエストボディが不正（displayName 空・avtarUrl 不正など）", ...errorJson },
     401: { description: "未認証", ...errorJson },
   },
 });
@@ -284,7 +284,7 @@ const BatchRunLogComponent = registry.register(
 registry.registerPath({
   method: "get",
   path: "/api/admin/batch-logs",
-  summary: "バッチ実行ログ一覧を取得（認証必須・直近 50 件タexecutedAt 降順）（#75）",
+  summary: "バッチ実行ログ一覧を取得（認証必須・直近 50 件・executedAt 降順）（#75）",
   responses: {
     200: {
       description: "バッチ実行ログ一覧",
@@ -457,7 +457,7 @@ registry.registerPath({
   },
 });
 
-// ── 公共コミュニティ API（#305 / ADR-0019 / ADR-0020）────────────────────────────────────────────────
+// ── 公共コミュニティ API（#305 / ADR-0019 / ADR-0020）──────────────────────────────────
 
 const CommunityComponent = registry.register(
   "Community",
@@ -697,11 +697,11 @@ const VoteRequestComponent = registry.register(
   VoteRequestSchema.openapi({ description: "vote リクエストボディ（direction: up | down）" }),
 );
 
-// post への vote（認証必須タtoggle/switch・ADR-0025）
+// post への vote（認証必須・toggle/switch・ADR-0025）
 registry.registerPath({
   method: "post",
   path: "/api/posts/{postId}/vote",
-  summary: "post に up/down vote（認証必須タtoggle/switch・ADR-0025）",
+  summary: "post に up/down vote（認証必須・toggle/switch・ADR-0025）",
   request: {
     params: z.object({ postId: postIdParam }),
     body: { content: { "application/json": { schema: VoteRequestComponent } } },
@@ -717,11 +717,11 @@ registry.registerPath({
   },
 });
 
-// comment への vote（認証必須タtoggle/switch・ADR-0025）
+// comment への vote（認証必須・toggle/switch・ADR-0025）
 registry.registerPath({
   method: "post",
   path: "/api/comments/{commentId}/vote",
-  summary: "comment に up/down vote（認証必須タtoggle/switch・ADR-0025）",
+  summary: "comment に up/down vote（認証必須・toggle/switch・ADR-0025）",
   request: {
     params: z.object({ commentId: commentIdParam }),
     body: { content: { "application/json": { schema: VoteRequestComponent } } },

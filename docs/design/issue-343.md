@@ -89,12 +89,12 @@ export interface UserRepository {
 ## 5. 影響範囲 / 既存への変更
 
 | ファイル | 変更内容 |
-|----------|----------|
+|----------|---------|
 | `server/prisma/schema.prisma` | `User.googleId` 追加、`passwordHash` nullable 化 |
 | `server/prisma/migrations/*` | 新マイグレーション SQL（手動作成） |
 | `server/src/persistence/userRepository.ts` | `User` 型・`UserRepository` IF 拡張 |
 | `server/src/persistence/prismaUserRepository.ts` | `findByGoogleId`・`create` 対応 |
-| `server/src/auth/passport.ts` | Google Strategy 追加・ null passwordHash ガード |
+| `server/src/auth/passport.ts` | Google Strategy 追加・null passwordHash ガード |
 | `server/src/app.ts` | `AppDeps.googleAuth?` 追加 |
 | `server/src/routes/auth.ts` | Google OAuth ルート追加 |
 | `server/src/openapi/registry.ts` | Google auth エンドポイント登録 |

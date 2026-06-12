@@ -70,7 +70,7 @@ describe("ログインフォーム", () => {
     renderApp("/login");
     await userEvent.type(await screen.findByLabelText(/ID/), "user1");
     await userEvent.type(screen.getByLabelText(/パスワード/), "pass1");
-    await userEvent.click(screen.getByRole("button", { name: /ログイン/ }));
+    await userEvent.click(screen.getByRole("button", { name: "ログイン" }));
     await waitFor(() => expect(loginSpy).toHaveBeenCalledWith({ loginId: "user1", password: "pass1" }));
   });
 
@@ -80,7 +80,7 @@ describe("ログインフォーム", () => {
     renderApp("/login");
     await screen.findByLabelText(/ID/);
     await userEvent.type(screen.getByLabelText(/パスワード/), "pass1");
-    await userEvent.click(screen.getByRole("button", { name: /ログイン/ }));
+    await userEvent.click(screen.getByRole("button", { name: "ログイン" }));
     await waitFor(() => expect(loginSpy).not.toHaveBeenCalled());
   });
 
@@ -89,7 +89,7 @@ describe("ログインフォーム", () => {
     const loginSpy = vi.spyOn(authApi, "login").mockResolvedValue({ id: "user1", displayName: "Alice" });
     renderApp("/login");
     await userEvent.type(await screen.findByLabelText(/ID/), "user1");
-    await userEvent.click(screen.getByRole("button", { name: /ログイン/ }));
+    await userEvent.click(screen.getByRole("button", { name: "ログイン" }));
     await waitFor(() => expect(loginSpy).not.toHaveBeenCalled());
   });
 });

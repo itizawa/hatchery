@@ -7,9 +7,10 @@ function mapRow(row: {
   id: string;
   loginId: string;
   displayName: string;
-  passwordHash: string;
+  passwordHash: string | null;
   role: string;
   avatarUrl: string | null;
+  googleId: string | null;
 }): User {
   return {
     id: row.id,
@@ -18,6 +19,7 @@ function mapRow(row: {
     passwordHash: row.passwordHash,
     role: UserRoleSchema.parse(row.role ?? "member"),
     avatarUrl: row.avatarUrl ?? null,
+    googleId: row.googleId ?? null,
   };
 }
 
@@ -34,6 +36,14 @@ export function createPrismaUserRepository(prisma: PrismaClient): UserRepository
     async findByLoginId(loginId: string): Promise<User | null> {
       const row = await prisma.user.findUnique({
         where: { loginId },
+      });
+      if (!row) return null;
+      return mapRow(row);
+    },
+
+    async findByGoogleId(googleId: string): Promise<User | null> {
+      const row = await prisma.user.findUnique({
+        where: { googleId },
       });
       if (!row) return null;
       return mapRow(row);
@@ -63,14 +73,16 @@ export function createPrismaUserRepository(prisma: PrismaClient): UserRepository
     async create(input: {
       loginId: string;
       displayName: string;
-      passwordHash: string;
+      passwordHash?: string | null;
+      googleId?: string | null;
     }): Promise<User> {
       try {
         const row = await prisma.user.create({
           data: {
             loginId: input.loginId,
             displayName: input.displayName,
-            passwordHash: input.passwordHash,
+            passwordHash: input.passwordHash ?? null,
+            googleId: input.googleId ?? null,
             role: "member",
           },
         });

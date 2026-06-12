@@ -2,7 +2,7 @@ import { LoginRequestSchema, UpdateProfileSchema } from "@hatchery/common";
 import type { RequestHandler } from "express";
 import { Router } from "express";
 
-import type { PassportInstance } from "../auth/passport.js";
+import type { GoogleAuthConfig, PassportInstance } from "../auth/passport.js";
 import { toAuthUser } from "../auth/passport.js";
 import { requireAuth } from "../middleware/requireAuth.js";
 import { validateBody } from "../middleware/validateBody.js";
@@ -11,6 +11,7 @@ import type { UserRepository } from "../persistence/userRepository.js";
 export function createAuthRouter(
   passportInstance: PassportInstance,
   userRepository: UserRepository,
+  googleConfig?: GoogleAuthConfig,
 ): Router {
   const router = Router();
 
@@ -43,6 +44,21 @@ export function createAuthRouter(
       next(err);
     }
   });
+
+  if (googleConfig) {
+    router.get(
+      "/google",
+      passportInstance.authenticate("google", { scope: ["profile", "email"] }) as RequestHandler,
+    );
+
+    router.get(
+      "/google/callback",
+      passportInstance.authenticate("google", { failureRedirect: "/login" }) as RequestHandler,
+      (_req, res) => {
+        res.redirect("/");
+      },
+    );
+  }
 
   return router;
 }

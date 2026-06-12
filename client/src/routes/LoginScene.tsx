@@ -90,6 +90,15 @@ export const LoginScene = (): ReactElement => {
       <Button type="submit" variant="contained" fullWidth>
         ログイン
       </Button>
+      <Button
+        variant="outlined"
+        fullWidth
+        onClick={() => {
+          window.location.href = "/api/auth/google";
+        }}
+      >
+        Google でログイン
+      </Button>
     </Box>
   );
 };

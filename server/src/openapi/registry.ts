@@ -213,6 +213,25 @@ registry.registerPath({
   },
 });
 
+// Google OAuth 認証（#343 / ADR-0027）。GOOGLE_CLIENT_ID 等が設定されている場合のみ有効。
+registry.registerPath({
+  method: "get",
+  path: "/api/auth/google",
+  summary: "Google OAuth 認証画面へリダイレクト（#343）",
+  responses: {
+    302: { description: "Google OAuth 認証画面へリダイレクト（GOOGLE_CLIENT_ID 未設定時は 404）" },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/api/auth/google/callback",
+  summary: "Google OAuth コールバック（#343）",
+  responses: {
+    302: { description: "認証成功: フロントエンドの / へリダイレクト。認証失敗: /login へリダイレクト" },
+  },
+});
+
 // 管理画面 API（#52）。認証必須。
 const AppSettingResponseComponent = registry.register(
   "AppSettingResponse",

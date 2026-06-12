@@ -12,6 +12,7 @@ const baseUser: User = {
   loginId: "login1",
   displayName: "User One",
   passwordHash: "hash1",
+  googleId: null,
   role: "member",
   avatarUrl: null,
 };

@@ -1,7 +1,7 @@
 import express, { type Express } from "express";
 import session, { type Store } from "express-session";
 
-import { createPassport } from "./auth/passport.js";
+import { createPassport, type GoogleAuthConfig } from "./auth/passport.js";
 import { DEFAULT_PUBLIC_BASE_URL, SECURITY_DEFAULTS } from "./config/env.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { createCors } from "./middleware/cors.js";
@@ -71,7 +71,7 @@ const DEFAULT_SECURITY: Required<SecurityOptions> = {
 /**
  * セッション cookie の属性を組み立てる（#78）。
  * crossSiteCookie=true（別ドメイン配信）では SameSite=None + Secure とし、ブラウザが
- * クロスサイトでも cookie を送信できるようにする（Secure は HTTPS 必須＝Cloud Run 前提）。
+ * クロスサイトでも cookie を送信できるようにする（Secure は HTTPS 必須＝ Cloud Run 前提）。
  * false（ローカル同一オリジン）では SameSite=Lax + 非 Secure（http://localhost で送信可能）。
  */
 export function buildSessionCookieOptions(crossSiteCookie: boolean) {
@@ -84,7 +84,7 @@ export function buildSessionCookieOptions(crossSiteCookie: boolean) {
 }
 
 /**
- * createApp の依存（永続化は注入する＝Express/Prisma からドメインを独立させる）。
+ * createApp の依存（永続化は注入する＝ Express/Prisma からドメインを独立させる）。
  * テスト用合成は server/src/testing/createTestDeps.ts、
  * 本番用合成は server/src/composition/createPrismaDeps.ts を使う。
  */
@@ -128,10 +128,16 @@ export interface AppDeps {
    * 本番は server.ts が env（PUBLIC_BASE_URL）から渡す。
    */
   publicBaseUrl?: string;
+  /**
+   * Google OAuth 設定（#343 / ADR-0027）。
+   * 設定がある場合のみ Google 認証エンドポイントを有効化する。
+   * 本番は server.ts が env（GOOGLE_CLIENT_ID 等）から渡す。
+   */
+  googleAuth?: GoogleAuthConfig;
 }
 
 /**
- * Express アプリを生成する（listen はしない＝supertest でテスト可能）。
+ * Express アプリを生成する（listen はしない＝ supertest でテスト可能）。
  * 層分離: routes → usecases → persistence(IF)。ドメイン型は common。
  * 純粋ファクトリ（Issue #137）: 受け取った依存をそのまま配線するだけ。
  * どの実装を使うかの決定は呼び出し側（composition root）に委ねる。
@@ -184,7 +190,7 @@ export function createApp(deps: AppDeps): Express {
     }),
   );
 
-  const passportInstance = createPassport(deps.userRepository);
+  const passportInstance = createPassport(deps.userRepository, deps.googleAuth);
   app.use(passportInstance.initialize());
   app.use(passportInstance.session());
 
@@ -204,7 +210,7 @@ export function createApp(deps: AppDeps): Express {
     "/sitemap.xml",
     createSitemapRouter(communityRepo, deps.publicBaseUrl ?? DEFAULT_PUBLIC_BASE_URL),
   );
-  app.use("/api/auth", createAuthRouter(passportInstance, deps.userRepository));
+  app.use("/api/auth", createAuthRouter(passportInstance, deps.userRepository, deps.googleAuth));
   app.use("/api/workers", createWorkersRouter(deps.workerRepository));
   app.use("/api/admin/batch-logs", createBatchLogsRouter(deps.batchRunLogRepository));
   app.use("/api/admin/token-usage", createTokenUsageRouter(deps.tokenUsageLogRepository));

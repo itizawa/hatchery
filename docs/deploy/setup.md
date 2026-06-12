@@ -191,7 +191,7 @@ dev 環境（`develop` ブランチのデプロイ）には HTTP Basic 認証が
 - `client/functions/_middleware.ts` が全リクエストをインターセプトし、Basic 認証を検証する
 - `BASIC_AUTH_USER` / `BASIC_AUTH_PASSWORD` が**どちらか未設定の場合はスキップ**（= 本番無効化）
 - タイミング攻撃に配慮した定数時間比較を使用（XOR ビット演算）
-- あくまで「dev 画面の詪き見防止」目的。API サーバ（Cloud Run）のアクセス制御は別途必要
+- あくまで「dev 画面の窃き見防止」目的。API サーバ（Cloud Run）のアクセス制御は別途必要
 
 ---
 
@@ -257,11 +257,64 @@ GitHub Actions タブ → **Run Batch (Scene Generation)** → **Run workflow** 
 
 ---
 
+## 6. 本番（prod）環境のセットアップ（#345）
+
+`main` ブランチへのマージをトリガーに、本番環境へ自動デプロイされます。
+dev 環境のセットアップ（1〜5 章）が完了していることを前提とします。
+
+### 6-1. 本番用 Google Cloud リソースの準備
+
+dev 環境（`hatchery` サービス・`hatchery-dev` プロジェクト等）とは別に本番用のリソースを作成してください。
+同一プロジェクトを使う場合は、Cloud Run サービス名を `hatchery-prod` で新規作成します。
+
+```bash
+# 本番用 Cloud Run サービスの初回デプロイ（ワークフロー初回実行前）
+gcloud run deploy hatchery-prod \
+  --image=<初期ダミーイメージ> \
+  --region=$GCP_REGION \
+  --platform=managed \
+  --allow-unauthenticated
+```
+
+### 6-2. 本番用 PostgreSQL の準備
+
+本番 DB を用意し、接続文字列を `DATABASE_URL_PROD` Secret に設定します。
+Neon や Cloud SQL を dev と別プロジェクトで作成することを推奨します。
+
+### 6-3. 本番環境の GitHub Actions Secrets
+
+セクション 3 の dev 用 Secrets に加えて、以下を追加してください:
+
+| Secret 名 | 値の取得元 | 説明 |
+|-----------|-----------|------|
+| `DATABASE_URL_PROD` | 本番 Neon / Cloud SQL の接続文字列 | 本番 DB への Prisma 接続先 |
+| `CLOUD_RUN_PROD_URL` | 本番 Cloud Run サービスの URL | client ビルド時の API エンドポイント |
+| `CORS_ALLOWED_ORIGINS_PROD` | 本番 Cloudflare Pages の URL（例: `https://hatchery.pages.dev`） | 本番サーバの CORS 許可オリジン |
+
+> **注意**: `SESSION_SECRET` / `ANTHROPIC_API_KEY` / `GCP_*` の GCP 認証情報は dev と共用可能ですが、
+> セキュリティ上は本番専用の値を別 Secret として用意することを強く推奨します。
+
+### 6-4. Cloudflare Pages の本番設定
+
+Cloudflare Pages では、`main` ブランチが本番エイリアスとして機能します（`--branch main` でデプロイ）。
+本番 Basic 認証は**設定しない**（`BASIC_AUTH_USER` / `BASIC_AUTH_PASSWORD` を本番環境変数に追加しないことで無効化）。
+
+### 6-5. 本番デプロイの動作確認
+
+1. `develop → main` の昇格 PR をマージする（人間ゲート）
+2. GitHub Actions タブで `Deploy Server (prod)` と `Deploy Client (prod)` が緑になることを確認
+3. `CLOUD_RUN_PROD_URL` の API が正常応答することを確認
+4. 本番 Cloudflare Pages URL にアクセスして画面が表示されることを確認
+
+---
+
 ## 関連
 
 - ADR-0009: 定時バッチ方式（常時稼働せず外部スケジューラから起動）
 - ADR-0011: サーバホスティング選定の記録
 - ADR-0018: Reddit 風公共コミュニティへのピボット
-- `.github/workflows/deploy-server-dev.yml`: サーバデプロイ用ワークフロー
-- `.github/workflows/deploy-client-dev.yml`: クライアントデプロイ用ワークフロー
+- `.github/workflows/deploy-server-dev.yml`: サーバデプロイ用ワークフロー（dev）
+- `.github/workflows/deploy-client-dev.yml`: クライアントデプロイ用ワークフロー（dev）
+- `.github/workflows/deploy-server-prod.yml`: サーバデプロイ用ワークフロー（prod・#345）
+- `.github/workflows/deploy-client-prod.yml`: クライアントデプロイ用ワークフロー（prod・#345）
 - `.github/workflows/run-batch.yml`: 定時バッチワークフロー（#388）

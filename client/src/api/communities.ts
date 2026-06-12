@@ -17,7 +17,7 @@ export type { VoteDirection };
 import { openApiClient } from "./client.js";
 import type { components } from "./openapi.gen.js";
 
-// ─── 公開 API 向け型定義（openapi.gen.ts より）───────────────────────────────────────────
+// ─── 公開 API 向け型定義（openapi.gen.ts より）────────────────────────────────────
 export type Community = components["schemas"]["Community"];
 export type Post = components["schemas"]["Post"];
 export type Comment = components["schemas"]["Comment"];
@@ -30,13 +30,13 @@ export type RecentWorker = {
   imageUrl?: string | null;
 };
 
-// ─── 管理者 API 向け型 re-export（@hatchery/common より）────────────────────────
+// ─── 管理者 API 向け型 re-export（@hatchery/common より）──────────────────
 export type { AdminCommunity, CreateCommunityInput, UpdateCommunityInput };
 
-// ─── Query Keys ───────────────────────────────────────────────────────────────────
+// ─── Query Keys ──────────────────────────────────────────────────────────────
 /** 管理者コミュニティ一覧（/api/admin/communities）のキャッシュキー。 */
 export const ADMIN_COMMUNITIES_QUERY_KEY = ["admin", "communities"] as const;
-/** 後方互换のエイリアス（CommunitiesTab.tsx など既存コードが参照）。 */
+/** 後方互換のエイリアス（CommunitiesTab.tsx など既存コードが参照）。 */
 export const COMMUNITIES_QUERY_KEY = ADMIN_COMMUNITIES_QUERY_KEY;
 
 export const communityFeedQueryKey = (slug: string) => ["communities", slug, "feed"] as const;
@@ -47,7 +47,7 @@ export const postThreadQueryKey = (postId: string) => ["posts", postId] as const
 export const communitySubscriptionQueryKey = (slug: string) =>
   ["communities", slug, "subscription"] as const;
 
-// ─── 管理者向け API 関数（/api/admin/communities）───────────────────────────────────────
+// ─── 管理者向け API 関数（/api/admin/communities）───────────────────────────────────
 
 /** GET /api/admin/communities — コミュニティ一覧を取得する（admin のみ）。 */
 export async function fetchAdminCommunities(): Promise<AdminCommunity[]> {
@@ -64,7 +64,7 @@ export async function fetchAdminCommunities(): Promise<AdminCommunity[]> {
   );
 }
 
-/** 後方互换: CommunitiesTab.tsx などが参照する fetchCommunities は管理者向けを指す。 */
+/** 後方互換: CommunitiesTab.tsx などが参照する fetchCommunities は管理者向けを指す。 */
 export const fetchCommunities = fetchAdminCommunities;
 
 /** POST /api/admin/communities — コミュニティを作成する（admin のみ）。 */
@@ -124,7 +124,7 @@ export function useUpdateCommunity() {
   });
 }
 
-// ─── 公開ブラウズ向け API 関数（/api/communities, /api/feed 等）──────────────────────────
+// ─── 公開ブラウズ向け API 関数（/api/communities, /api/feed 等）──────────────────────
 
 /** GET /api/communities — 公開コミュニティ一覧を取得する（認証不要）。 */
 export async function fetchPublicCommunities(): Promise<Community[]> {
@@ -293,27 +293,38 @@ export function usePostThread(postId: string) {
   });
 }
 
-/** コミュニティ購読ミューテーションフック。成功後に購読状態キャッシュを更新する。 */
+/**
+ * GET /api/communities/{slug}/subscription — 購読状態を取得する（#421）。
+ * 未認証の場合は { subscribed: false } が返る。
+ */
+export async function fetchSubscriptionStatus(slug: string): Promise<{ subscribed: boolean }> {
+  const res = await fetch(`/api/communities/${encodeURIComponent(slug)}/subscription`, {
+    credentials: "include",
+  });
+  if (!res.ok)
+    throw new Error(`GET /api/communities/${slug}/subscription failed: ${res.status}`);
+  return res.json() as Promise<{ subscribed: boolean }>;
+}
+
+/** コミュニティ購読ミューテーションフック。成功後に購読状態クエリを invalidate する（#421）。 */
 export function useSubscribe(slug: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => subscribeCommunity(slug),
     onSuccess: () => {
-      // 購読状態を true に直接更新する（購読一覧 API がないため setQueryData を使用）
-      queryClient.setQueryData(communitySubscriptionQueryKey(slug), true);
+      void queryClient.invalidateQueries({ queryKey: communitySubscriptionQueryKey(slug) });
       void queryClient.invalidateQueries({ queryKey: homeFeedQueryKey() });
     },
   });
 }
 
-/** コミュニティ購読解除ミューテーションフック。成功後に購読状態キャッシュを更新する。 */
+/** コミュニティ購読解除ミューテーションフック。成功後に購読状態クエリを invalidate する（#421）。 */
 export function useUnsubscribe(slug: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => unsubscribeCommunity(slug),
     onSuccess: () => {
-      // 購読状態を false に直接更新する
-      queryClient.setQueryData(communitySubscriptionQueryKey(slug), false);
+      void queryClient.invalidateQueries({ queryKey: communitySubscriptionQueryKey(slug) });
       void queryClient.invalidateQueries({ queryKey: homeFeedQueryKey() });
     },
   });

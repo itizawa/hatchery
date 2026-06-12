@@ -24,6 +24,7 @@ import {
   LoginRequestSchema,
   PostSchema,
   SubscriptionSchema,
+  SubscriptionStatusSchema,
   TokenUsageLogSchema,
   UpdateAppSettingSchema,
   UpdateWorkerSchema,
@@ -208,7 +209,7 @@ registry.registerPath({
       description: "更新後の認証済みユーザー",
       content: { "application/json": { schema: AuthUserComponent } },
     },
-    400: { description: "リクエストボディが不正（displayName 空・avtarUrl 不正など）", ...errorJson },
+    400: { description: "リクエストボディが不正（displayName 空・atvtarUrl 不正など）", ...errorJson },
     401: { description: "未認証", ...errorJson },
   },
 });
@@ -457,7 +458,7 @@ registry.registerPath({
   },
 });
 
-// ── 公共コミュニティ API（#305 / ADR-0019 / ADR-0020）──────────────────────────────────
+// ── 公共コミュニティ API（#305 / ADR-0019 / ADR-0020）────────────────────────
 
 const CommunityComponent = registry.register(
   "Community",
@@ -589,6 +590,26 @@ registry.registerPath({
     200: {
       description: "最近投稿したワーカー一覧（新着投稿順・distinct）",
       content: { "application/json": { schema: z.array(WorkerComponent) } },
+    },
+    404: { description: "コミュニティが存在しない", ...errorJson },
+  },
+});
+
+// 購読状態取得（認証任意・#421）
+const SubscriptionStatusComponent = registry.register(
+  "SubscriptionStatus",
+  SubscriptionStatusSchema.openapi({ description: "コミュニティへの購読状態（#421）" }),
+);
+
+registry.registerPath({
+  method: "get",
+  path: "/api/communities/{slug}/subscription",
+  summary: "コミュニティへの購読状態を取得（認証任意・未認証は subscribed: false・#421）",
+  request: { params: z.object({ slug: communitySlugParam }) },
+  responses: {
+    200: {
+      description: "購読状態",
+      content: { "application/json": { schema: SubscriptionStatusComponent } },
     },
     404: { description: "コミュニティが存在しない", ...errorJson },
   },

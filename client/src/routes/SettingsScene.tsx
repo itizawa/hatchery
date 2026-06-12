@@ -48,6 +48,7 @@ const ApiTokenSettings = (): ReactElement => {
   return (
     <Box
       component="form"
+      noValidate
       onSubmit={async (e) => {
         e.preventDefault();
         await form.handleSubmit();
@@ -80,7 +81,7 @@ const ApiTokenSettings = (): ReactElement => {
       <Button
         type="submit"
         variant="contained"
-        disabled={saveMutation.isPending || form.state.isSubmitting}
+        disabled={saveMutation.isPending}
       >
         保存
       </Button>

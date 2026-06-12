@@ -127,3 +127,22 @@ describe("チェックアウト全履歴 (受け入れ条件 #11)", () => {
     expect(checkout?.with?.["fetch-depth"]).toBe(0);
   });
 });
+
+describe("マイルストーン名を含む PR タイトル (受け入れ条件 #1 拡張)", () => {
+  it("open マイルストーン一覧を gh api で取得する", () => {
+    const run = allRun(loadWorkflow());
+    expect(run).toMatch(/gh\s+api\b/);
+    expect(run).toMatch(/milestones/);
+  });
+
+  it("マイルストーン名が取得できた場合に Release <name>: develop -> main 形式を使う", () => {
+    const run = allRun(loadWorkflow());
+    expect(run).toMatch(/milestone_name/);
+    expect(run).toMatch(/Release/);
+  });
+
+  it("マイルストーン未設定時のフォールバックタイトルを持つ（if 分岐でジョブを失敗させない）", () => {
+    const run = allRun(loadWorkflow());
+    expect(run).toMatch(/if\s+\[/);
+  });
+});

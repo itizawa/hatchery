@@ -32,6 +32,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build dependencies
+        run: pnpm turbo run build --filter=@hatchery/server
+
       - name: Run community batch
         run: pnpm --filter @hatchery/server batch
         env:

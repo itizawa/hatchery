@@ -145,6 +145,67 @@ describe("DELETE /api/communities/:slug/subscribe", () => {
   });
 });
 
+describe("GET /api/communities/:slug/subscription", () => {
+  it("未認証ユーザーは subscribed: false が返る", async () => {
+    const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
+    const deps = await createTestDeps({ communityRepository: communityRepo });
+    const app = createApp(deps);
+    const res = await request(app).get("/api/communities/technology/subscription");
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ subscribed: false });
+  });
+
+  it("認証済みで未購読の場合は subscribed: false が返る", async () => {
+    const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
+    const deps = await createTestDeps({ communityRepository: communityRepo });
+    const app = createApp(deps);
+
+    const loginRes = await request(app)
+      .post("/api/auth/login")
+      .send({ loginId: "testuser", password: "testpass" });
+    const cookie = loginRes.headers["set-cookie"] as string[];
+
+    const res = await request(app)
+      .get("/api/communities/technology/subscription")
+      .set("Cookie", cookie);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ subscribed: false });
+  });
+
+  it("購読後は subscribed: true が返る", async () => {
+    const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
+    const subscriptionRepo = createInMemorySubscriptionRepository();
+    const deps = await createTestDeps({
+      communityRepository: communityRepo,
+      subscriptionRepository: subscriptionRepo,
+    });
+    const app = createApp(deps);
+
+    const loginRes = await request(app)
+      .post("/api/auth/login")
+      .send({ loginId: "testuser", password: "testpass" });
+    const cookie = loginRes.headers["set-cookie"] as string[];
+
+    // 購読する
+    await request(app)
+      .post("/api/communities/technology/subscribe")
+      .set("Cookie", cookie);
+
+    const res = await request(app)
+      .get("/api/communities/technology/subscription")
+      .set("Cookie", cookie);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ subscribed: true });
+  });
+
+  it("存在しない slug は 404 を返す", async () => {
+    const deps = await createTestDeps();
+    const app = createApp(deps);
+    const res = await request(app).get("/api/communities/not-exists/subscription");
+    expect(res.status).toBe(404);
+  });
+});
+
 describe("GET /api/communities/:slug/recent-workers", () => {
   it("投稿があるとき distinct ワーカーを返す", async () => {
     const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);

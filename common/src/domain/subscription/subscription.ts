@@ -12,3 +12,10 @@ export const SubscriptionSchema = z.object({
 });
 
 export type Subscription = z.infer<typeof SubscriptionSchema>;
+
+/** GET /api/communities/{slug}/subscription のレスポンス（#421）。 */
+export const SubscriptionStatusSchema = z.object({
+  subscribed: z.boolean(),
+});
+
+export type SubscriptionStatus = z.infer<typeof SubscriptionStatusSchema>;

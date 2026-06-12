@@ -72,6 +72,25 @@ export function createCommunitiesRouter(
       .catch(next);
   });
 
+  // 購読状態取得（認証任意・未認証は subscribed: false を返す・#421）
+  router.get("/:slug/subscription", (req, res, next) => {
+    const { slug } = req.params as { slug: string };
+    communityRepo
+      .findBySlug(slug)
+      .then((community) => {
+        if (!community) {
+          throw new NotFoundError("CommunityNotFound");
+        }
+        if (!req.user) {
+          return res.status(200).json({ subscribed: false });
+        }
+        return subscriptionRepo
+          .hasSubscription(req.user.id, community.id)
+          .then((subscribed) => res.status(200).json({ subscribed }));
+      })
+      .catch(next);
+  });
+
   // community 購読（認証必須・ADR-0020）
   router.post("/:slug/subscribe", requireAuth, (req, res, next) => {
     const { slug } = req.params as { slug: string };

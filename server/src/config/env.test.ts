@@ -108,4 +108,54 @@ describe("loadEnv", () => {
     const env = loadEnv({});
     expect(env.gcsBucketName).toBeUndefined();
   });
+
+  // --- BATCH_MODEL（#389 AC1: モデル選定の設定化） ---
+
+  it("BATCH_MODEL 未設定なら既定の claude-sonnet-4-6 を使う", () => {
+    const env = loadEnv({});
+    expect(env.batchModel).toBe("claude-sonnet-4-6");
+  });
+
+  it("BATCH_MODEL に許可値 claude-haiku-4-5 を設定すると反映される", () => {
+    const env = loadEnv({ BATCH_MODEL: "claude-haiku-4-5" });
+    expect(env.batchModel).toBe("claude-haiku-4-5");
+  });
+
+  it("BATCH_MODEL に許可値 claude-sonnet-4-6 を設定すると反映される", () => {
+    const env = loadEnv({ BATCH_MODEL: "claude-sonnet-4-6" });
+    expect(env.batchModel).toBe("claude-sonnet-4-6");
+  });
+
+  it("不正な BATCH_MODEL は ZodError で弾く（起動時エラー）", () => {
+    expect(() => loadEnv({ BATCH_MODEL: "gpt-4" })).toThrow();
+  });
+
+  // --- BATCH_RECENT_LIMIT（#389 AC2: 直近ログ件数の設定化） ---
+
+  it("BATCH_RECENT_LIMIT 未設定なら既定の 30 を使う", () => {
+    const env = loadEnv({});
+    expect(env.batchRecentLimit).toBe(30);
+  });
+
+  it("BATCH_RECENT_LIMIT を数値として読み取り反映する", () => {
+    const env = loadEnv({ BATCH_RECENT_LIMIT: "10" });
+    expect(env.batchRecentLimit).toBe(10);
+  });
+
+  it("BATCH_RECENT_LIMIT の下限 1・上限 50 は許容する", () => {
+    expect(loadEnv({ BATCH_RECENT_LIMIT: "1" }).batchRecentLimit).toBe(1);
+    expect(loadEnv({ BATCH_RECENT_LIMIT: "50" }).batchRecentLimit).toBe(50);
+  });
+
+  it("下限未満（0）の BATCH_RECENT_LIMIT は ZodError で弾く", () => {
+    expect(() => loadEnv({ BATCH_RECENT_LIMIT: "0" })).toThrow();
+  });
+
+  it("上限超過（51）の BATCH_RECENT_LIMIT は ZodError で弾く", () => {
+    expect(() => loadEnv({ BATCH_RECENT_LIMIT: "51" })).toThrow();
+  });
+
+  it("数値でない BATCH_RECENT_LIMIT は ZodError で弾く", () => {
+    expect(() => loadEnv({ BATCH_RECENT_LIMIT: "abc" })).toThrow();
+  });
 });

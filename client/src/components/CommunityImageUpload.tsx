@@ -67,20 +67,17 @@ export const CommunityImageUpload = ({
           width: "100%",
           height: COVER_HEIGHT,
           borderRadius: 1,
+          overflow: "hidden",
           opacity: upload.isPending ? 0.5 : 1,
           bgcolor: "action.hover",
-          backgroundImage: currentImageUrl ? `url(${currentImageUrl})` : undefined,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
         }}
       >
         {currentImageUrl && (
-          // スクリーンリーダー / テスト向けに img を提供（背景画像は role=img を持たないため）
           <Box
             component="img"
             src={currentImageUrl}
             alt={name}
-            sx={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 1, opacity: 0 }}
+            sx={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
           />
         )}
       </Box>

@@ -6,6 +6,7 @@ import { type SyntheticEvent, useState, type ReactElement, type ReactNode } from
 
 import { APP_SETTING_VALUE_MAX_LENGTH } from "@hatchery/common";
 import { useAdminSettings, useSaveAdminSetting } from "../api/admin.js";
+import { getApiErrorMessage } from "../api/errors.js";
 import { useBatchLogs, useRefreshBatchLogs } from "../api/batchLogs.js";
 import { useTokenUsage, useRefreshTokenUsage } from "../api/tokenUsage.js";
 import { AdminWorkerTable } from "../components/AdminWorkerTable.js";
@@ -17,7 +18,6 @@ const ApiTokenSettings = (): ReactElement => {
   const { data: settings, isLoading: isSettingsLoading } = useAdminSettings();
   const saveMutation = useSaveAdminSetting();
   const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [errorOpen, setErrorOpen] = useState(false);
 
   const currentMasked =
     settings?.find((s) => s.key === "CLAUDE_API_KEY")?.maskedValue ?? null;
@@ -25,12 +25,15 @@ const ApiTokenSettings = (): ReactElement => {
   const form = useForm({
     defaultValues: { apiKey: "" },
     onSubmit: async ({ value }) => {
+      // エラー表示は saveMutation.isError / error に集約する（独立ローカル state を持たない・#476）。
+      // mutateAsync の reject を握りつぶさないよう try/catch するが、catch では何もしない
+      // （未処理 Promise を避けるためだけ）。再送信成功で isError=false に戻り残留しない。
       try {
         await saveMutation.mutateAsync({ key: "CLAUDE_API_KEY", value: value.apiKey });
         form.reset();
         setSnackbarOpen(true);
       } catch {
-        setErrorOpen(true);
+        // 表示は mutation 状態に委ねる
       }
     },
   });
@@ -94,12 +97,12 @@ const ApiTokenSettings = (): ReactElement => {
         </Alert>
       </Snackbar>
       <Snackbar
-        open={errorOpen}
-        autoHideDuration={4000}
-        onClose={() => setErrorOpen(false)}
+        open={saveMutation.isError}
+        autoHideDuration={6000}
+        onClose={() => saveMutation.reset()}
       >
-        <Alert severity="error" onClose={() => setErrorOpen(false)}>
-          APIキーの保存に失敗しました
+        <Alert severity="error" onClose={() => saveMutation.reset()}>
+          {getApiErrorMessage(saveMutation.error, "APIキーの保存に失敗しました")}
         </Alert>
       </Snackbar>
     </Box>

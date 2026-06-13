@@ -56,7 +56,10 @@ function stubAll(opts?: {
   vi.mocked(useUpdateWorker).mockReturnValue({
     mutateAsync: opts?.updateMutateAsync ?? vi.fn().mockResolvedValue(undefined),
     isPending: false,
-  } as ReturnType<typeof useUpdateWorker>);
+    isError: false,
+    error: null,
+    reset: vi.fn(),
+  } as unknown as ReturnType<typeof useUpdateWorker>);
   vi.mocked(useCommunities).mockReturnValue({
     data: mockCommunities,
     isLoading: false,
@@ -70,7 +73,10 @@ function stubAll(opts?: {
   vi.mocked(useSetWorkerCommunities).mockReturnValue({
     mutateAsync: opts?.setMutateAsync ?? vi.fn().mockResolvedValue([]),
     isPending: false,
-  } as ReturnType<typeof useSetWorkerCommunities>);
+    isError: false,
+    error: null,
+    reset: vi.fn(),
+  } as unknown as ReturnType<typeof useSetWorkerCommunities>);
 }
 
 describe("EditWorkerDialog（#181 / #329 / #490）", () => {
@@ -171,6 +177,36 @@ describe("EditWorkerDialog（#181 / #329 / #490）", () => {
     await waitFor(() => {
       expect(onClose).toHaveBeenCalled();
     });
+  });
+
+  it("保存失敗時にサーバから返るエラーメッセージが表示される（#476）", async () => {
+    const updateMutateAsync = vi.fn().mockRejectedValue(new Error("Forbidden: 権限がありません"));
+    stubAll({ updateMutateAsync });
+    // update mutation がエラー状態であることをモックで表現する（二重 state を持たず mutation 状態に従う）
+    vi.mocked(useUpdateWorker).mockReturnValue({
+      mutateAsync: updateMutateAsync,
+      isPending: false,
+      isError: true,
+      error: new Error("Forbidden: 権限がありません"),
+      reset: vi.fn(),
+    } as unknown as ReturnType<typeof useUpdateWorker>);
+
+    renderWithClient(<EditWorkerDialog worker={mockWorker} open onClose={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /保存/ }));
+
+    // 汎用文言ではなくサーバが返した具体的なメッセージを表示する
+    await waitFor(() => {
+      expect(screen.getByText(/Forbidden: 権限がありません/)).toBeInTheDocument();
+    });
+  });
+
+  it("mutation が isError=false のときはエラーが表示されない（二重 state を廃し mutation 状態に従う・#476）", () => {
+    // 全 mutation が成功状態。ローカル state に残るエラーは無く、何も表示されない。
+    stubAll();
+    renderWithClient(<EditWorkerDialog worker={mockWorker} open onClose={vi.fn()} />);
+
+    expect(screen.queryByText(/失敗/)).not.toBeInTheDocument();
   });
 
   it("参加コミュニティ取得が失敗しても名前・役割は編集・保存でき、置換 API は呼ばれない（#490）", async () => {

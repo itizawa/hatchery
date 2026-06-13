@@ -198,11 +198,14 @@ describe("API トークン設定フォーム（#417 useForm 移行）", () => {
     expect(input).toHaveValue("");
   });
 
-  it("保存失敗時にエラー地博れが表示される", async () => {
-    const mutateAsync = vi.fn().mockRejectedValue(new Error("save failed"));
+  it("保存失敗時にサーバから返るエラーメッセージが表示される（#476）", async () => {
+    const mutateAsync = vi.fn().mockRejectedValue(new Error("Forbidden: 権限がありません"));
     vi.spyOn(adminApi, "useSaveAdminSetting").mockReturnValue({
       mutateAsync,
       isPending: false,
+      isError: true,
+      error: new Error("Forbidden: 権限がありません"),
+      reset: vi.fn(),
     } as unknown as ReturnType<typeof adminApi.useSaveAdminSetting>);
 
     renderApp("/admin?tab=api-token", { id: "user1", displayName: "Alice", role: "admin" });
@@ -211,9 +214,34 @@ describe("API トークン設定フォーム（#417 useForm 移行）", () => {
     await userEvent.type(input, "invalid-key");
     await userEvent.click(screen.getByRole("button", { name: /保存/ }));
 
+    // 汎用文言ではなく、サーバが返した具体的なエラー内容を表示する
     await waitFor(() => {
-      expect(screen.getByText(/APIキーの保存に失敗しました/)).toBeInTheDocument();
+      expect(screen.getByText(/Forbidden: 権限がありません/)).toBeInTheDocument();
     });
+  });
+
+  it("mutation の isError=false ならエラーは表示されない（二重 state を持たず mutation 状態に従う・#476）", async () => {
+    // mutateAsync は reject するが mutation 状態は成功扱い（isError=false）。
+    // ローカル state での二重管理を廃したため、表示はあくまで mutation の isError に従う。
+    vi.spyOn(adminApi, "useSaveAdminSetting").mockReturnValue({
+      mutateAsync: vi.fn().mockResolvedValue(undefined),
+      isPending: false,
+      isError: false,
+      error: null,
+      reset: vi.fn(),
+    } as unknown as ReturnType<typeof adminApi.useSaveAdminSetting>);
+
+    renderApp("/admin?tab=api-token", { id: "user1", displayName: "Alice", role: "admin" });
+
+    const input = await screen.findByLabelText(/Claude API キー/);
+    await userEvent.type(input, "sk-ant-api03-ok");
+    await userEvent.click(screen.getByRole("button", { name: /保存/ }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/APIキーを保存しました/)).toBeInTheDocument();
+    });
+    // エラー Snackbar の文言は出ない
+    expect(screen.queryByText(/失敗/)).not.toBeInTheDocument();
   });
 
   it("保存中は保存ボタンが disabled になる", async () => {

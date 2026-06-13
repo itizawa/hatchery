@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { AppSettingResponse, Worker } from "@hatchery/common";
 
 import { openApiClient } from "./client.js";
+import { buildApiErrorMessage } from "./errors.js";
 import { BOT_WORKERS_QUERY_KEY } from "./workers.js";
 
 export const ADMIN_SETTINGS_QUERY_KEY = ["admin", "settings"] as const;
@@ -25,11 +26,14 @@ export async function fetchSettings(): Promise<AppSettingResponse[]> {
 
 /** PATCH /admin/settings を openApiClient 経由で更新する（#110）。成功時は更新後の設定を返す。 */
 export async function patchSetting(key: string, value: string): Promise<AppSettingResponse> {
-  const { data, response } = await openApiClient.PATCH("/api/admin/settings", {
+  const { data, error, response } = await openApiClient.PATCH("/api/admin/settings", {
     body: { key, value },
     credentials: "include",
   });
-  if (!response.ok || !data) throw new Error(`PATCH /api/admin/settings failed: ${response.status}`);
+  // 失敗時はサーバが返す { error } メッセージを Error に乗せ、UI で原因を提示できるようにする（#476）。
+  if (!response.ok || !data) {
+    throw new Error(buildApiErrorMessage(error, response.status, "設定の保存に失敗しました"));
+  }
   return data;
 }
 

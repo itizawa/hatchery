@@ -8,6 +8,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { openApiClient } from "./client.js";
+import { buildApiErrorMessage } from "./errors.js";
 import { BOT_WORKERS_QUERY_KEY } from "./workers.js";
 import { ADMIN_WORKERS_QUERY_KEY } from "./admin.js";
 
@@ -42,8 +43,11 @@ export async function setWorkerCommunities(
       credentials: "include",
     },
   );
+  // 失敗時はサーバが返す { error } メッセージを Error に乗せ、UI で原因を提示できるようにする（#476）。
   if (error || !response.ok || !data)
-    throw new Error(`PUT /api/admin/workers/${workerId}/communities failed: ${response.status}`);
+    throw new Error(
+      buildApiErrorMessage(error, response.status, "参加コミュニティの更新に失敗しました"),
+    );
   return data.communityIds;
 }
 

@@ -1,5 +1,3 @@
-import bcrypt from "bcrypt";
-
 /**
  * seed が必要とする Prisma クライアントの構造的インターフェース。
  * 生成済み Prisma Client（`@prisma/client`）の該当メソッドはこの型に構造的に適合する。
@@ -8,13 +6,14 @@ import bcrypt from "bcrypt";
  * #305: Message / Channel / ChannelEmployee / Task モデル削除に伴い、
  * seed を Community / Worker / User のみに変更。
  * #329: Employee → Worker へのリネーム。
+ * #455: Google 認証のみに統一。loginId / passwordHash を廃止し email / googleId を必須化。
  */
 export interface SeedPrisma {
   user: {
     upsert(args: {
-      where: { id: string };
+      where: { googleId: string };
       update: { role?: "admin" | "member" };
-      create: { id: string; loginId: string; displayName: string; passwordHash: string; role?: "admin" | "member" };
+      create: { id: string; email: string; googleId: string; displayName: string; role?: "admin" | "member" };
     }): Promise<unknown>;
   };
   worker: {
@@ -25,8 +24,6 @@ export interface SeedPrisma {
         id: string;
         displayName: string;
         role: string | null;
-        isBot: boolean;
-        userId?: string | null;
       };
     }): Promise<unknown>;
   };
@@ -44,11 +41,16 @@ export interface SeedResult {
   skipped: boolean;
 }
 
-/** 開発用テストユーザーの資格情報（既存コードベースの標準: testuser / testpass）。 */
-const DEV_USER = { id: "testuser", loginId: "testuser", displayName: "Test User", password: "testpass" } as const;
-
-/** ログインユーザーに紐づく Worker の id（#49）。 */
-const DEV_USER_WORKER_ID = "emp-testuser";
+/**
+ * 開発用テストユーザー（#455: Google 認証のみ。loginId / password は廃止）。
+ * dev-login エンドポイントはこの googleId でユーザーを検索してログインする。
+ */
+const DEV_USER = {
+  id: "dev-user-1",
+  email: "dev@hatchery.local",
+  googleId: "dev-google-id",
+  displayName: "claude-dev",
+} as const;
 
 /** MVP の AI ワーカー定義（#329: Worker へリネーム）。ADR-0019: author = workerId。 */
 const DEFAULT_WORKERS = [
@@ -57,7 +59,7 @@ const DEFAULT_WORKERS = [
   { id: "worker-carol", displayName: "Carol", role: "マーケター" },
 ] as const;
 
-/** MVP のコミュニティ seed（#305 / ADR-0019）。作成 API は #310 で実装予定。 */
+/** MVP のコミュニティ seed（#305 / ADR-0019）。作成 API は #310 で実装済み。 */
 const DEFAULT_COMMUNITIES = [
   {
     slug: "technology",
@@ -72,8 +74,8 @@ const DEFAULT_COMMUNITIES = [
 ] as const;
 
 /**
- * 開発環境向けのテストデータを冪等に投入する（設計書 §4 / #305 / #329）。
- * - testuser（admin）/ AI ワーカー 3 名 / MVP コミュニティ 2 件を upsert する。
+ * 開発環境向けのテストデータを冪等に投入する（設計書 §4 / #305 / #329 / #455）。
+ * - dev ユーザー（admin）/ AI ワーカー 3 名 / MVP コミュニティ 2 件を upsert する。
  * - 本番環境（NODE_ENV=production）では何も投入せずスキップする。
  * すべて upsert のため再実行しても安全。
  */
@@ -82,11 +84,10 @@ export async function seedDevData(prisma: SeedPrisma): Promise<SeedResult> {
     return { skipped: true };
   }
 
-  const passwordHash = await bcrypt.hash(DEV_USER.password, 10);
   await prisma.user.upsert({
-    where: { id: DEV_USER.id },
+    where: { googleId: DEV_USER.googleId },
     update: { role: "admin" },
-    create: { id: DEV_USER.id, loginId: DEV_USER.loginId, displayName: DEV_USER.displayName, passwordHash, role: "admin" },
+    create: { id: DEV_USER.id, email: DEV_USER.email, googleId: DEV_USER.googleId, displayName: DEV_USER.displayName, role: "admin" },
   });
 
   // AI ワーカー（3 名）
@@ -98,23 +99,9 @@ export async function seedDevData(prisma: SeedPrisma): Promise<SeedResult> {
         id: worker.id,
         displayName: worker.displayName,
         role: worker.role,
-        isBot: true,
       },
     });
   }
-
-  // ログインユーザーに対応する Worker は isBot=false / userId で User と 1:1 紐付け（#49）。
-  await prisma.worker.upsert({
-    where: { id: DEV_USER_WORKER_ID },
-    update: {},
-    create: {
-      id: DEV_USER_WORKER_ID,
-      displayName: DEV_USER.displayName,
-      role: null,
-      isBot: false,
-      userId: DEV_USER.id,
-    },
-  });
 
   // MVP コミュニティ（#305 / ADR-0019）
   for (const community of DEFAULT_COMMUNITIES) {

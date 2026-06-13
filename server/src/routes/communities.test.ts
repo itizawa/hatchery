@@ -73,9 +73,7 @@ describe("POST /api/communities/:slug/subscribe", () => {
     const app = createApp(deps);
 
     // ログイン
-    const loginRes = await request(app)
-      .post("/api/auth/login")
-      .send({ loginId: "testuser", password: "testpass" });
+    const loginRes = await request(app).post("/api/auth/dev-login");
     expect(loginRes.status).toBe(200);
     const cookie = loginRes.headers["set-cookie"] as string[];
 
@@ -97,9 +95,7 @@ describe("POST /api/communities/:slug/subscribe", () => {
     const deps = await createTestDeps();
     const app = createApp(deps);
 
-    const loginRes = await request(app)
-      .post("/api/auth/login")
-      .send({ loginId: "testuser", password: "testpass" });
+    const loginRes = await request(app).post("/api/auth/dev-login");
     const cookie = loginRes.headers["set-cookie"] as string[];
 
     const res = await request(app)
@@ -119,9 +115,7 @@ describe("DELETE /api/communities/:slug/subscribe", () => {
     });
     const app = createApp(deps);
 
-    const loginRes = await request(app)
-      .post("/api/auth/login")
-      .send({ loginId: "testuser", password: "testpass" });
+    const loginRes = await request(app).post("/api/auth/dev-login");
     const cookie = loginRes.headers["set-cookie"] as string[];
 
     // まず購読
@@ -160,9 +154,7 @@ describe("GET /api/communities/:slug/subscription", () => {
     const deps = await createTestDeps({ communityRepository: communityRepo });
     const app = createApp(deps);
 
-    const loginRes = await request(app)
-      .post("/api/auth/login")
-      .send({ loginId: "testuser", password: "testpass" });
+    const loginRes = await request(app).post("/api/auth/dev-login");
     const cookie = loginRes.headers["set-cookie"] as string[];
 
     const res = await request(app)
@@ -181,9 +173,7 @@ describe("GET /api/communities/:slug/subscription", () => {
     });
     const app = createApp(deps);
 
-    const loginRes = await request(app)
-      .post("/api/auth/login")
-      .send({ loginId: "testuser", password: "testpass" });
+    const loginRes = await request(app).post("/api/auth/dev-login");
     const cookie = loginRes.headers["set-cookie"] as string[];
 
     // 購読する

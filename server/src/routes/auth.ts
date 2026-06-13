@@ -1,4 +1,4 @@
-import { LoginRequestSchema, UpdateProfileSchema } from "@hatchery/common";
+import { UpdateProfileSchema } from "@hatchery/common";
 import type { RequestHandler } from "express";
 import { Router } from "express";
 
@@ -8,21 +8,14 @@ import { requireAuth } from "../middleware/requireAuth.js";
 import { validateBody } from "../middleware/validateBody.js";
 import type { UserRepository } from "../persistence/userRepository.js";
 
+// #455: Google-only auth。dev-login は NODE_ENV !== 'production' のときのみ登録。
 export function createAuthRouter(
   passportInstance: PassportInstance,
   userRepository: UserRepository,
   googleConfig?: GoogleAuthConfig,
+  nodeEnv: string = process.env.NODE_ENV ?? "development",
 ): Router {
   const router = Router();
-
-  router.post(
-    "/login",
-    validateBody(LoginRequestSchema),
-    (passportInstance.authenticate("local") as RequestHandler),
-    (req, res) => {
-      res.status(200).json(req.user);
-    },
-  );
 
   router.post("/logout", (req, res, next) => {
     req.logout((err) => {
@@ -58,6 +51,26 @@ export function createAuthRouter(
         res.redirect("/");
       },
     );
+  }
+
+  // 開発専用バイパスログイン。本番環境では登録しない（#455）。
+  if (nodeEnv !== "production") {
+    router.post("/dev-login", async (req, res, next) => {
+      try {
+        const devUser = await userRepository.findByGoogleId("dev-google-id");
+        if (!devUser) {
+          res.status(404).json({ error: "Dev user not found. Run db:seed first." });
+          return;
+        }
+        const authUser = toAuthUser(devUser);
+        req.login(authUser, (err) => {
+          if (err) return next(err);
+          res.status(200).json(authUser);
+        });
+      } catch (err) {
+        next(err);
+      }
+    });
   }
 
   return router;

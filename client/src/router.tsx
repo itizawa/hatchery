@@ -43,10 +43,6 @@ const LazyLoginScene = lazyRouteComponent(() => import("./routes/LoginScene"), "
 const LazyLandingScene = lazyRouteComponent(() => import("./routes/LandingScene"), "LandingScene");
 const LazySettingsScene = lazyRouteComponent(() => import("./routes/SettingsScene"), "SettingsScene");
 const LazyAccountScene = lazyRouteComponent(() => import("./routes/AccountScene"), "AccountScene");
-const LazyAcceptInvitationScene = lazyRouteComponent(
-  () => import("./routes/AcceptInvitationScene"),
-  "AcceptInvitationScene",
-);
 
 /**
  * 認証ガード: 未ログイン（fetchMe が null を返す）またはネットワークエラーの場合に /login へリダイレクト。
@@ -79,16 +75,15 @@ async function requireAdminRoute(): Promise<void> {
 
 /**
  * サイドバーなしで描画する auth 系ルートかどうかを判定する。
- * /login・/lp は完全一致、/invite/ は動的パスのためプレフィックス一致で判定する。
- * 新しい auth ルート（認証不要・サイドバーなし）を追加した場合はここにも追記すること。
+ * /login・/lp は完全一致で判定する（#455: /invite/ は廃止）。
  */
 function isAuthLayout(pathname: string): boolean {
-  return pathname === "/login" || pathname === "/lp" || pathname.startsWith("/invite/");
+  return pathname === "/login" || pathname === "/lp";
 }
 
 /**
  * アプリ全体のシェル。現在のパスに応じて
- * - auth 系ルート（/login, /invite/:token 等）→ AuthLayout（サイドバーなし）
+ * - auth 系ルート（/login, /lp）→ AuthLayout（サイドバーなし）
  * - その他 → RootLayout（サイドバーあり）
  * を切り替える。ルートの ID を変えない方式のため、既存の useSearch 等への影響がない。
  */
@@ -216,17 +211,6 @@ const accountRoute = createRoute({
   beforeLoad: requireAuth,
 });
 
-/** 招待リンク受諾画面（/invite/:token）。公開ルート（requireAuth なし・AuthLayout）。 */
-const inviteRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/invite/$token",
-  component: () => (
-    <Suspense fallback={null}>
-      <LazyAcceptInvitationScene />
-    </Suspense>
-  ),
-});
-
 const routeTree = rootRoute.addChildren([
   indexRoute,
   popularRoute,
@@ -237,7 +221,6 @@ const routeTree = rootRoute.addChildren([
   lpRoute,
   adminRoute,
   accountRoute,
-  inviteRoute,
 ]);
 
 export interface CreateAppRouterOptions {
@@ -246,7 +229,7 @@ export interface CreateAppRouterOptions {
 }
 
 /**
- * アプリのルータを生成する。history を差し替え可能にしてテスト（memory history）から利用する。
+ * アプリのルータを生成する。history を差替え可能にしてテスト（memory history）から利用する。
  */
 export const createAppRouter = (options: CreateAppRouterOptions = {}) =>
   createRouter({

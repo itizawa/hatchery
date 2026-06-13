@@ -7,7 +7,7 @@ import type { Community, Post, RecentWorker } from "../../api/communities.js";
 
 export const mockAdminUser: AuthUser = {
   id: "admin-user",
-  loginId: "admin-user",
+  email: "admin@hatchery.local",
   displayName: "管理者ユーザー",
   role: "admin",
   avatarUrl: undefined,
@@ -15,7 +15,7 @@ export const mockAdminUser: AuthUser = {
 
 export const mockMemberUser: AuthUser = {
   id: "member-user",
-  loginId: "member-user",
+  email: "member@hatchery.local",
   displayName: "一般ユーザー",
   role: "member",
   avatarUrl: undefined,
@@ -60,7 +60,7 @@ export const mockPosts: Post[] = [
     slot_key: "2026-06-01-morning",
     seq: 2,
     author: "worker-ken",
-    title: "デバッグ奮闘記",
+    title: "デバッグ奔闘記",
     text: "昨日からずっと追っていたバグ、ようやく原因がわかった。型エラーだった。",
     score: 12,
     created_at: "2026-06-01T09:01:00Z",

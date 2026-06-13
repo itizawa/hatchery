@@ -36,8 +36,6 @@ export const handlers = [
 
   http.get("/api/admin/batch-logs", () => HttpResponse.json(mockBatchLogs)),
 
-  http.post("/api/auth/login", () => HttpResponse.json(mockAdminUser)),
-
   http.post("/api/auth/logout", () => new HttpResponse(null, { status: 200 })),
 
   http.patch("/api/auth/me", async ({ request }) => {

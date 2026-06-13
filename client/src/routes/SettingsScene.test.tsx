@@ -1,4 +1,3 @@
-import * as invitationsApi from "../api/invitations.js";
 import * as adminApi from "../api/admin.js";
 import { DEFAULT_WORKERS } from "@hatchery/common";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -180,7 +179,7 @@ describe("API トークン設定フォーム（#417 useForm 移行）", () => {
     });
   });
 
-  it("保存成功後に入力フィールドがクリアされ成功Snackbarが表示される", async () => {
+  it("保存成功後に入力フィールドがクリアされ成功地博れが表示される", async () => {
     const mutateAsync = vi.fn().mockResolvedValue(undefined);
     vi.spyOn(adminApi, "useSaveAdminSetting").mockReturnValue({
       mutateAsync,
@@ -199,7 +198,7 @@ describe("API トークン設定フォーム（#417 useForm 移行）", () => {
     expect(input).toHaveValue("");
   });
 
-  it("保存失敗時にエラーSnackbarが表示される", async () => {
+  it("保存失敗時にエラー地博れが表示される", async () => {
     const mutateAsync = vi.fn().mockRejectedValue(new Error("save failed"));
     vi.spyOn(adminApi, "useSaveAdminSetting").mockReturnValue({
       mutateAsync,
@@ -227,34 +226,5 @@ describe("API トークン設定フォーム（#417 useForm 移行）", () => {
 
     const saveButton = await screen.findByRole("button", { name: /保存/ });
     expect(saveButton).toBeDisabled();
-  });
-});
-
-describe("招待タブ（#133）", () => {
-  beforeEach(() => {
-    vi.restoreAllMocks();
-    vi.spyOn(authApi, "fetchMe").mockResolvedValue({ id: "user1", displayName: "Alice", role: "admin" });
-    vi.spyOn(invitationsApi, "fetchInvitations").mockResolvedValue([]);
-  });
-
-  it("「招待」タブが表示される", async () => {
-    renderApp("/admin");
-    expect(await screen.findByRole("tab", { name: /招待/ })).toBeInTheDocument();
-  });
-
-  it("?tab=invitations で開くと「招待」タブがアクティブになる", async () => {
-    renderApp("/admin?tab=invitations");
-    const invitationsTab = await screen.findByRole("tab", { name: /招待/ });
-    expect(invitationsTab).toHaveAttribute("aria-selected", "true");
-  });
-
-  it("「招待」タブをクリックすると URL が ?tab=invitations になる", async () => {
-    const { router } = renderApp("/admin");
-    await screen.findByRole("tab", { name: /ワーカー管理/ });
-    await userEvent.click(screen.getByRole("tab", { name: /招待/ }));
-
-    await waitFor(() => {
-      expect(router.state.location.searchStr).toContain("tab=invitations");
-    });
   });
 });

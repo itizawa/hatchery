@@ -35,11 +35,8 @@ export const Default: Story = {
 };
 
 /**
- * ログイン成功後のリダイレクト再現。
- * POST /auth/login が成功すると / へ遷移する動作を確認できる。
- * global handlers をそのまま使う（/auth/me → admin、POST /auth/login → admin、
- * /channels → サイドバーのチャンネル一覧も正しく表示される）。
- * ナビゲーション再現ストーリー（受け入れ条件「少なくとも 1 つ」を満たす）。
+ * ログイン済み状態で /login にアクセスすると / へリダイレクトする再現。
+ * global handlers をそのまま使う（/auth/me → admin ユーザー返却）。
  */
 export const AfterLoginRedirect: Story = {
   render: () => renderWithRouter("/login"),

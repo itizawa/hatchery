@@ -13,9 +13,6 @@ vi.mock("../persistence/prismaBatchRunLogRepository.js", () => ({
 vi.mock("../persistence/prismaWorkerRepository.js", () => ({
   createPrismaWorkerRepository: vi.fn(() => ({})),
 }));
-vi.mock("../persistence/prismaInvitationLinkRepository.js", () => ({
-  createPrismaInvitationLinkRepository: vi.fn(() => ({})),
-}));
 vi.mock("../persistence/prismaTokenUsageLogRepository.js", () => ({
   createPrismaTokenUsageLogRepository: vi.fn(() => ({})),
 }));

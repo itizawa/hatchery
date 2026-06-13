@@ -7,21 +7,15 @@ import type { OpenAPIObject } from "openapi3-ts/oas31";
 import { z } from "zod";
 
 import {
-  AcceptInvitationSchema,
   AppSettingResponseSchema,
   AuthUserSchema,
   BatchRunLogSchema,
   CommunitySchema,
   CommentSchema,
   CreateCommunitySchema,
-  CreateInvitationSchema,
   CreateWorkerSchema,
   UpdateCommunitySchema,
   WorkerSchema,
-  InvitationPublicSchema,
-  InvitationSchema,
-  InvitationStatusSchema,
-  LoginRequestSchema,
   PostSchema,
   SubscriptionSchema,
   SubscriptionStatusSchema,
@@ -45,11 +39,6 @@ const AuthUserComponent = registry.register(
   AuthUserSchema.openapi({
     description: "認証済みユーザーの公開情報（passwordHash 等は含まない）",
   }),
-);
-
-const LoginRequestComponent = registry.register(
-  "LoginRequest",
-  LoginRequestSchema.openapi({ description: "ログインリクエストボディ（id / password）" }),
 );
 
 // エラー応答スキーマ。実装（validateBody / errorHandler）が実際に返す形 `{ error: string }` に忠実。
@@ -149,24 +138,8 @@ registry.registerPath({
   },
 });
 
-// 認証（#26 / routes/auth.ts。createApp は /auth プレフィックスでマウント）。
-registry.registerPath({
-  method: "post",
-  path: "/api/auth/login",
-  summary: "ID / パスワードでログイン（passport-local）",
-  request: {
-    body: { content: { "application/json": { schema: LoginRequestComponent } } },
-  },
-  responses: {
-    200: {
-      description: "ログイン成功。認証済みユーザーを返す",
-      content: { "application/json": { schema: AuthUserComponent } },
-    },
-    400: { description: "リクエストボディが不正（id / password 空など）", ...errorJson },
-    401: { description: "認証失敗（ID またはパスワード不一致）" },
-  },
-});
-
+// 認証（ADR-0029 / routes/auth.ts。createApp は /api/auth プレフィックスでマウント）。
+// #455: POST /api/auth/login は廃止。Google OAuth のみ。
 registry.registerPath({
   method: "post",
   path: "/api/auth/logout",
@@ -342,119 +315,6 @@ registry.registerPath({
       description: "稼働中",
       content: { "application/json": { schema: z.object({ status: z.literal("ok") }) } },
     },
-  },
-});
-
-// 招待リンク API（#131）。管理者が招待リンクを発行・一覧・失効できる。
-registry.register("InvitationStatus", InvitationStatusSchema.openapi({ description: "招待リンクのステータス（#131）" }));
-
-const InvitationComponent = registry.register(
-  "Invitation",
-  InvitationSchema.openapi({ description: "招待リンク（管理者向け。token 含む）" }),
-);
-
-const CreateInvitationComponent = registry.register(
-  "CreateInvitation",
-  CreateInvitationSchema.openapi({ description: "招待リンク発行リクエスト（expiresInHours / memo?）" }),
-);
-
-const invitationIdParam = z.string().openapi({ param: { name: "id", in: "path" } });
-
-registry.registerPath({
-  method: "post",
-  path: "/api/admin/invitations",
-  summary: "招待リンクを発行（認証必須・admin ロール・#131）",
-  request: {
-    body: { content: { "application/json": { schema: CreateInvitationComponent } } },
-  },
-  responses: {
-    201: {
-      description: "発行された招待リンク（token 含む）",
-      content: { "application/json": { schema: InvitationComponent } },
-    },
-    400: { description: "リクエストボディが不正（expiresInHours 範囲外など）", ...errorJson },
-    401: { description: "未認証", ...errorJson },
-    403: { description: "admin 権限なし", ...errorJson },
-  },
-});
-
-registry.registerPath({
-  method: "get",
-  path: "/api/admin/invitations",
-  summary: "招待リンク一覧を取得（認証必須・admin ロール・#131）",
-  responses: {
-    200: {
-      description: "招待リンク一覧（ステータス込み）",
-      content: { "application/json": { schema: z.array(InvitationComponent) } },
-    },
-    401: { description: "未認証", ...errorJson },
-    403: { description: "admin 権限なし", ...errorJson },
-  },
-});
-
-registry.registerPath({
-  method: "post",
-  path: "/api/admin/invitations/{id}/revoke",
-  summary: "招待リンクを手動失効（認証必須・admin ロール・#131）",
-  request: {
-    params: z.object({ id: invitationIdParam }),
-  },
-  responses: {
-    200: {
-      description: "失効後の招待リンク（status: revoked）",
-      content: { "application/json": { schema: InvitationComponent } },
-    },
-    401: { description: "未認証", ...errorJson },
-    403: { description: "admin 権限なし", ...errorJson },
-    404: { description: "招待リンクが存在しない", ...errorJson },
-  },
-});
-
-// 招待受諾 API（#132）。公開エンドポイント（requireAuth なし）。
-const InvitationPublicComponent = registry.register(
-  "InvitationPublic",
-  InvitationPublicSchema.openapi({ description: "招待トークン検証レスポンス（公開・機寧情報なし）" }),
-);
-
-const AcceptInvitationComponent = registry.register(
-  "AcceptInvitation",
-  AcceptInvitationSchema.openapi({ description: "招待受諾リクエスト（id / displayName / password）" }),
-);
-
-const invitationTokenParam = z.string().openapi({ param: { name: "token", in: "path" } });
-
-registry.registerPath({
-  method: "get",
-  path: "/api/invitations/{token}",
-  summary: "招待トークンを検証（公開・認証不要・#132）",
-  request: {
-    params: z.object({ token: invitationTokenParam }),
-  },
-  responses: {
-    200: {
-      description: "トークンのステータスと有効期限",
-      content: { "application/json": { schema: InvitationPublicComponent } },
-    },
-    404: { description: "トークンが存在しない", ...errorJson },
-  },
-});
-
-registry.registerPath({
-  method: "post",
-  path: "/api/invitations/{token}/accept",
-  summary: "招待を受諾して新規ユーザーを登録（公開・認証不要・#132）",
-  request: {
-    params: z.object({ token: invitationTokenParam }),
-    body: { content: { "application/json": { schema: AcceptInvitationComponent } } },
-  },
-  responses: {
-    201: {
-      description: "受諾成功。作成されたユーザーを返す（セッション確立済み）",
-      content: { "application/json": { schema: AuthUserComponent } },
-    },
-    400: { description: "バリデーションエラー（password 短すぎ等）", ...errorJson },
-    404: { description: "トークンが存在しない", ...errorJson },
-    409: { description: "招待が無効（期限切れ・使用済み・失効済み）または id 重複", ...errorJson },
   },
 });
 

@@ -55,7 +55,9 @@ describe("API ドキュメント配信ルート（dev = 有効）", () => {
     expect(res.body.paths).toBeDefined();
     // registry に登録済みの主要パス（手書きではなく生成ロジック由来であること）
     expect(res.body.paths["/api/workers"]).toBeDefined();
-    expect(res.body.paths["/api/auth/login"]).toBeDefined();
+    // #455: Google-only auth へ移行し /api/auth/login は廃止。/api/auth/me で生成由来を確認する。
+    expect(res.body.paths["/api/auth/me"]).toBeDefined();
+    expect(res.body.paths["/api/auth/login"]).toBeUndefined();
   });
 
   it("GET /api-docs は 200・text/html で Redoc を読み込む HTML を返す", async () => {

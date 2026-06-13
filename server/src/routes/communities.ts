@@ -57,16 +57,18 @@ export function createCommunitiesRouter(
         return postRepo.listByCommunity(community.id);
       })
       .then((posts) => {
+        // post.author は worker の id（UUID）か displayName（旧データ）のいずれか（#478）。
+        // 新着順の distinct author を集め、id/displayName 両対応の resolveByAuthors で Worker を解決する。
         const seen = new Set<string>();
-        const distinctIds: string[] = [];
+        const distinctAuthors: string[] = [];
         for (const post of posts) {
           if (!seen.has(post.author)) {
             seen.add(post.author);
-            distinctIds.push(post.author);
-            if (distinctIds.length >= RECENT_WORKERS_LIMIT) break;
+            distinctAuthors.push(post.author);
+            if (distinctAuthors.length >= RECENT_WORKERS_LIMIT) break;
           }
         }
-        return workerRepo.listByIds(distinctIds);
+        return workerRepo.resolveByAuthors(distinctAuthors);
       })
       .then((workers) => res.status(200).json(workers))
       .catch(next);

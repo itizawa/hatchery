@@ -1,6 +1,6 @@
 # ADR-0027: Google OAuth 認証の追加（ADR-0010 増補）
 
-- ステータス: Accepted
+- ステータス: Superseded by ADR-0029
 - 日付: 2026-06-12
 - 関連 Issue: #343
 

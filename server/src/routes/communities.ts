@@ -2,6 +2,7 @@ import { NotFoundError } from "@hatchery/common";
 import { Router } from "express";
 
 import { requireAuth } from "../middleware/requireAuth.js";
+import { toCommunityResponse } from "./communityResponse.js";
 import type { CommunityRepository } from "../persistence/communityRepository.js";
 import type { PostRepository } from "../persistence/postRepository.js";
 import type { SubscriptionRepository } from "../persistence/subscriptionRepository.js";
@@ -23,10 +24,11 @@ export function createCommunitiesRouter(
   const router = Router();
 
   // community 一覧（認証不要・公共コミュニティ）
+  // CommunityRecord（camelCase）を OpenAPI 契約（snake_case created_at）に整形して返す（#477）
   router.get("/", (_req, res, next) => {
     communityRepo
       .list()
-      .then((communities) => res.status(200).json(communities))
+      .then((communities) => res.status(200).json(communities.map(toCommunityResponse)))
       .catch(next);
   });
 
@@ -57,16 +59,18 @@ export function createCommunitiesRouter(
         return postRepo.listByCommunity(community.id);
       })
       .then((posts) => {
+        // post.author は worker の id（UUID）か displayName（旧データ）のいずれか（#478）。
+        // 新着順の distinct author を集め、id/displayName 両対応の resolveByAuthors で Worker を解決する。
         const seen = new Set<string>();
-        const distinctIds: string[] = [];
+        const distinctAuthors: string[] = [];
         for (const post of posts) {
           if (!seen.has(post.author)) {
             seen.add(post.author);
-            distinctIds.push(post.author);
-            if (distinctIds.length >= RECENT_WORKERS_LIMIT) break;
+            distinctAuthors.push(post.author);
+            if (distinctAuthors.length >= RECENT_WORKERS_LIMIT) break;
           }
         }
-        return workerRepo.listByIds(distinctIds);
+        return workerRepo.resolveByAuthors(distinctAuthors);
       })
       .then((workers) => res.status(200).json(workers))
       .catch(next);

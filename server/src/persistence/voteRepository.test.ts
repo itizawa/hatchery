@@ -87,6 +87,74 @@ describe("createInMemoryVoteRepository", () => {
     });
   });
 
+  describe("voteAndApplyScore — vote と score 更新を 1 操作で整合させる (#453)", () => {
+    // 対象スコアストアを模した applyScore コールバック（route が postRepo/commentRepo.addScore を渡す想定）。
+    function createRepoWithScores() {
+      const scores = new Map<string, number>([
+        ["post:post-1", 0],
+        ["comment:comment-1", 0],
+      ]);
+      const makeApply =
+        (targetKey: string) =>
+        (delta: number): Promise<number | null> => {
+          if (!scores.has(targetKey)) return Promise.resolve(null);
+          const next = (scores.get(targetKey) ?? 0) + delta;
+          scores.set(targetKey, next);
+          return Promise.resolve(next);
+        };
+      const repo = createInMemoryVoteRepository();
+      return { repo, scores, makeApply };
+    }
+
+    it("未投票 → up: scoreDelta=+1 と更新後 score=1 を返し、vote レコードが作られる", async () => {
+      const { repo, makeApply } = createRepoWithScores();
+      const result = await repo.voteAndApplyScore("u1", "post", "post-1", "up", makeApply("post:post-1"));
+      expect(result).toEqual({ scoreDelta: 1, score: 1 });
+      expect((await repo.findVote("u1", "post", "post-1"))?.direction).toBe("up");
+    });
+
+    it("未投票 → down: scoreDelta=-1 と更新後 score=-1 を返す", async () => {
+      const { repo, makeApply } = createRepoWithScores();
+      const result = await repo.voteAndApplyScore("u1", "post", "post-1", "down", makeApply("post:post-1"));
+      expect(result).toEqual({ scoreDelta: -1, score: -1 });
+    });
+
+    it("up 済み → up (toggle off): scoreDelta=-1 と更新後 score=0、レコード削除", async () => {
+      const { repo, makeApply } = createRepoWithScores();
+      await repo.voteAndApplyScore("u1", "post", "post-1", "up", makeApply("post:post-1"));
+      const result = await repo.voteAndApplyScore("u1", "post", "post-1", "up", makeApply("post:post-1"));
+      expect(result).toEqual({ scoreDelta: -1, score: 0 });
+      expect(await repo.findVote("u1", "post", "post-1")).toBeNull();
+    });
+
+    it("up 済み → down (switch): scoreDelta=-2 と更新後 score=-1", async () => {
+      const { repo, makeApply } = createRepoWithScores();
+      await repo.voteAndApplyScore("u1", "post", "post-1", "up", makeApply("post:post-1"));
+      const result = await repo.voteAndApplyScore("u1", "post", "post-1", "down", makeApply("post:post-1"));
+      expect(result).toEqual({ scoreDelta: -2, score: -1 });
+      expect((await repo.findVote("u1", "post", "post-1"))?.direction).toBe("down");
+    });
+
+    it("comment にも適用できる（post と独立）", async () => {
+      const { repo, makeApply } = createRepoWithScores();
+      const result = await repo.voteAndApplyScore(
+        "u1",
+        "comment",
+        "comment-1",
+        "up",
+        makeApply("comment:comment-1"),
+      );
+      expect(result).toEqual({ scoreDelta: 1, score: 1 });
+    });
+
+    it("対象が存在しない場合 score=null を返す（applyScore が null）", async () => {
+      const { repo, makeApply } = createRepoWithScores();
+      const result = await repo.voteAndApplyScore("u1", "post", "missing", "up", makeApply("post:missing"));
+      expect(result.scoreDelta).toBe(1);
+      expect(result.score).toBeNull();
+    });
+  });
+
   describe("netScoresByCommunitySince (#486)", () => {
     // targetId → communityId の解決マップ（テスト用）。
     const resolve = (targetType: "post" | "comment", targetId: string): string | null => {

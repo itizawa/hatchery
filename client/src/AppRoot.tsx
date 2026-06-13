@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
 import { useState, type ReactElement } from "react";
 
+import { useCfPageViewTracking } from "./analytics/useCfPageViewTracking";
 import { createQueryClient } from "./queryClient";
 import { router as defaultRouter, type AppRouter } from "./router";
 import { slackTheme } from "./theme";
@@ -20,6 +21,10 @@ export interface AppRootProps {
 export const AppRoot = ({ router = defaultRouter }: AppRootProps = {}): ReactElement => {
   // マウントごとに 1 つの QueryClient を保持する（再レンダーで作り直さない）。
   const [queryClient] = useState(createQueryClient);
+
+  // SPA ルート遷移を Cloudflare Web Analytics へ通知する（ADR-0026 / #439）。
+  // トークン未設定（window.__cfBeacon 不在）では no-op になる。
+  useCfPageViewTracking(router);
 
   return (
     <ThemeProvider theme={slackTheme}>

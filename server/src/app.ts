@@ -167,7 +167,13 @@ export function createApp(deps: AppDeps): Express {
   app.use("/api/admin/token-usage", createTokenUsageRouter(deps.tokenUsageLogRepository));
   app.use(
     "/api/admin",
-    createAdminRouter(deps.appSettingRepository, deps.workerRepository, communityRepo),
+    createAdminRouter(
+      deps.appSettingRepository,
+      deps.workerRepository,
+      communityRepo,
+      postRepo,
+      commentRepo,
+    ),
   );
   app.use("/api/admin", createAdminWorkerImageRouter(deps.workerRepository, deps.storageService));
   app.use("/api/admin", createAdminCommunityImageRouter(communityRepo, deps.storageService));

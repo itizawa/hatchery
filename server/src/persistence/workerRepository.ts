@@ -24,6 +24,14 @@ export interface WorkerRepository {
   update(id: string, input: UpdateWorkerInput): Promise<WorkerRecord | null>;
   /** 複数 id の Worker をまとめて取得する。存在しない id は除外する（#53・定時バッチの発言者解決）。 */
   listByIds(ids: string[]): Promise<WorkerRecord[]>;
+  /**
+   * post/comment の `author` 値（id か displayName）から有効な Worker を解決する（#478）。
+   * - 各 author を id で照合し、見つからなければ displayName で照合する（id 一致を優先）。
+   * - 入力 authors の順序を保持し、解決できた author に対応する Worker を 1 件返す（解決不能な author は除外）。
+   * - 論理削除済（deletedAt != null）の Worker は対象外。
+   * バッチが author に UUID id を保存する新データと、displayName を保存していた旧データの双方を解決するため。
+   */
+  resolveByAuthors(authors: string[]): Promise<WorkerRecord[]>;
   /** Worker を全件取得する（#240・仮想オフィス用）。論理削除済は除外（#331: Worker は AI 投稿者のみ）。 */
   listBotWorkers(): Promise<WorkerRecord[]>;
   /** Worker を論理削除済も含めて全件取得する（#218・メッセージ発言者名解決用 / #331）。 */
@@ -71,6 +79,21 @@ export function createInMemoryWorkerRepository(
       return Promise.resolve(
         ids
           .map((id) => workers.find((w) => w.id === id && w.deletedAt === null))
+          .filter((w): w is WorkerRecord => w !== undefined)
+          .map((w) => ({ ...w })),
+      );
+    },
+
+    resolveByAuthors(authors: string[]): Promise<WorkerRecord[]> {
+      const active = workers.filter((w) => w.deletedAt === null);
+      return Promise.resolve(
+        authors
+          .map(
+            (author) =>
+              // id 一致を displayName 一致より優先する。
+              active.find((w) => w.id === author) ??
+              active.find((w) => w.displayName === author),
+          )
           .filter((w): w is WorkerRecord => w !== undefined)
           .map((w) => ({ ...w })),
       );

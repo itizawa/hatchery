@@ -71,6 +71,28 @@ describe("CommunitySidebarCard", () => {
     expect(screen.getByText("2026年6月1日 作成")).toBeInTheDocument();
   });
 
+  it("created_at が undefined のとき「NaN年...」を出さず作成日行を描画しない（#477）", () => {
+    render(
+      <CommunitySidebarCard
+        {...baseProps}
+        community={{ ...mockCommunity, created_at: undefined as unknown as string }}
+      />,
+    );
+    expect(screen.queryByText(/作成/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
+  });
+
+  it("created_at が不正日付のとき「NaN年...」を出さず作成日行を描画しない（#477）", () => {
+    render(
+      <CommunitySidebarCard
+        {...baseProps}
+        community={{ ...mockCommunity, created_at: "not-a-date" }}
+      />,
+    );
+    expect(screen.queryByText(/作成/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
+  });
+
   it("showSubscribe=true のとき購読ボタンを表示し、クリックで onSubscribe が呼ばれる", async () => {
     const onSubscribe = vi.fn();
     render(<CommunitySidebarCard {...baseProps} onSubscribe={onSubscribe} />);

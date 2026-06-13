@@ -52,11 +52,13 @@ export function createPostsRouter(
           if (!post) {
             throw new NotFoundError("PostNotFound");
           }
+          // vote 記録と score 更新を単一の整合操作で行う（#453・AC7）。
           return voteRepo
-            .vote(userId, "post", postId, direction)
-            .then(({ scoreDelta }) => postRepo.addScore(postId, scoreDelta))
-            .then((updated) => {
-              res.status(200).json(updated);
+            .voteAndApplyScore(userId, "post", postId, direction, (delta) =>
+              postRepo.addScore(postId, delta).then((r) => r?.score ?? null),
+            )
+            .then(({ score }) => {
+              res.status(200).json({ ...post, score: score ?? post.score });
             });
         })
         .catch(next);
@@ -79,11 +81,13 @@ export function createPostsRouter(
           if (!comment) {
             throw new NotFoundError("CommentNotFound");
           }
+          // vote 記録と score 更新を単一の整合操作で行う（#453・AC7）。
           return voteRepo
-            .vote(userId, "comment", commentId, direction)
-            .then(({ scoreDelta }) => commentRepo.addScore(commentId, scoreDelta))
-            .then((updated) => {
-              res.status(200).json(updated);
+            .voteAndApplyScore(userId, "comment", commentId, direction, (delta) =>
+              commentRepo.addScore(commentId, delta).then((r) => r?.score ?? null),
+            )
+            .then(({ score }) => {
+              res.status(200).json({ ...comment, score: score ?? comment.score });
             });
         })
         .catch(next);

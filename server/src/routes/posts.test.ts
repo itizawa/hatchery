@@ -42,9 +42,7 @@ describe("GET /api/posts/:postId", () => {
 
 describe("POST /api/posts/:postId/vote", () => {
   async function loginAndGetCookie(app: Express.Application) {
-    const loginRes = await request(app)
-      .post("/api/auth/login")
-      .send({ loginId: "testuser", password: "testpass" });
+    const loginRes = await request(app).post("/api/auth/dev-login");
     return loginRes.headers["set-cookie"] as string[];
   }
 
@@ -146,7 +144,7 @@ describe("POST /api/posts/:postId/vote", () => {
   it("存在しない post は 404 を返す", async () => {
     const deps = await createTestDeps();
     const app = createApp(deps);
-    const loginRes = await request(app).post("/api/auth/login").send({ loginId: "testuser", password: "testpass" });
+    const loginRes = await request(app).post("/api/auth/dev-login");
     const cookie = loginRes.headers["set-cookie"] as string[];
     const res = await request(app).post("/api/posts/not-exists/vote").send({ direction: "up" }).set("Cookie", cookie);
     expect(res.status).toBe(404);
@@ -155,9 +153,7 @@ describe("POST /api/posts/:postId/vote", () => {
 
 describe("POST /api/comments/:commentId/vote", () => {
   async function loginAndGetCookie(app: Express.Application) {
-    const loginRes = await request(app)
-      .post("/api/auth/login")
-      .send({ loginId: "testuser", password: "testpass" });
+    const loginRes = await request(app).post("/api/auth/dev-login");
     return loginRes.headers["set-cookie"] as string[];
   }
 

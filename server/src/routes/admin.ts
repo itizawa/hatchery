@@ -2,12 +2,11 @@ import {
   ConflictError,
   CreateCommunitySchema,
   CreateWorkerSchema,
-  CreateInvitationSchema,
   NotFoundError,
   UpdateAppSettingSchema,
   UpdateCommunitySchema,
 } from "@hatchery/common";
-import { randomBytes, randomUUID } from "crypto";
+import { randomUUID } from "crypto";
 import { Router } from "express";
 
 import { requireAdmin } from "../middleware/requireAdmin.js";
@@ -16,10 +15,6 @@ import { validateBody } from "../middleware/validateBody.js";
 import type { AppSettingRepository } from "../persistence/appSettingRepository.js";
 import type { CommunityRecord, CommunityRepository } from "../persistence/communityRepository.js";
 import type { WorkerRepository } from "../persistence/workerRepository.js";
-import {
-  toInvitationLinkResponse,
-  type InvitationLinkRepository,
-} from "../persistence/invitationLinkRepository.js";
 import { decrypt, encrypt, maskApiKey } from "../utils/crypto.js";
 import { getApiKey } from "../utils/apiKey.js";
 
@@ -53,7 +48,6 @@ function toResponse(key: string, encryptedValue: string) {
 
 export function createAdminRouter(
   appSettingRepository: AppSettingRepository,
-  invitationLinkRepository: InvitationLinkRepository,
   workerRepository: WorkerRepository,
   communityRepository: CommunityRepository,
 ): Router {
@@ -84,53 +78,6 @@ export function createAdminRouter(
       }
     },
   );
-
-  router.post(
-    "/invitations",
-    validateBody(CreateInvitationSchema),
-    async (req, res, next) => {
-      try {
-        const { expiresInHours, memo } = req.body as { expiresInHours: number; memo?: string };
-        const token = randomBytes(32).toString("base64url");
-        const expiresAt = new Date(Date.now() + expiresInHours * 60 * 60 * 1000);
-        const userId = (req.user as { id: string }).id;
-
-        const record = await invitationLinkRepository.create({
-          token,
-          expiresAt,
-          createdByUserId: userId,
-          memo,
-        });
-
-        res.status(201).json(toInvitationLinkResponse(record));
-      } catch (err) {
-        next(err);
-      }
-    },
-  );
-
-  router.get("/invitations", async (_req, res, next) => {
-    try {
-      const records = await invitationLinkRepository.list();
-      const now = new Date();
-      res.json(records.map((r) => toInvitationLinkResponse(r, now)));
-    } catch (err) {
-      next(err);
-    }
-  });
-
-  router.post("/invitations/:id/revoke", async (req, res, next) => {
-    try {
-      const record = await invitationLinkRepository.revoke(req.params.id);
-      if (!record) {
-        res.status(404).json({ error: "Invitation not found" });
-        return;
-      }
-      res.json(toInvitationLinkResponse(record));
-    } catch (err) {
-      next(err);
-    }
-  });
 
   router.delete("/workers/:id", async (req, res, next) => {
     try {

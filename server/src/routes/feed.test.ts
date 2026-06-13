@@ -57,9 +57,7 @@ describe("GET /api/feed", () => {
     });
     const app = createApp(deps);
 
-    const loginRes = await request(app)
-      .post("/api/auth/login")
-      .send({ loginId: "testuser", password: "testpass" });
+    const loginRes = await request(app).post("/api/auth/dev-login");
     const cookie = loginRes.headers["set-cookie"] as string[];
 
     const res = await request(app).get("/api/feed").set("Cookie", cookie);

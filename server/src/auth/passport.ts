@@ -1,16 +1,14 @@
 import type { AuthUser } from "@hatchery/common";
-import bcrypt from "bcrypt";
 import { Passport } from "passport";
-import { Strategy as LocalStrategy } from "passport-local";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 
-import { LoginIdAlreadyExistsError, type User, type UserRepository } from "../persistence/userRepository.js";
+import { GoogleIdAlreadyExistsError, type User, type UserRepository } from "../persistence/userRepository.js";
 
-/** 認証ユーザー（DB の User）をセッションに載せる公開情報（AuthUser）へ写す（#51, #136, #185, #331）。 */
+/** 認証ユーザー（DB の User）をセッションに載せる公開情報（AuthUser）へ写す（#51, #136, #185, #331, #455）。 */
 export function toAuthUser(user: User): AuthUser {
   const authUser: AuthUser = {
     id: user.id,
-    loginId: user.loginId,
+    email: user.email,
     displayName: user.displayName,
     role: user.role,
   };
@@ -36,22 +34,6 @@ export interface GoogleAuthConfig {
 export function createPassport(userRepo: UserRepository, googleConfig?: GoogleAuthConfig): PassportInstance {
   const p = new Passport();
 
-  p.use(
-    new LocalStrategy({ usernameField: "loginId" }, async (loginId, password, done) => {
-      try {
-        const user = await userRepo.findByLoginId(loginId);
-        if (!user) return done(null, false);
-        // Google SSO ユーザーは passwordHash が null なのでパスワード認証を拒否する（#343）
-        if (!user.passwordHash) return done(null, false);
-        const match = await bcrypt.compare(password, user.passwordHash);
-        if (!match) return done(null, false);
-        return done(null, toAuthUser(user));
-      } catch (err) {
-        return done(err);
-      }
-    }),
-  );
-
   if (googleConfig) {
     p.use(
       new GoogleStrategy(
@@ -69,15 +51,13 @@ export function createPassport(userRepo: UserRepository, googleConfig?: GoogleAu
             if (existing) return done(null, toAuthUser(existing));
 
             const displayName = profile.displayName || `user_${googleId}`;
-            const loginId = `google_${googleId}`;
+            const email = profile.emails?.[0]?.value ?? `${googleId}@google.local`;
             try {
-              const newUser = await userRepo.create({ loginId, displayName, googleId, passwordHash: null });
+              const newUser = await userRepo.create({ email, displayName, googleId });
               return done(null, toAuthUser(newUser));
             } catch (createErr) {
-              if (createErr instanceof LoginIdAlreadyExistsError) {
-                // TOCTOU: 並行リクエストが先に同じ googleId でユーザーを作成した場合はリトライ。
-                // loginId 衝突（既存ローカルアカウントの loginId が google_<id> と重複）の場合は
-                // findByGoogleId が null を返すため done(null, false) で認証失敗として扱う。
+              if (createErr instanceof GoogleIdAlreadyExistsError) {
+                // TOCTOU: 並行リクエストが先に同じ googleId でユーザーを作成した場合はリトライ（#455）。
                 const retried = await userRepo.findByGoogleId(googleId);
                 if (retried) return done(null, toAuthUser(retried));
                 return done(null, false);

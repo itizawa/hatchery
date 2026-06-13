@@ -57,8 +57,6 @@ describe("generateOpenApiDocument", () => {
     expect(doc.components?.schemas).toHaveProperty("Post");
   });
 
-  type RefContent = { content?: Record<string, { schema?: { $ref?: string } }> };
-
   it("paths に admin communities/workers の 5 エンドポイントが含まれる（#337）", () => {
     const doc = generateOpenApiDocument();
     expect(doc.paths?.["/api/admin/communities"]?.get).toBeDefined();

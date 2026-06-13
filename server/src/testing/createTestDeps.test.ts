@@ -10,7 +10,6 @@ describe("createTestDeps", () => {
     expect(deps.workerRepository).toBeDefined();
     expect(deps.appSettingRepository).toBeDefined();
     expect(deps.batchRunLogRepository).toBeDefined();
-    expect(deps.invitationLinkRepository).toBeDefined();
   });
 
   it("community / post / comment / subscription / vote / worldState も InMemory 実装で返る（#290）", async () => {
@@ -29,9 +28,10 @@ describe("createTestDeps", () => {
     expect(deps.workerRepository).toBe(customWorkerRepo);
   });
 
-  it("デフォルト userRepository には testuser が存在する（createTestUserRepository）", async () => {
+  it("デフォルト userRepository には dev ユーザーが存在する（createTestUserRepository, #455）", async () => {
     const deps = await createTestDeps();
-    const user = await deps.userRepository.findByLoginId("testuser");
+    const user = await deps.userRepository.findByGoogleId("dev-google-id");
     expect(user).not.toBeNull();
+    expect(user?.email).toBe("dev@hatchery.local");
   });
 });

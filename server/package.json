@@ -35,7 +35,6 @@
     "@google-cloud/storage": "^7.21.0",
     "@hatchery/common": "workspace:*",
     "@prisma/client": "^6",
-    "bcrypt": "^6.0.0",
     "cheerio": "^1.2.0",
     "connect-pg-simple": "^10.0.0",
     "express": "^5.0.0",
@@ -45,12 +44,10 @@
     "multer": "^2.1.1",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
-    "passport-local": "^1.0.0",
     "pg": "^8.21.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {
-    "@types/bcrypt": "^6.0.0",
     "@types/connect-pg-simple": "^7.0.3",
     "@types/express": "^5",
     "@types/express-session": "^1.19.0",
@@ -58,7 +55,6 @@
     "@types/multer": "^2.1.0",
     "@types/passport": "^1.0.17",
     "@types/passport-google-oauth20": "^2.0.17",
-    "@types/passport-local": "^1.0.38",
     "@types/pg": "^8.20.0",
     "@types/supertest": "^6",
     "openapi3-ts": "^4.5.0",

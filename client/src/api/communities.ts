@@ -43,7 +43,10 @@ export const COMMUNITIES_QUERY_KEY = ADMIN_COMMUNITIES_QUERY_KEY;
 export const communityFeedQueryKey = (slug: string) => ["communities", slug, "feed"] as const;
 export const communityRecentWorkersQueryKey = (slug: string) =>
   ["communities", slug, "recent-workers"] as const;
-export const homeFeedQueryKey = (sort: HomeFeedSort = "latest") => ["feed", sort] as const;
+/** ホームフィードのキャッシュキープレフィックス。全 sort をまとめて無効化する際に使う。 */
+export const homeFeedQueryKeyPrefix = () => ["feed"] as const;
+export const homeFeedQueryKey = (sort: HomeFeedSort = "latest") =>
+  [...homeFeedQueryKeyPrefix(), sort] as const;
 export const postThreadQueryKey = (postId: string) => ["posts", postId] as const;
 export const communitySubscriptionQueryKey = (slug: string) =>
   ["communities", slug, "subscription"] as const;
@@ -319,7 +322,7 @@ export function useSubscribe(slug: string) {
     mutationFn: () => subscribeCommunity(slug),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: communitySubscriptionQueryKey(slug) });
-      void queryClient.invalidateQueries({ queryKey: ["feed"] });
+      void queryClient.invalidateQueries({ queryKey: homeFeedQueryKeyPrefix() });
     },
   });
 }
@@ -331,7 +334,7 @@ export function useUnsubscribe(slug: string) {
     mutationFn: () => unsubscribeCommunity(slug),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: communitySubscriptionQueryKey(slug) });
-      void queryClient.invalidateQueries({ queryKey: ["feed"] });
+      void queryClient.invalidateQueries({ queryKey: homeFeedQueryKeyPrefix() });
     },
   });
 }
@@ -368,7 +371,7 @@ export function useVotePost(communitySlug?: string) {
       if (communitySlug) {
         void queryClient.invalidateQueries({ queryKey: communityFeedQueryKey(communitySlug) });
       }
-      void queryClient.invalidateQueries({ queryKey: ["feed"] });
+      void queryClient.invalidateQueries({ queryKey: homeFeedQueryKeyPrefix() });
     },
   });
 }

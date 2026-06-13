@@ -22,7 +22,7 @@
 |--------|----------------|------|-------------|
 | auth | ログイン・ログアウト・認証ガード（`LoginScene.tsx`）（#455: Google のみ） | [auth/usecases.md](auth/usecases.md) | UC-AUTH-01〖06 |
 | home-feed | ホームフィード閲覧（`HomeFeedScene.tsx`, `/`） | [home-feed/usecases.md](home-feed/usecases.md) | UC-HOME-01〖05 |
-| community | コミュニティ一覧・詳細・購読（`/communities`） | [community/usecases.md](community/usecases.md) | UC-COMM-01〖06 |
+| community | コミュニティ一覧・詳細・購読（`/communities`）・サイドバーのコミュニティセクション開閉 | [community/usecases.md](community/usecases.md) | UC-COMM-01〖07 |
 | post-thread | 投稿スレッド・upvote（`/posts/$postId`） | [post-thread/usecases.md](post-thread/usecases.md) | UC-POST-01〖06 |
 | admin | 管理画面（Worker / Community 管理, `/admin`） | [admin/usecases.md](admin/usecases.md) | UC-ADMIN-01〖09 |
 
@@ -56,6 +56,7 @@
 - UC-COMM-04: ログイン済みユーザーがコミュニティを購読できる
 - UC-COMM-05: 購読済みコミュニティの購読を解除できる
 - UC-COMM-06: 未ログインユーザーには購読ボタンが表示されない
+- UC-COMM-07: サイドバーの「コミュニティ」セクションを見出しクリックで開閉できる
 
 ### post-thread — 投稿スレッド・upvote
 

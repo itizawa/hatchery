@@ -86,8 +86,30 @@ function renderWithRouter(initialPath = "/") {
     ),
   });
 
+  const popularRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/popular",
+    component: (): ReactElement => (
+      <RootLayout />
+    ),
+  });
+
+  const adminRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/admin",
+    component: (): ReactElement => (
+      <RootLayout />
+    ),
+  });
+
   const router = createRouter({
-    routeTree: rootRoute.addChildren([indexRoute, communitiesRoute, communityRoute]),
+    routeTree: rootRoute.addChildren([
+      indexRoute,
+      communitiesRoute,
+      communityRoute,
+      popularRoute,
+      adminRoute,
+    ]),
     history: createMemoryHistory({ initialEntries: [initialPath] }),
   });
 
@@ -238,7 +260,8 @@ describe("サイドバーのナビゲーション (#307)", () => {
     renderWithRouter("/");
 
     await screen.findByRole("navigation", { name: "サイドバー" });
-    expect(screen.getByRole("separator")).toBeInTheDocument();
+    // #435 でグローバルナビ追加に伴い Divider が複数になった
+    expect(screen.getAllByRole("separator").length).toBeGreaterThanOrEqual(1);
   });
 
   it("「探す」が /communities へのリンクを持つ ListItemButton でレンダリングされる", async () => {
@@ -303,5 +326,126 @@ describe("横オーバーフロー防止 (#279)", () => {
 
     await screen.findByRole("navigation", { name: "サイドバー" });
     expect(screen.getByRole("main")).toBeInTheDocument();
+  });
+});
+
+// 受け入れ条件 #435: Reddit 風グローバルナビゲーションメニュー
+describe("グローバルナビゲーションメニュー (#435)", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    // デスクトップ幅（恒久サイドバー表示）
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("「ホーム」が / へのリンクで表示される", async () => {
+    stubFetch(true);
+    renderWithRouter("/");
+
+    const homeLink = await screen.findByRole("link", { name: /ホーム/ });
+    expect(homeLink).toHaveAttribute("href", "/");
+  });
+
+  it("「人気」が /popular へのリンクで表示される", async () => {
+    stubFetch(true);
+    renderWithRouter("/");
+
+    const popularLink = await screen.findByRole("link", { name: /人気/ });
+    expect(popularLink).toHaveAttribute("href", "/popular");
+  });
+
+  it("/ ではホームがアクティブ（aria-current=page）・人気は非アクティブ", async () => {
+    stubFetch(true);
+    renderWithRouter("/");
+
+    const homeLink = await screen.findByRole("link", { name: /ホーム/ });
+    const popularLink = await screen.findByRole("link", { name: /人気/ });
+    expect(homeLink).toHaveAttribute("aria-current", "page");
+    expect(popularLink).not.toHaveAttribute("aria-current", "page");
+  });
+
+  it("/popular では人気がアクティブ（aria-current=page）・ホームは非アクティブ", async () => {
+    stubFetch(true);
+    renderWithRouter("/popular");
+
+    const homeLink = await screen.findByRole("link", { name: /ホーム/ });
+    const popularLink = await screen.findByRole("link", { name: /人気/ });
+    expect(popularLink).toHaveAttribute("aria-current", "page");
+    expect(homeLink).not.toHaveAttribute("aria-current", "page");
+  });
+
+  it("admin ユーザーには「コミュニティを作る」が表示され /admin へ導線する", async () => {
+    stubFetch(true, "admin");
+    renderWithRouter("/");
+
+    const createLink = await screen.findByRole("link", { name: /コミュニティを作る/ });
+    expect(createLink.getAttribute("href")).toContain("/admin");
+  });
+
+  it("member ユーザーには「コミュニティを作る」が表示されない", async () => {
+    stubFetch(true, "member");
+    renderWithRouter("/");
+
+    await screen.findByRole("navigation", { name: "サイドバー" });
+    expect(screen.queryByRole("link", { name: /コミュニティを作る/ })).not.toBeInTheDocument();
+  });
+
+  it("未ログインユーザーには「コミュニティを作る」が表示されない", async () => {
+    stubFetch(false);
+    renderWithRouter("/");
+
+    await screen.findByRole("navigation", { name: "サイドバー" });
+    expect(screen.queryByRole("link", { name: /コミュニティを作る/ })).not.toBeInTheDocument();
+  });
+});
+
+// 受け入れ条件 #435-7: モバイルドロワーでもナビメニューが表示される
+describe("グローバルナビゲーションメニュー（モバイルドロワー） (#435)", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: query.includes("max-width"),
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("ドロワーを開くとホーム・人気メニューが表示される", async () => {
+    stubFetch(true);
+    renderWithRouter("/");
+
+    const hamburger = await screen.findByRole("button", { name: /メニューを開く/ });
+    await userEvent.click(hamburger);
+
+    await screen.findByRole("navigation", { name: "サイドバー" });
+    expect(await screen.findByRole("link", { name: /ホーム/ })).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: /人気/ })).toBeInTheDocument();
   });
 });

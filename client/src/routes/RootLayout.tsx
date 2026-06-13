@@ -1,7 +1,10 @@
 import { Box, Divider, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText } from "../components/uiParts";
 
 import { isAdmin } from "@hatchery/common";
+import AddIcon from "@mui/icons-material/Add";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
+import HomeIcon from "@mui/icons-material/Home";
+import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import { Link as RouterLink, Outlet, useLocation } from "@tanstack/react-router";
 import { Suspense, useEffect, useState, type ReactElement } from "react";
 
@@ -16,6 +19,75 @@ import { SLACK_COLORS } from "../theme.js";
 const SIDEBAR_WIDTH = 260;
 const SIDEBAR_ICON_SX = { color: SLACK_COLORS.sidebarText, minWidth: 36 } as const;
 
+/** Reddit 風ナビゲーション項目の共通スタイル（角丸 + アクティブ時グレー背景）。 */
+const navItemSx = {
+  color: SLACK_COLORS.sidebarText,
+  borderRadius: 2,
+  "&.Mui-selected, &.Mui-selected:hover": { bgcolor: "action.selected" },
+} as const;
+
+/**
+ * サイドバー最上部の Reddit 風グローバルナビゲーション（#435）。
+ * ホーム（/）・人気（/popular）・（admin のみ）コミュニティを作る（/admin?tab=communities）。
+ * 現在ルートに一致する項目をグレー背景でハイライトする。
+ */
+const SidebarGlobalNav = (): ReactElement => {
+  const { data: user } = useAuth();
+  const { pathname } = useLocation();
+  const isHomeActive = pathname === "/";
+  const isPopularActive = pathname === "/popular";
+
+  return (
+    <List dense>
+      <ListItem disablePadding>
+        <ListItemButton
+          component={RouterLink}
+          to="/"
+          selected={isHomeActive}
+          aria-current={isHomeActive ? "page" : undefined}
+          sx={navItemSx}
+        >
+          <ListItemIcon sx={SIDEBAR_ICON_SX}>
+            <HomeIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="ホーム" />
+        </ListItemButton>
+      </ListItem>
+      <ListItem disablePadding>
+        <ListItemButton
+          component={RouterLink}
+          to="/popular"
+          selected={isPopularActive}
+          aria-current={isPopularActive ? "page" : undefined}
+          sx={navItemSx}
+        >
+          <ListItemIcon sx={SIDEBAR_ICON_SX}>
+            <TrendingUpIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="人気" />
+        </ListItemButton>
+      </ListItem>
+      {user && isAdmin(user) && (
+        <ListItem disablePadding>
+          <ListItemButton
+            component={RouterLink}
+            to="/admin"
+            // MUI の component 経由だと TanStack の typed search 推論が AnyRouter に退化するため
+            // reducer 戻り値を never にキャストする（実体は /admin の tab=communities へ遷移）。
+            search={((prev: Record<string, unknown>) => ({ ...prev, tab: "communities" })) as never}
+            sx={navItemSx}
+          >
+            <ListItemIcon sx={SIDEBAR_ICON_SX}>
+              <AddIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText primary="コミュニティを作る" />
+          </ListItemButton>
+        </ListItem>
+      )}
+    </List>
+  );
+};
+
 /**
  * サイドバーの内容。デスクトップの恒久サイドバーとモバイルのドロワー両方で共用する。
  */
@@ -24,6 +96,8 @@ const SidebarContent = (): ReactElement => {
 
   return (
     <>
+      <SidebarGlobalNav />
+      <Divider sx={{ my: 1 }} />
       <SidebarCommunitySection />
       <Divider sx={{ my: 1 }} />
       <List dense>

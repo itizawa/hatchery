@@ -116,6 +116,17 @@ const indexRoute = createRoute({
   ),
 });
 
+/** 人気フィード（/popular）。vote 数降順の公開フィード（#435）。認証不要。 */
+const popularRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/popular",
+  component: () => (
+    <Suspense fallback={null}>
+      <LazyHomeFeedScene sort="popular" />
+    </Suspense>
+  ),
+});
+
 /** コミュニティブラウズ（/communities）。認証不要の公開ページ。 */
 const communitiesRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -218,6 +229,7 @@ const inviteRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   indexRoute,
+  popularRoute,
   communitiesRoute,
   communityRoute,
   postRoute,

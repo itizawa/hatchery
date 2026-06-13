@@ -24,7 +24,7 @@
 | home-feed | ホームフィード閲覧（`HomeFeedScene.tsx`, `/`） | [home-feed/usecases.md](home-feed/usecases.md) | UC-HOME-01〖05 |
 | community | コミュニティ一覧・詳細・購読（`/communities`） | [community/usecases.md](community/usecases.md) | UC-COMM-01〖06 |
 | post-thread | 投稿スレッド・upvote（`/posts/$postId`） | [post-thread/usecases.md](post-thread/usecases.md) | UC-POST-01〖06 |
-| admin | 管理画面（Worker / Community 管理, `/admin`） | [admin/usecases.md](admin/usecases.md) | UC-ADMIN-01〖09 |
+| admin | 管理画面（Worker / Community 管理, `/admin`） | [admin/usecases.md](admin/usecases.md) | UC-ADMIN-01〖11 |
 
 ## ユースケース一覧（サマリ）
 
@@ -77,3 +77,5 @@
 - UC-ADMIN-07: admin ユーザーがコミュニティ管理タブで一覧を閲覧できる
 - UC-ADMIN-08: admin ユーザーが Worker の参加コミュニティを編集できる
 - UC-ADMIN-09: admin ユーザーが Worker 新規作成時に参加コミュニティを指定できる
+- UC-ADMIN-10: Worker 編集の保存に失敗するとエラー内容が表示される
+- UC-ADMIN-11: API トークン設定の保存に失敗するとエラー内容が表示される

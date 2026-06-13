@@ -26,3 +26,31 @@ export function getApiErrorMessage(
   }
   return fallback;
 }
+
+/**
+ * openapi-fetch のエラー応答（非 2xx）から `Error` に乗せる文言を組み立てる（#476）。
+ *
+ * サーバは `{ error: string }` をボディで返すため、それがあれば採用する。
+ * 無ければ HTTP ステータスを付したフォールバック文言を返す。API ヘルパが
+ * `throw new Error(buildApiErrorMessage(...))` する用途。
+ *
+ * @param errorBody openapi-fetch が返すパース済みエラーボディ（`error` フィールド・undefined もあり得る）
+ * @param status HTTP ステータスコード
+ * @param fallback ボディに `error` が無いときの基底文言
+ */
+export function buildApiErrorMessage(
+  errorBody: unknown,
+  status: number,
+  fallback: string,
+): string {
+  if (
+    errorBody !== null &&
+    typeof errorBody === "object" &&
+    "error" in errorBody &&
+    typeof (errorBody as { error: unknown }).error === "string" &&
+    (errorBody as { error: string }).error.trim().length > 0
+  ) {
+    return (errorBody as { error: string }).error.trim();
+  }
+  return `${fallback} (${status})`;
+}

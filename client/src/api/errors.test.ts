@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { getApiErrorMessage } from "./errors.js";
+import { buildApiErrorMessage, getApiErrorMessage } from "./errors.js";
 
 describe("getApiErrorMessage（#476）", () => {
   it("Error インスタンスは message を返す", () => {
@@ -40,5 +40,19 @@ describe("getApiErrorMessage（#476）", () => {
 
   it("fallback 文言を指定できる", () => {
     expect(getApiErrorMessage(null, "更新に失敗しました")).toBe("更新に失敗しました");
+  });
+});
+
+describe("buildApiErrorMessage（#476）", () => {
+  it("{ error: string } があればその文字列を返す", () => {
+    expect(buildApiErrorMessage({ error: "Forbidden" }, 403, "PATCH 失敗")).toBe("Forbidden");
+  });
+
+  it("error が無ければ fallback にステータスを付して返す", () => {
+    expect(buildApiErrorMessage(undefined, 500, "PATCH 失敗")).toBe("PATCH 失敗 (500)");
+  });
+
+  it("error が空文字なら fallback にステータスを付して返す", () => {
+    expect(buildApiErrorMessage({ error: "" }, 400, "PATCH 失敗")).toBe("PATCH 失敗 (400)");
   });
 });

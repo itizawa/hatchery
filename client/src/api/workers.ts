@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { clientEnv } from "../config/env.js";
 import { openApiClient } from "./client.js";
+import { buildApiErrorMessage } from "./errors.js";
 
 export const BOT_WORKERS_QUERY_KEY = ["workers", "bots"] as const;
 export const BOT_WORKERS_ALL_QUERY_KEY = ["workers", "bots", "all"] as const;
@@ -38,13 +39,14 @@ export function useUpdateWorker() {
       id: string;
       body: { displayName?: string; role?: string; personality?: string };
     }) => {
-      const { data, response } = await openApiClient.PATCH("/api/workers/{id}", {
+      const { data, error, response } = await openApiClient.PATCH("/api/workers/{id}", {
         params: { path: { id } },
         body,
         credentials: "include",
       });
+      // 失敗時はサーバが返す { error } メッセージを Error に乗せ、UI で原因を提示できるようにする（#476）。
       if (!response.ok || !data) {
-        throw new Error(`PATCH /api/workers/${id} failed: ${response.status}`);
+        throw new Error(buildApiErrorMessage(error, response.status, "ワーカーの更新に失敗しました"));
       }
       return data;
     },

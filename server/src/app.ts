@@ -140,19 +140,24 @@ export function createApp(deps: AppDeps): Express {
   const commentRepo = deps.commentRepository;
   const subscriptionRepo = deps.subscriptionRepository;
   const voteRepo = deps.voteRepository;
-  const worldStateRepo = deps.worldStateRepository;
 
   if (isApiDocsEnabled(process.env)) {
     app.use("/", createApiDocsRouter());
   }
 
   app.use("/health", healthRouter);
-  app.use("/sitemap.xml", createSitemapRouter(communityRepo, deps.publicBaseUrl ?? DEFAULT_PUBLIC_BASE_URL));
+  app.use(
+    "/sitemap.xml",
+    createSitemapRouter(communityRepo, deps.publicBaseUrl ?? DEFAULT_PUBLIC_BASE_URL),
+  );
   app.use("/api/auth", createAuthRouter(passportInstance, deps.userRepository, deps.googleAuth));
   app.use("/api/workers", createWorkersRouter(deps.workerRepository));
   app.use("/api/admin/batch-logs", createBatchLogsRouter(deps.batchRunLogRepository));
   app.use("/api/admin/token-usage", createTokenUsageRouter(deps.tokenUsageLogRepository));
-  app.use("/api/admin", createAdminRouter(deps.appSettingRepository, deps.workerRepository, communityRepo));
+  app.use(
+    "/api/admin",
+    createAdminRouter(deps.appSettingRepository, deps.workerRepository, communityRepo),
+  );
   app.use("/api/admin", createAdminWorkerImageRouter(deps.workerRepository, deps.storageService));
   app.use(
     "/api/admin",
@@ -162,11 +167,12 @@ export function createApp(deps: AppDeps): Express {
       communityRepo,
     ),
   );
-  app.use("/api/communities", createCommunitiesRouter(communityRepo, postRepo, subscriptionRepo, deps.workerRepository));
+  app.use(
+    "/api/communities",
+    createCommunitiesRouter(communityRepo, postRepo, subscriptionRepo, deps.workerRepository),
+  );
   app.use("/api/feed", createFeedRouter(postRepo));
   app.use("/api", createPostsRouter(postRepo, commentRepo, voteRepo));
-
-  void worldStateRepo;
 
   app.use(errorHandler);
   return app;

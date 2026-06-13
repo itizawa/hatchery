@@ -62,9 +62,10 @@ export function createAuthRouter(
           res.status(404).json({ error: "Dev user not found. Run db:seed first." });
           return;
         }
-        req.login(toAuthUser(devUser), (err) => {
+        const authUser = toAuthUser(devUser);
+        req.login(authUser, (err) => {
           if (err) return next(err);
-          res.status(200).json(toAuthUser(devUser));
+          res.status(200).json(authUser);
         });
       } catch (err) {
         next(err);

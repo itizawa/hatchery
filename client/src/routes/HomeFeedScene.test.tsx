@@ -23,7 +23,7 @@ type FetchStubOptions = {
 
 function stubFetch({ authenticated, feedPosts = [] }: FetchStubOptions) {
   const user = authenticated
-    ? { id: "user1", displayName: "Alice", role: "member", loginId: "alice" }
+    ? { id: "user1", displayName: "Alice", role: "member", email: "alice@example.com" }
     : undefined;
   vi.stubGlobal(
     "fetch",

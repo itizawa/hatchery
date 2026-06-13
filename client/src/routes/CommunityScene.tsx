@@ -60,6 +60,7 @@ export const CommunityScene = (): ReactElement => {
   const shareUrl = typeof window !== "undefined" ? window.location.href : "";
   const shareTitle = community?.name ?? communitySlug;
 
+  return (
     <SubscriptionStatus communitySlug={communitySlug}>
       {(subscribed) => (
         <Box component="section" sx={{ p: 3, maxWidth: 1200, mx: "auto" }}>

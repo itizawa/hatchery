@@ -1,3 +1,4 @@
+import { COMMUNITY_DESCRIPTION_MAX_LENGTH } from "@hatchery/common";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { seedDevData, type SeedPrisma } from "./seedDevData.js";
@@ -7,7 +8,7 @@ function createFakePrisma() {
   const calls = {
     user: [] as Array<{ id: string; email: string; googleId: string; displayName: string }>,
     worker: [] as Array<{ id: string; role: string | null }>,
-    community: [] as Array<{ slug: string; name: string }>,
+    community: [] as Array<{ slug: string; name: string; description: string }>,
   };
   const prisma: SeedPrisma = {
     user: {
@@ -25,15 +26,15 @@ function createFakePrisma() {
     },
     community: {
       async upsert(args) {
-        calls.community.push({ slug: args.create.slug, name: args.create.name });
+        calls.community.push({ slug: args.create.slug, name: args.create.name, description: args.create.description });
       },
     },
   };
   return { prisma, calls };
 }
 
-/** MVP コミュニティの slugs（seedDevData.ts 内の DEFAULT_COMMUNITIES に対応） */
-const EXPECTED_COMMUNITY_SLUGS = ["technology", "daily"] as const;
+/** コミュニティの slugs（seedDevData.ts 内の DEFAULT_COMMUNITIES に対応・#487 で hatchery 追加） */
+const EXPECTED_COMMUNITY_SLUGS = ["technology", "daily", "hatchery"] as const;
 /** MVP AI ワーカーの ids（seedDevData.ts 内の DEFAULT_WORKERS に対応） */
 const EXPECTED_WORKER_IDS = ["worker-alice", "worker-bob", "worker-carol"] as const;
 
@@ -71,7 +72,7 @@ describe("seedDevData (#305 / #329 / #455)", () => {
     }
   });
 
-  it("MVP コミュニティ 2 件を community.upsert で投入する（#305 / ADR-0019）", async () => {
+  it("コミュニティを community.upsert で投入する（technology / daily / hatchery）（#305 / ADR-0019 / #487）", async () => {
     const { prisma, calls } = createFakePrisma();
     await seedDevData(prisma);
     expect(calls.community).toHaveLength(EXPECTED_COMMUNITY_SLUGS.length);
@@ -79,6 +80,15 @@ describe("seedDevData (#305 / #329 / #455)", () => {
     for (const slug of EXPECTED_COMMUNITY_SLUGS) {
       expect(slugs).toContain(slug);
     }
+  });
+
+  it("hatchery community を upsert し description は 500 文字以内（#487 / #91）", async () => {
+    const { prisma, calls } = createFakePrisma();
+    await seedDevData(prisma);
+    const hatchery = calls.community.find((c) => c.slug === "hatchery");
+    expect(hatchery).toBeDefined();
+    expect(hatchery?.description.length).toBeGreaterThan(0);
+    expect(hatchery?.description.length).toBeLessThanOrEqual(COMMUNITY_DESCRIPTION_MAX_LENGTH);
   });
 
   it("NODE_ENV=production では何も投入せずスキップする", async () => {

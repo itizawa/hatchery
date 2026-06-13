@@ -1,8 +1,8 @@
 import {
-  DEFAULT_WORKERS,
   GenerationOutputSchema,
   formatRecentLog,
   type RecentEntry,
+  selectCommunityWorkers,
   validateGenerationOutput,
 } from "@hatchery/common";
 
@@ -11,6 +11,8 @@ import type { BatchRunLogRepository } from "../persistence/batchRunLogRepository
 import type { CommentRecord, CommentRepository } from "../persistence/commentRepository.js";
 import type { CommunityRepository } from "../persistence/communityRepository.js";
 import type { PostRecord, PostRepository } from "../persistence/postRepository.js";
+import type { WorkerCommunityRepository } from "../persistence/workerCommunityRepository.js";
+import type { WorkerRecord } from "../persistence/workerRepository.js";
 import { getApiKey } from "../utils/apiKey.js";
 
 import { generateConversationWithClaude, type ConversationGenerator } from "./aiMessageGenerator.js";
@@ -31,14 +33,23 @@ export interface RunCommunityBatchDeps {
   postRepo: PostRepository;
   commentRepo: CommentRepository;
   appSettingRepo: AppSettingRepository;
+  /**
+   * WorkerCommunity 経由で community 別の登場ワーカーを DB から解決する（#489）。
+   * community ごとにこのリポジトリで紐づくワーカーを取得し、生成・author 検証に使う。
+   */
+  workerCommunityRepo: WorkerCommunityRepository;
+  /**
+   * 紐づくワーカーが 0 件の community のフォールバック先（全 Bot ワーカー）（#489）。
+   * 省略時はフォールバックせず、紐づき 0 件の community は生成をスキップする。
+   * CLI では workerRepo.listBotWorkers を渡す。
+   */
+  botWorkerProvider?: () => Promise<readonly WorkerRecord[]>;
   /** バッチ実行ログの永続化（省略時はログ保存しない）。 */
   batchRunLogRepository?: BatchRunLogRepository;
   /** テスト用に注入可能な AI 生成関数。省略時は Claude を使う。 */
   generate?: ConversationGenerator;
   /** プロンプトに載せる直近 post/comment 件数（既定 30）。 */
   recentLimit?: number;
-  /** ワーカー定義（省略時は DEFAULT_WORKERS）。 */
-  workers?: readonly WorkerDef[];
   /**
    * 定時キー（省略時は現在時刻から "YYYY-MM-DDTHH:MM" 形式を自動生成）。
    * テストで固定 slotKey を使う場合に注入する。
@@ -89,9 +100,7 @@ export async function runCommunityBatch(
 
   const generate = deps.generate ?? generateConversationWithClaude;
   const recentLimit = deps.recentLimit ?? DEFAULT_RECENT_LIMIT;
-  const workers = deps.workers ?? (DEFAULT_WORKERS as WorkerDef[]);
   const slotKey = deps.slotKey ?? generateSlotKey();
-  const workerIds = workers.map((w) => w.id);
 
   const communities = await deps.communityRepo.list();
 
@@ -101,6 +110,27 @@ export async function runCommunityBatch(
 
   for (const community of communities) {
     try {
+      // community 別の登場ワーカーを DB から解決する（#489）。
+      // WorkerCommunity で紐づくワーカー → 0 件なら全 Bot ワーカーへフォールバック。
+      const communityWorkers = await deps.workerCommunityRepo.listWorkersByCommunity(community.id);
+      const botWorkers =
+        communityWorkers.length > 0 ? [] : ((await deps.botWorkerProvider?.()) ?? []);
+      const resolvedWorkers = selectCommunityWorkers(communityWorkers, botWorkers);
+      // 登場ワーカーが 1 人もいない community は生成をスキップする（#489 AC3）。
+      if (resolvedWorkers.length === 0) {
+        console.warn(
+          `[communityBatch] community ${community.id} に紐づくワーカーが 0 件のためスキップします。`,
+        );
+        continue;
+      }
+      const workers: readonly WorkerDef[] = resolvedWorkers.map((w) => ({
+        id: w.id,
+        displayName: w.displayName,
+        role: w.role,
+        personality: w.personality,
+      }));
+      const workerIds = workers.map((w) => w.id);
+
       // 直近 post/comment をログ形式に変換
       const recentPosts = await deps.postRepo.listByCommunity(community.id, recentLimit);
       const recentComments = await deps.commentRepo.listByCommunity(community.id, recentLimit);

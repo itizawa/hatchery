@@ -1,6 +1,5 @@
 import {
-  // auth（ログイン / プロフィール更新）
-  LoginRequestSchema,
+  // auth（プロフィール更新）
   UpdateProfileSchema,
   // community（旧 channel）の作成 / 更新
   CreateCommunitySchema,
@@ -10,9 +9,6 @@ import {
   UpdateWorkerSchema,
   // appSetting（管理者の設定更新）
   UpdateAppSettingSchema,
-  // invitation（招待リンク発行 / 受諾）
-  CreateInvitationSchema,
-  AcceptInvitationSchema,
 } from "@hatchery/common";
 
 import { extractFieldSpecs } from "./extractFieldSpecs.js";
@@ -24,17 +20,12 @@ import type { FormSpec } from "./types.js";
  * Issue 本文の AC #2 はリネーム前のスキーマ名（channel/employee/message）を列挙しているが、
  * 現行コードでは community/worker 等にリネーム済みのため、
  * 「実際にユーザーが入力するフォームの入力系スキーマ」という意図に従って現行名で採用する。
+ * #455: LoginRequestSchema・招待系スキーマは廃止済みのため除外。
  *
  * ここで列挙したスキーマから extractFieldSpecs で項目一覧を生成するため、
  * 一覧は常に Zod 定義（正本）に追従し drift しない。
  */
 const FORM_SOURCES = [
-  {
-    id: "LoginRequestSchema",
-    title: "ログイン（LoginScene）",
-    description: "ログイン画面で入力する ID とパスワード。",
-    schema: LoginRequestSchema,
-  },
   {
     id: "UpdateProfileSchema",
     title: "プロフィール更新（AccountScene / PATCH /auth/me）",
@@ -70,18 +61,6 @@ const FORM_SOURCES = [
     title: "アプリ設定更新（管理）",
     description: "管理者がアプリ設定（key / value）を更新する際の入力。",
     schema: UpdateAppSettingSchema,
-  },
-  {
-    id: "CreateInvitationSchema",
-    title: "招待リンク発行（管理）",
-    description: "管理者が招待リンクを発行する際の入力（有効期限・メモ）。",
-    schema: CreateInvitationSchema,
-  },
-  {
-    id: "AcceptInvitationSchema",
-    title: "招待受諾・ユーザー登録",
-    description: "招待リンクから新規ユーザーが登録する際の入力。",
-    schema: AcceptInvitationSchema,
   },
 ] as const;
 

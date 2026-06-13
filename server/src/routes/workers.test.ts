@@ -32,13 +32,13 @@ async function buildAppWithMember(workerRepository = createInMemoryWorkerReposit
 
 async function loginAsAdmin(app: ReturnType<typeof createApp>) {
   const agent = request.agent(app);
-  await agent.post("/api/auth/login").send({ loginId: "testuser", password: "testpass" });
+  await agent.post("/api/auth/dev-login");
   return agent;
 }
 
 async function loginAsMember(app: ReturnType<typeof createApp>) {
   const agent = request.agent(app);
-  await agent.post("/api/auth/login").send({ loginId: "testuser", password: "testpass" });
+  await agent.post("/api/auth/dev-login");
   return agent;
 }
 

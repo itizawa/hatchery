@@ -8,8 +8,16 @@ import {
   type CommunityRecord,
 } from "../persistence/communityRepository.js";
 import { createInMemoryPostRepository } from "../persistence/postRepository.js";
+import { createInMemoryWorkerCommunityRepository } from "../persistence/workerCommunityRepository.js";
+import type { WorkerRecord } from "../persistence/workerRepository.js";
 
 import { runCommunityBatchCli, type CommunityBatchCliDeps } from "./communityBatchIndex.js";
+
+/** フォールバック用の全 Bot ワーカー（DEFAULT_WORKERS 相当・haru/ken）。 */
+const botWorkers: WorkerRecord[] = [
+  { id: "haru", displayName: "haru", role: "ムードメーカー", personality: null, imageUrl: null, deletedAt: null },
+  { id: "ken", displayName: "ken", role: "ベテラン", personality: null, imageUrl: null, deletedAt: null },
+];
 
 /** テスト用のコミュニティ */
 const community1: CommunityRecord = {
@@ -70,6 +78,9 @@ describe("communityBatchIndex (#383)", () => {
         commentRepo: createInMemoryCommentRepository(),
         appSettingRepo: createInMemoryAppSettingRepository(),
         batchRunLogRepository: createInMemoryBatchRunLogRepository(),
+        // WorkerCommunity 紐づきは無し → botWorkerProvider（haru/ken）へフォールバックする。
+        workerCommunityRepo: createInMemoryWorkerCommunityRepository({ workers: [], links: [] }),
+        botWorkerProvider: () => Promise.resolve(botWorkers),
         generate,
         anthropicApiKey: "test-key",
       },

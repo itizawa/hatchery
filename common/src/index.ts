@@ -19,7 +19,6 @@ export * from "./domain/batchRunLog/index.js";
 export * from "./domain/tokenUsageLog/index.js";
 export * from "./domain/auth/index.js";
 export * from "./domain/worker/index.js";
-export * from "./domain/invitation/index.js";
 export * from "./constants/workerMessages.js";
 export * from "./errors/index.js";
 export * from "./result/index.js";

@@ -1,4 +1,4 @@
-import type { AuthUser, LoginRequest, UpdateProfile } from "@hatchery/common";
+import type { AuthUser, UpdateProfile } from "@hatchery/common";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { openApiClient } from "./client.js";
@@ -16,21 +16,7 @@ export async function fetchMe(): Promise<AuthUser | null> {
   return data ?? null;
 }
 
-/**
- * POST /auth/login を呼び出す。成功時は AuthUser を返す。失敗時は例外を投げる。
- * openApiClient 経由で baseUrl（VITE_API_BASE_URL = Cloud Run）を解決する。生の相対 fetch だと
- * クロスオリジン配信（#78: Cloudflare Pages × Cloud Run）で Pages 側へ POST して 405 になる。
- */
-export async function login(body: LoginRequest): Promise<AuthUser> {
-  const { data, response } = await openApiClient.POST("/api/auth/login", {
-    body,
-    credentials: "include",
-  });
-  if (!response.ok || !data) throw new Error(`POST /api/auth/login failed: ${response.status}`);
-  return data;
-}
-
-/** POST /auth/logout を呼び出す。openApiClient 経由で baseUrl を解決する（login と同様）。 */
+/** POST /auth/logout を呼び出す。openApiClient 経由で baseUrl を解決する。 */
 export async function logout(): Promise<void> {
   const { response } = await openApiClient.POST("/api/auth/logout", { credentials: "include" });
   if (!response.ok) throw new Error(`POST /api/auth/logout failed: ${response.status}`);
@@ -43,15 +29,6 @@ export function useAuth() {
     queryFn: fetchMe,
     staleTime: 60_000,
     retry: false,
-  });
-}
-
-/** ログインミューテーションフック。成功後に auth キャッシュを無効化する。 */
-export function useLogin() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: login,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: AUTH_ME_QUERY_KEY }),
   });
 }
 

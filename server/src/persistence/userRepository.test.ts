@@ -1,28 +1,27 @@
-import bcrypt from "bcrypt";
 import { describe, expect, it } from "vitest";
 import {
   createInMemoryUserRepository,
   createTestUserRepository,
-  LoginIdAlreadyExistsError,
+  GoogleIdAlreadyExistsError,
   type User,
 } from "./userRepository.js";
 
 const baseUser: User = {
   id: "u1",
-  loginId: "login1",
+  email: "user1@example.com",
+  googleId: "google-u1",
   displayName: "User One",
-  passwordHash: "hash1",
-  googleId: null,
   role: "member",
   avatarUrl: null,
 };
 
-describe("createInMemoryUserRepository", () => {
+describe("createInMemoryUserRepository (#455)", () => {
   it("findById は初期ユーザーを id で取得できる", async () => {
     const repo = createInMemoryUserRepository([{ ...baseUser }]);
     const user = await repo.findById("u1");
     expect(user).not.toBeNull();
-    expect(user?.loginId).toBe("login1");
+    expect(user?.email).toBe("user1@example.com");
+    expect(user?.googleId).toBe("google-u1");
     expect(user?.displayName).toBe("User One");
     expect(user?.role).toBe("member");
   });
@@ -32,41 +31,39 @@ describe("createInMemoryUserRepository", () => {
     expect(await repo.findById("missing")).toBeNull();
   });
 
-  it("findByLoginId は loginId で取得できる", async () => {
+  it("findByGoogleId は googleId で取得できる", async () => {
     const repo = createInMemoryUserRepository([{ ...baseUser }]);
-    const user = await repo.findByLoginId("login1");
+    const user = await repo.findByGoogleId("google-u1");
     expect(user?.id).toBe("u1");
   });
 
-  it("findByLoginId は存在しない loginId に null を返す", async () => {
+  it("findByGoogleId は存在しない googleId に null を返す", async () => {
     const repo = createInMemoryUserRepository([{ ...baseUser }]);
-    expect(await repo.findByLoginId("missing")).toBeNull();
+    expect(await repo.findByGoogleId("missing")).toBeNull();
   });
 
-  it("create は id=loginId・role=member・avatarUrl=null でユーザーを作成し取得できる", async () => {
+  it("create は role=memberセavatarUrl=null でユーザーを作成し取得できる", async () => {
     const repo = createInMemoryUserRepository();
     const created = await repo.create({
-      loginId: "newuser",
+      email: "new@example.com",
+      googleId: "google-new",
       displayName: "New User",
-      passwordHash: "hash-new",
     });
-    expect(created.id).toBe("newuser");
-    expect(created.loginId).toBe("newuser");
+    expect(created.email).toBe("new@example.com");
+    expect(created.googleId).toBe("google-new");
     expect(created.displayName).toBe("New User");
-    expect(created.passwordHash).toBe("hash-new");
     expect(created.role).toBe("member");
     expect(created.avatarUrl).toBeNull();
 
-    const found = await repo.findByLoginId("newuser");
+    const found = await repo.findByGoogleId("google-new");
     expect(found).toEqual(created);
   });
 
-  it("create は loginId 重複時に LoginIdAlreadyExistsError をスローする", () => {
+  it("create は googleId 重複時に GoogleIdAlreadyExistsError をスローする", () => {
     const repo = createInMemoryUserRepository([{ ...baseUser }]);
-    // 現実装は同期的にスローする
-    expect(() => repo.create({ loginId: "login1", displayName: "Dup", passwordHash: "h" })).toThrow(
-      LoginIdAlreadyExistsError,
-    );
+    expect(() =>
+      repo.create({ email: "dup@example.com", googleId: "google-u1", displayName: "Dup" }),
+    ).toThrow(GoogleIdAlreadyExistsError);
   });
 
   it("updateProfile は displayName と avatarUrl を更新し findById に反映される", async () => {
@@ -93,25 +90,30 @@ describe("createInMemoryUserRepository", () => {
 
   it("updateProfile は存在しない id にエラーをスローする", () => {
     const repo = createInMemoryUserRepository();
-    // 現実装は同期的にスローする
     expect(() => repo.updateProfile("missing", { displayName: "X" })).toThrow(
       "User not found: missing",
     );
   });
 });
 
-describe("createTestUserRepository", () => {
-  it("既定で role=admin の testuser を持ち、パスワードは testpass に一致する", async () => {
-    const repo = await createTestUserRepository();
-    const user = await repo.findByLoginId("testuser");
+describe("createTestUserRepository (#455)", () => {
+  it("既定で role=admin の dev ユーザーを持ち、email と googleId が設定されている", () => {
+    const repo = createTestUserRepository();
+    const user = repo.findById("dev-user-1");
     expect(user).not.toBeNull();
+  });
+
+  it("findByGoogleId('dev-google-id') で dev ユーザーを取得できる", async () => {
+    const repo = createTestUserRepository();
+    const user = await repo.findByGoogleId("dev-google-id");
+    expect(user).not.toBeNull();
+    expect(user?.email).toBe("dev@hatchery.local");
     expect(user?.role).toBe("admin");
-    expect(await bcrypt.compare("testpass", user?.passwordHash ?? "")).toBe(true);
   });
 
   it("role を指定するとそのロールが反映される", async () => {
-    const repo = await createTestUserRepository("member");
-    const user = await repo.findById("testuser");
+    const repo = createTestUserRepository("member");
+    const user = await repo.findByGoogleId("dev-google-id");
     expect(user?.role).toBe("member");
   });
 });

@@ -52,6 +52,8 @@ async function main(): Promise<void> {
     { createPrismaCommunityRepository },
     { createPrismaPostRepository },
     { createPrismaCommentRepository },
+    { createPrismaWorkerCommunityRepository },
+    { createPrismaWorkerRepository },
   ] = await Promise.all([
     import("../persistence/prismaClient.js"),
     import("../persistence/prismaAppSettingRepository.js"),
@@ -59,7 +61,11 @@ async function main(): Promise<void> {
     import("../persistence/prismaCommunityRepository.js"),
     import("../persistence/prismaPostRepository.js"),
     import("../persistence/prismaCommentRepository.js"),
+    import("../persistence/prismaWorkerCommunityRepository.js"),
+    import("../persistence/prismaWorkerRepository.js"),
   ]);
+
+  const workerRepo = createPrismaWorkerRepository(prisma);
 
   await runCommunityBatchCli({
     batchDeps: {
@@ -68,6 +74,10 @@ async function main(): Promise<void> {
       commentRepo: createPrismaCommentRepository(prisma),
       appSettingRepo: createPrismaAppSettingRepository(prisma),
       batchRunLogRepository: createPrismaBatchRunLogRepository(prisma),
+      // community 別の登場ワーカーを DB から解決する（#489）。
+      workerCommunityRepo: createPrismaWorkerCommunityRepository(prisma),
+      // 紐づき 0 件 community のフォールバック先（全 Bot ワーカー）。
+      botWorkerProvider: () => workerRepo.listBotWorkers(),
       anthropicApiKey: env.anthropicApiKey,
     },
     disconnect: () => prisma.$disconnect(),

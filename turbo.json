@@ -21,6 +21,16 @@
       "dependsOn": ["^build", "gen-types"],
       "outputs": ["dist/**"]
     },
+    "db:generate": {
+      "cache": false
+    },
+    "@hatchery/server#test": {
+      "dependsOn": ["^build", "@hatchery/server#db:generate"]
+    },
+    "@hatchery/server#build": {
+      "dependsOn": ["^build", "@hatchery/server#db:generate"],
+      "outputs": ["dist/**"]
+    },
     "test": {
       "dependsOn": ["^build"]
     },

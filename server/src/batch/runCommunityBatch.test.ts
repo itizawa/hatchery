@@ -5,8 +5,20 @@ import { createInMemoryBatchRunLogRepository } from "../persistence/batchRunLogR
 import { createInMemoryCommentRepository } from "../persistence/commentRepository.js";
 import { createInMemoryCommunityRepository, type CommunityRecord } from "../persistence/communityRepository.js";
 import { createInMemoryPostRepository } from "../persistence/postRepository.js";
+import {
+  createInMemoryWorkerCommunityRepository,
+  type InMemoryWorkerCommunityData,
+} from "../persistence/workerCommunityRepository.js";
+import type { WorkerRecord } from "../persistence/workerRepository.js";
 
 import { runCommunityBatch } from "./runCommunityBatch.js";
+
+/** テスト用 Bot ワーカー（フォールバック候補）。 */
+const botWorkers: WorkerRecord[] = [
+  { id: "haru", displayName: "haru", role: "ムードメーカー", personality: null, imageUrl: null, deletedAt: null },
+  { id: "ken", displayName: "ken", role: "ベテラン", personality: null, imageUrl: null, deletedAt: null },
+  { id: "mei", displayName: "mei", role: "新人", personality: null, imageUrl: null, deletedAt: null },
+];
 
 /** テスト用のコミュニティ */
 const community1: CommunityRecord = {
@@ -64,13 +76,28 @@ describe("runCommunityBatch (#306)", () => {
     vi.restoreAllMocks();
   });
 
-  const buildDeps = (communities: CommunityRecord[]) => {
+  const buildDeps = (
+    communities: CommunityRecord[],
+    workerCommunityData: InMemoryWorkerCommunityData = { workers: [], links: [] },
+  ) => {
     const communityRepo = createInMemoryCommunityRepository(communities);
     const postRepo = createInMemoryPostRepository();
     const commentRepo = createInMemoryCommentRepository();
     const appSettingRepo = createInMemoryAppSettingRepository();
     const batchRunLogRepository = createInMemoryBatchRunLogRepository();
-    return { communityRepo, postRepo, commentRepo, appSettingRepo, batchRunLogRepository, anthropicApiKey: "test-key" };
+    const workerCommunityRepo = createInMemoryWorkerCommunityRepository(workerCommunityData);
+    // 紐づき 0 件のフォールバック先（全 Bot ワーカー）。既存テストはここで haru/ken/mei を供給する。
+    const botWorkerProvider = (): Promise<readonly WorkerRecord[]> => Promise.resolve(botWorkers);
+    return {
+      communityRepo,
+      postRepo,
+      commentRepo,
+      appSettingRepo,
+      batchRunLogRepository,
+      workerCommunityRepo,
+      botWorkerProvider,
+      anthropicApiKey: "test-key",
+    };
   };
 
   it("正常系: community ごとに post と comment が永続化される", async () => {
@@ -98,8 +125,15 @@ describe("runCommunityBatch (#306)", () => {
     expect(generate).toHaveBeenCalledTimes(2);
   });
 
-  it("author が未知の workerId を含む出力はスキップされる", async () => {
-    const deps = buildDeps([community1]);
+  it("author が未知の workerId を含む出力はスキップされる（DB 取得 id 集合で検証）", async () => {
+    // community-1 に haru/ken を WorkerCommunity で紐づける（unknown-worker は含まない）
+    const deps = buildDeps([community1], {
+      workers: [botWorkers[0]!, botWorkers[1]!],
+      links: [
+        { workerId: "haru", communityId: "community-1" },
+        { workerId: "ken", communityId: "community-1" },
+      ],
+    });
     const invalidOutput = JSON.stringify({
       topic: "test",
       posts: [
@@ -114,15 +148,7 @@ describe("runCommunityBatch (#306)", () => {
     });
     const generate = vi.fn().mockResolvedValue(invalidOutput);
 
-    // workers に haru, ken のみを渡す（unknown-worker は含まない）
-    const result = await runCommunityBatch({
-      ...deps,
-      generate,
-      workers: [
-        { id: "haru", displayName: "haru", role: "ムードメーカー" },
-        { id: "ken", displayName: "ken", role: "ベテラン" },
-      ],
-    });
+    const result = await runCommunityBatch({ ...deps, generate });
 
     // 検証失敗でスキップ → 永続化されない
     expect(result.posts.length).toBe(0);
@@ -195,15 +221,79 @@ describe("runCommunityBatch (#306)", () => {
         },
       ],
     });
-    const deps = buildDeps([community1]);
+    const deps = buildDeps([community1], {
+      workers: [botWorkers[0]!],
+      links: [{ workerId: "haru", communityId: "community-1" }],
+    });
     const generate = vi.fn().mockResolvedValue(outputWithScore);
 
+    const result = await runCommunityBatch({ ...deps, generate });
+
+    expect(result.posts[0]?.score).toBe(0);
+  });
+
+  it("WorkerCommunity で紐づくワーカーが community 別にプロンプト・検証に使われる（#489 AC2/AC4）", async () => {
+    // community-1 には mei だけを紐づける。mei を author にした出力は通り、
+    // 紐づきの無い haru を author にした出力は検証で弾かれることで DB 取得を確認する。
+    const deps = buildDeps([community1], {
+      workers: [botWorkers[2]!], // mei
+      links: [{ workerId: "mei", communityId: "community-1" }],
+    });
+    const meiOutput = JSON.stringify({
+      topic: "test",
+      posts: [
+        { id: "p1", author: "mei", title: "新人の投稿", text: "よろしくお願いします", comments: [] },
+      ],
+    });
+    const haruOutput = JSON.stringify({
+      topic: "test",
+      posts: [
+        { id: "p1", author: "haru", title: "未参加ワーカー", text: "登場しないはず", comments: [] },
+      ],
+    });
+
+    const okResult = await runCommunityBatch({
+      ...deps,
+      generate: vi.fn().mockResolvedValue(meiOutput),
+      slotKey: "2026-06-13T09:00",
+    });
+    expect(okResult.posts.map((p) => p.author)).toEqual(["mei"]);
+
+    const ngResult = await runCommunityBatch({
+      ...deps,
+      generate: vi.fn().mockResolvedValue(haruOutput),
+      slotKey: "2026-06-13T12:00",
+    });
+    // haru は community-1 に紐づいていないため検証で弾かれる
+    expect(ngResult.posts.length).toBe(0);
+  });
+
+  it("紐づくワーカーが 0 件の community は全 Bot ワーカーへフォールバックする（#489 AC3）", async () => {
+    // WorkerCommunity の紐づき無し → botWorkerProvider（haru/ken/mei）が使われる
+    const deps = buildDeps([community1], { workers: [], links: [] });
+    const generate = vi.fn().mockResolvedValue(validGenerationOutput); // author: haru / ken
+
+    const result = await runCommunityBatch({ ...deps, generate });
+
+    // フォールバックで haru/ken が許可され生成される
+    expect(generate).toHaveBeenCalledTimes(1);
+    expect(result.posts.length).toBe(2);
+  });
+
+  it("紐づきも Bot ワーカーも 0 件の community は生成をスキップする（#489 AC3）", async () => {
+    const deps = buildDeps([community1], { workers: [], links: [] });
+    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+
+    // botWorkerProvider を空に上書き（全 Bot ワーカーも 0 件）
     const result = await runCommunityBatch({
       ...deps,
       generate,
-      workers: [{ id: "haru", displayName: "haru", role: "ムードメーカー" }],
+      botWorkerProvider: () => Promise.resolve([]),
     });
 
-    expect(result.posts[0]?.score).toBe(0);
+    // 登場ワーカーが 1 人もいないため生成しない
+    expect(generate).not.toHaveBeenCalled();
+    expect(result.posts.length).toBe(0);
+    expect(result.comments.length).toBe(0);
   });
 });

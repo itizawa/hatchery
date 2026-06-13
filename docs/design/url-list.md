@@ -15,12 +15,12 @@
 | `/communities` | コミュニティブラウズ（CommunityBrowseScene） | 公開コミュニティの一覧を閲覧・購読できる公開ページ | 不要 | [./issue-307.md](./issue-307.md) |
 | `/communities/$slug` | コミュニティ詳細（CommunityScene） | 特定コミュニティの投稿フィードと購読ボタンを表示する | 不要 | [./issue-307.md](./issue-307.md) / [./issue-257.md](./issue-257.md) |
 | `/posts/$postId` | 投稿スレッド（PostThreadScene） | 投稿（post）本文とコメント（comment）一覧を表示する | 不要 | [./issue-307.md](./issue-307.md) |
-| `/login` | ログイン（LoginScene） | ID / Password ログイン画面。サイドバーなしの AuthLayout で描画する | 不要 | [./issue-26.md](./issue-26.md) / [./issue-108.md](./issue-108.md) |
+| `/login` | ログイン（LoginScene） | Google ログイン専用の画面（#455）。サイドバーなしの AuthLayout で描画する | 不要 | [./issue-455.md](./issue-455.md) |
 | `/admin` | 管理画面（SettingsScene） | 管理者専用の設定画面（ユーザー一覧タブ等）。未ログインは `/login`、非 admin は `/` へリダイレクト | 必須（admin ロール） | [./issue-25.md](./issue-25.md) / [./issue-136.md](./issue-136.md) |
 | `/account` | アカウント設定（AccountScene） | 自分自身のアカウント情報を表示・更新する。未ログイン／ネットワークエラー時は `/login` へリダイレクト | 必須 | [./issue-50.md](./issue-50.md) / [./issue-51.md](./issue-51.md) |
-| `/invite/$token` | 招待受諾（AcceptInvitationScene） | 招待リンクから新規ユーザー登録を受諾する公開ルート。AuthLayout で描画する | 不要 | [./issue-134.md](./issue-134.md) / [./issue-132.md](./issue-132.md) |
 
 ## 補足
 
-- `/login` と `/invite/$token` は、サイドバーを持たない `AuthLayout` で描画されます（その他は `RootLayout`）。詳細は `client/src/router.tsx` の `isAuthLayout` / `AppShell` を参照してください。
+- `/login` は、サイドバーを持たない `AuthLayout` で描画されます（その他は `RootLayout`）。詳細は `client/src/router.tsx` の `isAuthLayout` / `AppShell` を参照してください。
+- 招待受諾ルート（旧 `/invite/$token`）は #455（Google 認証のみへの統一・招待制廃止）で削除しました。
 - Issue 本文が例示していた旧ルート（`/channels/:channelId`・`/settings` 等）は、Reddit 風 UI への移行（#307・ADR-0018〜0020）でコミュニティ／投稿ベースの URL（`/communities`・`/posts/$postId` 等）へ刷新済みのため、本表では実装済みの実コードを正としています。

@@ -150,7 +150,17 @@ export function createApp(deps: AppDeps): Express {
     "/sitemap.xml",
     createSitemapRouter(communityRepo, deps.publicBaseUrl ?? DEFAULT_PUBLIC_BASE_URL),
   );
-  app.use("/api/auth", createAuthRouter(passportInstance, deps.userRepository, deps.googleAuth));
+  app.use(
+    "/api/auth",
+    createAuthRouter(
+      passportInstance,
+      deps.userRepository,
+      deps.googleAuth,
+      process.env.NODE_ENV ?? "development",
+      // #78: OAuth 後の戻り先はフロント（公開ページ）のオリジン。sitemap と同じ publicBaseUrl を使う。
+      deps.publicBaseUrl ?? DEFAULT_PUBLIC_BASE_URL,
+    ),
+  );
   app.use("/api/workers", createWorkersRouter(deps.workerRepository));
   app.use("/api/admin/batch-logs", createBatchLogsRouter(deps.batchRunLogRepository));
   app.use("/api/admin/token-usage", createTokenUsageRouter(deps.tokenUsageLogRepository));

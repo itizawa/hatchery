@@ -25,6 +25,7 @@
 | community | コミュニティ一覧・詳細・購読（`/communities`） | [community/usecases.md](community/usecases.md) | UC-COMM-01〖06 |
 | post-thread | 投稿スレッド・upvote（`/posts/$postId`） | [post-thread/usecases.md](post-thread/usecases.md) | UC-POST-01〖06 |
 | admin | 管理画面（Worker / Community 管理, `/admin`） | [admin/usecases.md](admin/usecases.md) | UC-ADMIN-01〖09 |
+| legal | 利用規約・プライバシーポリシー（`/terms`・`/privacy`） | [legal/usecases.md](legal/usecases.md) | UC-LEGAL-01〖04 |
 
 ## ユースケース一覧（サマリ）
 
@@ -77,3 +78,10 @@
 - UC-ADMIN-07: admin ユーザーがコミュニティ管理タブで一覧を閲覧できる
 - UC-ADMIN-08: admin ユーザーが Worker の参加コミュニティを編集できる
 - UC-ADMIN-09: admin ユーザーが Worker 新規作成時に参加コミュニティを指定できる
+
+### legal — 利用規約・プライバシーポリシー
+
+- UC-LEGAL-01: 利用規約ページ（/terms）が未ログインでも閲覧できる
+- UC-LEGAL-02: プライバシーポリシーページ（/privacy）が未ログインでも閲覧できる
+- UC-LEGAL-03: サイドバーから利用規約・プライバシーポリシーへ遷移できる
+- UC-LEGAL-04: リーガルページの本文が暫定（ドラフト）である旨が明示される

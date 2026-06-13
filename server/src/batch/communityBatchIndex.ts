@@ -1,6 +1,7 @@
 import { pathToFileURL } from "node:url";
 
 import { loadEnv } from "../config/env.js";
+import { createClaudeConversationGenerator } from "./aiMessageGenerator.js";
 import {
   runCommunityBatch,
   type RunCommunityBatchDeps,
@@ -87,6 +88,10 @@ async function main(): Promise<void> {
       // 登場ローテーション（#464）: lastAppearedSlotKey の読み書きで登場ワーカーを公平化する。
       worldStateRepository: createPrismaWorldStateRepository(prisma),
       anthropicApiKey: env.anthropicApiKey,
+      // モデル選定の設定化（#389 AC1）: env.batchModel から生成関数を作って注入する。
+      generate: createClaudeConversationGenerator(env.batchModel),
+      // 直近ログ件数の設定化（#389 AC2）: env.batchRecentLimit を recentLimit に反映する。
+      recentLimit: env.batchRecentLimit,
     },
     disconnect: () => prisma.$disconnect(),
   });

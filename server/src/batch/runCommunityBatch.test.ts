@@ -369,6 +369,29 @@ describe("runCommunityBatch (#306)", () => {
     expect(ngResult.posts.length).toBe(0);
   });
 
+  it("recentLimit を指定すると直近ログ取得件数に反映される（#389 AC2）", async () => {
+    const deps = buildDeps([community1]);
+    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+    // postRepo.listByCommunity / commentRepo.listByCommunity の limit 引数を観測する。
+    const postSpy = vi.spyOn(deps.postRepo, "listByCommunity");
+    const commentSpy = vi.spyOn(deps.commentRepo, "listByCommunity");
+
+    await runCommunityBatch({ ...deps, generate, recentLimit: 7 });
+
+    expect(postSpy).toHaveBeenCalledWith("community-1", 7);
+    expect(commentSpy).toHaveBeenCalledWith("community-1", 7);
+  });
+
+  it("recentLimit 未指定なら既定の 30 件で取得する（#389 AC2）", async () => {
+    const deps = buildDeps([community1]);
+    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+    const postSpy = vi.spyOn(deps.postRepo, "listByCommunity");
+
+    await runCommunityBatch({ ...deps, generate });
+
+    expect(postSpy).toHaveBeenCalledWith("community-1", 30);
+  });
+
   it("紐づくワーカーが 0 件の community は全 Bot ワーカーへフォールバックする（#489 AC3）", async () => {
     // WorkerCommunity の紐づき無し → botWorkerProvider（haru/ken/mei）が使われる
     const deps = buildDeps([community1], { workers: [], links: [] });

@@ -114,4 +114,34 @@ describe("buildCommunityPrompt (#306)", () => {
       expect(prompt).toContain("さん付け");
     });
   });
+
+  // #389 AC4: 安定 prefix（テンプレート + ワーカー + 作風）→ 可変 suffix（直近ログ）の順に構造化
+  describe("プロンプトキャッシュ向けの構造化（#389 AC4）", () => {
+    it("安定部（トーン規約・作風・ワーカー）が可変部（直近ログ）より前に置かれる", () => {
+      const prompt = buildCommunityPrompt(baseParams);
+      const toneIdx = prompt.indexOf(TONE_GUIDELINES);
+      const descIdx = prompt.indexOf("テクノロジーとプログラミングの話題を楽しむコミュニティ。");
+      const workerIdx = prompt.indexOf("haru");
+      const recentLogIdx = prompt.indexOf("[technology] haru: 最近の AI トレンド面白いですね");
+
+      // 安定部はすべて存在し、直近ログより前にある
+      expect(toneIdx).toBeGreaterThanOrEqual(0);
+      expect(descIdx).toBeGreaterThanOrEqual(0);
+      expect(workerIdx).toBeGreaterThanOrEqual(0);
+      expect(recentLogIdx).toBeGreaterThanOrEqual(0);
+      expect(toneIdx).toBeLessThan(recentLogIdx);
+      expect(descIdx).toBeLessThan(recentLogIdx);
+      expect(workerIdx).toBeLessThan(recentLogIdx);
+    });
+
+    it("可変部（直近ログ）は出力フォーマット指示より前に置かれる", () => {
+      const prompt = buildCommunityPrompt(baseParams);
+      const recentLogIdx = prompt.indexOf("[technology] haru: 最近の AI トレンド面白いですね");
+      const outputFormatIdx = prompt.indexOf("以下のJSON形式のみで出力してください");
+
+      expect(recentLogIdx).toBeGreaterThanOrEqual(0);
+      expect(outputFormatIdx).toBeGreaterThanOrEqual(0);
+      expect(recentLogIdx).toBeLessThan(outputFormatIdx);
+    });
+  });
 });

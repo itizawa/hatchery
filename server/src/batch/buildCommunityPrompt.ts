@@ -32,13 +32,22 @@ export const TONE_GUIDELINES = `## トーン規約（このコミュニティの
 - 失敗やハプニング・意見の食い違いは、最後は温かく着地させ深刻化させない。全員が常に気の利いたことを言う必要はなく、生返事・雑談も歓迎。`;
 
 /**
- * community 単位の生成プロンプトを構築する（#306 / ADR-0019 / ADR-0020）。
+ * community 単位の生成プロンプトを構築する（#306 / ADR-0019 / ADR-0020 / #389 AC4）。
  * - community の description（作風）を含める
  * - worker 定義（id / displayName / role / personality）を含める
  * - 直近ログ（formatRecentLog の出力）を含める
  * - お題（open_prompts）は含めない（ADR-0020）
  * - score は生成しない（ADR-0019）
  * - 出力形式: { topic, posts: [{ id, author, title, text, comments: [{ author, text }] }] }
+ *
+ * 構造（#389 AC4・プロンプトキャッシュ向け）:
+ *   安定 prefix（指示文 + トーン規約 + 作風 description/synopsis + ワーカー定義）
+ *   → 可変 suffix（直近ログ）
+ *   → 出力フォーマット指示
+ * 安定部を前・可変部を後ろに置くことで、将来 cache_control を安定部末尾に付けるだけで
+ * プロンプトキャッシュを適用できる形にしてある。現状は ADR-0030（1 定時 = 1 community = 1 API コール）
+ * により同一実行内で prefix を共有する相手がおらず、かつ安定部が sonnet-4-6 のキャッシュ最小 prefix
+ * （2048 トークン）に満たないため cache_control は付与しない（理由は docs/design/issue-389.md に記録）。
  */
 export function buildCommunityPrompt(params: BuildCommunityPromptParams): string {
   const { community, workers, recentLog } = params;

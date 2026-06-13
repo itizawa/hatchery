@@ -32,7 +32,32 @@ export interface ServerEnv {
   anthropicApiKey: string | undefined;
   /** GCS バケット名（#419）。設定時は GcsStorageService を使う。未設定なら InMemoryStorageService。 */
   gcsBucketName: string | undefined;
+  /** シーン生成バッチで使う Claude モデル（#389 AC1）。許可値のみ。既定 claude-sonnet-4-6。 */
+  batchModel: BatchModel;
+  /** プロンプトに載せる直近 post/comment 件数（#389 AC2）。1〜50。既定 30。 */
+  batchRecentLimit: number;
 }
+
+/**
+ * シーン生成バッチで許可する Claude モデル（#389 AC1 / ADR-0023）。
+ * - claude-sonnet-4-6: 既定。入力 $3 / 出力 $15 per 1M tok。
+ * - claude-haiku-4-5: 低コスト枠。入力 $1 / 出力 $5 per 1M tok。品質許容ならコストを約 1/3 に。
+ * 値を増やすときはここだけ書き換える（Zod enum と型が連動する）。
+ */
+export const ALLOWED_BATCH_MODELS = ["claude-sonnet-4-6", "claude-haiku-4-5"] as const;
+
+/** 許可されたバッチモデルの型（#389 AC1）。 */
+export type BatchModel = (typeof ALLOWED_BATCH_MODELS)[number];
+
+/** バッチモデルの既定値（#389 AC1）。 */
+export const DEFAULT_BATCH_MODEL: BatchModel = "claude-sonnet-4-6";
+
+/** 直近ログ件数の既定値（#389 AC2）。runCommunityBatch の DEFAULT_RECENT_LIMIT と一致させる。 */
+export const DEFAULT_BATCH_RECENT_LIMIT = 30;
+
+/** 直近ログ件数の許容範囲（#389 AC2）。表示・トークン・DB 負荷を踏まえた上下限。 */
+export const BATCH_RECENT_LIMIT_MIN = 1;
+export const BATCH_RECENT_LIMIT_MAX = 50;
 
 /** 公開ページのベース URL の既定値（#259）。client の DEFAULT_OGP_URL と同じドメイン。 */
 export const DEFAULT_PUBLIC_BASE_URL = "https://hatchery.pages.dev";
@@ -80,6 +105,15 @@ const EnvSchema = z.object({
     .optional()
     .transform((v) => v || undefined),
   GCS_BUCKET_NAME: z.string().min(1).optional(),
+  // シーン生成バッチのモデル（#389 AC1）。許可値のみ。既定 sonnet-4-6。不正値は parse 時に throw。
+  BATCH_MODEL: z.enum(ALLOWED_BATCH_MODELS).default(DEFAULT_BATCH_MODEL),
+  // 直近ログ件数（#389 AC2）。1〜50 に制限。既定 30。範囲外・非数値は parse 時に throw。
+  BATCH_RECENT_LIMIT: z.coerce
+    .number()
+    .int()
+    .min(BATCH_RECENT_LIMIT_MIN)
+    .max(BATCH_RECENT_LIMIT_MAX)
+    .default(DEFAULT_BATCH_RECENT_LIMIT),
 });
 
 /** 環境変数から ServerEnv を構築する。不正な値は ZodError を投げて起動時に気付けるようにする。 */
@@ -100,6 +134,8 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): ServerEnv {
     GOOGLE_CALLBACK_URL: source.GOOGLE_CALLBACK_URL,
     ANTHROPIC_API_KEY: source.ANTHROPIC_API_KEY,
     GCS_BUCKET_NAME: source.GCS_BUCKET_NAME,
+    BATCH_MODEL: source.BATCH_MODEL,
+    BATCH_RECENT_LIMIT: source.BATCH_RECENT_LIMIT,
   });
   return {
     port: parsed.PORT,
@@ -117,5 +153,7 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): ServerEnv {
     googleCallbackUrl: parsed.GOOGLE_CALLBACK_URL,
     anthropicApiKey: parsed.ANTHROPIC_API_KEY,
     gcsBucketName: parsed.GCS_BUCKET_NAME,
+    batchModel: parsed.BATCH_MODEL,
+    batchRecentLimit: parsed.BATCH_RECENT_LIMIT,
   };
 }

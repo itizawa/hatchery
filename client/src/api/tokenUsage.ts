@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { TokenUsageLogSchema } from "@hatchery/common";
 import type { TokenUsageLog } from "@hatchery/common";
 import { z } from "zod";
@@ -43,8 +43,12 @@ export async function fetchTokenUsage(): Promise<TokenUsageResult> {
   return { logs, summary };
 }
 
+/**
+ * トークン使用量を取得するフック（#153）。
+ * useSuspenseQuery（#459/#463）。ローディング・エラーは呼び出し元の QueryBoundary に委譲する。
+ */
 export function useTokenUsage() {
-  return useQuery({
+  return useSuspenseQuery({
     queryKey: TOKEN_USAGE_QUERY_KEY,
     queryFn: fetchTokenUsage,
   });

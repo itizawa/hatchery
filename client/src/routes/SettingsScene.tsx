@@ -10,17 +10,35 @@ import { useBatchLogs, useRefreshBatchLogs } from "../api/batchLogs.js";
 import { useTokenUsage, useRefreshTokenUsage } from "../api/tokenUsage.js";
 import { AdminWorkerTable } from "../components/AdminWorkerTable.js";
 import { CommunitiesTab } from "../components/CommunitiesTab.js";
+import { QueryBoundary } from "../components/QueryBoundary.js";
 import { type SettingsTabValue } from "./settingsTabValues.js";
 
-/** API トークン設定タブのコンテンツ（#52）。 */
-const ApiTokenSettings = (): ReactElement => {
-  const { data: settings, isLoading: isSettingsLoading } = useAdminSettings();
+/** タブ内のローディング表示（スケルトン行）。data-testid で各タブを識別する。 */
+const TabSkeleton = ({ testId }: { testId: string }): ReactElement => (
+  <Box>
+    {Array.from({ length: 3 }, (_, i) => (
+      <Skeleton key={i} variant="text" height={32} data-testid={testId} sx={{ my: 0.5 }} />
+    ))}
+  </Box>
+);
+
+/** API トークン設定タブのローディング表示（QueryBoundary の fallback・#463）。 */
+const ApiTokenSettingsSkeleton = (): ReactElement => (
+  <Box sx={{ maxWidth: 480, display: "flex", flexDirection: "column", gap: 2 }}>
+    <Skeleton variant="text" height={24} width="60%" data-testid="api-token-skeleton" />
+    <Skeleton variant="text" height={40} />
+  </Box>
+);
+
+/** API トークン設定タブの本体（#52）。useSuspenseQuery で取得し data は undefined を取らない。 */
+const ApiTokenSettingsInner = (): ReactElement => {
+  const { data: settings } = useAdminSettings();
   const saveMutation = useSaveAdminSetting();
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [errorOpen, setErrorOpen] = useState(false);
 
   const currentMasked =
-    settings?.find((s) => s.key === "CLAUDE_API_KEY")?.maskedValue ?? null;
+    settings.find((s) => s.key === "CLAUDE_API_KEY")?.maskedValue ?? null;
 
   const form = useForm({
     defaultValues: { apiKey: "" },
@@ -34,15 +52,6 @@ const ApiTokenSettings = (): ReactElement => {
       }
     },
   });
-
-  if (isSettingsLoading) {
-    return (
-      <Box sx={{ maxWidth: 480, display: "flex", flexDirection: "column", gap: 2 }}>
-        <Skeleton variant="text" height={24} width="60%" data-testid="api-token-skeleton" />
-        <Skeleton variant="text" height={40} />
-      </Box>
-    );
-  }
 
   return (
     <Box
@@ -106,20 +115,17 @@ const ApiTokenSettings = (): ReactElement => {
   );
 };
 
-/** バッチログタブのコンテンツ（#75）。 */
-const BatchLogs = (): ReactElement => {
-  const { data: logs = [], isLoading: isLogsLoading } = useBatchLogs();
-  const refresh = useRefreshBatchLogs();
+/** API トークン設定タブ（#52 / #463）。QueryBoundary でローディング・エラーを扱う。 */
+const ApiTokenSettings = (): ReactElement => (
+  <QueryBoundary fallback={<ApiTokenSettingsSkeleton />}>
+    <ApiTokenSettingsInner />
+  </QueryBoundary>
+);
 
-  if (isLogsLoading) {
-    return (
-      <Box>
-        {Array.from({ length: 3 }, (_, i) => (
-          <Skeleton key={i} variant="text" height={32} data-testid="batch-logs-skeleton" sx={{ my: 0.5 }} />
-        ))}
-      </Box>
-    );
-  }
+/** バッチログタブの本体（#75）。useSuspenseQuery で取得し data は undefined を取らない。 */
+const BatchLogsInner = (): ReactElement => {
+  const { data: logs } = useBatchLogs();
+  const refresh = useRefreshBatchLogs();
 
   return (
     <Box>
@@ -171,22 +177,19 @@ const BatchLogs = (): ReactElement => {
   );
 };
 
-/** トークン使用量タブのコンテンツ（#153）。 */
-const TokenUsageTab = (): ReactElement => {
-  const { data, isLoading } = useTokenUsage();
-  const refresh = useRefreshTokenUsage();
-  const logs = data?.logs ?? [];
-  const summary = data?.summary;
+/** バッチログタブ（#75 / #463）。QueryBoundary でローディング・エラーを扱う。 */
+const BatchLogs = (): ReactElement => (
+  <QueryBoundary fallback={<TabSkeleton testId="batch-logs-skeleton" />}>
+    <BatchLogsInner />
+  </QueryBoundary>
+);
 
-  if (isLoading) {
-    return (
-      <Box>
-        {Array.from({ length: 3 }, (_, i) => (
-          <Skeleton key={i} variant="text" height={32} data-testid="token-usage-skeleton" sx={{ my: 0.5 }} />
-        ))}
-      </Box>
-    );
-  }
+/** トークン使用量タブの本体（#153）。useSuspenseQuery で取得し data は undefined を取らない。 */
+const TokenUsageTabInner = (): ReactElement => {
+  const { data } = useTokenUsage();
+  const refresh = useRefreshTokenUsage();
+  const logs = data.logs;
+  const summary = data.summary;
 
   return (
     <Box>
@@ -241,6 +244,13 @@ const TokenUsageTab = (): ReactElement => {
     </Box>
   );
 };
+
+/** トークン使用量タブ（#153 / #463）。QueryBoundary でローディング・エラーを扱う。 */
+const TokenUsageTab = (): ReactElement => (
+  <QueryBoundary fallback={<TabSkeleton testId="token-usage-skeleton" />}>
+    <TokenUsageTabInner />
+  </QueryBoundary>
+);
 
 /** 管理画面のタブ定義。配列駆動にして将来のタブ追加（会社設定・定時設定など）を妨げない。 */
 interface SettingsTab {

@@ -12,7 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Reddit 風 UI の「AI ワーカーたちが投稿し合う公共コミュニティ」を放置して眺める観察エンタメ（`concept.md`・ADR-0018〜0020）。構造は `Hatchery > community > post > comment`。ユーザーの関与は **up vote と community 購読のみ**（投稿・コメントはしない）。設計上の重要な制約:
 
-- **定時方式**: 常時稼働せず、1 日数回の「定時」に **community ごと 1 API コールで複数 post / comment（複数ワーカーの掛け合い）** を JSON 生成・検証・community 紐づきで永続化する。常時稼働プロセスは前提にしない（ADR-0009 / ADR-0018）。
+- **定時方式**: 常時稼働せず、1 日数回の「定時」に、**vote 重み付きランダムで選んだ 1 コミュニティだけ**を 1 API コールで複数 post / comment（複数ワーカーの掛け合い）を JSON 生成・検証・community 紐づきで永続化する。これにより API コール/定時は常に最大 1 回でコミュニティ数に非依存（ADR-0030）。重みは直近 7 日の純 vote スコア（up−down）+ cold start 床 +1。常時稼働プロセスは前提にしない（ADR-0009 / ADR-0018 / ADR-0030）。
 - **純粋な会話観察に集中（ADR-0023）**: プロダクトが GitHub Issue 等の外部成果物を生成する機能は持たない（goal 機構 / リサーチャー / artifactConfig は廃止）。進化イベント・経験値・関係値・mood といった成長メカニクスも持たない。生成エンジンは `@anthropic-ai/sdk` の単発コールのみで、Claude Agent SDK は採用しない。
 - MVP は「最小 1 ループ」のみ（ワーカー 3 人・community 2 つ・定時 2 回）。ホームフィードは新着順で十分。
 

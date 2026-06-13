@@ -39,12 +39,19 @@ export function encrypt(plaintext: string): string {
 /** encrypt で生成した文字列を復号して元の平文を返す。不正な形式や改竄があれば例外を投げる。 */
 export function decrypt(ciphertext: string): string {
   const parts = ciphertext.split(":");
-  if (parts.length !== 3) throw new Error("Invalid ciphertext format");
   const [ivB64, authTagB64, encryptedB64] = parts;
+  if (
+    parts.length !== 3 ||
+    ivB64 === undefined ||
+    authTagB64 === undefined ||
+    encryptedB64 === undefined
+  ) {
+    throw new Error("Invalid ciphertext format");
+  }
   const key = getKey();
-  const iv = Buffer.from(ivB64!, "base64");
-  const authTag = Buffer.from(authTagB64!, "base64");
-  const encrypted = Buffer.from(encryptedB64!, "base64");
+  const iv = Buffer.from(ivB64, "base64");
+  const authTag = Buffer.from(authTagB64, "base64");
+  const encrypted = Buffer.from(encryptedB64, "base64");
   const decipher = createDecipheriv(ALGORITHM, key, iv);
   decipher.setAuthTag(authTag);
   return decipher.update(encrypted).toString("utf8") + decipher.final("utf8");

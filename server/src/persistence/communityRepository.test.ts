@@ -8,6 +8,8 @@ const makeCommunity = (overrides: Partial<Parameters<typeof createInMemoryCommun
   description: "テクノロジーコミュニティ",
   synopsis: null,
   lastSlotKey: null,
+  iconUrl: null,
+  coverUrl: null,
   createdAt: new Date("2026-01-01"),
   ...overrides,
 });
@@ -60,6 +62,50 @@ describe("createInMemoryCommunityRepository", () => {
       const repo = createInMemoryCommunityRepository([]);
       const result = await repo.list();
       expect(result).toEqual([]);
+    });
+  });
+
+  describe("create（#457）", () => {
+    it("新規作成時は iconUrl / coverUrl が null になる", async () => {
+      const repo = createInMemoryCommunityRepository([]);
+      const created = await repo.create({ slug: "new", name: "New", description: "説明" });
+      expect(created.iconUrl).toBeNull();
+      expect(created.coverUrl).toBeNull();
+    });
+  });
+
+  describe("update（#457 画像 URL の永続化）", () => {
+    it("iconUrl を更新できる", async () => {
+      const repo = createInMemoryCommunityRepository([makeCommunity()]);
+      const updated = await repo.update("community-1", {
+        iconUrl: "https://example.com/icon.png",
+      });
+      expect(updated?.iconUrl).toBe("https://example.com/icon.png");
+      const refetched = await repo.findById("community-1");
+      expect(refetched?.iconUrl).toBe("https://example.com/icon.png");
+    });
+
+    it("coverUrl を更新できる", async () => {
+      const repo = createInMemoryCommunityRepository([makeCommunity()]);
+      const updated = await repo.update("community-1", {
+        coverUrl: "https://example.com/cover.png",
+      });
+      expect(updated?.coverUrl).toBe("https://example.com/cover.png");
+    });
+
+    it("iconUrl 更新時に name / description は変更されない", async () => {
+      const repo = createInMemoryCommunityRepository([makeCommunity()]);
+      const updated = await repo.update("community-1", {
+        iconUrl: "https://example.com/icon.png",
+      });
+      expect(updated?.name).toBe("Technology");
+      expect(updated?.description).toBe("テクノロジーコミュニティ");
+    });
+
+    it("存在しない id の更新は null を返す", async () => {
+      const repo = createInMemoryCommunityRepository([]);
+      const updated = await repo.update("nope", { iconUrl: "https://example.com/icon.png" });
+      expect(updated).toBeNull();
     });
   });
 });

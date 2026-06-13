@@ -67,18 +67,50 @@ function renderRouter(router: AppRouter): ReactElement {
   );
 }
 
-describe("AuthLayout（ログインページ専用レイアウト）", () => {
+describe("ログインモーダル導線（#454）", () => {
+  beforeEach(() => {
+    stubFetch({ authenticated: false });
+  });
   afterEach(() => {
     vi.unstubAllGlobals();
   });
 
-  it("/login ではサイドバーが表示されない", async () => {
+  // #454: /login ルートは廃止せず /?login=1 へリダイレクトし、ホーム上にログインモーダルを開く。
+  // モーダルが開くと背景は aria-hidden になるため、背景コンテンツの存在は role ではなく text で検証する。
+  it("/login を開くとホーム上にログインモーダル（Google でログイン）が開く", async () => {
     const router = createAppRouter({
       history: createMemoryHistory({ initialEntries: ["/login"] }),
     });
     render(renderRouter(router));
-    expect(await screen.findByRole("heading", { name: /ログイン/ })).toBeInTheDocument();
-    expect(screen.queryByRole("navigation", { name: /サイドバー/ })).not.toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /Google でログイン/ })).toBeInTheDocument();
+    // 背景にはホームフィード（ゲスト UI）が残る（DOM 上に存在する）。
+    expect(await screen.findByText("ホームフィード")).toBeInTheDocument();
+  });
+
+  // #454: URL 駆動（?login=1）でモーダルが復元され、背景の閲覧コンテキストが保持される。
+  it("?login=1 付きでホームを開くとログインモーダルが開き、背景のホームフィードが残る", async () => {
+    const router = createAppRouter({
+      history: createMemoryHistory({ initialEntries: ["/?login=1"] }),
+    });
+    render(renderRouter(router));
+    expect(await screen.findByRole("button", { name: /Google でログイン/ })).toBeInTheDocument();
+    expect(await screen.findByText("ホームフィード")).toBeInTheDocument();
+  });
+
+  // #454: login search param が無ければモーダルは閉じている。
+  it("login search param が無いホームではログインモーダルが開かない", async () => {
+    const router = createAppRouter({
+      history: createMemoryHistory({ initialEntries: ["/"] }),
+    });
+    render(renderRouter(router));
+    expect(await screen.findByRole("heading", { name: /ホームフィード/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Google でログイン/ })).not.toBeInTheDocument();
+  });
+});
+
+describe("AuthLayout（LP 専用レイアウト）", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   // 受け入れ条件 #167: LP（/lp）はサイドバーなしの AuthLayout で描画する。
@@ -141,6 +173,24 @@ describe("createAppRouter", () => {
     render(renderRouter(router));
     expect(await screen.findByRole("heading", { name: /管理画面/ })).toBeInTheDocument();
   });
+
+  // 受け入れ条件 #484-1,2: 利用規約ページ（/terms）をルートとして描画する。
+  it("利用規約ルート（/terms）で利用規約の見出しを描画する", async () => {
+    const router = createAppRouter({
+      history: createMemoryHistory({ initialEntries: ["/terms"] }),
+    });
+    render(renderRouter(router));
+    expect(await screen.findByRole("heading", { name: /利用規約/ })).toBeInTheDocument();
+  });
+
+  // 受け入れ条件 #484-1,2: プライバシーポリシーページ（/privacy）をルートとして描画する。
+  it("プライバシーポリシールート（/privacy）でプライバシーポリシーの見出しを描画する", async () => {
+    const router = createAppRouter({
+      history: createMemoryHistory({ initialEntries: ["/privacy"] }),
+    });
+    render(renderRouter(router));
+    expect(await screen.findByRole("heading", { name: /プライバシーポリシー/ })).toBeInTheDocument();
+  });
 });
 
 // 認証ガード: 未ログインで保護ルートを開くと /login へリダイレクトする。
@@ -162,23 +212,25 @@ describe("認証ガード（未ログイン時のリダイレクト）", () => {
     expect(screen.queryByRole("heading", { name: /^ログイン$/ })).not.toBeInTheDocument();
   });
 
-  // Issue #236: 動的 import 後も認証ガードが正しく機能することを担保する。
-  it("未ログインでアカウント（/account）を開くと /login へリダイレクトする", async () => {
+  // Issue #236 / #454: 動的 import 後も認証ガードが機能する。未ログインで保護ルートを開くと
+  // /?login=1 へリダイレクトし、公開ホーム上にログインモーダルを開いて認証導線へ誘導する。
+  it("未ログインでアカウント（/account）を開くとホーム上にログインモーダルが開く", async () => {
     const router = createAppRouter({
       history: createMemoryHistory({ initialEntries: ["/account"] }),
     });
     render(renderRouter(router));
-    expect(await screen.findByRole("heading", { name: /ログイン/ })).toBeInTheDocument();
-    expect(screen.queryByRole("navigation", { name: /サイドバー/ })).not.toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /Google でログイン/ })).toBeInTheDocument();
+    // 公開ホーム（ホームフィード）へリダイレクトされたうえでモーダルが重なる（背景は aria-hidden）。
+    expect(await screen.findByText("ホームフィード")).toBeInTheDocument();
   });
 
-  it("未ログインで管理画面（/admin）を開くと /login へリダイレクトする", async () => {
+  it("未ログインで管理画面（/admin）を開くとホーム上にログインモーダルが開く", async () => {
     const router = createAppRouter({
       history: createMemoryHistory({ initialEntries: ["/admin"] }),
     });
     render(renderRouter(router));
-    expect(await screen.findByRole("heading", { name: /ログイン/ })).toBeInTheDocument();
-    expect(screen.queryByRole("navigation", { name: /サイドバー/ })).not.toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /Google でログイン/ })).toBeInTheDocument();
+    expect(await screen.findByText("ホームフィード")).toBeInTheDocument();
   });
 
   // コミュニティブラウズは認証不要（公開ページ）
@@ -189,5 +241,25 @@ describe("認証ガード（未ログイン時のリダイレクト）", () => {
     render(renderRouter(router));
     expect(await screen.findByRole("heading", { name: /コミュニティを探す/ })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: /ログイン/ })).not.toBeInTheDocument();
+  });
+
+  // 受け入れ条件 #484-6: 利用規約は認証不要（公開ページ）
+  it("未認証で利用規約（/terms）を開いても /login へリダイレクトしない", async () => {
+    const router = createAppRouter({
+      history: createMemoryHistory({ initialEntries: ["/terms"] }),
+    });
+    render(renderRouter(router));
+    expect(await screen.findByRole("heading", { name: /利用規約/ })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /^ログイン$/ })).not.toBeInTheDocument();
+  });
+
+  // 受け入れ条件 #484-6: プライバシーポリシーは認証不要（公開ページ）
+  it("未認証でプライバシーポリシー（/privacy）を開いても /login へリダイレクトしない", async () => {
+    const router = createAppRouter({
+      history: createMemoryHistory({ initialEntries: ["/privacy"] }),
+    });
+    render(renderRouter(router));
+    expect(await screen.findByRole("heading", { name: /プライバシーポリシー/ })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /^ログイン$/ })).not.toBeInTheDocument();
   });
 });

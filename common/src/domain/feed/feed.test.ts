@@ -50,4 +50,27 @@ describe("HomeFeedQuerySchema", () => {
     expect(result.success).toBe(true);
     if (result.success) expect(result.data.cursor).toBeUndefined();
   });
+
+  it("sort 省略時はデフォルト latest", () => {
+    const result = HomeFeedQuerySchema.safeParse({});
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.sort).toBe("latest");
+  });
+
+  it("sort=popular は有効", () => {
+    const result = HomeFeedQuerySchema.safeParse({ sort: "popular" });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.sort).toBe("popular");
+  });
+
+  it("sort=latest は有効", () => {
+    const result = HomeFeedQuerySchema.safeParse({ sort: "latest" });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.sort).toBe("latest");
+  });
+
+  it("sort が enum 外の値は無効", () => {
+    const result = HomeFeedQuerySchema.safeParse({ sort: "hot" });
+    expect(result.success).toBe(false);
+  });
 });

@@ -2,13 +2,19 @@ import type { Worker } from "@hatchery/common";
 import { WORKER_DISPLAY_NAME_MAX_LENGTH, WORKER_ROLE_MAX_LENGTH } from "@hatchery/common";
 import { useForm } from "@tanstack/react-form";
 import type { ReactElement } from "react";
-import { useState } from "react";
 
 import { useUpdateWorker } from "../api/workers.js";
+import { getApiErrorMessage } from "../api/errors.js";
+import {
+  useSetWorkerCommunities,
+  useWorkerCommunities,
+} from "../api/workerCommunities.js";
+import { WorkerCommunitiesField } from "./WorkerCommunitiesField.js";
 import {
   Alert,
   Box,
   Button,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -29,19 +35,41 @@ interface EditWorkerDialogProps {
 }
 
 /**
- * ワーカーの表示名・役割・性格を編集するダイアログ（#181 / #329）。
+ * ワーカーの表示名・役割・性格・参加コミュニティを編集するダイアログ（#181 / #329 / #490）。
  * admin 管理画面から呼び出す。@tanstack/react-form を使いフォーム状態を管理する（CLAUDE.md フォーム規約）。
  * 各入力フィールドに inputProps.maxLength を設定し、サーバー側 Zod と二重防御する（CLAUDE.md バリデーションルール）。
  */
 export function EditWorkerDialog({ worker, open, onClose }: EditWorkerDialogProps): ReactElement {
   const updateMutation = useUpdateWorker();
-  const [errorOpen, setErrorOpen] = useState(false);
+  const setCommunitiesMutation = useSetWorkerCommunities();
+  const workerCommunitiesQuery = useWorkerCommunities(worker.id);
+
+  // 保存エラーは mutation の isError / error に集約し、独立ローカル state を持たない（#476）。
+  // どちらの mutation が失敗してもエラーとして扱い、サーバが返したメッセージを表示する。
+  const saveError = updateMutation.error ?? setCommunitiesMutation.error;
+  const isSaveError = updateMutation.isError || setCommunitiesMutation.isError;
+  // エラー Snackbar を閉じる際は両 mutation をリセットし、再オープン時に残留させない。
+  const handleErrorClose = (): void => {
+    updateMutation.reset();
+    setCommunitiesMutation.reset();
+  };
+
+  // 現在の参加コミュニティ取得が完了するまではフォームの初期値が確定しないため、
+  // 取得完了後に form を再マウントする（defaultValues は非同期更新されないため key で制御）。
+  // 取得が「進行中（isLoading）」の間だけ初期化中とみなす。エラー時は isLoading=false になり
+  // フォーム編集を可能にする（取得失敗で名前・役割の編集まで永久にブロックしないため）。
+  const initialCommunityIds = workerCommunitiesQuery.data;
+  const isInitializing = workerCommunitiesQuery.isLoading;
+  // 参加コミュニティ取得に成功した場合のみ、その編集と置換 API 呼び出しを行う。
+  // 取得失敗時は communityIds を触らず（誤って全解除しないため）、エラー表示のみ行う。
+  const canEditCommunities = workerCommunitiesQuery.isSuccess;
 
   const form = useForm({
     defaultValues: {
       displayName: worker.displayName,
       role: worker.role ?? "",
       personality: worker.personality ?? "",
+      communityIds: initialCommunityIds ?? [],
     },
     onSubmit: async ({ value }) => {
       try {
@@ -53,16 +81,34 @@ export function EditWorkerDialog({ worker, open, onClose }: EditWorkerDialogProp
             personality: value.personality || undefined,
           },
         });
+        // 参加コミュニティの取得に成功している場合のみ置換する。
+        // 取得失敗時に呼ぶと未取得の空配列で既存紐づきを誤って消すため呼ばない。
+        if (canEditCommunities) {
+          await setCommunitiesMutation.mutateAsync({
+            workerId: worker.id,
+            communityIds: value.communityIds,
+          });
+        }
         onClose();
       } catch {
-        setErrorOpen(true);
+        // エラー表示は updateMutation / setCommunitiesMutation の状態に委ねる（#476）。
+        // mutateAsync の reject を握りつぶさないため catch するが、ここでは何もしない。
       }
     },
   });
 
+  const isPending = updateMutation.isPending || setCommunitiesMutation.isPending;
+
   return (
     <>
-      <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <Dialog
+        // 取得完了タイミングで初期値を反映するため form を再マウントする。
+        key={isInitializing ? "loading" : "ready"}
+        open={open}
+        onClose={onClose}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>ワーカー編集</DialogTitle>
         <Box
           component="form"
@@ -119,25 +165,45 @@ export function EditWorkerDialog({ worker, open, onClose }: EditWorkerDialogProp
                   />
                 )}
               </form.Field>
+              {isInitializing ? (
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <CircularProgress size={16} />
+                  参加コミュニティを読み込み中…
+                </Box>
+              ) : canEditCommunities ? (
+                <form.Field name="communityIds">
+                  {(field) => (
+                    <WorkerCommunitiesField
+                      labelId="edit-worker-communities-label"
+                      value={field.state.value}
+                      onChange={(ids) => field.handleChange(ids)}
+                    />
+                  )}
+                </form.Field>
+              ) : (
+                <Alert severity="warning">
+                  参加コミュニティの読み込みに失敗しました。表示名・役割・性格のみ編集できます。
+                </Alert>
+              )}
             </Box>
           </DialogContent>
           <DialogActions>
-            <Button onClick={onClose} disabled={updateMutation.isPending}>
+            <Button onClick={onClose} disabled={isPending}>
               キャンセル
             </Button>
-            <Button type="submit" variant="contained" disabled={updateMutation.isPending}>
+            <Button type="submit" variant="contained" disabled={isPending || isInitializing}>
               保存
             </Button>
           </DialogActions>
         </Box>
       </Dialog>
       <Snackbar
-        open={errorOpen}
-        autoHideDuration={4000}
-        onClose={() => setErrorOpen(false)}
+        open={isSaveError}
+        autoHideDuration={6000}
+        onClose={handleErrorClose}
       >
-        <Alert severity="error" onClose={() => setErrorOpen(false)}>
-          ワーカーの更新に失敗しました
+        <Alert severity="error" onClose={handleErrorClose}>
+          {getApiErrorMessage(saveError, "ワーカーの更新に失敗しました")}
         </Alert>
       </Snackbar>
     </>

@@ -1,8 +1,9 @@
 # ADR-0025: down vote の導入と Reddit 風アクションバー（ADR-0019/0020 の up vote 限定を supersede）
 
-- ステータス: Accepted
+- ステータス: Accepted（投票対象の参照方式は ADR-0031 で supersede）
 - 日付: 2026-06-10
 - 関連 Issue: #369
+- **注記**: 本 ADR が前提とした「ユニーク制約 `(userId, targetType, targetId)` の多態参照」は **ADR-0031 により supersede**。Exclusive Arc 化に伴い `(userId, postId)` / `(userId, commentId)` の複合ユニークに置き換わる（direction による toggle/switch のふるまいは不変）。
 
 ## コンテキスト（背景）
 

@@ -38,5 +38,10 @@ yarn-error.log*
 # Test / coverage
 coverage/
 
+# Playwright e2e の生成物（スクショ・レポート・トレースはコミットしない）
+e2e/screenshots/
+test-results/
+playwright-report/
+
 # Dark Factory: /df の作業用 git worktree（隔離・コミットしない）
 .claude/worktrees/

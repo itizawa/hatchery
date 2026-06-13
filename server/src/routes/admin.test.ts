@@ -1,5 +1,5 @@
 import request from "supertest";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import { createApp } from "../app.js";
 import { createInMemoryAppSettingRepository } from "../persistence/appSettingRepository.js";
@@ -22,7 +22,7 @@ async function makeApp(appSettingRepo = createInMemoryAppSettingRepository(), ro
 
 async function loginAgent(app: ReturnType<typeof createApp>) {
   const agent = request.agent(app);
-  await agent.post("/api/auth/login").send({ loginId: "testuser", password: "testpass" });
+  await agent.post("/api/auth/dev-login");
   return agent;
 }
 
@@ -110,24 +110,12 @@ describe("PATCH /api/admin/settings", () => {
 });
 
 describe("getApiKey", () => {
-  const originalEnv = process.env.ANTHROPIC_API_KEY;
-
-  afterEach(() => {
-    if (originalEnv === undefined) {
-      delete process.env.ANTHROPIC_API_KEY;
-    } else {
-      process.env.ANTHROPIC_API_KEY = originalEnv;
-    }
-  });
-
-  it("DB 未設定・env 未設定の場合は undefined を返す", async () => {
-    delete process.env.ANTHROPIC_API_KEY;
+  it("DB 未設定・anthropicApiKey 未指定の場合は undefined を返す", async () => {
     const repo = createInMemoryAppSettingRepository();
     expect(await getApiKey(repo)).toBeUndefined();
   });
 
   it("DB に設定済みの場合は復号した値を返す", async () => {
-    delete process.env.ANTHROPIC_API_KEY;
     const plaintext = "sk-ant-api03-test-key";
     const repo = createInMemoryAppSettingRepository([
       { key: "CLAUDE_API_KEY", value: encrypt(plaintext), updatedAt: new Date() },
@@ -135,10 +123,9 @@ describe("getApiKey", () => {
     expect(await getApiKey(repo)).toBe(plaintext);
   });
 
-  it("DB 未設定・env 設定済みの場合は env 値を返す", async () => {
-    process.env.ANTHROPIC_API_KEY = "sk-ant-env-key";
+  it("DB 未設定・anthropicApiKey 指定の場合は引数の値を返す", async () => {
     const repo = createInMemoryAppSettingRepository();
-    expect(await getApiKey(repo)).toBe("sk-ant-env-key");
+    expect(await getApiKey(repo, "sk-ant-env-key")).toBe("sk-ant-env-key");
   });
 });
 

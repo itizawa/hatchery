@@ -1,7 +1,7 @@
-// Hatchery v1.1.0 の永続化スキーマ（ADR-0004 / ADR-0019 / ADR-0020 / Issue #305）。
+// Hatchery v1.2.0 の永続化スキーマ（ADR-0004 / ADR-0019 / ADR-0020 / ADR-0029 / Issue #455）。
 // 公共コミュニティモデル: Community / Post / Comment / Subscription / WorldState / Vote。
-// 旧 Message / Channel / ChannelEmployee / Task は削除。
-// User / Employee / AppSetting / BatchRunLog / TokenUsageLog / InvitationLink は継続。
+// 旧 Message / Channel / ChannelEmployee / Task / InvitationLink は削除。
+// #455: Google 認証のみに統一。loginId / passwordHash を削除し email / googleId を必須化。
 
 generator client {
   provider = "prisma-client-js"
@@ -18,17 +18,19 @@ enum UserRole {
   member
 }
 
-/// 認証ユーザー（Issue #26 / ADR-0009 / #185）。パスワードは bcrypt ハッシュで保存する。
-/// id はサロゲートキー（UUIDv7 自動採番）。loginId は人間可読ログイン識別子（#185）。
+/// 認証ユーザー（Issue #26 / ADR-0009 / ADR-0029 / #455）。
+/// #455: Google 認証のみに統一。loginId / passwordHash を廃止し email / googleId を必須化。
+/// id はサロゲートキー（UUIDv7 自動採番）。
 model User {
   id            String         @id @default(uuid(7))
-  /// 人間可読なログイン識別子（#185）。認証は loginId ベースで行う。
-  loginId       String         @unique
+  /// メールアドレス（#455 で必須化）。Google OAuth から取得。
+  email         String         @unique
+  /// Google OAuth の sub claim（profile.id）。#455 で必須化（nullable → NOT NULL）。
+  googleId      String         @unique
   displayName   String
-  passwordHash  String
   /// プロフィール画像 URL（#51）。nullable。
   avatarUrl     String?
-  /// 権限ロール（#136）。既定は member。新規登録（招待受諾）は member として登録される。
+  /// 権限ロール（#136）。既定は member。
   role          UserRole       @default(member)
   subscriptions Subscription[]
   votes         Vote[]
@@ -48,7 +50,25 @@ model Worker {
   /// GCS 上のアバター画像 URL（#204）。admin がアップロード後に設定される。最大 500 文字（#91）。
   imageUrl    String?
 
+  /// 参加コミュニティ（#489）。定時バッチはこの紐づきから登場ワーカーを解決する。
+  workerCommunities WorkerCommunity[]
+
   @@map("workers")
+}
+
+/// ワーカーの community 参加（#489）。worker ↔ community の多対多中間テーブル。
+/// 定時バッチはこの紐づきから community ごとの登場ワーカーを DB 取得して
+/// 会話生成・author 検証に使う（DEFAULT_WORKERS への直接依存を外すデータ基盤）。
+model WorkerCommunity {
+  workerId    String
+  worker      Worker    @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  communityId String
+  community   Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+
+  @@id([workerId, communityId])
+  @@index([communityId])
+  @@map("worker_communities")
 }
 
 /// アプリ設定のキーバリューストア（#52）。API キーや各種設定値を格納する。値は暗号化して保存。
@@ -90,27 +110,6 @@ model TokenUsageLog {
   @@index([occurredAt])
 }
 
-/// 招待リンク（#131）。管理者が発行し、期限 + single-use で新規ユーザーを招待する。
-model InvitationLink {
-  id              String    @id @default(uuid(7))
-  /// URL に載せる招待トークン。推測困難な乱数（base64url）。平文保存（再コピー可・期限+single-use でリスク軽減）。
-  token           String    @unique
-  expiresAt       DateTime
-  /// 受諾された日時。null=未使用。ここが入ると single-use 失効（#132 で書き込み）。
-  usedAt          DateTime?
-  /// 受諾で作成された User の id（監査用）。#132 で書き込み。
-  usedByUserId    String?
-  /// 管理者が手動失効した日時。null=未失効。
-  revokedAt       DateTime?
-  /// 発行した管理者の User.id。
-  createdByUserId String
-  /// 管理者用メモ（任意・200 文字以内）。
-  memo            String?
-  createdAt       DateTime  @default(now())
-
-  @@index([createdAt])
-}
-
 /// コミュニティ（サブレディット相当）。ADR-0019。
 /// admin が CRUD できる第一級エンティティ（作成 API は #310）。
 /// slug は URL セーフな識別子（例: "technology"）。
@@ -124,10 +123,16 @@ model Community {
   synopsis      String?
   /// 最後に生成バッチが走った定時キー。省略可（未生成の場合 null）。
   lastSlotKey   String?
+  /// GCS 上のアイコン画像 URL（#457）。admin がアップロード後に設定される。最大 500 文字（#91）。
+  iconUrl       String?
+  /// GCS 上のカバー（ヘッダー）画像 URL（#457）。admin がアップロード後に設定される。最大 500 文字（#91）。
+  coverUrl      String?
   createdAt     DateTime       @default(now())
   posts         Post[]
   comments      Comment[]
   subscriptions Subscription[]
+  /// 参加ワーカー（#489）。定時バッチの登場ワーカー解決に使う。
+  workerCommunities WorkerCommunity[]
 }
 
 /// 投稿。ADR-0019。AI ワーカーのみが author となる（ADR-0020）。
@@ -148,6 +153,8 @@ model Post {
   score       Int       @default(0)
   createdAt   DateTime  @default(now())
   comments    Comment[]
+  /// この post への vote（#453: Exclusive Arc 化の逆リレーション。Post 削除で cascade）。
+  votes       Vote[]
 
   @@unique([communityId, slotKey, seq])
   @@index([communityId, createdAt])
@@ -172,6 +179,8 @@ model Comment {
   /// up vote の累積数（ADR-0019）。生成出力には含めない。
   score       Int       @default(0)
   createdAt   DateTime  @default(now())
+  /// この comment への vote（#453: Exclusive Arc 化の逆リレーション。Comment 削除で cascade）。
+  votes       Vote[]
 
   @@unique([communityId, slotKey, seq])
   @@index([postId, createdAt])
@@ -201,32 +210,34 @@ model WorldState {
   updatedAt      DateTime @updatedAt
 }
 
-/// vote レコード。ADR-0019 / ADR-0025（down vote 追加）。
-/// 二重投票防止のため (userId, targetType, targetId) をユニーク制約で保護する。
-/// targetType は "post" または "comment"。direction は up/down。
-enum VoteTargetType {
-  post
-  comment
-}
-
 /// vote 方向（ADR-0025: down vote 追加）。
 enum VoteDirection {
   up
   down
 }
 
-/// Vote.targetId は多態参照（Post または Comment の id）のため DB FK を張らない。
-/// アプリケーション層（vote API）でターゲットの存在確認を行う。
+/// vote レコード。ADR-0019 / ADR-0025 / ADR-0031（#453: Exclusive Arc）。
+/// 投票対象（Post / Comment の 2 種固定）を多態参照ではなく
+/// postId? / commentId? の本物 FK（onDelete: Cascade）で表す。
+/// ちょうど片方だけ非 null を強制する CHECK 制約はマイグレーション SQL で付与する
+///（Prisma スキーマでは宣言不可）。二重投票防止は (userId, postId) / (userId, commentId)
+/// のユニーク制約で担保する（PostgreSQL は NULL を一意制約上区別するため両立する）。
 model Vote {
-  id         String         @id @default(uuid(7))
-  userId     String
-  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  targetType VoteTargetType
-  targetId   String
+  id        String        @id @default(uuid(7))
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// 投票対象が Post のとき非 null。Comment 票のときは null（Exclusive Arc）。
+  postId    String?
+  post      Post?         @relation(fields: [postId], references: [id], onDelete: Cascade)
+  /// 投票対象が Comment のとき非 null。Post 票のときは null（Exclusive Arc）。
+  commentId String?
+  comment   Comment?      @relation(fields: [commentId], references: [id], onDelete: Cascade)
   /// vote 方向（ADR-0025）。既存レコードのデフォルトは up。
-  direction  VoteDirection  @default(up)
-  createdAt  DateTime       @default(now())
+  direction VoteDirection @default(up)
+  createdAt DateTime      @default(now())
 
-  @@unique([userId, targetType, targetId])
-  @@index([targetType, targetId])
+  @@unique([userId, postId])
+  @@unique([userId, commentId])
+  @@index([postId])
+  @@index([commentId])
 }

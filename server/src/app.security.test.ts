@@ -8,8 +8,8 @@ import { createTestDeps } from "./testing/createTestDeps.js";
 
 /** 各テストで使う共通 deps（InMemory 一式）。beforeEach で初期化。 */
 let baseDeps: AppDeps;
-beforeEach(async () => {
-  baseDeps = await createTestDeps();
+beforeEach(() => {
+  baseDeps = createTestDeps();
 });
 
 describe("createApp: sessionStore の本番ガード（#186）", () => {
@@ -46,11 +46,13 @@ describe("createApp: sessionStore の本番ガード（#186）", () => {
     }
   });
 
-  it("NODE_ENV=production でも sessionStore を注入すれば起動時例外を投げない", () => {
+  it("NODE_ENV=production でも sessionStore・SESSION_SECRET・APP_SECRET を注入すれば起動時例外を投げない", () => {
     const originalEnv = process.env.NODE_ENV;
     const originalSecret = process.env.SESSION_SECRET;
+    const originalAppSecret = process.env.APP_SECRET;
     process.env.NODE_ENV = "production";
     process.env.SESSION_SECRET = "test-secret-for-production-guard-test";
+    process.env.APP_SECRET = "test-app-secret-for-production-guard-test";
     try {
       expect(() =>
         createApp({ ...baseDeps, sessionStore: new session.MemoryStore() }),
@@ -62,14 +64,47 @@ describe("createApp: sessionStore の本番ガード（#186）", () => {
       } else {
         process.env.SESSION_SECRET = originalSecret;
       }
+      if (originalAppSecret === undefined) {
+        delete process.env.APP_SECRET;
+      } else {
+        process.env.APP_SECRET = originalAppSecret;
+      }
+    }
+  });
+
+  it("NODE_ENV=production で APP_SECRET が未設定なら起動時例外を投げる（#418）", () => {
+    const originalEnv = process.env.NODE_ENV;
+    const originalSecret = process.env.SESSION_SECRET;
+    const originalAppSecret = process.env.APP_SECRET;
+    process.env.NODE_ENV = "production";
+    process.env.SESSION_SECRET = "test-secret";
+    delete process.env.APP_SECRET;
+    try {
+      expect(() =>
+        createApp({
+          ...baseDeps,
+          sessionStore: new session.MemoryStore(),
+          security: { corsAllowedOrigins: ["https://example.com"] },
+        }),
+      ).toThrow(/APP_SECRET/);
+    } finally {
+      process.env.NODE_ENV = originalEnv;
+      if (originalSecret === undefined) {
+        delete process.env.SESSION_SECRET;
+      } else {
+        process.env.SESSION_SECRET = originalSecret;
+      }
+      if (originalAppSecret === undefined) {
+        delete process.env.APP_SECRET;
+      } else {
+        process.env.APP_SECRET = originalAppSecret;
+      }
     }
   });
 });
 
 describe("buildSessionCookieOptions（別ドメイン配信のクロスサイト cookie）", () => {
   it("crossSiteCookie=true で SameSite=None + Secure（クロスサイトでも cookie を送信できる）", () => {
-    // フロント（Cloudflare Pages）と API（Cloud Run）が別ドメインの本番/dev では
-    // SameSite=Lax だと cookie が送られずログインが維持できない（#78 のクロスオリジン配信）。
     expect(buildSessionCookieOptions(true)).toEqual({
       httpOnly: true,
       sameSite: "none",
@@ -146,10 +181,11 @@ describe("createApp のセキュリティ防衛", () => {
   it("NODE_ENV=production で corsAllowedOrigins に明示オリジンのみ含むと正常起動する", () => {
     const original = process.env.NODE_ENV;
     const originalSecret = process.env.SESSION_SECRET;
+    const originalAppSecret = process.env.APP_SECRET;
     process.env.NODE_ENV = "production";
     process.env.SESSION_SECRET = "test-secret";
+    process.env.APP_SECRET = "test-app-secret";
     try {
-      // sessionStore も必要（本番ガード）
       expect(() =>
         createApp({
           ...baseDeps,
@@ -163,6 +199,11 @@ describe("createApp のセキュリティ防衛", () => {
         delete process.env.SESSION_SECRET;
       } else {
         process.env.SESSION_SECRET = originalSecret;
+      }
+      if (originalAppSecret === undefined) {
+        delete process.env.APP_SECRET;
+      } else {
+        process.env.APP_SECRET = originalAppSecret;
       }
     }
   });

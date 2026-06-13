@@ -14,6 +14,8 @@ import type { ReactElement } from "react";
 
 import { WORKER_DISPLAY_NAME_MAX_LENGTH, WORKER_ROLE_MAX_LENGTH } from "@hatchery/common";
 import { useCreateAdminWorker } from "../api/admin.js";
+import { useSetWorkerCommunities } from "../api/workerCommunities.js";
+import { WorkerCommunitiesField } from "./WorkerCommunitiesField.js";
 
 interface AddWorkerDialogProps {
   open: boolean;
@@ -21,30 +23,33 @@ interface AddWorkerDialogProps {
 }
 
 /**
- * 管理画面のワーカー一覧タブで AI ワーカーを追加するモーダル（#217 / #329）。
+ * 管理画面のワーカー一覧タブで AI ワーカーを追加するモーダル（#217 / #329 / #490）。
  * フォームは @tanstack/react-form の useForm を使用（useState によるフォーム管理禁止）。
+ * 作成後に、選択された参加コミュニティを `WorkerCommunity` に反映する（#490）。
  */
 export const AddWorkerDialog = ({ open, onClose }: AddWorkerDialogProps): ReactElement => {
   const createWorker = useCreateAdminWorker();
+  const setCommunities = useSetWorkerCommunities();
 
   const form = useForm({
     defaultValues: {
       displayName: "",
       role: "",
+      communityIds: [] as string[],
     },
-    onSubmit: ({ value }) => {
-      createWorker.mutate(
-        {
-          displayName: value.displayName.trim(),
-          role: value.role.trim() || undefined,
-        },
-        {
-          onSuccess: () => {
-            form.reset();
-            onClose();
-          },
-        },
-      );
+    onSubmit: async ({ value }) => {
+      const created = await createWorker.mutateAsync({
+        displayName: value.displayName.trim(),
+        role: value.role.trim() || undefined,
+      });
+      // 作成された worker に参加コミュニティを反映する（#490）。
+      // 空配列のときも明示的に置換 API を呼び、状態を確定させる（冪等）。
+      await setCommunities.mutateAsync({
+        workerId: created.id,
+        communityIds: value.communityIds,
+      });
+      form.reset();
+      onClose();
     },
   });
 
@@ -52,6 +57,8 @@ export const AddWorkerDialog = ({ open, onClose }: AddWorkerDialogProps): ReactE
     form.reset();
     onClose();
   };
+
+  const isPending = createWorker.isPending || setCommunities.isPending;
 
   return (
     <Dialog open={open} onClose={handleClose} fullWidth maxWidth="xs">
@@ -97,7 +104,16 @@ export const AddWorkerDialog = ({ open, onClose }: AddWorkerDialogProps): ReactE
               />
             )}
           </form.Field>
-          {createWorker.isError && (
+          <form.Field name="communityIds">
+            {(field) => (
+              <WorkerCommunitiesField
+                labelId="add-worker-communities-label"
+                value={field.state.value}
+                onChange={(ids) => field.handleChange(ids)}
+              />
+            )}
+          </form.Field>
+          {(createWorker.isError || setCommunities.isError) && (
             <Typography variant="caption" color="error">
               作成に失敗しました。もう一度お試しください。
             </Typography>
@@ -110,7 +126,7 @@ export const AddWorkerDialog = ({ open, onClose }: AddWorkerDialogProps): ReactE
               <Button
                 type="submit"
                 variant="contained"
-                disabled={!displayName.trim() || createWorker.isPending}
+                disabled={!displayName.trim() || isPending}
               >
                 追加
               </Button>

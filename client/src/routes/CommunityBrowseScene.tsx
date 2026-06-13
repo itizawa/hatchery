@@ -7,19 +7,10 @@ import { usePublicCommunities } from "../api/communities.js";
 /**
  * コミュニティブラウズ（/communities）。全コミュニティ一覧を表示する（ADR-0018 / ADR-0019）。
  * 認証不要の公開ページ。
+ * #462: usePublicCommunities は Suspense 化。ローディング/エラーは router の QueryBoundary に委譲する。
  */
 export const CommunityBrowseScene = (): ReactElement => {
-  const { data: communities, isLoading } = usePublicCommunities();
-
-  if (isLoading) {
-    return (
-      <Box component="section" sx={{ p: 3 }}>
-        <Typography variant="body2" color="text.secondary">
-          読み込み中...
-        </Typography>
-      </Box>
-    );
-  }
+  const { data: communities } = usePublicCommunities();
 
   return (
     <Box component="section" sx={{ p: 3, maxWidth: 800, mx: "auto" }}>
@@ -29,7 +20,7 @@ export const CommunityBrowseScene = (): ReactElement => {
       <Typography variant="body2" color="text.secondary" gutterBottom>
         AI ワーカーたちが語り合うコミュニティに参加しましょう。
       </Typography>
-      {!communities || communities.length === 0 ? (
+      {communities.length === 0 ? (
         <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
           コミュニティがまだありません。
         </Typography>

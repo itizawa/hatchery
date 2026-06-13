@@ -1,18 +1,18 @@
 # Dark Factory 開発ワークフロー設計
 
-> 「Dark Factory（消灯工場）」= 人間は **意思決定と承認** だけを行い、実装作業の大半を AI が自動で回す開発体制。
+> 「ダークファクトリー（消灯工場）」= 人間は **意思決定と承認** だけを行い、実装作業の大半を AI が自動で回す開発体制。
 > 本ドキュメントは ai-workspace リポジトリにおける Issue → 実装 → レビュー → リリースのワークフローを定義する。
-> **人間が触るのは「Issue 起票」と「main 昇格」の 2 点だけ。** 独立した設計 PR とその人間承認は廃止し、AI が 1 回の `/df` 実行で 実装 → 実装 PR → セルフレビュー → develop マージまで自走する（人間確認の最小化）。設計書は廃止せず実装 PR に同梱する。AI は専用 worktree を使わず feature ブランチで直接作業する。
+> **人間が触るのは『Issue 起票』と『main 昇格』の 2 点だけ。** 独立した設計 PR とその人間承認は廃止し、AI が 1 回の `/df` 実行で 実装 → 実装 PR → セルフレビュー → develop マージまで自走する（人間確認の最小化）。設計書は廃止せず実装 PR に同梱する。AI は専用 worktree を使わず feature ブランチで直接作業する。
 
 ## 1. 全体像
 
 ```mermaid
 flowchart TD
-    A["👤 人間: Issue 起票<br/>(open / 任意で priority・マイルストーン)"] --> D["🤖 AI: TDDで実装・テスト<br/>feature/issue-N ブランチ"]
-    D --> E["🤖 AI: develop への実装PR作成<br/>(Issue は open のまま)"]
-    E --> F["🤖 AI: セルフレビュー & 修正<br/>(/code-review)"]
+    A["👤 人間: Issue 起票\n(open / 任意で priority・マイルストーン)"] --> D["🤖 AI: TDDで実装・テスト\nfeature/issue-N ブランチ"]
+    D --> E["🤖 AI: develop への実装PR作成\n(Issue は open のまま)"]
+    E --> F["🤖 AI: セルフレビュー & 修正\n(/code-review)"]
     F -- 指摘あり --> F
-    F -- 指摘なし + CI緑 = AI が develop へマージ<br/>(Issue クローズ) --> H["👤 人間: develop → main へ昇格<br/>本番反映"]
+    F -- 指摘なし + CI緑 = AI が develop へマージ\n(Issue クローズ) --> H["👤 人間: develop → main へ昇格\n本番反映"]
 ```
 
 **役割分担の原則**
@@ -22,12 +22,12 @@ flowchart TD
 | 👤 人間 | Issue 起票、本番リリース判断（main 昇格） |
 | 🤖 AI | 設計判断、TDD実装、テスト、PR作成、セルフレビュー・修正、develop へのマージ |
 
-人間は「ゲート（承認の門）」にだけ立つ。門と門のあいだは AI が走る。門は **入口（Issue 起票）** と **出口（本番昇格）** の 2 つだけ。
+人間は「ゲート（承認の門）」にだけ立つ。門と門のあいまは AI が走る。門は **入口（Issue 起票）** と **出口（本番昇格）** の 2 つだけ。
 
 ## 2. ブランチ戦略
 
 | ブランチ | 役割 | 保護 | 反映先 |
-|----------|------|------|--------|
+|----------|------|------|------|
 | `main` | 本番（production） | ✅ 保護・人間のみマージ可 | 本番環境 |
 | `develop` | 統合（integration） | ✅ PR必須・CI緑必須（実装PRは AI がレビュー・マージ） | ステージング |
 | `feature/issue-<N>` | 実装 | - | → `develop`（実装PR） |
@@ -38,10 +38,10 @@ flowchart TD
 
 ## 3. 状態管理（ラベルに依存しない）
 
-ワークフローの進行状態は **Issue の open/closed と develop ベース実装 PR の有無**で表現する。`df:todo` のような `df:*` 状態ラベルは廃止済みで使わない（`/df` がこの状態から「今 AI が何をすべきか」を判定する。`.claude/commands/df.md` の状態判定が正本）。
+ワークフローの進行状態は **Issue の open/closed と develop ベース実装 PR の有無**で表現する。`df:todo` のような `df:*` 状態ラベルは廃止済みで使わない（`/df` がこの状態から「今 AI がやるべきこと」を判定する。`.claude/commands/df.md` の状態判定が正本）。
 
 | Issue 状態 | 実装 PR（`feature/issue-<N>` → develop） | フェーズ | 次に動くのは |
-|------------|------------------------------------------|---------|--------------|
+|------------|------------------------------------------|バウシュース |次に動くのは |
 | open | PR なし | 実装 → 実装 PR 作成 | 🤖 AI |
 | open | develop ベース PR あり | レビュー → 修正 → develop マージ | 🤖 AI |
 | closed | — | 完了（develop マージ済み・本番昇格待ち） | 👤 人間 |
@@ -58,7 +58,7 @@ flowchart TD
 
 | ラベル | 意味 | 重み |
 |--------|------|:----:|
-| `priority/critical` | 緊急・最優先 | 4 |
+| `priority/critical` | 紧急・最優先 | 4 |
 | `priority/high` | 高 | 3 |
 | `priority/medium` | 中（**ラベル無しと同等のデフォルト**） | 2 |
 | `priority/low` | 低 | 1 |
@@ -73,20 +73,20 @@ flowchart TD
 - **目的・背景・受け入れ条件** を記述して Issue を起票（open）。状態ラベルは付けない。
 - 任意で **優先度ラベル `priority/*` を 1 つ**付ける（緊急なら `priority/critical`/`high`）。付けなければ `medium` 相当。
 - **マイルストーンを設定**しておくと引数なし `/df` / `/goal` の自動選択対象になる（GitHub Actions が `milestone/*` ラベルへ自動同期）。
-- **受け入れ条件をテストに落とせる粒度で書くのがコツ**（設計レビューが無くなった分、Issue 本文が実装の正本になる）。曖昧で AI が実装方針を確定できない場合、AI はフェーズ 2 でコメントを残しマイルストーンを解除してブロックにする。
+- **受け入れ条件をテストに落とせる粒度で書くのがコツ**（設計レビューが無くなった分、Issue 本文が実装の正本になる）。曙昧で AI が実装方针を確定できない場合、AI はフェーズ 2 でコメントを残しマイルストーンを解除してブロックにする。
 
 ### フェーズ 2 — 🤖 AI: 設計書 + TDD 実装 → 実装PR作成
 
 **トリガー**: open かつ実装 PR が無い Issue
 
-1. Issue 本文・受け入れ条件・関連 ADR（`docs/adr/*.md`）・`concept.md`・既存コードを読み込む。**ADR の決定が正本**。情報が決定的に不足し受け入れ条件をテストに落とせないなら、設計を捏造せず Issue にコメント + マイルストーン解除でブロックにする（フェーズ 4）。
+1. Issue 本文・受け入れ条件・関連 ADR（`docs/adr/*.md`）・`concept.md`・既存コードを読み込む。**ADR の決定が正本**。情報が決定的に不足し受け入れ条件をテストに落とせないなら、設計を捕造せず Issue にコメント + マイルストーン解除でブロックにする（フェーズ 4）。
 2. `feature/issue-<N>` ブランチを `develop` から作成する。
-3. 設計書 `docs/design/issue-<N>.md`（テンプレートは §6）を書いてコミットする。**独立した設計 PR は作らず、この実装ブランチに同梱する**（人間承認は挟まない）。
-4. `CLAUDE.md` の方針に従い **テスト駆動開発（TDD）** で進める:
+3. 設計書 `docs/design/issue-<N>.md`（テンプレートは §6）を書いてコミットする。**独立した設計 PR は作らず、この実装ブランチに同梱する**（人間承認は指まない）。
+4. `CLAUDE.md` の方针に従い **テスト駆動開発（TDD）** で進める:
    - 受け入れ条件を入出力に落とし、**まずテストを書く**（実装は書かない）→ テスト実行して失敗を確認 → コミット。
    - テストを通す最小実装 → 緑にする。実装中はテストを変更しない。
    - 全テスト緑 + lint 通過まで反復。機能単位で細かくコミット（規約は §7）。
-5. `feature/issue-<N>` を push し、`develop` 向けに **実装PR** を作成（設計書を含む。本文に `Closes #N`、設計判断の要点、テスト結果サマリを記載）。
+5. `feature/issue-<N>` を push し、`develop` 向けに **実装 PR** を作成（設計書を含む。本文に `Closes #N`、設計判断の要点、テスト結果サマリを記載）。
 6. **そのまま続けてフェーズ 3（セルフレビュー → マージ）へ進む**。
 
 > `/df` は 1 回の実行でフェーズ 2 → 3 を続けて完走する（実装 → 実装 PR → セルフレビュー → develop マージ → Issue クローズ）。フェーズ 2・3 の間に人間の確認は入らない。
@@ -97,15 +97,16 @@ flowchart TD
 
 1. `/code-review`（または `code-review` スキル）で実装PR をレビューする。
 2. 指摘（バグ・簡素化・効率）を自分で修正してコミット。
-3. 指摘がなくなる（収束する）まで 1〜2 を反復する。
+3. 指摘がなくなる（収束する）まで 1～2 を反復する。
 4. CI（test + lint）が緑かつレビュー指摘ゼロになったら、**AI が `develop` へマージ**する。
 5. マージ後に **Issue をクローズ**する（本番昇格は人間ゲートなのでここで止める）。
-   - 自力で解消できない指摘がある・実装方針に確信が持てない場合は Issue にコメント + マイルストーン解除でブロックにし、人間に委ねる。
+   - 自力で解消できない指摘がある・実装方针に確信が持てない場合は Issue にコメント + マイルストーン解除でブロックにし、人間に委ねる。
 
 ### フェーズ 4 — 👤 人間: 本番反映
 
 - 任意のタイミングで `develop → main` の昇格 PR を作成しマージ（**人間のみ**）。
 - main マージ＝本番デプロイ（デプロイ手段は別途）。
+- **main マージ時に `.github/workflows/release-tag.yml` が自動起動**し、PR タイトルの `vX.Y.Z` からタグと GitHub Release を自動作成する。タイトルからバージョンを抽出できない場合・同名タグが既に存在する場合は何も作成せずスキップする（冪等）。
 
 ## 5. 自動化の実装方式
 
@@ -133,7 +134,7 @@ flowchart TD
 ```
 .
 ├── concept.md
-├── CLAUDE.md                      # 開発方針（TDD等）。後述の運用ルールを追記
+├── CLAUDE.md                      # 開発方针（TDD等）。後述の運用ルールを追記
 ├── docs/
 │   ├── dark-factory-workflow.md   # 本ドキュメント
 │   └── design/
@@ -143,7 +144,9 @@ flowchart TD
     │   └── feature.yml            # 目的・背景・受け入れ条件のテンプレート（状態ラベルは付与しない）
     ├── pull_request_template.md
     └── workflows/
-        └── sync-milestone-labels.yml  # マイルストーン設定を milestone/* ラベルへ自動同期
+        ├── sync-milestone-labels.yml  # マイルストーン設定を milestone/* ラベルへ自動同期
+        ├── auto-release-pr.yml        # develop 更新時に develop→main のリリースPRを自動作成・更新
+        └── release-tag.yml            # develop→main マージ時にタグ + GitHub Release を自動作成
 ```
 
 ### 設計書テンプレート（`docs/design/issue-<N>.md`）
@@ -156,7 +159,7 @@ flowchart TD
 ## 1. 目的 / 背景
 ## 2. スコープ（やること / やらないこと）
 ## 3. 受け入れ条件（テストに落とせる粒度で箇条書き）
-## 4. 設計方針（アーキ・データ構造・主要モジュール）
+## 4. 設計方针（アーキ・データ構造・主要モジュール）
 ## 5. 影響範囲 / 既存への変更（対象ワークスペース: client / server / common / docs）
 ## 6. テスト計画（TDDで書くテスト一覧）
 ## 7. リスク・未決事項
@@ -172,6 +175,7 @@ flowchart TD
 | レビュー | `/code-review` 指摘を収束まで解消 | AI 実行 |
 | 実装マージ | CI 緑 + 指摘ゼロで AI が `develop` へマージし Issue クローズ | AI 実行（CI を required check に） |
 | 本番昇格 | `develop → main` を人間がマージ | main 保護・push禁止 |
+| タグ・ Release | main マージ後、`.github/workflows/release-tag.yml` がタグ + GitHub Release を自動作成 | GitHub Actions |
 
 **コミットメッセージ規約**（Conventional Commits 準拠）:
 `feat:` / `fix:` / `refactor:` / `docs:` / `config:` / `test:` / `style:`
@@ -194,7 +198,7 @@ flowchart TD
 
 - ✅ GitHub Issues 有効・Public リポジトリ。
 - ✅ `gh` 認証済み、トークンに `repo` / `workflow` / `project` スコープあり → Actions 追加・ラベル/PR 操作が可能。
-- ✅ TDD 方針（`CLAUDE.md`）と `/df` コマンド（`.claude/commands/df.md`）が既にあり、実装〜マージフェーズの土台が揃っている。
+- ✅ TDD 方针（`CLAUDE.md`）と `/df` コマンド（`.claude/commands/df.md`）が既にあり、実装〜マージフェーズの土台が揃っている。
 - ⚠️ 現状コミット/ブランチが無いため、§8 の初期化が前提。
 - ⚠️ フル自動（方式A）は `ANTHROPIC_API_KEY` の Secret 登録とコストガードが必要。
 

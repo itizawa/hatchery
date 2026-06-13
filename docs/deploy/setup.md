@@ -91,7 +91,26 @@ gcloud iam workload-identity-pools providers describe github-provider \
 # → projects/XXXXXXX/locations/global/workloadIdentityPools/github-pool/providers/github-provider
 ```
 
-### 1-5. PostgreSQL の準備
+### 1-5. GCS バケットの作成（アバター画像・ADR-0022）
+
+ワーカーのアバター画像保存に Google Cloud Storage を使う。
+
+1. [Cloud Storage コンソール](https://console.cloud.google.com/storage/browser) → **「バケットを作成」**
+   - 名前: `hatchery-dev-avatars`（dev）/ `hatchery-prod-avatars`（prod）
+   - ロケーションタイプ: リージョン / `asia-northeast1`
+   - アクセス制御: **均一（Uniform）**
+
+2. バケット → **「権限」タブ** → **「アクセスを許可」**:
+   - プリンシパル: `allUsers` / ロール: `Storage オブジェクト閲覧者`（公開読み取り）
+
+3. 同じく **「アクセスを許可」**:
+   - プリンシパル: `[プロジェクト番号]-compute@developer.gserviceaccount.com`
+     （プロジェクト番号は IAM & 管理 → 設定で確認）
+   - ロール: `Storage オブジェクト作成者`（Cloud Run からの書き込み権限）
+
+> **ローカル開発**: `GCS_BUCKET_NAME` 未設定の場合は InMemory モックに自動切り替えされるため、ローカルに GCS 認証は不要。
+
+### 1-6. PostgreSQL の準備
 
 **Neon（推奨・無料枚あり）** を使う場合:
 1. https://neon.tech にサインアップ
@@ -150,7 +169,8 @@ pnpm --filter @hatchery/server db:migrate
 | `DATABASE_URL` | Neon または Cloud SQL の接続文字列 | Prisma 接続先 |
 | `SESSION_SECRET` | 任意の 32 文字以上のランダム文字列 | Express session の署名鍵 |
 | `ANTHROPIC_API_KEY` | Anthropic コンソール | AI バッチ用 |
-| `CORS_ALLOWED_ORIGINS` | Cloudflare Pages の dev URL（例: `https://hatchery.pages.dev`） | CORS 許可オリジン（server の `CORS_ALLOWED_ORIGINS` 環境変数に対応） |
+| `CORS_ALLOWED_ORIGINS` | Cloudflare Pages の dev URL（例: `https://develop.hatchery.pages.dev`） | CORS 許可オリジン（server の `CORS_ALLOWED_ORIGINS` 環境変数に対応） |
+| `GCS_BUCKET_NAME` | `hatchery-dev-avatars` | ワーカーアバター画像の GCS バケット名（ADR-0022） |
 | `CLOUDFLARE_API_TOKEN` | 手順 2-4 で取得 | Wrangler デプロイ用 |
 | `CLOUDFLARE_ACCOUNT_ID` | 手順 2-5 で取得 | Cloudflare アカウント識別子 |
 
@@ -191,7 +211,7 @@ dev 環境（`develop` ブランチのデプロイ）には HTTP Basic 認証が
 - `client/functions/_middleware.ts` が全リクエストをインターセプトし、Basic 認証を検証する
 - `BASIC_AUTH_USER` / `BASIC_AUTH_PASSWORD` が**どちらか未設定の場合はスキップ**（= 本番無効化）
 - タイミング攻撃に配慮した定数時間比較を使用（XOR ビット演算）
-- あくまで「dev 画面の詪き見防止」目的。API サーバ（Cloud Run）のアクセス制御は別途必要
+- あくまで「dev 画面の窃き見防止」目的。API サーバ（Cloud Run）のアクセス制御は別途必要
 
 ---
 
@@ -257,11 +277,77 @@ GitHub Actions タブ → **Run Batch (Scene Generation)** → **Run workflow** 
 
 ---
 
+## 6. 本番（prod）環境のセットアップ（#345）
+
+`main` ブランチへのマージをトリガーに、本番環境へ自動デプロイされます。
+dev 環境のセットアップ（1〜5 章）が完了していることを前提とします。
+
+### 6-1. 本番用 Google Cloud リソースの準備
+
+dev 環境（`hatchery` サービス・`hatchery-dev` プロジェクト等）とは別に本番用のリソースを作成してください。
+同一プロジェクトを使う場合は、Cloud Run サービス名を `hatchery-prod` で新規作成します。
+
+```bash
+# 本番用 Cloud Run サービスの初回デプロイ（ワークフロー初回実行前）
+gcloud run deploy hatchery-prod \
+  --image=<初期ダミーイメージ> \
+  --region=$GCP_REGION \
+  --platform=managed \
+  --allow-unauthenticated
+```
+
+### 6-2. 本番用 PostgreSQL の準備
+
+本番 DB を用意し、接続文字列を `DATABASE_URL_PROD` Secret に設定します。
+Neon や Cloud SQL を dev と別プロジェクトで作成することを推奨します。
+
+### 6-3. 本番環境の GitHub Actions Secrets
+
+セクション 3 の dev 用 Secrets に加えて、以下を追加してください:
+
+| Secret 名 | 値の取得元 | 説明 |
+|-----------|-----------|------|
+| `DATABASE_URL_PROD` | 本番 Neon / Cloud SQL の接続文字列 | 本番 DB への Prisma 接続先 |
+| `CLOUD_RUN_PROD_URL` | 本番 Cloud Run サービスの URL（初回デプロイ後に確定） | client ビルド時の API エンドポイント |
+| `CORS_ALLOWED_ORIGINS_PROD` | 本番カスタムドメイン（例: `https://hatchery-works.com`） | 本番サーバの CORS 許可オリジン |
+| `GOOGLE_CALLBACK_URL_PROD` | `https://hatchery-works.com/api/auth/google/callback` | 本番 OAuth コールバック URL |
+| `GCS_BUCKET_NAME_PROD` | `hatchery-prod-avatars` | 本番ワーカーアバター画像の GCS バケット名（ADR-0022） |
+
+> **注意**: `SESSION_SECRET` / `ANTHROPIC_API_KEY` / `GCP_*` の GCP 認証情報は dev と共用可能ですが、
+> セキュリティ上は本番専用の値を別 Secret として用意することを強く推奨します。
+
+### 6-4. Cloudflare Pages の本番設定
+
+Cloudflare Pages では、`main` ブランチが本番エイリアスとして機能します（`--branch main` でデプロイ）。
+本番 Basic 認証は**設定しない**（`BASIC_AUTH_USER` / `BASIC_AUTH_PASSWORD` を本番環境変数に追加しないことで無効化）。
+
+**カスタムドメイン**: Cloudflare ダッシュボード → Workers & Pages → `hatchery` → **「カスタムドメイン」タブ** → `hatchery-works.com` を追加（Cloudflare でドメインを購入済みの場合、DNS は自動設定）。
+
+**API プロキシ向け環境変数**: Pages Function の `/api/*` プロキシが Cloud Run に転送するために `API_BASE_URL` を設定する。
+Cloudflare ダッシュボード → Workers & Pages → `hatchery` → **Settings → Environment variables → Production** に追加:
+
+| 変数名 | 値 |
+|--------|-----|
+| `API_BASE_URL` | 本番 Cloud Run の URL（`https://hatchery-prod-xxxx-an.a.run.app`）|
+
+> **注意**: `API_BASE_URL` は初回デプロイ後に Cloud Run URL が確定してから設定し、再デプロイする。
+
+### 6-5. 本番デプロイの動作確認
+
+1. `develop → main` の昇格 PR をマージする（人間ゲート）
+2. GitHub Actions タブで `Deploy Server (prod)` と `Deploy Client (prod)` が緑になることを確認
+3. `CLOUD_RUN_PROD_URL` の API が正常応答することを確認
+4. 本番 Cloudflare Pages URL にアクセスして画面が表示されることを確認
+
+---
+
 ## 関連
 
 - ADR-0009: 定時バッチ方式（常時稼働せず外部スケジューラから起動）
 - ADR-0011: サーバホスティング選定の記録
 - ADR-0018: Reddit 風公共コミュニティへのピボット
-- `.github/workflows/deploy-server-dev.yml`: サーバデプロイ用ワークフロー
-- `.github/workflows/deploy-client-dev.yml`: クライアントデプロイ用ワークフロー
+- `.github/workflows/deploy-server-dev.yml`: サーバデプロイ用ワークフロー（dev）
+- `.github/workflows/deploy-client-dev.yml`: クライアントデプロイ用ワークフロー（dev）
+- `.github/workflows/deploy-server-prod.yml`: サーバデプロイ用ワークフロー（prod・#345）
+- `.github/workflows/deploy-client-prod.yml`: クライアントデプロイ用ワークフロー（prod・#345）
 - `.github/workflows/run-batch.yml`: 定時バッチワークフロー（#388）

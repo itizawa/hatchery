@@ -1,6 +1,11 @@
 import { Prisma, type PrismaClient } from "@prisma/client";
 
-import { decodeCursor, encodeCursor } from "./postRepository.js";
+import {
+  decodeCursor,
+  decodePopularCursor,
+  encodeCursor,
+  encodePopularCursor,
+} from "./postRepository.js";
 import type { PostCreateInput, PostRecord, PostRepository } from "./postRepository.js";
 
 function toRecord(row: {
@@ -117,6 +122,43 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
       const hasMore = rows.length > limit;
       const posts = hasMore ? rows.slice(0, limit) : rows;
       const nextCursor = hasMore ? encodeCursor(toRecord(posts[posts.length - 1]!)) : null;
+
+      return { posts: posts.map(toRecord), nextCursor };
+    },
+
+    async listPopularPaged(
+      cursor?: string,
+      limit = 20,
+    ): Promise<{ posts: PostRecord[]; nextCursor: string | null }> {
+      let where: Prisma.PostWhereInput | undefined = undefined;
+
+      if (cursor !== undefined) {
+        const payload = decodePopularCursor(cursor);
+        if (!payload) throw new Error("INVALID_CURSOR");
+        const cursorDate = new Date(payload.createdAt);
+        // keyset: score 降順 → createdAt 降順 → id 降順
+        where = {
+          OR: [
+            { score: { lt: payload.score } },
+            { score: { equals: payload.score }, createdAt: { lt: cursorDate } },
+            {
+              score: { equals: payload.score },
+              createdAt: { equals: cursorDate },
+              id: { lt: payload.id },
+            },
+          ],
+        };
+      }
+
+      const rows = await prisma.post.findMany({
+        where,
+        orderBy: [{ score: "desc" }, { createdAt: "desc" }, { id: "desc" }],
+        take: limit + 1,
+      });
+
+      const hasMore = rows.length > limit;
+      const posts = hasMore ? rows.slice(0, limit) : rows;
+      const nextCursor = hasMore ? encodePopularCursor(toRecord(posts[posts.length - 1]!)) : null;
 
       return { posts: posts.map(toRecord), nextCursor };
     },

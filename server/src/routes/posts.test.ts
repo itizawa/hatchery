@@ -5,6 +5,7 @@ import { createApp } from "../app.js";
 import { createInMemoryCommentRepository } from "../persistence/commentRepository.js";
 import { createInMemoryPostRepository } from "../persistence/postRepository.js";
 import { createInMemoryVoteRepository } from "../persistence/voteRepository.js";
+import { createInMemoryWorkerRepository } from "../persistence/workerRepository.js";
 import { createTestDeps } from "../testing/createTestDeps.js";
 
 describe("GET /api/posts/:postId", () => {
@@ -38,13 +39,67 @@ describe("GET /api/posts/:postId", () => {
     const res = await request(app).get("/api/posts/not-exists");
     expect(res.status).toBe(404);
   });
+
+  it("post と各 comment に author_worker（display_name + image_url）を付与する（#479）", async () => {
+    const postRepo = createInMemoryPostRepository();
+    const commentRepo = createInMemoryCommentRepository();
+    const [post] = await postRepo.createMany("community-1", [
+      { slotKey: "2026-06-10T09:00", seq: 0, author: "haru", title: "T", text: "Body" },
+    ]);
+    await commentRepo.createMany("community-1", [
+      { postId: post.id, slotKey: "2026-06-10T09:00", seq: 0, author: "uuid-ken", text: "Reply" },
+    ]);
+    const workerRepo = createInMemoryWorkerRepository([
+      { id: "uuid-haru", displayName: "haru", role: null, personality: null, imageUrl: "https://example.com/haru.png" },
+      { id: "uuid-ken", displayName: "ken", role: null, personality: null, imageUrl: null },
+    ]);
+
+    const deps = await createTestDeps({
+      postRepository: postRepo,
+      commentRepository: commentRepo,
+      workerRepository: workerRepo,
+    });
+    const app = createApp(deps);
+
+    const res = await request(app).get(`/api/posts/${post.id}`);
+    expect(res.status).toBe(200);
+    expect(res.body.post.author_worker).toEqual({
+      id: "uuid-haru",
+      display_name: "haru",
+      image_url: "https://example.com/haru.png",
+    });
+    expect(res.body.comments[0].author_worker).toEqual({
+      id: "uuid-ken",
+      display_name: "ken",
+      image_url: null,
+    });
+  });
+
+  it("解決できない author の comment には author_worker を付与しない（#479）", async () => {
+    const postRepo = createInMemoryPostRepository();
+    const commentRepo = createInMemoryCommentRepository();
+    const [post] = await postRepo.createMany("community-1", [
+      { slotKey: "2026-06-10T09:00", seq: 0, author: "unknown-author", title: "T", text: "Body" },
+    ]);
+    await commentRepo.createMany("community-1", [
+      { postId: post.id, slotKey: "2026-06-10T09:00", seq: 0, author: "unknown-commenter", text: "Reply" },
+    ]);
+
+    const deps = await createTestDeps({
+      postRepository: postRepo,
+      commentRepository: commentRepo,
+    });
+    const app = createApp(deps);
+
+    const res = await request(app).get(`/api/posts/${post.id}`);
+    expect(res.body.post.author_worker).toBeUndefined();
+    expect(res.body.comments[0].author_worker).toBeUndefined();
+  });
 });
 
 describe("POST /api/posts/:postId/vote", () => {
   async function loginAndGetCookie(app: Express.Application) {
-    const loginRes = await request(app)
-      .post("/api/auth/login")
-      .send({ loginId: "testuser", password: "testpass" });
+    const loginRes = await request(app).post("/api/auth/dev-login");
     return loginRes.headers["set-cookie"] as string[];
   }
 
@@ -146,7 +201,7 @@ describe("POST /api/posts/:postId/vote", () => {
   it("存在しない post は 404 を返す", async () => {
     const deps = await createTestDeps();
     const app = createApp(deps);
-    const loginRes = await request(app).post("/api/auth/login").send({ loginId: "testuser", password: "testpass" });
+    const loginRes = await request(app).post("/api/auth/dev-login");
     const cookie = loginRes.headers["set-cookie"] as string[];
     const res = await request(app).post("/api/posts/not-exists/vote").send({ direction: "up" }).set("Cookie", cookie);
     expect(res.status).toBe(404);
@@ -155,9 +210,7 @@ describe("POST /api/posts/:postId/vote", () => {
 
 describe("POST /api/comments/:commentId/vote", () => {
   async function loginAndGetCookie(app: Express.Application) {
-    const loginRes = await request(app)
-      .post("/api/auth/login")
-      .send({ loginId: "testuser", password: "testpass" });
+    const loginRes = await request(app).post("/api/auth/dev-login");
     return loginRes.headers["set-cookie"] as string[];
   }
 

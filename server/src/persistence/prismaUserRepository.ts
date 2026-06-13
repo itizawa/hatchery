@@ -1,21 +1,21 @@
 import { UserRoleSchema } from "@hatchery/common";
 import { Prisma, type PrismaClient } from "@prisma/client";
 
-import { LoginIdAlreadyExistsError, type User, type UserRepository } from "./userRepository.js";
+import { GoogleIdAlreadyExistsError, type User, type UserRepository } from "./userRepository.js";
 
 function mapRow(row: {
   id: string;
-  loginId: string;
+  email: string;
+  googleId: string;
   displayName: string;
-  passwordHash: string;
   role: string;
   avatarUrl: string | null;
 }): User {
   return {
     id: row.id,
-    loginId: row.loginId,
+    email: row.email,
+    googleId: row.googleId,
     displayName: row.displayName,
-    passwordHash: row.passwordHash,
     role: UserRoleSchema.parse(row.role ?? "member"),
     avatarUrl: row.avatarUrl ?? null,
   };
@@ -31,9 +31,9 @@ export function createPrismaUserRepository(prisma: PrismaClient): UserRepository
       return mapRow(row);
     },
 
-    async findByLoginId(loginId: string): Promise<User | null> {
+    async findByGoogleId(googleId: string): Promise<User | null> {
       const row = await prisma.user.findUnique({
-        where: { loginId },
+        where: { googleId },
       });
       if (!row) return null;
       return mapRow(row);
@@ -61,23 +61,23 @@ export function createPrismaUserRepository(prisma: PrismaClient): UserRepository
     },
 
     async create(input: {
-      loginId: string;
+      email: string;
+      googleId: string;
       displayName: string;
-      passwordHash: string;
     }): Promise<User> {
       try {
         const row = await prisma.user.create({
           data: {
-            loginId: input.loginId,
+            email: input.email,
+            googleId: input.googleId,
             displayName: input.displayName,
-            passwordHash: input.passwordHash,
             role: "member",
           },
         });
         return mapRow(row);
       } catch (err) {
         if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
-          throw new LoginIdAlreadyExistsError(input.loginId);
+          throw new GoogleIdAlreadyExistsError(input.googleId);
         }
         throw err;
       }

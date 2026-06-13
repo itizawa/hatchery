@@ -1,4 +1,4 @@
-import { Alert, Box, Button, Skeleton, Snackbar, TextField, Typography } from "../components/uiParts";
+import { Alert, Box, Button, Snackbar, TextField, Typography } from "../components/uiParts";
 
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -18,7 +18,9 @@ function validateUrl(value: string): string | undefined {
 }
 
 export const AccountScene = (): ReactElement => {
-  const { data: authUser, isLoading } = authApi.useAuth();
+  // #461: useAuth は useSuspenseQuery 化済み。/account は requireAuth ガード経由で到達するため
+  // ここでは authUser は解決済み（AuthUser）。ローディングはルートの Suspense に委譲する。
+  const { data: authUser } = authApi.useAuth();
   const queryClient = useQueryClient();
   const updateMutation = useMutation({
     mutationFn: (body: Parameters<typeof authApi.updateProfile>[0]) => authApi.updateProfile(body),
@@ -55,20 +57,6 @@ export const AccountScene = (): ReactElement => {
       form.reset(values);
     }
   }, [authUser]); // form は stable なので依存配列から除外
-
-  if (isLoading) {
-    return (
-      <Box component="section" sx={{ p: 3, maxWidth: 480 }}>
-        <Typography variant="h5" component="h1" gutterBottom>
-          アカウント設定
-        </Typography>
-        <Box sx={{ mt: 2, display: "flex", flexDirection: "column", gap: 2 }}>
-          <Skeleton variant="text" height={40} data-testid="account-scene-skeleton" />
-          <Skeleton variant="text" height={40} />
-        </Box>
-      </Box>
-    );
-  }
 
   return (
     <Box component="section" sx={{ p: 3, maxWidth: 480 }}>
@@ -142,12 +130,20 @@ export const AccountScene = (): ReactElement => {
           {({ displayName, avatarUrl, canSubmit, isSubmitting }) => {
             // savedValuesRef との比較で dirty を判定（savedValuesRef は authUser ロード後にセットされる）
             const saved = savedValuesRef.current;
-            const isDirty = saved !== null && (displayName !== saved.displayName || avatarUrl !== saved.avatarUrl);
+            const isDirty =
+              saved !== null &&
+              (displayName !== saved.displayName || avatarUrl !== saved.avatarUrl);
             return (
               <Button
                 type="submit"
                 variant="contained"
-                disabled={!displayName.trim() || !canSubmit || isSubmitting || updateMutation.isPending || !isDirty}
+                disabled={
+                  !displayName.trim() ||
+                  !canSubmit ||
+                  isSubmitting ||
+                  updateMutation.isPending ||
+                  !isDirty
+                }
                 sx={{ alignSelf: "flex-start" }}
               >
                 保存

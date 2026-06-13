@@ -12,7 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Reddit 風 UI の「AI ワーカーたちが投稿し合う公共コミュニティ」を放置して眺める観察エンタメ（`concept.md`・ADR-0018〜0020）。構造は `Hatchery > community > post > comment`。ユーザーの関与は **up vote と community 購読のみ**（投稿・コメントはしない）。設計上の重要な制約:
 
-- **定時方式**: 常時稼働せず、1 日数回の「定時」に **community ごと 1 API コールで複数 post / comment（複数ワーカーの掛け合い）** を JSON 生成・検証・community 紐づきで永続化する。常時稼働プロセスは前提にしない（ADR-0009 / ADR-0018）。
+- **定時方式**: 常時稼働せず、1 日数回の「定時」に、**vote 重み付きランダムで選んだ 1 コミュニティだけ**を 1 API コールで複数 post / comment（複数ワーカーの掛け合い）を JSON 生成・検証・community 紐づきで永続化する。これにより API コール/定時は常に最大 1 回でコミュニティ数に非依存（ADR-0030）。重みは直近 7 日の純 vote スコア（up−down）+ cold start 床 +1。常時稼働プロセスは前提にしない（ADR-0009 / ADR-0018 / ADR-0030）。
 - **純粋な会話観察に集中（ADR-0023）**: プロダクトが GitHub Issue 等の外部成果物を生成する機能は持たない（goal 機構 / リサーチャー / artifactConfig は廃止）。進化イベント・経験値・関係値・mood といった成長メカニクスも持たない。生成エンジンは `@anthropic-ai/sdk` の単発コールのみで、Claude Agent SDK は採用しない。
 - MVP は「最小 1 ループ」のみ（ワーカー 3 人・community 2 つ・定時 2 回）。ホームフィードは新着順で十分。
 
@@ -108,6 +108,18 @@ common: Zod スキーマ → server: zod-to-openapi で openapi.json 生成 → 
 - バリデーション・ダーティ検知・送信ハンドリングはすべて `useForm` に委ねる。
 - 参照実装: `client/src/routes/LoginScene.tsx`（`useForm` + `form.Field` + MUI `TextField` の連携例）。
 - 違反（生の `useState` によるフォーム管理・自前 isDirty 等）はレビューで指摘対象とする。
+
+## e2e ユースケースの保守
+
+**ユーザーから見た振る舞い（画面・遷移・操作結果・空状態/エラー表示等）を追加・変更する機能開発では、`e2e/` のユースケースを必ず同じ PR で更新すること**。これは `develop → main` 昇格前のリリース判定（`/release-check`）が「何を動作確認すべきか」を読む正本であり、更新を怠ると検証範囲が実機能から乖離する。
+
+- **正本**: `e2e/usecases.md`（全エリア索引）と各 `e2e/<area>/usecases.md`（エリア別の前提条件・ステップ・期待動作）。`## UC-XXX-NN` 見出しは同エリアの `<area>/<area>.spec.ts` の `test.todo()` と 1:1 対応。
+- **更新ルール**:
+  - 既存画面に振る舞いを足す → 該当 `e2e/<area>/usecases.md` に `## UC-XXX-NN` を追記し、`e2e/usecases.md` のサマリにも反映する。
+  - 新しい画面・機能カテゴリ → `e2e/<new-area>/usecases.md` を新設し、`e2e/usecases.md` のエリア一覧に行を追加する。
+  - ユースケースは**ユーザー視点の「観察可能な期待動作」**で書く（実装詳細は書かない）。設計書（`docs/design/issue-<N>.md`）の受け入れ条件と整合させる。
+- 純粋なバックエンド/リファクタ等で**ユーザー可視の振る舞いが変わらない**場合は更新不要（その旨を PR に一言残す）。
+- ユーザー可視の振る舞いを変えたのに usecases を更新していない PR は、**レビューで指摘対象**とする。
 
 ## ADR の追加・更新
 

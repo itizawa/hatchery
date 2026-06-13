@@ -14,6 +14,8 @@ function toRecord(row: {
   description: string;
   synopsis: string | null;
   lastSlotKey: string | null;
+  iconUrl: string | null;
+  coverUrl: string | null;
   createdAt: Date;
 }): CommunityRecord {
   return {
@@ -23,6 +25,8 @@ function toRecord(row: {
     description: row.description,
     synopsis: row.synopsis,
     lastSlotKey: row.lastSlotKey,
+    iconUrl: row.iconUrl,
+    coverUrl: row.coverUrl,
     createdAt: row.createdAt,
   };
 }
@@ -65,6 +69,8 @@ export function createPrismaCommunityRepository(prisma: PrismaClient): Community
           data: {
             ...(input.name !== undefined && { name: input.name }),
             ...(input.description !== undefined && { description: input.description }),
+            ...(input.iconUrl !== undefined && { iconUrl: input.iconUrl }),
+            ...(input.coverUrl !== undefined && { coverUrl: input.coverUrl }),
           },
         });
         return toRecord(row);

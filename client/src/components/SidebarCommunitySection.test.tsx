@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { SidebarCommunitySection } from "./SidebarCommunitySection";
@@ -76,5 +77,48 @@ describe("SidebarCommunitySection", () => {
   it("「コミュニティ」セクションのラベルが表示される", () => {
     render(<SidebarCommunitySection />, { wrapper: Wrapper });
     expect(screen.getByText("コミュニティ")).toBeInTheDocument();
+  });
+
+  it("初期状態は展開で、トグルの aria-expanded が true・本体が表示される", async () => {
+    render(<SidebarCommunitySection />, { wrapper: Wrapper });
+    const toggle = screen.getByRole("button", { name: /コミュニティ/ });
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(await screen.findByText("AI 開発者の集い")).toBeInTheDocument();
+    expect(screen.getByText("探す")).toBeInTheDocument();
+  });
+
+  it("見出しクリックで折りたたまれ、本体が非マウントになり aria-expanded が false になる", async () => {
+    const user = userEvent.setup();
+    render(<SidebarCommunitySection />, { wrapper: Wrapper });
+    await screen.findByText("AI 開発者の集い");
+    const toggle = screen.getByRole("button", { name: /コミュニティ/ });
+
+    await user.click(toggle);
+
+    // MUI Collapse(unmountOnExit) はトランジション完了後に子を DOM から外す
+    await waitFor(() => {
+      expect(screen.queryByText("AI 開発者の集い")).not.toBeInTheDocument();
+    });
+    expect(screen.queryByText("コーディング日常")).not.toBeInTheDocument();
+    expect(screen.queryByText("探す")).not.toBeInTheDocument();
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("折りたたみ後に再クリックすると再展開し、本体が再表示され aria-expanded が true に戻る", async () => {
+    const user = userEvent.setup();
+    render(<SidebarCommunitySection />, { wrapper: Wrapper });
+    await screen.findByText("AI 開発者の集い");
+    const toggle = screen.getByRole("button", { name: /コミュニティ/ });
+
+    await user.click(toggle);
+    await waitFor(() => {
+      expect(screen.queryByText("AI 開発者の集い")).not.toBeInTheDocument();
+    });
+
+    await user.click(toggle);
+
+    expect(await screen.findByText("AI 開発者の集い")).toBeInTheDocument();
+    expect(screen.getByText("探す")).toBeInTheDocument();
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
   });
 });

@@ -260,7 +260,8 @@ describe("サイドバーのナビゲーション (#307)", () => {
     renderWithRouter("/");
 
     await screen.findByRole("navigation", { name: "サイドバー" });
-    expect(screen.getByRole("separator")).toBeInTheDocument();
+    // #435 でグローバルナビ追加に伴い Divider が複数になった
+    expect(screen.getAllByRole("separator").length).toBeGreaterThanOrEqual(1);
   });
 
   it("「探す」が /communities へのリンクを持つ ListItemButton でレンダリングされる", async () => {

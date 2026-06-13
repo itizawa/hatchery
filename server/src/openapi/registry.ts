@@ -668,6 +668,10 @@ registry.registerPath({
         .max(100)
         .default(20)
         .openapi({ description: "1 ページあたりの件数（1～100、既定 20）" }),
+      sort: z
+        .enum(["latest", "popular"])
+        .default("latest")
+        .openapi({ description: "並び順（latest=新着順 / popular=vote 数降順、既定 latest）" }),
     }),
   },
   responses: {

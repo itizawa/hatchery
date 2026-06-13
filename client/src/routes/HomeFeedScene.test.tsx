@@ -181,7 +181,7 @@ describe("HomeFeedScene — 人気フィード (/popular) (#435)", () => {
           slot_key: "2026-06-10-morning",
           seq: 1,
           author: "worker-haru",
-          title: "人気投稿テスト",
+          title: "トレンド投稿テスト",
           text: "内容",
           score: 99,
           created_at: "2026-06-10T00:00:00Z",
@@ -190,8 +190,8 @@ describe("HomeFeedScene — 人気フィード (/popular) (#435)", () => {
     });
     renderApp("/popular");
 
-    expect(await screen.findByRole("heading", { name: /人気/ })).toBeInTheDocument();
-    expect(await screen.findByText("人気投稿テスト")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "人気の投稿" })).toBeInTheDocument();
+    expect(await screen.findByText("トレンド投稿テスト")).toBeInTheDocument();
   });
 
   it("/popular では GET /api/feed?sort=popular が呼ばれる", async () => {

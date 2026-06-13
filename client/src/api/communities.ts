@@ -8,6 +8,7 @@ import { CommunitySchema } from "@hatchery/common";
 import type {
   Community as AdminCommunity,
   CreateCommunityInput,
+  HomeFeedSort,
   UpdateCommunityInput,
   VoteDirection,
 } from "@hatchery/common";
@@ -42,7 +43,7 @@ export const COMMUNITIES_QUERY_KEY = ADMIN_COMMUNITIES_QUERY_KEY;
 export const communityFeedQueryKey = (slug: string) => ["communities", slug, "feed"] as const;
 export const communityRecentWorkersQueryKey = (slug: string) =>
   ["communities", slug, "recent-workers"] as const;
-export const homeFeedQueryKey = () => ["feed"] as const;
+export const homeFeedQueryKey = (sort: HomeFeedSort = "latest") => ["feed", sort] as const;
 export const postThreadQueryKey = (postId: string) => ["posts", postId] as const;
 export const communitySubscriptionQueryKey = (slug: string) =>
   ["communities", slug, "subscription"] as const;
@@ -149,13 +150,18 @@ export async function fetchCommunityFeed(slug: string): Promise<Post[]> {
 }
 
 /**
- * GET /api/feed — ホームフィードを 1 ページ分取得する（カーソルページネーション #367）。
+ * GET /api/feed — ホームフィードを 1 ページ分取得する（カーソルページネーション #367 / 並び順 #435）。
+ * sort=latest（既定）は後方互換のため query に sort を含めない。
  */
 export async function fetchHomeFeedPage(
   cursor?: string,
+  sort: HomeFeedSort = "latest",
 ): Promise<{ posts: Post[]; nextCursor: string | null }> {
+  const query: { cursor?: string; limit: number; sort?: HomeFeedSort } = { limit: 20 };
+  if (cursor) query.cursor = cursor;
+  if (sort === "popular") query.sort = sort;
   const { data, response } = await openApiClient.GET("/api/feed", {
-    params: { query: cursor ? { cursor, limit: 20 } : { limit: 20 } },
+    params: { query },
     credentials: "include",
   });
   if (!response.ok || !data) throw new Error(`GET /api/feed failed: ${response.status}`);
@@ -272,11 +278,11 @@ export function useCommunityFeed(slug: string) {
   });
 }
 
-/** ホームフィードを TanStack Query の無限スクロールで取得するフック（#367）。 */
-export function useInfiniteHomeFeed() {
+/** ホームフィードを TanStack Query の無限スクロールで取得するフック（#367 / 並び順 #435）。 */
+export function useInfiniteHomeFeed(sort: HomeFeedSort = "latest") {
   return useInfiniteQuery({
-    queryKey: homeFeedQueryKey(),
-    queryFn: ({ pageParam }) => fetchHomeFeedPage(pageParam as string | undefined),
+    queryKey: homeFeedQueryKey(sort),
+    queryFn: ({ pageParam }) => fetchHomeFeedPage(pageParam as string | undefined, sort),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     staleTime: 30_000,
@@ -313,7 +319,7 @@ export function useSubscribe(slug: string) {
     mutationFn: () => subscribeCommunity(slug),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: communitySubscriptionQueryKey(slug) });
-      void queryClient.invalidateQueries({ queryKey: homeFeedQueryKey() });
+      void queryClient.invalidateQueries({ queryKey: ["feed"] });
     },
   });
 }
@@ -325,7 +331,7 @@ export function useUnsubscribe(slug: string) {
     mutationFn: () => unsubscribeCommunity(slug),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: communitySubscriptionQueryKey(slug) });
-      void queryClient.invalidateQueries({ queryKey: homeFeedQueryKey() });
+      void queryClient.invalidateQueries({ queryKey: ["feed"] });
     },
   });
 }
@@ -362,7 +368,7 @@ export function useVotePost(communitySlug?: string) {
       if (communitySlug) {
         void queryClient.invalidateQueries({ queryKey: communityFeedQueryKey(communitySlug) });
       }
-      void queryClient.invalidateQueries({ queryKey: homeFeedQueryKey() });
+      void queryClient.invalidateQueries({ queryKey: ["feed"] });
     },
   });
 }

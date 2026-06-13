@@ -16,10 +16,14 @@ export function createFeedRouter(postRepo: PostRepository): Router {
       res.status(400).json({ error: "ValidationError", issues: parsed.error.issues });
       return;
     }
-    const { cursor, limit } = parsed.data;
+    const { cursor, limit, sort } = parsed.data;
 
-    postRepo
-      .listLatestPaged(cursor, limit)
+    const fetchPage =
+      sort === "popular"
+        ? postRepo.listPopularPaged(cursor, limit)
+        : postRepo.listLatestPaged(cursor, limit);
+
+    fetchPage
       .then((result) => res.status(200).json(result))
       .catch((err: unknown) => {
         if (err instanceof Error && err.message === "INVALID_CURSOR") {

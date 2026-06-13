@@ -25,3 +25,5 @@ test.todo("UC-ADMIN-08: admin ユーザーが Worker の参加コミュニティ
 test.todo("UC-ADMIN-09: admin ユーザーが Worker 新規作成時に参加コミュニティを指定できる");
 
 test.todo("UC-ADMIN-10: admin ユーザーがコミュニティのアイコン・カバー画像をアップロードできる");
+
+test.todo("UC-ADMIN-11: 管理画面タブのデータ取得に失敗すると再試行フォールバックが表示される");

@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import type { AppSettingResponse, Worker } from "@hatchery/common";
 
 import { openApiClient } from "./client.js";
@@ -33,8 +33,12 @@ export async function patchSetting(key: string, value: string): Promise<AppSetti
   return data;
 }
 
+/**
+ * 管理画面の設定一覧を取得するフック（#110）。
+ * useSuspenseQuery（#459/#463）。ローディング・エラーは呼び出し元の QueryBoundary に委譲する。
+ */
 export function useAdminSettings() {
-  return useQuery({
+  return useSuspenseQuery({
     queryKey: ADMIN_SETTINGS_QUERY_KEY,
     queryFn: fetchSettings,
   });
@@ -95,9 +99,12 @@ export async function createAdminWorker(input: {
   return data;
 }
 
-/** 管理画面のワーカー一覧（全 Worker）を取得するフック（#217 / #329）。 */
+/**
+ * 管理画面のワーカー一覧（全 Worker）を取得するフック（#217 / #329）。
+ * useSuspenseQuery（#459/#463）。ローディング・エラーは呼び出し元の QueryBoundary に委譲する。
+ */
 export function useAdminWorkers() {
-  return useQuery({
+  return useSuspenseQuery({
     queryKey: ADMIN_WORKERS_QUERY_KEY,
     queryFn: fetchAdminWorkers,
   });

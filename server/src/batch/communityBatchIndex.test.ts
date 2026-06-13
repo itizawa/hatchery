@@ -8,6 +8,7 @@ import {
   type CommunityRecord,
 } from "../persistence/communityRepository.js";
 import { createInMemoryPostRepository } from "../persistence/postRepository.js";
+import { createInMemoryVoteRepository } from "../persistence/voteRepository.js";
 import { createInMemoryWorkerCommunityRepository } from "../persistence/workerCommunityRepository.js";
 import type { WorkerRecord } from "../persistence/workerRepository.js";
 
@@ -78,43 +79,42 @@ describe("communityBatchIndex (#383)", () => {
         commentRepo: createInMemoryCommentRepository(),
         appSettingRepo: createInMemoryAppSettingRepository(),
         batchRunLogRepository: createInMemoryBatchRunLogRepository(),
+        // vote 0（純スコアなし）→ 全コミュニティ床 +1（weight=1）の均等選定。
+        voteRepo: createInMemoryVoteRepository(),
         // WorkerCommunity 紐づきは無し → botWorkerProvider（haru/ken）へフォールバックする。
         workerCommunityRepo: createInMemoryWorkerCommunityRepository({ workers: [], links: [] }),
         botWorkerProvider: () => Promise.resolve(botWorkers),
         generate,
         anthropicApiKey: "test-key",
+        // rng=0 → 先頭（最古）コミュニティを決定的に選定する。
+        rng: () => 0,
       },
       disconnect,
     };
   };
 
-  it("複数 community があるとき、各 community について生成処理が 1 回ずつ呼ばれる", async () => {
+  it("複数 community があっても 1 定時 = 1 コミュニティのみ生成される（#486）", async () => {
     const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+    // rng=0 → community1 が選定される。
     const cliDeps = buildCliDeps([community1, community2], generate);
 
     const result = await runCommunityBatchCli(cliDeps);
 
-    expect(generate).toHaveBeenCalledTimes(2);
-    // 各 community に post 1 件ずつ永続化される
-    expect(result.posts.map((p) => p.communityId).sort()).toEqual([
-      "community-1",
-      "community-2",
-    ]);
+    // 1 定時 = vote 重み付きランダムで 1 コミュニティのみ → API コールは最大 1 回。
+    expect(generate).toHaveBeenCalledTimes(1);
+    expect(result.posts.map((p) => p.communityId)).toEqual(["community-1"]);
   });
 
-  it("1 つの community の生成が失敗しても、他の community の処理が継続される", async () => {
-    const generate = vi
-      .fn()
-      .mockRejectedValueOnce(new Error("API エラー")) // community1: 失敗
-      .mockResolvedValueOnce(validGenerationOutput); // community2: 成功
+  it("選定コミュニティの生成が失敗してもエントリ関数は正常終了する（#486）", async () => {
+    const generate = vi.fn().mockRejectedValue(new Error("API エラー"));
+    // rng=0 → community1 が選定される。その生成が失敗する。
     const cliDeps = buildCliDeps([community1, community2], generate);
 
-    // 1 件失敗してもエントリ関数自体は正常終了する
+    // 生成失敗してもエントリ関数自体は正常終了する（エラーは batchRunLog に記録）。
     const result = await runCommunityBatchCli(cliDeps);
 
-    expect(generate).toHaveBeenCalledTimes(2);
-    expect(result.posts.length).toBe(1);
-    expect(result.posts[0]?.communityId).toBe("community-2");
+    expect(generate).toHaveBeenCalledTimes(1);
+    expect(result.posts.length).toBe(0);
   });
 
   it("対象 community が 0 件のとき、エラーにせず正常終了する", async () => {

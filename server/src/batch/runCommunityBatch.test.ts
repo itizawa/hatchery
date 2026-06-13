@@ -5,6 +5,7 @@ import { createInMemoryBatchRunLogRepository } from "../persistence/batchRunLogR
 import { createInMemoryCommentRepository } from "../persistence/commentRepository.js";
 import { createInMemoryCommunityRepository, type CommunityRecord } from "../persistence/communityRepository.js";
 import { createInMemoryPostRepository } from "../persistence/postRepository.js";
+import { createInMemoryVoteRepository } from "../persistence/voteRepository.js";
 import {
   createInMemoryWorkerCommunityRepository,
   type InMemoryWorkerCommunityData,
@@ -86,6 +87,8 @@ describe("runCommunityBatch (#306)", () => {
     const appSettingRepo = createInMemoryAppSettingRepository();
     const batchRunLogRepository = createInMemoryBatchRunLogRepository();
     const workerCommunityRepo = createInMemoryWorkerCommunityRepository(workerCommunityData);
+    // vote 集計（重み算出）用。既定では vote 0（純スコアなし）で全コミュニティが床 +1 のみ。
+    const voteRepo = createInMemoryVoteRepository();
     // 紐づき 0 件のフォールバック先（全 Bot ワーカー）。既存テストはここで haru/ken/mei を供給する。
     const botWorkerProvider = (): Promise<readonly WorkerRecord[]> => Promise.resolve(botWorkers);
     return {
@@ -95,8 +98,11 @@ describe("runCommunityBatch (#306)", () => {
       appSettingRepo,
       batchRunLogRepository,
       workerCommunityRepo,
+      voteRepo,
       botWorkerProvider,
       anthropicApiKey: "test-key",
+      // 既定では rng=0 → 先頭（最古）コミュニティを選定する（決定的）。
+      rng: () => 0,
     };
   };
 
@@ -116,13 +122,78 @@ describe("runCommunityBatch (#306)", () => {
     expect(result.comments[1]?.postId).toBe(result.posts[0]?.id);
   });
 
-  it("複数コミュニティがある場合、それぞれに generate が 1 回呼ばれる", async () => {
+  it("複数コミュニティがあっても generate は最大 1 回だけ呼ばれる（1 コミュニティのみ選定）", async () => {
     const deps = buildDeps([community1, community2]);
     const generate = vi.fn().mockResolvedValue(validGenerationOutput);
 
     await runCommunityBatch({ ...deps, generate });
 
-    expect(generate).toHaveBeenCalledTimes(2);
+    // 1 定時 = vote 重み付きランダムで 1 コミュニティのみ → API コールは最大 1 回（#486 AC3）。
+    expect(generate).toHaveBeenCalledTimes(1);
+  });
+
+  it("rng を固定すると決定的に選ばれたコミュニティのみ生成・永続化される", async () => {
+    // vote 0 のため両コミュニティとも床 +1（weight=1）。累積: community1=[0,1), community2=[1,2)。
+    // rng=0 → community1、rng=0.9 → community2。
+    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+
+    const depsA = buildDeps([community1, community2]);
+    const resultA = await runCommunityBatch({ ...depsA, generate, rng: () => 0 });
+    expect(resultA.posts.every((p) => p.communityId === "community-1")).toBe(true);
+    expect(resultA.posts.length).toBeGreaterThan(0);
+
+    const depsB = buildDeps([community1, community2]);
+    const resultB = await runCommunityBatch({ ...depsB, generate, rng: () => 0.9 });
+    expect(resultB.posts.every((p) => p.communityId === "community-2")).toBe(true);
+    expect(resultB.posts.length).toBeGreaterThan(0);
+  });
+
+  it("vote の純スコアが高いコミュニティほど選ばれやすい（重み付き）", async () => {
+    // community2 配下の post に多数の up vote を積み、community2 の重みを大きくする。
+    const deps = buildDeps([community1, community2]);
+    // community2 の post (post-c2-*) に up を 5 件入れる → 純スコア +5、床込み weight=6。
+    // community1 は vote 0 → weight=1。total=7。community1=[0,1), community2=[1,7)。
+    // この vote を community2 に解決するため、voteRepo は targetId→community を解く必要がある。
+    // ここではバッチ側が voteRepo.netScoresByCommunitySince を呼ぶので、
+    // 集計結果を返すスタブ voteRepo を注入して重みを与える。
+    const stubVoteRepo = {
+      ...deps.voteRepo,
+      netScoresByCommunitySince: () =>
+        Promise.resolve(new Map<string, number>([["community-2", 5]])),
+    };
+    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+
+    // rng=0.5 → r=0.5*7=3.5 → community2（[1,7) 区間）。
+    const result = await runCommunityBatch({
+      ...deps,
+      voteRepo: stubVoteRepo,
+      generate,
+      rng: () => 0.5,
+    });
+
+    expect(result.posts.every((p) => p.communityId === "community-2")).toBe(true);
+  });
+
+  it("vote 0 の新規コミュニティも床 +1 により選定対象になる", async () => {
+    // community1 が高スコア（+10 → weight=11）、community2 が vote 0（weight=1）。total=12。
+    // community1=[0,11), community2=[11,12)。rng=11.5/12 → community2 が選ばれる。
+    const deps = buildDeps([community1, community2]);
+    const stubVoteRepo = {
+      ...deps.voteRepo,
+      netScoresByCommunitySince: () =>
+        Promise.resolve(new Map<string, number>([["community-1", 10]])),
+    };
+    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+
+    const result = await runCommunityBatch({
+      ...deps,
+      voteRepo: stubVoteRepo,
+      generate,
+      rng: () => 11.5 / 12,
+    });
+
+    expect(result.posts.every((p) => p.communityId === "community-2")).toBe(true);
+    expect(result.posts.length).toBeGreaterThan(0);
   });
 
   it("author が未知の workerId を含む出力はスキップされる（DB 取得 id 集合で検証）", async () => {
@@ -155,18 +226,17 @@ describe("runCommunityBatch (#306)", () => {
     expect(result.comments.length).toBe(0);
   });
 
-  it("JSON パース失敗時はその community をスキップする", async () => {
+  it("選定したコミュニティの生成出力が JSON パース失敗のときは何も永続化しない", async () => {
+    // rng=0 → community1 が選定される。その生成出力がパース失敗 → 永続化なし。
     const deps = buildDeps([community1, community2]);
-    const generate = vi
-      .fn()
-      .mockResolvedValueOnce("不正なJSON{{{") // community1: パース失敗
-      .mockResolvedValueOnce(validGenerationOutput); // community2: 正常
+    const generate = vi.fn().mockResolvedValue("不正なJSON{{{");
 
-    const result = await runCommunityBatch({ ...deps, generate });
+    const result = await runCommunityBatch({ ...deps, generate, rng: () => 0 });
 
-    // community1 はスキップ、community2 は永続化
-    expect(result.posts.length).toBe(2);
-    expect(result.posts[0]?.communityId).toBe("community-2");
+    // 選定された 1 コミュニティのみ generate され、パース失敗で永続化されない。
+    expect(generate).toHaveBeenCalledTimes(1);
+    expect(result.posts.length).toBe(0);
+    expect(result.comments.length).toBe(0);
   });
 
   it("二重発火ガード: 同一 slotKey で 2 回実行しても 2 回目は skip される", async () => {

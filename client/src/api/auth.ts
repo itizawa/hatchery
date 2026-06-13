@@ -1,9 +1,19 @@
 import type { AuthUser, UpdateProfile } from "@hatchery/common";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { openApiClient } from "./client.js";
+import { apiBaseUrl, openApiClient } from "./client.js";
 
 export const AUTH_ME_QUERY_KEY = ["auth", "me"] as const;
+
+/**
+ * Google ログイン開始エンドポイント（GET /api/auth/google）への全画面遷移先 URL を組み立てる（#78）。
+ * openapi-fetch を通さない素のブラウザ遷移なので baseUrl が効かない。相対パスへ遷移すると
+ * クロスオリジン配信（Cloudflare Pages × Cloud Run）では Pages 側に飛んで Not Found になるため、
+ * API オリジン（apiBaseUrl）を必ず前置する。
+ */
+export function googleLoginUrl(base: string = apiBaseUrl): string {
+  return `${base.replace(/\/$/, "")}/api/auth/google`;
+}
 
 /**
  * GET /auth/me を openapi-fetch（生成型）経由で呼び出す。未ログイン（401）のときは null を返す。

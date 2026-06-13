@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { fetchMe, logout, updateProfile } from "./auth.js";
+import { fetchMe, googleLoginUrl, logout, updateProfile } from "./auth.js";
 
 /** JSON ボディを持つ Response を組み立てる小ヘルパ。 */
 function jsonResponse(status: number, body?: unknown): Response {
@@ -67,5 +67,21 @@ describe("logout / updateProfile（openApiClient 経由・絶対 URL）", () => 
     expect(request.url).toContain("/auth/me");
     expect(request.url).toMatch(/^https?:\/\//);
     expect(request.method).toBe("PATCH");
+  });
+});
+
+// #78: クロスオリジン配信（Cloudflare Pages × Cloud Run）で Google ログインの全画面遷移が
+// API オリジンへ向くことを保証する。相対パスだと Pages 側に飛んで Not Found になる回帰。
+describe("googleLoginUrl（Google ログインの全画面遷移先）", () => {
+  it("API ベース URL を前置した絶対 URL を返す", () => {
+    expect(googleLoginUrl("https://api.example.com")).toBe(
+      "https://api.example.com/api/auth/google",
+    );
+  });
+
+  it("末尾スラッシュ付きのベース URL でもパスが重複しない", () => {
+    expect(googleLoginUrl("https://api.example.com/")).toBe(
+      "https://api.example.com/api/auth/google",
+    );
   });
 });

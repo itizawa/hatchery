@@ -47,9 +47,9 @@ export default defineConfig({
     include: ["src/**/*.test.{ts,tsx}", "functions/**/*.test.ts"],
     css: false,
     // #461 / #459: Suspense クエリ移行でルート全体描画テストが「fallback → 解決後」の 2 パスになり、
-    // CI の低速ランナーでは findBy 解決が既定 5s を超えうる。setup.ts の asyncUtilTimeout(10s) を
+    // CI の低速ランナーでは findBy 解決が既定 5s を超えうる。setup.ts の asyncUtilTimeout(5s) を
     // 待ちきれるよう、テスト自体のタイムアウトもそれより長く取る（描画は確実に完了する）。
-    testTimeout: 15000,
+    testTimeout: 10000,
     coverage: {
       provider: "v8",
       reporter: ["text", "json-summary", "lcov"],

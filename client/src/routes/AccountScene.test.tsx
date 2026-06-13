@@ -33,6 +33,28 @@ function stubFetch(isLoggedIn: boolean) {
   );
 }
 
+/**
+ * /account を描画するテスト用に、シェル（AppHeader/サイドバー）と requireAuth ガードの両方が呼ぶ
+ * fetch を一括スタブする。#461 で useAuth が useSuspenseQuery 化され、シェルの useAuth は
+ * モジュール内ローカル参照の fetchMe を呼ぶため `vi.spyOn(authApi, "fetchMe")` だけでは届かず、
+ * グローバル fetch を確実にスタブする必要がある（未スタブだと実ネットワークへ出て失敗・throw する）。
+ */
+function stubAuthFetch(user: { id: string; displayName: string; avatarUrl?: string } | null) {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockImplementation((input: RequestInfo | URL) => {
+      const url = input instanceof Request ? input.url : String(input);
+      if (url.includes("/auth/me")) {
+        return Promise.resolve(jsonResponse(user ? 200 : 401, user ?? undefined));
+      }
+      if (url.includes("/api/feed")) {
+        return Promise.resolve(jsonResponse(200, { posts: [], nextCursor: null }));
+      }
+      return Promise.resolve(jsonResponse(200, []));
+    }),
+  );
+}
+
 function renderApp(initialPath: string) {
   const queryClient = createQueryClient();
   const router = createAppRouter({
@@ -57,10 +79,25 @@ describe("AccountScene ローディング（#241 / #461: Suspense へ委譲）",
   // #461: useAuth が useSuspenseQuery 化され、認証ローディングはルートの Suspense に委譲される。
   // 認証が解決するまでアカウント設定フォーム（見出し）は描画されず、解決後に表示される。
   it("認証ローディング中はアカウント設定見出しを表示せず、解決後に表示する", async () => {
-    let resolveMe: (user: { id: string; displayName: string }) => void = () => {};
-    vi.spyOn(authApi, "fetchMe").mockReturnValue(
-      new Promise((resolve) => {
-        resolveMe = resolve;
+    // /auth/me の応答を遅延制御する。シェルの useAuth・requireAuth ガードが各々 fetch するため
+    // 複数の保留プロミスを全て解決できるよう、解放フラグ + 保留リストで管理する。
+    let released = false;
+    const pending: Array<(res: Response) => void> = [];
+    const meResponse = () => jsonResponse(200, { id: "user1", displayName: "Alice" });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation((input: RequestInfo | URL) => {
+        const url = input instanceof Request ? input.url : String(input);
+        if (url.includes("/auth/me")) {
+          if (released) return Promise.resolve(meResponse());
+          return new Promise<Response>((resolve) => {
+            pending.push(resolve);
+          });
+        }
+        if (url.includes("/api/feed")) {
+          return Promise.resolve(jsonResponse(200, { posts: [], nextCursor: null }));
+        }
+        return Promise.resolve(jsonResponse(200, []));
       }),
     );
     renderApp("/account");
@@ -68,7 +105,8 @@ describe("AccountScene ローディング（#241 / #461: Suspense へ委譲）",
     // 認証未解決の間は見出しが出ない（per-scene スケルトンは廃止し Suspense に委譲）。
     expect(screen.queryByRole("heading", { name: /アカウント設定/ })).not.toBeInTheDocument();
 
-    resolveMe({ id: "user1", displayName: "Alice" });
+    released = true;
+    pending.forEach((resolve) => resolve(meResponse()));
 
     expect(await screen.findByRole("heading", { name: /アカウント設定/ })).toBeInTheDocument();
   });
@@ -84,14 +122,14 @@ describe("アカウント設定画面（#50）", () => {
   });
 
   it("ログイン済みで /account にアクセスするとアカウント設定の見出しが表示される", async () => {
-    vi.spyOn(authApi, "fetchMe").mockResolvedValue({ id: "user1", displayName: "Alice" });
+    stubAuthFetch({ id: "user1", displayName: "Alice" });
     renderApp("/account");
 
     expect(await screen.findByRole("heading", { name: /アカウント設定/ })).toBeInTheDocument();
   });
 
   it("未ログイン状態で /account にアクセスするとログイン画面が表示される", async () => {
-    vi.spyOn(authApi, "fetchMe").mockResolvedValue(null);
+    stubAuthFetch(null);
     renderApp("/account");
 
     expect(await screen.findByRole("heading", { name: /ログイン/ })).toBeInTheDocument();
@@ -191,7 +229,7 @@ describe("プロフィール編集フォーム (#51)", () => {
   });
 
   it("avatarUrl に不正な URL を入力したとき保存ボタンが無効化またはエラーが表示される（#187）", async () => {
-    vi.spyOn(authApi, "fetchMe").mockResolvedValue({ id: "user1", displayName: "Alice" });
+    stubAuthFetch({ id: "user1", displayName: "Alice" });
     renderApp("/account");
 
     const avatarInput = await screen.findByRole("textbox", { name: /プロフィール画像 URL/ });

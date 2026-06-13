@@ -22,9 +22,15 @@ interface CommunitySidebarCardProps {
   children?: ReactNode;
 }
 
-/** community.created_at を "YYYY年M月D日 作成" 形式（UTC 基準）にフォーマットする。 */
-const formatCreatedAt = (dateStr: string): string => {
+/**
+ * community.created_at を "YYYY年M月D日 作成" 形式（UTC 基準）にフォーマットする。
+ * created_at が undefined / 空文字 / 不正日付のときは null を返し、呼び出し側で作成日行を
+ * 非表示にする（「NaN年NaN月NaN日 作成」の表示を防ぐ・#477）。
+ */
+const formatCreatedAt = (dateStr: string | undefined): string | null => {
+  if (!dateStr) return null;
   const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return null;
   return `${d.getUTCFullYear()}年${d.getUTCMonth() + 1}月${d.getUTCDate()}日 作成`;
 };
 
@@ -45,6 +51,7 @@ export const CommunitySidebarCard = ({
   nameLink = false,
   children,
 }: CommunitySidebarCardProps): ReactElement => {
+  const createdAtLabel = formatCreatedAt(community.created_at);
   return (
     <Box
       sx={{
@@ -73,9 +80,11 @@ export const CommunitySidebarCard = ({
           {community.description}
         </Typography>
       )}
-      <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 2 }}>
-        {formatCreatedAt(community.created_at)}
-      </Typography>
+      {createdAtLabel && (
+        <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 2 }}>
+          {createdAtLabel}
+        </Typography>
+      )}
       {children}
       <Stack spacing={1}>
         <ShareButton shareUrl={shareUrl} shareTitle={shareTitle} />

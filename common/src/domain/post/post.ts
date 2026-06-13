@@ -36,3 +36,34 @@ export const PostSchema = z.object({
 });
 
 export type Post = z.infer<typeof PostSchema>;
+
+/**
+ * 手動作成 post / comment の slot_key プレフィックス（#433）。
+ * 定時バッチの slot_key は "YYYY-MM-DDTHH:MM" 形式（generateSlotKey）なので、
+ * このプレフィックスを付けることで複合ユニーク制約 (community_id, slot_key, seq) が
+ * 定時バッチの採番と決して衝突しない。
+ */
+export const MANUAL_SLOT_KEY_PREFIX = "manual:";
+
+/**
+ * 手動作成用の slot_key を組み立てる純粋関数（#433）。
+ * 一意値（呼び出し側で UUID 等を渡す）にプレフィックスを付けて返す。
+ * seq は常に 0 を使う前提（1 リクエスト = 1 件作成）。
+ */
+export function buildManualSlotKey(uniqueValue: string): string {
+  return `${MANUAL_SLOT_KEY_PREFIX}${uniqueValue}`;
+}
+
+/**
+ * 管理者が任意の worker 名義で post を作成するリクエストスキーマ（#433）。
+ * ADR-0020 を維持し author は既存 worker（workerId）。id / seq / slot_key / score /
+ * created_at はサーバ側で採番するため含めない。文字列フィールドは .max() 必須（#91）。
+ */
+export const CreatePostRequestSchema = z.object({
+  communityId: z.string().uuid(),
+  authorWorkerId: z.string().uuid(),
+  title: z.string().min(1).max(POST_TITLE_MAX_LENGTH),
+  text: z.string().min(1).max(POST_TEXT_MAX_LENGTH),
+});
+
+export type CreatePostRequest = z.infer<typeof CreatePostRequestSchema>;

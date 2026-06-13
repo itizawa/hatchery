@@ -24,3 +24,17 @@ export const CommentSchema = z.object({
 });
 
 export type Comment = z.infer<typeof CommentSchema>;
+
+/**
+ * 管理者が任意の worker 名義で comment を作成するリクエストスキーマ（#433）。
+ * ADR-0020 を維持し author は既存 worker（workerId）。community_id は postId から
+ * サーバ側で解決する。id / seq / slot_key / score / created_at もサーバ側で採番する。
+ * 文字列フィールドは .max() 必須（#91）。
+ */
+export const CreateCommentRequestSchema = z.object({
+  postId: z.string().uuid(),
+  authorWorkerId: z.string().uuid(),
+  text: z.string().min(1).max(COMMENT_TEXT_MAX_LENGTH),
+});
+
+export type CreateCommentRequest = z.infer<typeof CreateCommentRequestSchema>;

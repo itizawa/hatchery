@@ -12,7 +12,9 @@ import {
   BatchRunLogSchema,
   CommunitySchema,
   CommentSchema,
+  CreateCommentRequestSchema,
   CreateCommunitySchema,
+  CreatePostRequestSchema,
   CreateWorkerSchema,
   UpdateCommunitySchema,
   WorkerSchema,
@@ -393,6 +395,21 @@ registry.register(
   SubscriptionSchema.openapi({ description: "コミュニティへの購読。ADR-0019 / ADR-0020" }),
 );
 
+// admin: 任意の worker 名義で post / comment を手動作成するリクエストボディ（#433）。
+const CreatePostRequestComponent = registry.register(
+  "CreatePostRequest",
+  CreatePostRequestSchema.openapi({
+    description: "管理者による手動 post 作成リクエストボディ（#433 / ADR-0020）",
+  }),
+);
+
+const CreateCommentRequestComponent = registry.register(
+  "CreateCommentRequest",
+  CreateCommentRequestSchema.openapi({
+    description: "管理者による手動 comment 作成リクエストボディ（#433 / ADR-0020）",
+  }),
+);
+
 // admin コミュニティ CRUD のリクエストボディ（#310 / #337）。
 const CreateCommunityComponent = registry.register(
   "CreateCommunity",
@@ -462,6 +479,46 @@ registry.registerPath({
     401: { description: "未認証", ...errorJson },
     403: { description: "admin 権限なし", ...errorJson },
     404: { description: "コミュニティが存在しない", ...errorJson },
+  },
+});
+
+// admin: 任意の worker 名義で post を手動作成（認証必須・admin のみ・#433）
+registry.registerPath({
+  method: "post",
+  path: "/api/admin/posts",
+  summary: "任意の worker 名義で post を手動作成（認証必須・admin のみ・#433 / ADR-0020）",
+  request: {
+    body: { content: { "application/json": { schema: CreatePostRequestComponent } } },
+  },
+  responses: {
+    201: {
+      description: "作成された Post",
+      content: { "application/json": { schema: PostComponent } },
+    },
+    400: { description: "バリデーションエラー（uuid 不正・title/text 空など）", ...errorJson },
+    401: { description: "未認証", ...errorJson },
+    403: { description: "admin 権限なし", ...errorJson },
+    404: { description: "community / worker（削除済み含む）が存在しない", ...errorJson },
+  },
+});
+
+// admin: 任意の worker 名義で comment を手動作成（認証必須・admin のみ・#433）
+registry.registerPath({
+  method: "post",
+  path: "/api/admin/comments",
+  summary: "任意の worker 名義で comment を手動作成（認証必須・admin のみ・#433 / ADR-0020）",
+  request: {
+    body: { content: { "application/json": { schema: CreateCommentRequestComponent } } },
+  },
+  responses: {
+    201: {
+      description: "作成された Comment（postId の community に紐づく）",
+      content: { "application/json": { schema: CommentComponent } },
+    },
+    400: { description: "バリデーションエラー（uuid 不正・text 空など）", ...errorJson },
+    401: { description: "未認証", ...errorJson },
+    403: { description: "admin 権限なし", ...errorJson },
+    404: { description: "post / worker（削除済み含む）が存在しない", ...errorJson },
   },
 });
 

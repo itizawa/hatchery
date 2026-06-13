@@ -80,7 +80,10 @@ describe("AdminWorkerTab（useSuspenseQuery + QueryBoundary）", () => {
   it("空配列のときデータ行は 0（ヘッダ行のみ）", async () => {
     stubWorkers(200, []);
     renderWithClient(<AdminWorkerTab />);
-    await screen.findByRole("columnheader", { name: "アバター" });
+    // データ解決後はスケルトン行が消え、ヘッダ行のみになる。
+    await waitFor(() =>
+      expect(screen.queryAllByTestId("admin-worker-avatar-skeleton")).toHaveLength(0),
+    );
     expect(screen.getAllByRole("row")).toHaveLength(1);
   });
 
@@ -131,7 +134,7 @@ describe("AdminWorkerTab（useSuspenseQuery + QueryBoundary）", () => {
   });
 
   it("取得失敗時は QueryBoundary のエラーフォールバック（再試行）が表示される", async () => {
-    stubWorkers(500, undefined);
+    stubWorkers(500, { error: "Server Error" } as unknown as Worker[]);
     renderWithClient(<AdminWorkerTab />);
     expect(await screen.findByRole("button", { name: "再試行" })).toBeInTheDocument();
   });

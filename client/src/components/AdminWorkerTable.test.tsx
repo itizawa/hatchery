@@ -70,7 +70,10 @@ describe("AdminWorkerTable（useSuspenseQuery + QueryBoundary）", () => {
   it("空配列のときデータ行は 0（ヘッダ行のみ）", async () => {
     stubWorkers(200, []);
     renderWithClient(<AdminWorkerTable />);
-    await screen.findByRole("button", { name: "社員を追加" });
+    // データ解決後はスケルトン行が消え、ヘッダ行のみになる。
+    await waitFor(() =>
+      expect(screen.queryAllByTestId("worker-table-skeleton-item")).toHaveLength(0),
+    );
     expect(screen.getAllByRole("row")).toHaveLength(1);
   });
 
@@ -99,7 +102,10 @@ describe("AdminWorkerTable（useSuspenseQuery + QueryBoundary）", () => {
   it("「社員を追加」をクリックすると AddWorkerDialog が開く", async () => {
     stubWorkers(200, []);
     renderWithClient(<AdminWorkerTable />);
-    await screen.findByRole("button", { name: "社員を追加" });
+    // スケルトン（fallback）解決後の本体ボタンを操作する。
+    await waitFor(() =>
+      expect(screen.queryAllByTestId("worker-table-skeleton-item")).toHaveLength(0),
+    );
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "社員を追加" }));
     expect(screen.getByRole("dialog")).toBeInTheDocument();

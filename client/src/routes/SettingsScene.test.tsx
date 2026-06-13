@@ -259,6 +259,7 @@ describe("管理画面タブの Suspense / QueryBoundary（#463）", () => {
             status: "success",
             messageCount: 3,
             errorMessage: null,
+            errorCode: null,
             executedAt: "2026-06-01T00:00:00.000Z",
           },
         ]),
@@ -266,7 +267,7 @@ describe("管理画面タブの Suspense / QueryBoundary（#463）", () => {
     );
     renderApp("/admin?tab=batch-logs", { id: "user1", displayName: "Alice", role: "admin" });
 
-    expect(await screen.findByText(/直近 50 件のバッチ実行ログ/)).toBeInTheDocument();
+    expect(await screen.findByText(/直近 50 件のバッチ実行ログ/, undefined, { timeout: 3000 })).toBeInTheDocument();
     expect(await screen.findByText("成功")).toBeInTheDocument();
   });
 
@@ -274,7 +275,10 @@ describe("管理画面タブの Suspense / QueryBoundary（#463）", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(500, { error: "boom" })));
     renderApp("/admin?tab=batch-logs", { id: "user1", displayName: "Alice", role: "admin" });
 
-    expect(await screen.findByRole("button", { name: "再試行" })).toBeInTheDocument();
+    // createQueryClient は retry:1 のため、リトライのバックオフ込みで待つ。
+    expect(
+      await screen.findByRole("button", { name: "再試行" }, { timeout: 5000 }),
+    ).toBeInTheDocument();
   });
 
   it("バッチログタブ: ローディング中は Suspense fallback（スケルトン）が表示される", async () => {
@@ -290,6 +294,9 @@ describe("管理画面タブの Suspense / QueryBoundary（#463）", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(500, { error: "boom" })));
     renderApp("/admin?tab=token-usage", { id: "user1", displayName: "Alice", role: "admin" });
 
-    expect(await screen.findByRole("button", { name: "再試行" })).toBeInTheDocument();
+    // createQueryClient は retry:1 のため、リトライのバックオフ込みで待つ。
+    expect(
+      await screen.findByRole("button", { name: "再試行" }, { timeout: 5000 }),
+    ).toBeInTheDocument();
   });
 });

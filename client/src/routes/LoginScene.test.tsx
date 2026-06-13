@@ -3,6 +3,7 @@ import { RouterProvider, createMemoryHistory } from "@tanstack/react-router";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
+import * as adminApi from "../api/admin.js";
 import * as authApi from "../api/auth.js";
 import { createQueryClient } from "../queryClient.js";
 import { createAppRouter } from "../router.js";
@@ -32,8 +33,15 @@ describe("管理画面ガード", () => {
 
   it("ログイン済み状態で /admin にアクセスすると管理画面が表示される", async () => {
     vi.spyOn(authApi, "fetchMe").mockResolvedValue({ id: "user1", email: "user1@example.com", displayName: "Alice", role: "admin" });
+    // #463: 既定タブ（ワーカー管理）は useSuspenseQuery で取得し QueryBoundary で Suspend する。
+    // ここでは画面表示（見出し）の検証が目的なのでフックをスタブし、即時にデータ解決させる。
+    vi.spyOn(adminApi, "useAdminWorkers").mockReturnValue({
+      data: [],
+    } as ReturnType<typeof adminApi.useAdminWorkers>);
     renderApp("/admin");
-    expect(await screen.findByRole("heading", { name: /管理画面/ })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: /管理画面/ }, { timeout: 4000 }),
+    ).toBeInTheDocument();
   });
 });
 

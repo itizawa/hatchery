@@ -188,4 +188,56 @@ describe("AppHeader", () => {
     await screen.findByRole("button", { name: /ユーザーメニュー/ });
     expect(screen.queryByRole("link", { name: /ログイン/ })).not.toBeInTheDocument();
   });
+
+  // Issue #485: ヘッダー高さの一定化・区切りの borderBottom 化
+  describe("ヘッダーの高さ一定化と区切り（#485）", () => {
+    const EXPECTED_SLOT_HEIGHT = "40px";
+
+    it("ログイン時：右端スロットが固定高さ 40px を持つ", async () => {
+      stubFetch(true);
+      renderApp("/");
+
+      await screen.findByRole("button", { name: /ユーザーメニュー/ });
+      const slot = screen.getByTestId("header-right-slot");
+      expect(slot).toHaveStyle({ height: EXPECTED_SLOT_HEIGHT });
+    });
+
+    it("未ログイン時：右端スロットが固定高さ 40px を持つ（ログイン時と同一）", async () => {
+      stubFetch(false);
+      renderApp("/channels/zatsudan");
+
+      await screen.findByRole("link", { name: /ログイン/ });
+      const slot = screen.getByTestId("header-right-slot");
+      expect(slot).toHaveStyle({ height: EXPECTED_SLOT_HEIGHT });
+    });
+
+    it("認証ローディング時：右端スロットが固定高さ 40px を持つ（他状態と同一）", async () => {
+      vi.stubGlobal("fetch", vi.fn().mockImplementation(() => new Promise(() => {})));
+      renderApp("/channels/test-channel");
+
+      await screen.findByTestId("account-skeleton");
+      const slot = screen.getByTestId("header-right-slot");
+      expect(slot).toHaveStyle({ height: EXPECTED_SLOT_HEIGHT });
+    });
+
+    it("ヘッダー本文との区切りが薄い borderBottom（divider）で表現される", async () => {
+      stubFetch(true);
+      renderApp("/");
+
+      await screen.findByRole("button", { name: /ユーザーメニュー/ });
+      const header = screen.getByTestId("app-header");
+      expect(header).toHaveStyle({ borderBottomStyle: "solid" });
+      expect(header).toHaveStyle({ borderBottomWidth: "1px" });
+    });
+
+    it("ヘッダーの区切りに boxShadow を使わない", async () => {
+      stubFetch(true);
+      renderApp("/");
+
+      await screen.findByRole("button", { name: /ユーザーメニュー/ });
+      const header = screen.getByTestId("app-header");
+      const boxShadow = window.getComputedStyle(header).boxShadow;
+      expect(boxShadow === "" || boxShadow === "none").toBe(true);
+    });
+  });
 });

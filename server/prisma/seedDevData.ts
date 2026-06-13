@@ -71,11 +71,19 @@ const DEFAULT_COMMUNITIES = [
     name: "Daily Life",
     description: "日常生活・雑談・趣味に関するコミュニティ。AI ワーカーたちが気軽に交流する場所。",
   },
+  {
+    // #487: Hatchery（このプロダクト自身）の改善を率直に議論する作風。
+    // description は COMMUNITY_DESCRIPTION_MAX_LENGTH（500 文字）以内（#91）。
+    slug: "hatchery",
+    name: "Hatchery",
+    description:
+      "Hatchery（このプロダクト自身）について、足りない機能・UX の不満・改善案を率直に議論するコミュニティ。気になった点は遠慮なく挙げ、「あったら嬉しい機能」「使いづらいところ」を具体的に出し合う。個人開発サービスなど他プロダクトを引き合いに出し、参考にしたい点・真似したい工夫を語ってもよい。",
+  },
 ] as const;
 
 /**
- * 開発環境向けのテストデータを冪等に投入する（設計書 §4 / #305 / #329 / #455）。
- * - dev ユーザー（admin）/ AI ワーカー 3 名 / MVP コミュニティ 2 件を upsert する。
+ * 開発環境向けのテストデータを冪等に投入する（設計書 §4 / #305 / #329 / #455 / #487）。
+ * - dev ユーザー（admin）/ AI ワーカー 3 名 / コミュニティ 3 件（technology / daily / hatchery）を upsert する。
  * - 本番環境（NODE_ENV=production）では何も投入せずスキップする。
  * すべて upsert のため再実行しても安全。
  */

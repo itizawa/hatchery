@@ -8,6 +8,13 @@ import { useAuth, useLogout } from "../api/auth.js";
 import { SLACK_COLORS } from "../theme.js";
 
 const ACCOUNT_ICON_SIZE = 32;
+/**
+ * ヘッダー右端スロットの固定高さ（px）。
+ * ログイン時のアバターボタン（Avatar 32px + ButtonBase の p: 0.5 = 上下 4px ずつ）が最も背が高く 40px。
+ * これを基準スロット高にして 3 状態（ログイン / 未ログイン / ローディング）の占有高さを揃え、
+ * ヘッダー総高がログイン状態に依らず一定になるようにする（#485）。
+ */
+const RIGHT_SLOT_HEIGHT = ACCOUNT_ICON_SIZE + 8;
 
 export interface AppHeaderProps {
   /** モバイル幅でサイドバードロワーを開くコールバック。未指定の場合はハンバーガーボタンを表示しない。 */
@@ -34,6 +41,7 @@ export const AppHeader = ({ onMenuOpen }: AppHeaderProps): ReactElement => {
   return (
     <Box
       component="header"
+      data-testid="app-header"
       sx={{
         position: "sticky",
         top: 0,
@@ -44,7 +52,10 @@ export const AppHeader = ({ onMenuOpen }: AppHeaderProps): ReactElement => {
         alignItems: "center",
         px: 2,
         py: 1,
-        boxShadow: 1,
+        // サイドバー⇔メインの区切り（borderRight: 1, borderColor: "divider"）と揃えた薄い境界線。
+        // 以前の boxShadow: 1 は主張が強かったため borderBottom に統一する（#485）。
+        borderBottom: 1,
+        borderColor: "divider",
       }}
     >
       {onMenuOpen && (
@@ -66,7 +77,18 @@ export const AppHeader = ({ onMenuOpen }: AppHeaderProps): ReactElement => {
         Hatchery
       </Link>
 
-      <Box sx={{ ml: "auto" }}>
+      <Box
+        data-testid="header-right-slot"
+        sx={{
+          ml: "auto",
+          // 右端要素（アバターボタン / ログインリンク / Skeleton）を同一の固定高さスロットに
+          // 縦中央配置し、各バリアントの高さ差がヘッダー総高に波及しないようにする（#485）。
+          height: RIGHT_SLOT_HEIGHT,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "flex-end",
+        }}
+      >
         {isPending ? (
           <Skeleton
             variant="circular"

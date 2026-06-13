@@ -4,7 +4,7 @@ import { z } from "zod";
 export interface ServerEnv {
   /** Express API プロセスの待受ポート。未指定なら 3000。 */
   port: number;
-  /** Prisma / PostgreSQL の接続先。バッチ・API の永続化で使う。未設定なら undefined。 */
+  /** Prisma / PostgreSQL の接続先。バッチ・ API の永続化で使う。未設定なら undefined。 */
   databaseUrl: string | undefined;
   /** レート制限のウィンドウ長（ミリ秒）。未指定なら 60000（1 分）。 */
   rateLimitWindowMs: number;
@@ -75,7 +75,10 @@ const EnvSchema = z.object({
   GOOGLE_CLIENT_ID: z.string().min(1).optional(),
   GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
   GOOGLE_CALLBACK_URL: z.string().url().optional(),
-  ANTHROPIC_API_KEY: z.string().min(1).optional(),
+  ANTHROPIC_API_KEY: z
+    .string()
+    .optional()
+    .transform((v) => v || undefined),
   GCS_BUCKET_NAME: z.string().min(1).optional(),
 });
 

@@ -93,6 +93,12 @@ describe("loadEnv", () => {
     expect(env.anthropicApiKey).toBeUndefined();
   });
 
+  it("ANTHROPIC_API_KEY が空文字のとき anthropicApiKey が undefined を返し loadEnv が throw しない", () => {
+    expect(() => loadEnv({ ANTHROPIC_API_KEY: "" })).not.toThrow();
+    const env = loadEnv({ ANTHROPIC_API_KEY: "" });
+    expect(env.anthropicApiKey).toBeUndefined();
+  });
+
   it("GCS_BUCKET_NAME が設定されている場合に env.gcsBucketName として返す", () => {
     const env = loadEnv({ GCS_BUCKET_NAME: "my-bucket" });
     expect(env.gcsBucketName).toBe("my-bucket");

@@ -8,6 +8,7 @@ import { z } from "zod";
 
 import {
   AppSettingResponseSchema,
+  AuthorWorkerSchema,
   AuthUserSchema,
   BatchRunLogSchema,
   CommunitySchema,
@@ -376,6 +377,14 @@ registry.registerPath({
 const CommunityComponent = registry.register(
   "Community",
   CommunitySchema.openapi({ description: "コミュニティ（サブレディット相当）。ADR-0019" }),
+);
+
+// 発言者の表示用ワーカー情報（#479）。Post / Comment の author_worker が参照する。
+registry.register(
+  "AuthorWorker",
+  AuthorWorkerSchema.openapi({
+    description: "post / comment の発言者の表示用ワーカー情報（アバター画像 + 表示名・#479）",
+  }),
 );
 
 const PostComponent = registry.register(

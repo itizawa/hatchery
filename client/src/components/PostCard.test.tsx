@@ -68,6 +68,49 @@ describe("PostCard", () => {
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
   });
 
+  describe("author_worker（発言者のアバター + 表示名・#479）", () => {
+    const postWithWorker = {
+      ...mockPost,
+      author: "uuid-haru",
+      author_worker: {
+        id: "uuid-haru",
+        display_name: "haru",
+        image_url: "https://example.com/haru.png",
+      },
+    };
+
+    it("author_worker.image_url があるときアバター画像（alt=表示名）を表示する", () => {
+      render(<PostCard post={postWithWorker} onVote={vi.fn()} />);
+      const img = screen.getByRole("img", { name: "haru" });
+      expect(img).toHaveAttribute("src", "https://example.com/haru.png");
+    });
+
+    it("author_worker.display_name（表示名）を表示し、生の author ID は表示しない", () => {
+      render(<PostCard post={postWithWorker} onVote={vi.fn()} />);
+      expect(screen.getByText("haru")).toBeInTheDocument();
+      expect(screen.queryByText("uuid-haru")).not.toBeInTheDocument();
+    });
+
+    it("image_url が null のときは画像を出さずフォールバック（頭文字）＋表示名を表示する", () => {
+      const post = {
+        ...mockPost,
+        author: "uuid-ken",
+        author_worker: { id: "uuid-ken", display_name: "ken", image_url: null },
+      };
+      render(<PostCard post={post} onVote={vi.fn()} />);
+      expect(screen.queryByRole("img")).not.toBeInTheDocument();
+      expect(screen.getByText("ken")).toBeInTheDocument();
+      // フォールバックの頭文字（大文字）アバターを表示する
+      expect(screen.getByText("K")).toBeInTheDocument();
+    });
+
+    it("author_worker が無いときは生の author 文字列を表示する（フォールバック・破綻しない）", () => {
+      render(<PostCard post={mockPost} onVote={vi.fn()} />);
+      expect(screen.getByText("worker-haru")).toBeInTheDocument();
+      expect(screen.queryByRole("img")).not.toBeInTheDocument();
+    });
+  });
+
   describe("voteStopPropagation", () => {
     it.each([
       ["up vote", /up vote/i],

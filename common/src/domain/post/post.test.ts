@@ -74,4 +74,21 @@ describe("PostSchema", () => {
     const result = PostSchema.parse(validPost);
     expect(result.created_at).toBeInstanceOf(Date);
   });
+
+  it("author_worker は任意で、省略しても有効（後方互換）", () => {
+    const result = PostSchema.parse(validPost);
+    expect(result.author_worker).toBeUndefined();
+  });
+
+  it("author_worker を持てる（発言者の表示用ワーカー情報・#479）", () => {
+    const result = PostSchema.parse({
+      ...validPost,
+      author_worker: { id: "uuid-haru", display_name: "haru", image_url: "https://example.com/haru.png" },
+    });
+    expect(result.author_worker).toEqual({
+      id: "uuid-haru",
+      display_name: "haru",
+      image_url: "https://example.com/haru.png",
+    });
+  });
 });

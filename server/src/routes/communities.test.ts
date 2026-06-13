@@ -64,6 +64,45 @@ describe("GET /api/communities/:slug/feed", () => {
     const res = await request(app).get("/api/communities/not-exists/feed");
     expect(res.status).toBe(404);
   });
+
+  it("各 post に author_worker（display_name + image_url）を付与する（#479）", async () => {
+    const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
+    const postRepo = createInMemoryPostRepository();
+    await postRepo.createMany("community-1", [
+      { slotKey: "2026-06-10T09:00", seq: 0, author: "haru", title: "Title", text: "Text" },
+    ]);
+    const workerRepo = createInMemoryWorkerRepository([
+      { id: "uuid-haru", displayName: "haru", role: null, personality: null, imageUrl: "https://example.com/haru.png" },
+    ]);
+    const deps = await createTestDeps({
+      communityRepository: communityRepo,
+      postRepository: postRepo,
+      workerRepository: workerRepo,
+    });
+    const app = createApp(deps);
+    const res = await request(app).get("/api/communities/technology/feed");
+    expect(res.status).toBe(200);
+    expect(res.body[0].author_worker).toEqual({
+      id: "uuid-haru",
+      display_name: "haru",
+      image_url: "https://example.com/haru.png",
+    });
+  });
+
+  it("解決できない author の post には author_worker を付与しない（#479）", async () => {
+    const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
+    const postRepo = createInMemoryPostRepository();
+    await postRepo.createMany("community-1", [
+      { slotKey: "2026-06-10T09:00", seq: 0, author: "unknown", title: "Title", text: "Text" },
+    ]);
+    const deps = await createTestDeps({
+      communityRepository: communityRepo,
+      postRepository: postRepo,
+    });
+    const app = createApp(deps);
+    const res = await request(app).get("/api/communities/technology/feed");
+    expect(res.body[0].author_worker).toBeUndefined();
+  });
 });
 
 describe("POST /api/communities/:slug/subscribe", () => {

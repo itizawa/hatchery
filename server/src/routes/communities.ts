@@ -6,6 +6,7 @@ import type { CommunityRepository } from "../persistence/communityRepository.js"
 import type { PostRepository } from "../persistence/postRepository.js";
 import type { SubscriptionRepository } from "../persistence/subscriptionRepository.js";
 import type { WorkerRepository } from "../persistence/workerRepository.js";
+import { attachAuthorWorker } from "./authorWorker.js";
 
 const RECENT_WORKERS_LIMIT = 10;
 
@@ -30,7 +31,7 @@ export function createCommunitiesRouter(
       .catch(next);
   });
 
-  // community フィード（新着順・認証不要）
+  // community フィード（新着順・認証不要・#479 で author_worker を付与）
   router.get("/:slug/feed", (req, res, next) => {
     const { slug } = req.params as { slug: string };
     communityRepo
@@ -41,6 +42,7 @@ export function createCommunitiesRouter(
         }
         return postRepo.listByCommunity(community.id);
       })
+      .then((posts) => attachAuthorWorker(posts, workerRepo))
       .then((posts) => res.status(200).json(posts))
       .catch(next);
   });

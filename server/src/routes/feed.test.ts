@@ -5,6 +5,7 @@ import { createApp } from "../app.js";
 import { createInMemoryCommunityRepository } from "../persistence/communityRepository.js";
 import type { CommunityRecord } from "../persistence/communityRepository.js";
 import { createInMemoryPostRepository } from "../persistence/postRepository.js";
+import { createInMemoryWorkerRepository } from "../persistence/workerRepository.js";
 import { createTestDeps } from "../testing/createTestDeps.js";
 
 const makeCommunity = (overrides: Partial<CommunityRecord> = {}): CommunityRecord => ({
@@ -256,5 +257,76 @@ describe("GET /api/feed", () => {
     const invalidCursor = Buffer.from("not-valid-json").toString("base64");
     const res = await request(app).get(`/api/feed?sort=popular&cursor=${invalidCursor}`);
     expect(res.status).toBe(400);
+  });
+});
+
+describe("GET /api/feed author_worker enrichment（#479）", () => {
+  it("post.author が displayName 文字列でも author_worker（display_name + image_url）を付与する", async () => {
+    const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
+    const postRepo = createInMemoryPostRepository();
+    await postRepo.createMany("community-1", [
+      { slotKey: "2026-06-10T09:00", seq: 0, author: "haru", title: "My Post", text: "Text" },
+    ]);
+    const workerRepo = createInMemoryWorkerRepository([
+      { id: "uuid-haru", displayName: "haru", role: null, personality: null, imageUrl: "https://example.com/haru.png" },
+    ]);
+
+    const deps = await createTestDeps({
+      communityRepository: communityRepo,
+      postRepository: postRepo,
+      workerRepository: workerRepo,
+    });
+    const app = createApp(deps);
+
+    const res = await request(app).get("/api/feed");
+    expect(res.status).toBe(200);
+    expect(res.body.posts[0].author_worker).toEqual({
+      id: "uuid-haru",
+      display_name: "haru",
+      image_url: "https://example.com/haru.png",
+    });
+  });
+
+  it("post.author が UUID id でも author_worker を付与する（後方互換）", async () => {
+    const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
+    const postRepo = createInMemoryPostRepository();
+    await postRepo.createMany("community-1", [
+      { slotKey: "2026-06-10T09:00", seq: 0, author: "uuid-ken", title: "P", text: "T" },
+    ]);
+    const workerRepo = createInMemoryWorkerRepository([
+      { id: "uuid-ken", displayName: "ken", role: null, personality: null, imageUrl: null },
+    ]);
+
+    const deps = await createTestDeps({
+      communityRepository: communityRepo,
+      postRepository: postRepo,
+      workerRepository: workerRepo,
+    });
+    const app = createApp(deps);
+
+    const res = await request(app).get("/api/feed");
+    expect(res.body.posts[0].author_worker).toEqual({
+      id: "uuid-ken",
+      display_name: "ken",
+      image_url: null,
+    });
+  });
+
+  it("解決できない author の post には author_worker を付与しない", async () => {
+    const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
+    const postRepo = createInMemoryPostRepository();
+    await postRepo.createMany("community-1", [
+      { slotKey: "2026-06-10T09:00", seq: 0, author: "unknown", title: "P", text: "T" },
+    ]);
+
+    const deps = await createTestDeps({
+      communityRepository: communityRepo,
+      postRepository: postRepo,
+    });
+    const app = createApp(deps);
+
+    const res = await request(app).get("/api/feed");
+    expect(res.body.posts[0].author).toBe("unknown");
+    expect(res.body.posts[0].author_worker).toBeUndefined();
   });
 });

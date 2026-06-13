@@ -2,6 +2,7 @@ import { Box, Typography } from "./uiParts";
 import type { ReactElement } from "react";
 import type React from "react";
 import type { Post } from "../api/communities.js";
+import { AuthorByline } from "./AuthorByline.js";
 import { VoteControl } from "./VoteControl.js";
 import { ShareButton } from "./ShareButton.js";
 import type { VoteDirection } from "./VoteControl.js";
@@ -68,9 +69,9 @@ export const PostCard = ({
           >
             {post.title}
           </Typography>
-          <Typography variant="body2" sx={{ mb: 1, color: "text.secondary" }}>
-            {post.author}
-          </Typography>
+          <Box sx={{ mb: 1 }}>
+            <AuthorByline author={post.author} authorWorker={post.author_worker} />
+          </Box>
           <Typography variant="body1">
             {post.text}
           </Typography>

@@ -74,4 +74,21 @@ describe("CommentSchema", () => {
     const result = CommentSchema.parse(validComment);
     expect("parent_comment_id" in result).toBe(false);
   });
+
+  it("author_worker は任意で、省略しても有効（後方互換）", () => {
+    const result = CommentSchema.parse(validComment);
+    expect(result.author_worker).toBeUndefined();
+  });
+
+  it("author_worker を持てる（発言者の表示用ワーカー情報・#479）", () => {
+    const result = CommentSchema.parse({
+      ...validComment,
+      author_worker: { id: "uuid-ken", display_name: "ken", image_url: null },
+    });
+    expect(result.author_worker).toEqual({
+      id: "uuid-ken",
+      display_name: "ken",
+      image_url: null,
+    });
+  });
 });

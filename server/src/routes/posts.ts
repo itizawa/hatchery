@@ -6,17 +6,21 @@ import { validateBody } from "../middleware/validateBody.js";
 import type { CommentRepository } from "../persistence/commentRepository.js";
 import type { PostRepository } from "../persistence/postRepository.js";
 import type { VoteRepository } from "../persistence/voteRepository.js";
+import type { WorkerRepository } from "../persistence/workerRepository.js";
+import { buildAuthorWorkerEnricher } from "./authorWorker.js";
 
 /**
  * /api/posts・/api/comments ルータ。
  * スレッド（post + comments）の取得、up/down vote を担う。ADR-0019 / ADR-0025。
  * - 読み取りは認証不要
  * - vote は認証必須（ADR-0025: up/down 両対応、toggle/switch）
+ * - #479: スレッドの post / 各 comment に発言者の表示用ワーカー情報（author_worker）を付与する。
  */
 export function createPostsRouter(
   postRepo: PostRepository,
   commentRepo: CommentRepository,
   voteRepo: VoteRepository,
+  workerRepo: WorkerRepository,
 ): Router {
   const router = Router();
 
@@ -29,8 +33,12 @@ export function createPostsRouter(
         if (!post) {
           throw new NotFoundError("PostNotFound");
         }
-        return commentRepo.listByPost(postId).then((comments) => {
-          res.status(200).json({ post, comments });
+        return commentRepo.listByPost(postId).then(async (comments) => {
+          // post と comments を 1 回のワーカー取得で付与する（重複クエリを避ける）。
+          const enrich = await buildAuthorWorkerEnricher(workerRepo);
+          const [enrichedPost] = enrich([post]);
+          const enrichedComments = enrich(comments);
+          res.status(200).json({ post: enrichedPost, comments: enrichedComments });
         });
       })
       .catch(next);

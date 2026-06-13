@@ -35,8 +35,8 @@ export const BatchLogsTab: Story = {
 
 /**
  * 未認証時のリダイレクト再現（ナビゲーション確認）。
- * /admin にアクセスすると beforeLoad が 401 を受け取り /login へリダイレクトする。
- * TanStack Router の memory history でこのリダイレクトが再現できる。
+ * #454: /admin にアクセスすると beforeLoad が 401 を受け取り /?login=1 へリダイレクトし、
+ * 公開ホーム上にログインモーダルを開く。TanStack Router の memory history で再現できる。
  */
 export const RedirectsToLoginWhenUnauthenticated: Story = {
   render: () => renderWithRouter("/admin"),

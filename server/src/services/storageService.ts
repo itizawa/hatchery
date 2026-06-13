@@ -16,6 +16,17 @@ export interface UploadWorkerImageInput {
   buffer: Buffer;
 }
 
+/** コミュニティ画像の種別（#457）。icon=アイコン / cover=カバー（ヘッダー）。 */
+export type CommunityImageKind = "icon" | "cover";
+
+/** コミュニティ画像アップロード入力（#457）。 */
+export interface UploadCommunityImageInput {
+  communityId: string;
+  kind: CommunityImageKind;
+  mimeType: string;
+  buffer: Buffer;
+}
+
 /** ストレージサービスのインターフェース */
 export interface StorageService {
   /**
@@ -23,6 +34,11 @@ export interface StorageService {
    * 命名規約: workers/{workerId}/{uuid}.{ext}
    */
   uploadWorkerImage(input: UploadWorkerImageInput): Promise<string>;
+  /**
+   * コミュニティのアイコン / カバー画像をアップロードして公開 URL を返す（#457）。
+   * 命名規約: communities/{communityId}/{kind}/{uuid}.{ext}
+   */
+  uploadCommunityImage(input: UploadCommunityImageInput): Promise<string>;
 }
 
 /** 許可する MIME タイプ（ADR-0022）。 */
@@ -80,6 +96,26 @@ export class GcsStorageService implements StorageService {
 
     return `https://storage.googleapis.com/${this.bucketName}/${objectName}`;
   }
+
+  async uploadCommunityImage(input: UploadCommunityImageInput): Promise<string> {
+    const { Storage } = await import("@google-cloud/storage");
+    const storage = new Storage();
+
+    const ext = getImageExtension(input.mimeType);
+    if (!ext) {
+      throw new Error(`Unsupported MIME type: ${input.mimeType}`);
+    }
+
+    const objectName = `communities/${input.communityId}/${input.kind}/${randomUUID()}.${ext}`;
+    const bucket = storage.bucket(this.bucketName);
+    const file = bucket.file(objectName);
+
+    await file.save(input.buffer, {
+      metadata: { contentType: input.mimeType },
+    });
+
+    return `https://storage.googleapis.com/${this.bucketName}/${objectName}`;
+  }
 }
 
 /** テスト・ローカル開発用のインメモリストレージサービス。 */
@@ -89,6 +125,14 @@ export class InMemoryStorageService implements StorageService {
   async uploadWorkerImage(input: UploadWorkerImageInput): Promise<string> {
     const ext = getImageExtension(input.mimeType) ?? "bin";
     const objectName = `workers/${input.workerId}/${randomUUID()}.${ext}`;
+    const url = `inmemory://${objectName}`;
+    this.store.set(url, { mimeType: input.mimeType, buffer: input.buffer });
+    return url;
+  }
+
+  async uploadCommunityImage(input: UploadCommunityImageInput): Promise<string> {
+    const ext = getImageExtension(input.mimeType) ?? "bin";
+    const objectName = `communities/${input.communityId}/${input.kind}/${randomUUID()}.${ext}`;
     const url = `inmemory://${objectName}`;
     this.store.set(url, { mimeType: input.mimeType, buffer: input.buffer });
     return url;

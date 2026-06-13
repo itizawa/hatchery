@@ -14,6 +14,8 @@ const makeCommunity = (overrides: Partial<CommunityRecord> = {}): CommunityRecor
   description: "テクノロジーコミュニティ",
   synopsis: null,
   lastSlotKey: null,
+  iconUrl: null,
+  coverUrl: null,
   createdAt: new Date("2026-01-01"),
   ...overrides,
 });

@@ -20,6 +20,26 @@ export { SETTINGS_TAB_VALUES, type SettingsTabValue } from "./routes/settingsTab
 import { AuthLayout } from "./routes/AuthLayout";
 import { RootLayout } from "./routes/RootLayout";
 import { MainContentSkeleton } from "./components/MainContentSkeleton";
+import { LoginDialog } from "./components/LoginDialog";
+import { PostThreadSkeleton } from "./components/PostThreadSkeleton";
+import { QueryBoundary } from "./components/QueryBoundary";
+import { useLoginModal } from "./hooks/useLoginModal.js";
+
+/** root の search param。`login=1`（モーダル開）を全ルートで共有する（#454）。 */
+interface RootSearch {
+  login?: boolean;
+}
+
+/**
+ * root の search param を検証する（#454）。`login=1` / `login=true` を真として
+ * ログインモーダルを開く。未指定・偽値のときは `login` を持たない（モーダルは閉じる）。
+ * 他の search param（例: /admin の tab）は各ルートの validateSearch が別途検証する。
+ */
+function validateRootSearch(search: Record<string, unknown>): RootSearch {
+  const raw = search.login;
+  const login = raw === true || raw === 1 || raw === "1" || raw === "true";
+  return login ? { login: true } : {};
+}
 
 // ルートコンポーネントを lazyRouteComponent で動的 import（コード分割）する。
 // TanStack Router の defaultPreload: "intent" と組み合わせ、ホバー時にプリロードされる。
@@ -39,13 +59,14 @@ const LazyPostThreadScene = lazyRouteComponent(
   () => import("./routes/PostThreadScene"),
   "PostThreadScene",
 );
-const LazyLoginScene = lazyRouteComponent(() => import("./routes/LoginScene"), "LoginScene");
 const LazyLandingScene = lazyRouteComponent(() => import("./routes/LandingScene"), "LandingScene");
 const LazySettingsScene = lazyRouteComponent(() => import("./routes/SettingsScene"), "SettingsScene");
 const LazyAccountScene = lazyRouteComponent(() => import("./routes/AccountScene"), "AccountScene");
 
 /**
- * 認証ガード: 未ログイン（fetchMe が null を返す）またはネットワークエラーの場合に /login へリダイレクト。
+ * 認証ガード（#454）: 未ログイン（fetchMe が null）またはネットワークエラーの場合、
+ * 公開ホーム（/）へ `login=1` 付きでリダイレクトし、ホーム上にログインモーダルを開いて
+ * 認証導線へ誘導する（ページ遷移せず閲覧コンテキストを保つ思想に合わせ、専用ログインページへは飛ばさない）。
  * accountRoute の beforeLoad で使う。
  */
 async function requireAuth(): Promise<void> {
@@ -53,51 +74,64 @@ async function requireAuth(): Promise<void> {
   try {
     user = await fetchMe();
   } catch {
-    throw redirect({ to: "/login" });
+    throw redirect({ to: "/", search: { login: true } });
   }
-  if (!user) throw redirect({ to: "/login" });
+  if (!user) throw redirect({ to: "/", search: { login: true } });
 }
 
 /**
- * admin ロール専用ガード（#136）: 未ログインなら /login、非 admin なら / へリダイレクト。
- * adminRoute の beforeLoad で使う。
+ * admin ロール専用ガード（#136 / #454）: 未ログインならホーム上にログインモーダルを開き、
+ * 非 admin なら / へリダイレクト。adminRoute の beforeLoad で使う。
  */
 async function requireAdminRoute(): Promise<void> {
   let user: Awaited<ReturnType<typeof fetchMe>>;
   try {
     user = await fetchMe();
   } catch {
-    throw redirect({ to: "/login" });
+    throw redirect({ to: "/", search: { login: true } });
   }
-  if (!user) throw redirect({ to: "/login" });
+  if (!user) throw redirect({ to: "/", search: { login: true } });
   if (!isAdmin(user)) throw redirect({ to: "/" });
 }
 
 /**
  * サイドバーなしで描画する auth 系ルートかどうかを判定する。
- * /login・/lp は完全一致で判定する（#455: /invite/ は廃止）。
+ * /lp は完全一致で判定する（#454: /login ルートは廃止し /?login=1 へリダイレクト）。
  */
 function isAuthLayout(pathname: string): boolean {
-  return pathname === "/login" || pathname === "/lp";
+  return pathname === "/lp";
+}
+
+/**
+ * ログインモーダル（#454）。root の search param `login` 駆動で開閉し、
+ * Root / Auth どちらのレイアウト上でも閲覧コンテキストを保ったまま重ねて表示する。
+ */
+function LoginModalMount(): ReactElement {
+  const { isOpen, closeLogin } = useLoginModal();
+  return <LoginDialog open={isOpen} onClose={closeLogin} />;
 }
 
 /**
  * アプリ全体のシェル。現在のパスに応じて
- * - auth 系ルート（/login, /lp）→ AuthLayout（サイドバーなし）
+ * - auth 系ルート（/lp）→ AuthLayout（サイドバーなし）
  * - その他 → RootLayout（サイドバーあり）
- * を切り替える。ルートの ID を変えない方式のため、既存の useSearch 等への影響がない。
+ * を切り替える。いずれの場合もログインモーダル（LoginModalMount）を重ねてマウントし、
+ * `?login=1` で開く（#454）。ルートの ID を変えない方式のため、既存の useSearch 等への影響がない。
  */
 function AppShell(): ReactElement {
   const { pathname } = useLocation();
-  if (isAuthLayout(pathname)) {
-    return <AuthLayout />;
-  }
-  return <RootLayout />;
+  return (
+    <>
+      {isAuthLayout(pathname) ? <AuthLayout /> : <RootLayout />}
+      <LoginModalMount />
+    </>
+  );
 }
 
 // ルートはコードベースで定義する（ファイルルーティングの codegen には依存しない）。
 const rootRoute = createRootRoute({
   component: AppShell,
+  validateSearch: validateRootSearch,
 });
 
 /** ホームフィード（/）。認証済みなら購読フィード、未認証ならゲスト向け誘導 UI を表示する（#341）。 */
@@ -105,9 +139,9 @@ const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
   component: () => (
-    <Suspense fallback={null}>
+    <QueryBoundary fallback={<MainContentSkeleton />}>
       <LazyHomeFeedScene />
-    </Suspense>
+    </QueryBoundary>
   ),
 });
 
@@ -116,9 +150,9 @@ const popularRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/popular",
   component: () => (
-    <Suspense fallback={null}>
+    <QueryBoundary fallback={<MainContentSkeleton />}>
       <LazyHomeFeedScene sort="popular" />
-    </Suspense>
+    </QueryBoundary>
   ),
 });
 
@@ -127,9 +161,9 @@ const communitiesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/communities",
   component: () => (
-    <Suspense fallback={<MainContentSkeleton />}>
+    <QueryBoundary fallback={<MainContentSkeleton />}>
       <LazyCommunityBrowseScene />
-    </Suspense>
+    </QueryBoundary>
   ),
 });
 
@@ -138,9 +172,9 @@ const communityRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/communities/$slug",
   component: () => (
-    <Suspense fallback={<MainContentSkeleton />}>
+    <QueryBoundary fallback={<MainContentSkeleton />}>
       <LazyCommunityScene />
-    </Suspense>
+    </QueryBoundary>
   ),
 });
 
@@ -149,21 +183,23 @@ const postRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/posts/$postId",
   component: () => (
-    <Suspense fallback={<MainContentSkeleton />}>
+    <QueryBoundary fallback={<PostThreadSkeleton />}>
       <LazyPostThreadScene />
-    </Suspense>
+    </QueryBoundary>
   ),
 });
 
-/** ログイン画面（/login）。サイドバーなしの AuthLayout 経由で描画する。 */
+/**
+ * 旧ログインルート（/login）。#454 でログインはモーダル化したため、
+ * このルートは廃止せず公開ホーム（/?login=1）へリダイレクトし、ホーム上でログインモーダルを開く。
+ * 既存のブックマーク・外部リンク・OAuth 失敗時フォールバックの dead link を防ぐ後方互換。
+ */
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/login",
-  component: () => (
-    <Suspense fallback={null}>
-      <LazyLoginScene />
-    </Suspense>
-  ),
+  beforeLoad: () => {
+    throw redirect({ to: "/", search: { login: true } });
+  },
 });
 
 /** ランディングページ（/lp）。未ログイン向けの紹介ページ。認証不要・サイドバーなしの AuthLayout で描画する（#167）。 */

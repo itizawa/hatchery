@@ -18,6 +18,13 @@ interface PagesContext {
 // BASIC_AUTH_USER / BASIC_AUTH_PASSWORD が未設定の場合はスキップ（本番環境での無効化に対応）
 export const onRequest = async (context: PagesContext): Promise<Response> => {
   const { env, request, next } = context;
+
+  // `/api/*` は Cloud Run への逆プロキシ（functions/api/[[path]].ts, #78）。Basic 認証を被せると
+  // Google からの OAuth コールバック遷移が 401 で弾かれうるため除外する（API 自身がセッション認証を持つ）。
+  if (new URL(request.url).pathname.startsWith("/api/")) {
+    return next();
+  }
+
   const user = env.BASIC_AUTH_USER;
   const password = env.BASIC_AUTH_PASSWORD;
 

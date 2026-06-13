@@ -14,6 +14,7 @@ import type { BatchRunLogRepository } from "./persistence/batchRunLogRepository.
 import type { CommunityRepository } from "./persistence/communityRepository.js";
 import type { CommentRepository } from "./persistence/commentRepository.js";
 import type { WorkerRepository } from "./persistence/workerRepository.js";
+import type { WorkerCommunityRepository } from "./persistence/workerCommunityRepository.js";
 import type { StorageService } from "./services/storageService.js";
 import type { PostRepository } from "./persistence/postRepository.js";
 import type { SubscriptionRepository } from "./persistence/subscriptionRepository.js";
@@ -24,6 +25,7 @@ import type { WorldStateRepository } from "./persistence/worldStateRepository.js
 import { createAdminRouter } from "./routes/admin.js";
 import { createApiDocsRouter, isApiDocsEnabled } from "./routes/apiDocs.js";
 import { createAdminWorkerImageRouter } from "./routes/adminWorkerImage.js";
+import { createAdminWorkerCommunitiesRouter } from "./routes/adminWorkerCommunities.js";
 import { createBatchLogsRouter } from "./routes/batch-logs.js";
 import { createTokenUsageRouter } from "./routes/token-usage.js";
 import { createAuthRouter } from "./routes/auth.js";
@@ -66,6 +68,7 @@ export function buildSessionCookieOptions(crossSiteCookie: boolean) {
 export interface AppDeps {
   userRepository: UserRepository;
   workerRepository: WorkerRepository;
+  workerCommunityRepository: WorkerCommunityRepository;
   appSettingRepository: AppSettingRepository;
   batchRunLogRepository: BatchRunLogRepository;
   tokenUsageLogRepository: TokenUsageLogRepository;
@@ -151,6 +154,14 @@ export function createApp(deps: AppDeps): Express {
   app.use("/api/admin/token-usage", createTokenUsageRouter(deps.tokenUsageLogRepository));
   app.use("/api/admin", createAdminRouter(deps.appSettingRepository, deps.workerRepository, communityRepo));
   app.use("/api/admin", createAdminWorkerImageRouter(deps.workerRepository, deps.storageService));
+  app.use(
+    "/api/admin",
+    createAdminWorkerCommunitiesRouter(
+      deps.workerRepository,
+      deps.workerCommunityRepository,
+      communityRepo,
+    ),
+  );
   app.use("/api/communities", createCommunitiesRouter(communityRepo, postRepo, subscriptionRepo, deps.workerRepository));
   app.use("/api/feed", createFeedRouter(postRepo));
   app.use("/api", createPostsRouter(postRepo, commentRepo, voteRepo));

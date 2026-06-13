@@ -4,6 +4,7 @@ import { createInMemoryBatchRunLogRepository } from "../persistence/batchRunLogR
 import { createInMemoryCommentRepository } from "../persistence/commentRepository.js";
 import { createInMemoryCommunityRepository } from "../persistence/communityRepository.js";
 import { createInMemoryWorkerRepository } from "../persistence/workerRepository.js";
+import { createInMemoryWorkerCommunityRepository } from "../persistence/workerCommunityRepository.js";
 import { createInMemoryPostRepository } from "../persistence/postRepository.js";
 import { createInMemorySubscriptionRepository } from "../persistence/subscriptionRepository.js";
 import { createInMemoryTokenUsageLogRepository } from "../persistence/tokenUsageLogRepository.js";
@@ -20,6 +21,7 @@ export function createTestDeps(overrides?: TestDepsOverrides): AppDeps {
   return {
     userRepository: defaultUserRepo,
     workerRepository: createInMemoryWorkerRepository(),
+    workerCommunityRepository: createInMemoryWorkerCommunityRepository(),
     appSettingRepository: createInMemoryAppSettingRepository(),
     batchRunLogRepository: createInMemoryBatchRunLogRepository(),
     tokenUsageLogRepository: createInMemoryTokenUsageLogRepository(),

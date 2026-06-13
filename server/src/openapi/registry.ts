@@ -22,6 +22,8 @@ import {
   TokenUsageLogSchema,
   UpdateAppSettingSchema,
   UpdateWorkerSchema,
+  WorkerCommunityIdsSchema,
+  SetWorkerCommunitiesSchema,
   UpdateProfileSchema,
   UserRoleSchema,
   VoteRequestSchema,
@@ -132,6 +134,57 @@ registry.registerPath({
         },
       },
     },
+    401: { description: "未認証", ...errorJson },
+    403: { description: "admin 権限なし", ...errorJson },
+    404: { description: "Worker が存在しない", ...errorJson },
+  },
+});
+
+// admin: ワーカーの参加コミュニティ編集（#490）。認証必須・admin のみ。
+const WorkerCommunityIdsComponent = registry.register(
+  "WorkerCommunityIds",
+  WorkerCommunityIdsSchema.openapi({
+    description: "ワーカーの参加コミュニティ id 集合（#490）",
+  }),
+);
+
+const SetWorkerCommunitiesComponent = registry.register(
+  "SetWorkerCommunities",
+  SetWorkerCommunitiesSchema.openapi({
+    description: "ワーカーの参加コミュニティを置き換えるリクエストボディ（#490）",
+  }),
+);
+
+registry.registerPath({
+  method: "get",
+  path: "/api/admin/workers/{id}/communities",
+  summary: "ワーカーの参加コミュニティ id 一覧を取得（認証必須・admin のみ・#490）",
+  request: { params: z.object({ id: workerPathIdParam }) },
+  responses: {
+    200: {
+      description: "参加コミュニティ id 一覧",
+      content: { "application/json": { schema: WorkerCommunityIdsComponent } },
+    },
+    401: { description: "未認証", ...errorJson },
+    403: { description: "admin 権限なし", ...errorJson },
+    404: { description: "Worker が存在しない", ...errorJson },
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/api/admin/workers/{id}/communities",
+  summary: "ワーカーの参加コミュニティを置き換える（認証必須・admin のみ・#490）",
+  request: {
+    params: z.object({ id: workerPathIdParam }),
+    body: { content: { "application/json": { schema: SetWorkerCommunitiesComponent } } },
+  },
+  responses: {
+    200: {
+      description: "置換後の参加コミュニティ id 一覧",
+      content: { "application/json": { schema: WorkerCommunityIdsComponent } },
+    },
+    400: { description: "バリデーションエラー / 存在しない communityId", ...errorJson },
     401: { description: "未認証", ...errorJson },
     403: { description: "admin 権限なし", ...errorJson },
     404: { description: "Worker が存在しない", ...errorJson },

@@ -4,8 +4,10 @@ import { Link as RouterLink } from "@tanstack/react-router";
 import { useEffect, useRef, type ReactElement } from "react";
 
 import { useInfiniteHomeFeed, useVotePost } from "../api/communities.js";
+import { LoginPromptSnackbar } from "../components/LoginPromptSnackbar.js";
 import { PostCard } from "../components/PostCard.js";
 import type { VoteDirection } from "../components/VoteControl.js";
+import { useGuestVoteGuard } from "../hooks/useGuestVoteGuard.js";
 
 /** sort ごとの画面見出し。 */
 const FEED_HEADING: Record<HomeFeedSort, string> = {
@@ -33,6 +35,7 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
     isFetchingNextPage,
   } = useInfiniteHomeFeed(sort);
   const { mutate: votePost } = useVotePost();
+  const { guardVote, promptOpen, closePrompt } = useGuestVoteGuard();
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -98,7 +101,9 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
             <PostCard
               key={post.id}
               post={post}
-              onVote={(direction: VoteDirection) => votePost({ postId: post.id, direction })}
+              onVote={(direction: VoteDirection) =>
+                guardVote(() => votePost({ postId: post.id, direction }))
+              }
               voteStopPropagation
             />
           ))}
@@ -111,6 +116,7 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
           </Box>
         </Box>
       )}
+      <LoginPromptSnackbar open={promptOpen} onClose={closePrompt} />
     </Box>
   );
 };

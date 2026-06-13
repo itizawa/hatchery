@@ -14,7 +14,9 @@ import { useAuth } from "../api/auth.js";
 import { PostCard } from "../components/PostCard.js";
 import { CommentCard } from "../components/CommentCard.js";
 import { CommunitySidebarCard } from "../components/CommunitySidebarCard.js";
+import { LoginPromptSnackbar } from "../components/LoginPromptSnackbar.js";
 import type { VoteDirection } from "../components/VoteControl.js";
+import { useGuestVoteGuard } from "../hooks/useGuestVoteGuard.js";
 import { useSubscriptionStatus } from "../hooks/useSubscriptionStatus.js";
 
 /**
@@ -30,6 +32,7 @@ export const PostThreadScene = (): ReactElement => {
   const { data, isLoading, error } = usePostThread(id);
   const { mutate: votePost } = useVotePost();
   const { mutate: voteComment } = useVoteComment(id);
+  const { guardVote, promptOpen, closePrompt } = useGuestVoteGuard();
 
   // post.community_id から所属コミュニティを特定する（API 追加なし・#390）
   const { data: communities, isLoading: isCommunitiesLoading } = usePublicCommunities();
@@ -86,7 +89,9 @@ export const PostThreadScene = (): ReactElement => {
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <PostCard
             post={post}
-            onVote={(direction: VoteDirection) => votePost({ postId: post.id, direction })}
+            onVote={(direction: VoteDirection) =>
+              guardVote(() => votePost({ postId: post.id, direction }))
+            }
             postUrl={postUrl}
           />
 
@@ -100,7 +105,7 @@ export const PostThreadScene = (): ReactElement => {
                   key={comment.id}
                   comment={comment}
                   onVote={(direction: VoteDirection) =>
-                    voteComment({ commentId: comment.id, direction })
+                    guardVote(() => voteComment({ commentId: comment.id, direction }))
                   }
                 />
               ))}
@@ -152,6 +157,7 @@ export const PostThreadScene = (): ReactElement => {
           </Box>
         )}
       </Box>
+      <LoginPromptSnackbar open={promptOpen} onClose={closePrompt} />
     </Box>
   );
 };

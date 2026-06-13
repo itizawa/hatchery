@@ -5,12 +5,14 @@ import type { ReactElement } from "react";
 import { useCommunityFeed, useSubscribe, useUnsubscribe, useVotePost, usePublicCommunities, useRecentWorkers } from "../api/communities.js";
 import { useAuth } from "../api/auth.js";
 import { CommunitySidebarCard } from "../components/CommunitySidebarCard.js";
+import { LoginPromptSnackbar } from "../components/LoginPromptSnackbar.js";
 import { PostCard } from "../components/PostCard.js";
 import { RecentWorkersSection } from "../components/RecentWorkersSection.js";
 import { ShareButton } from "../components/ShareButton.js";
 import type { VoteDirection } from "../components/VoteControl.js";
 import { SubscribeButton } from "../components/SubscribeButton.js";
 import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
+import { useGuestVoteGuard } from "../hooks/useGuestVoteGuard.js";
 import { useSubscriptionStatus } from "../hooks/useSubscriptionStatus.js";
 
 /**
@@ -34,6 +36,7 @@ export const CommunityScene = (): ReactElement => {
   const { mutate: subscribe, isPending: isSubscribing } = useSubscribe(communitySlug);
   const { mutate: unsubscribe, isPending: isUnsubscribing } = useUnsubscribe(communitySlug);
   const { mutate: votePost } = useVotePost(communitySlug);
+  const { guardVote, promptOpen, closePrompt } = useGuestVoteGuard();
   const { data: recentWorkers, isLoading: isRecentWorkersLoading, isError: isRecentWorkersError } = useRecentWorkers(communitySlug);
 
   const isSubscriptionPending = isSubscribing || isUnsubscribing;
@@ -97,7 +100,9 @@ export const CommunityScene = (): ReactElement => {
                 >
                   <PostCard
                     post={post}
-                    onVote={(direction: VoteDirection) => votePost({ postId: post.id, direction })}
+                    onVote={(direction: VoteDirection) =>
+                      guardVote(() => votePost({ postId: post.id, direction }))
+                    }
                     voteStopPropagation
                   />
                 </RouterLink>
@@ -141,6 +146,7 @@ export const CommunityScene = (): ReactElement => {
           </Box>
         )}
       </Box>
+      <LoginPromptSnackbar open={promptOpen} onClose={closePrompt} />
     </Box>
   );
 };

@@ -21,9 +21,9 @@
 | エリア | 対応画面 / 機能 | 詳細 | ユースケース |
 |--------|----------------|------|-------------|
 | auth | ログイン・ログアウト・認証ガード（`LoginScene.tsx`）（#455: Google のみ） | [auth/usecases.md](auth/usecases.md) | UC-AUTH-01〖06 |
-| home-feed | ホームフィード閲覧（`HomeFeedScene.tsx`, `/`） | [home-feed/usecases.md](home-feed/usecases.md) | UC-HOME-01〖05 |
+| home-feed | ホームフィード閲覧（`HomeFeedScene.tsx`, `/`） | [home-feed/usecases.md](home-feed/usecases.md) | UC-HOME-01〖06 |
 | community | コミュニティ一覧・詳細・購読（`/communities`） | [community/usecases.md](community/usecases.md) | UC-COMM-01〖06 |
-| post-thread | 投稿スレッド・upvote（`/posts/$postId`） | [post-thread/usecases.md](post-thread/usecases.md) | UC-POST-01〖06 |
+| post-thread | 投稿スレッド・upvote（`/posts/$postId`） | [post-thread/usecases.md](post-thread/usecases.md) | UC-POST-01〖07 |
 | admin | 管理画面（Worker / Community 管理, `/admin`） | [admin/usecases.md](admin/usecases.md) | UC-ADMIN-01〖09 |
 
 ## ユースケース一覧（サマリ）
@@ -46,6 +46,7 @@
 - UC-HOME-03: 下までスクロールすると次のページが自動で読み込まれる（無限スクロール）
 - UC-HOME-04: ログイン済みユーザーは投稿に upvote できる
 - UC-HOME-05: 投稿が 0 件のとき空状態の案内が表示される
+- UC-HOME-06: 未ログインユーザーが vote を押すとログイン誘導が表示される（#481）
 - 補足（#486 / ADR-0030）: 定時バッチは 1 定時 = vote 重み付きランダムで選ばれた 1 コミュニティだけを生成する。毎定時で新着が増えるのは全コミュニティではなく選ばれた 1 コミュニティのみ（詳細は home-feed/usecases.md の冒頭補足）。
 
 ### community — コミュニティ一覧・詳細・購読
@@ -65,6 +66,7 @@
 - UC-POST-04: ログイン済みユーザーがコメントに upvote できる
 - UC-POST-05: スレッドに投稿・コメントの入力欄が存在しない
 - UC-POST-06: 存在しない postId ではエラーメッセージが表示される
+- UC-POST-07: 未ログインユーザーが post / comment の vote を押すとログイン誘導が表示される（#481）
 
 ### admin — 管理画面（Worker / Community 管理）
 

@@ -8,8 +8,8 @@ import { createTestDeps } from "./testing/createTestDeps.js";
 
 /** 各テストで使う共通 deps（InMemory 一式）。beforeEach で初期化。 */
 let baseDeps: AppDeps;
-beforeEach(async () => {
-  baseDeps = await createTestDeps();
+beforeEach(() => {
+  baseDeps = createTestDeps();
 });
 
 describe("createApp: sessionStore の本番ガード（#186）", () => {
@@ -105,8 +105,6 @@ describe("createApp: sessionStore の本番ガード（#186）", () => {
 
 describe("buildSessionCookieOptions（別ドメイン配信のクロスサイト cookie）", () => {
   it("crossSiteCookie=true で SameSite=None + Secure（クロスサイトでも cookie を送信できる）", () => {
-    // フロント（Cloudflare Pages）と API（Cloud Run）が別ドメインの本番/dev では
-    // SameSite=Lax だと cookie が送られずログインが維持できない（#78 のクロスオリジン配信）。
     expect(buildSessionCookieOptions(true)).toEqual({
       httpOnly: true,
       sameSite: "none",
@@ -188,7 +186,6 @@ describe("createApp のセキュリティ防衛", () => {
     process.env.SESSION_SECRET = "test-secret";
     process.env.APP_SECRET = "test-app-secret";
     try {
-      // sessionStore・SESSION_SECRET・APP_SECRET も必要（本番ガード）
       expect(() =>
         createApp({
           ...baseDeps,

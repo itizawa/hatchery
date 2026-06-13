@@ -5,6 +5,7 @@ import { Link as RouterLink, useNavigate } from "@tanstack/react-router";
 import { type ReactElement, useState } from "react";
 
 import { useAuth, useLogout } from "../api/auth.js";
+import { useLoginModal } from "../hooks/useLoginModal.js";
 import { SLACK_COLORS } from "../theme.js";
 
 const ACCOUNT_ICON_SIZE = 32;
@@ -17,6 +18,7 @@ export interface AppHeaderProps {
 export const AppHeader = ({ onMenuOpen }: AppHeaderProps): ReactElement => {
   const { data: user, isPending } = useAuth();
   const { mutate: logout } = useLogout();
+  const { openLogin } = useLoginModal();
   const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
@@ -26,9 +28,16 @@ export const AppHeader = ({ onMenuOpen }: AppHeaderProps): ReactElement => {
 
   const handleLogout = () => {
     handleClose();
+    // #454: ログアウト後はゲスト向け公開ホームへ戻す（ログインモーダルは自動では開かない）。
     logout(undefined, {
-      onSuccess: () => navigate({ to: "/login" }),
+      onSuccess: () => navigate({ to: "/", search: {} }),
     });
+  };
+
+  // #454: ログイン導線はページ遷移せず、現在の閲覧コンテキストを保ったままモーダルを開く。
+  const handleLoginClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    openLogin();
   };
 
   return (
@@ -114,7 +123,11 @@ export const AppHeader = ({ onMenuOpen }: AppHeaderProps): ReactElement => {
         ) : (
           <Link
             component={RouterLink}
-            to="/login"
+            // #454: 現在パスを保ったまま ?login=1 を付与してログインモーダルを開く。
+            // href も /?login=1 になりリロード・新規タブでも復元可能（middle-click 互換）。
+            to="."
+            search={((prev: Record<string, unknown>) => ({ ...prev, login: true })) as never}
+            onClick={handleLoginClick}
             underline="none"
             sx={{
               color: SLACK_COLORS.sidebarText,

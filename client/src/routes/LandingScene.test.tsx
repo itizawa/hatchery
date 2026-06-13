@@ -1,4 +1,4 @@
-import { RouterProvider, createMemoryHistory, createRootRoute, createRoute, createRouter } from "@tanstack/react-router";
+import { RouterProvider, createMemoryHistory, createRootRoute, createRouter } from "@tanstack/react-router";
 import { render, screen } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { describe, expect, it } from "vitest";
@@ -6,15 +6,19 @@ import { describe, expect, it } from "vitest";
 import { LandingScene } from "./LandingScene";
 
 /**
- * LandingScene は内部で TanStack Router の Link（CTA → /login）を使うため、
+ * LandingScene は内部で TanStack Router の Link（CTA → ?login=1 でログインモーダルを開く）を使うため、
  * RouterProvider 配下で描画する必要がある。最小のメモリルータでラップする。
+ * #454: CTA は専用ページへ遷移せず、現在パス（/lp）に login search param を付与する URL 駆動。
  */
 function renderLandingScene(): ReactElement {
-  const rootRoute = createRootRoute({ component: LandingScene });
-  const loginRoute = createRoute({ getParentRoute: () => rootRoute, path: "/login", component: () => null });
+  const rootRoute = createRootRoute({
+    component: LandingScene,
+    validateSearch: (search: Record<string, unknown>): { login?: boolean } =>
+      search.login === true || search.login === "1" ? { login: true } : {},
+  });
   const router = createRouter({
-    routeTree: rootRoute.addChildren([loginRoute]),
-    history: createMemoryHistory({ initialEntries: ["/"] }),
+    routeTree: rootRoute.addChildren([]),
+    history: createMemoryHistory({ initialEntries: ["/lp"] }),
   });
   return <RouterProvider router={router} />;
 }
@@ -49,9 +53,10 @@ describe("LandingScene", () => {
     expect((await screen.findAllByText(/観察 → 関与 → 変化/)).length).toBeGreaterThan(0);
   });
 
-  it("/login へ遷移する CTA リンクを表示する", async () => {
+  // #454: CTA は専用ログインページへ遷移せず、現在パスに ?login=1 を付与してモーダルを開く。
+  it("ログインモーダルを開く CTA リンク（href に login=1 を含む）を表示する", async () => {
     render(renderLandingScene());
     const cta = await screen.findByRole("link", { name: /ログイン|はじめる/ });
-    expect(cta).toHaveAttribute("href", "/login");
+    expect(cta.getAttribute("href")).toMatch(/login=(1|true)/);
   });
 });

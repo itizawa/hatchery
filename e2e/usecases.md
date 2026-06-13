@@ -20,7 +20,7 @@
 
 | エリア | 対応画面 / 機能 | 詳細 | ユースケース |
 |--------|----------------|------|-------------|
-| auth | ログイン・ログアウト・認証ガード（`LoginScene.tsx`）（#455: Google のみ） | [auth/usecases.md](auth/usecases.md) | UC-AUTH-01〖06 |
+| auth | ログイン・ログアウト・認証ガード（`LoginDialog.tsx` モーダル / #454, #455: Google のみ） | [auth/usecases.md](auth/usecases.md) | UC-AUTH-01〖07 |
 | home-feed | ホームフィード閲覧（`HomeFeedScene.tsx`, `/`） | [home-feed/usecases.md](home-feed/usecases.md) | UC-HOME-01〖05 |
 | community | コミュニティ一覧・詳細・購読（`/communities`） | [community/usecases.md](community/usecases.md) | UC-COMM-01〖06 |
 | post-thread | 投稿スレッド・upvote（`/posts/$postId`） | [post-thread/usecases.md](post-thread/usecases.md) | UC-POST-01〖06 |
@@ -30,14 +30,15 @@
 
 下記は各エリア `usecases.md` の見出しの転記。詳細（前提・ステップ・期待動作）は各エリアファイルを参照。
 
-### auth — ログイン・ログアウト・認証ガード（#455: Google 認証のみ）
+### auth — ログイン・ログアウト・認証ガード（#455: Google 認証のみ / #454: モーダル化）
 
-- UC-AUTH-01: ログイン画面の表示（Google でログインボタンのみ、ID/パスワードフォームなし）
+- UC-AUTH-01: ヘッダーのログイン導線からログインモーダルが開く（ページ遷移せず背景保持、Google でログインボタンのみ・ID/パスワードフォームなし）
 - UC-AUTH-02: Google でログインすると Google OAuth へリダイレクトされる
-- UC-AUTH-03: Google OAuth 完了後にホームへリダイレクトされる
-- UC-AUTH-04: ログアウトすると未ログイン状態に戻る
-- UC-AUTH-05: 未ログインで認証必須ページ（/account）にアクセスすると /login へリダイレクトされる
-- UC-AUTH-06: 未ログインで管理画面（/admin）にアクセスすると /login へリダイレクトされる
+- UC-AUTH-03: Google OAuth 完了後にホームへリダイレクトされる（モーダルは閉じる）
+- UC-AUTH-04: ログアウトすると未ログイン状態に戻る（モーダルは自動では開かない）
+- UC-AUTH-05: 未ログインで認証必須ページ（/account）にアクセスするとホーム上にログインモーダルが開く
+- UC-AUTH-06: 未ログインで管理画面（/admin）にアクセスするとホーム上にログインモーダルが開く
+- UC-AUTH-07: 旧 /login URL はホーム上のログインモーダルへ誘導される（後方互換）
 
 ### home-feed — ホームフィード閲覧
 

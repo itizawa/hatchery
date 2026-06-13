@@ -32,9 +32,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # #78: API は Pages Functions（functions/api/[[path]].ts）が同一オリジン /api/* で Cloud Run へ
+      # 逆プロキシする。クロスオリジン（別サイト）配信はセッション Cookie がサードパーティ Cookie 化して
+      # ブラウザにブロックされるため使わない。VITE_API_BASE_URL は空＝同一オリジン相対で呼ぶ。
       - name: Build client
         env:
-          VITE_API_BASE_URL: ${{ secrets.CLOUD_RUN_DEV_URL }}
+          VITE_API_BASE_URL: ""
         run: pnpm turbo run build --filter=@hatchery/client
 
       # 公式の wrangler GitHub Action は wrangler 未検出時に `pnpm add` で動的インストールを試み、

@@ -4,6 +4,7 @@ import { Router } from "express";
 
 import type { GoogleAuthConfig, PassportInstance } from "../auth/passport.js";
 import { toAuthUser } from "../auth/passport.js";
+import { DEFAULT_PUBLIC_BASE_URL } from "../config/env.js";
 import { requireAuth } from "../middleware/requireAuth.js";
 import { validateBody } from "../middleware/validateBody.js";
 import type { UserRepository } from "../persistence/userRepository.js";
@@ -14,8 +15,12 @@ export function createAuthRouter(
   userRepository: UserRepository,
   googleConfig?: GoogleAuthConfig,
   nodeEnv: string = process.env.NODE_ENV ?? "development",
+  // #78: OAuth 後の戻り先フロント絶対 URL。API（Cloud Run）とフロント（Pages）が別オリジンのため、
+  // 相対パスへリダイレクトすると API 側に戻ってしまい 404 になる。フロントのオリジンを前置する。
+  frontendBaseUrl: string = DEFAULT_PUBLIC_BASE_URL,
 ): Router {
   const router = Router();
+  const frontendOrigin = frontendBaseUrl.replace(/\/$/, "");
 
   router.post("/logout", (req, res, next) => {
     req.logout((err) => {
@@ -46,9 +51,11 @@ export function createAuthRouter(
 
     router.get(
       "/google/callback",
-      passportInstance.authenticate("google", { failureRedirect: "/login" }) as RequestHandler,
+      passportInstance.authenticate("google", {
+        failureRedirect: `${frontendOrigin}/login`,
+      }) as RequestHandler,
       (_req, res) => {
-        res.redirect("/");
+        res.redirect(`${frontendOrigin}/`);
       },
     );
   }

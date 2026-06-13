@@ -3,6 +3,8 @@
  * ユースケースはこのインターフェースにのみ依存する。
  */
 
+import { randomUUID } from "node:crypto";
+
 export interface PostRecord {
   id: string;
   communityId: string;
@@ -144,7 +146,6 @@ function comparePopular(a: PostRecord, b: PostRecord): number {
 /** DB 非依存のインメモリ実装。ユースケース/ルートのテストで注入する。 */
 export function createInMemoryPostRepository(): PostRepository {
   const records: PostRecord[] = [];
-  let seq = 0;
 
   return {
     createMany(communityId: string, inputs: PostCreateInput[]): Promise<PostRecord[]> {
@@ -160,9 +161,9 @@ export function createInMemoryPostRepository(): PostRepository {
           created.push(cloneRecord(exists));
           continue;
         }
-        seq += 1;
+        // 本番（Prisma）は uuid(7) を採番するため、in-memory も UUID を採番して整合させる（#433）。
         const record: PostRecord = {
-          id: `post-${seq}`,
+          id: randomUUID(),
           communityId,
           slotKey: input.slotKey,
           seq: input.seq,

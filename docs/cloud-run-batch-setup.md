@@ -71,6 +71,18 @@ gcloud run jobs add-iam-policy-binding ${JOB_NAME} \
   --project=${PROJECT_ID}
 ```
 
+さらに、Cloud Scheduler のサービスエージェントが OAuth トークンを `${SA_EMAIL}` として発行（impersonation）できるよう、
+`roles/iam.serviceAccountTokenCreator` を付与する（これが無いと Scheduler 起動が **401 UNAUTHENTICATED** で失敗する）:
+
+```bash
+export SCHEDULER_SA="service-${PROJECT_NUMBER}@gcp-sa-cloudscheduler.iam.gserviceaccount.com"
+
+gcloud iam service-accounts add-iam-policy-binding ${SA_EMAIL} \
+  --member="serviceAccount:${SCHEDULER_SA}" \
+  --role="roles/iam.serviceAccountTokenCreator" \
+  --project=${PROJECT_ID}
+```
+
 ## ステップ 3: Cloud Run Job を作成する（初回のみ）
 
 バッチは server と同じ Docker イメージを使い、`--command` で `CMD` を差し替えて実行する。
@@ -94,11 +106,13 @@ gcloud run jobs create ${JOB_NAME} \
 
 ## ステップ 4: Cloud Scheduler ジョブを作成する（初回のみ）
 
-Cloud Scheduler が Cloud Run Jobs API を OIDC 認証で呼び出す。
+Cloud Scheduler が Cloud Run Jobs Admin API を呼び出して Job を起動する。
 スケジュール: UTC 0/3/6/9 時（= JST 9/12/15/18 時）。
 
-Cloud Run Jobs execution endpoint はリクエストに OIDC id_token を要求する（OAuth アクセストークンは不可）。
-また URI の `namespaces/` セグメントは**数値のプロジェクト番号**が必要（文字列プロジェクト ID は不可）。
+**認証は OAuth（`--oauth-*`）を使う。** 呼び出し先の `:run` は Google API（`run.googleapis.com`）なので
+OAuth アクセストークンを要求する。OIDC id_token（`--oidc-*`）は自前の Cloud Run サービス（`*.run.app`）向けで、
+Google API に対しては **401 UNAUTHENTICATED** になる（過去にこの取り違えで一度失敗している）。
+URI の `namespaces/` セグメントには数値のプロジェクト番号を使う（実運用で動作確認済み）。
 
 ```bash
 # プロジェクト番号を取得する（一度だけ実行）
@@ -110,8 +124,8 @@ gcloud scheduler jobs create http ${JOB_NAME}-schedule \
   --uri="https://${REGION}-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/${PROJECT_NUMBER}/jobs/${JOB_NAME}:run" \
   --message-body="{}" \
   --headers="Content-Type=application/json" \
-  --oidc-service-account-email=${SA_EMAIL} \
-  --oidc-token-audience="https://${REGION}-run.googleapis.com/" \
+  --oauth-service-account-email=${SA_EMAIL} \
+  --oauth-token-scope="https://www.googleapis.com/auth/cloud-platform" \
   --location=${REGION} \
   --project=${PROJECT_ID}
 ```

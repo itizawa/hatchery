@@ -1,44 +1,45 @@
 import { Meta } from "@storybook/blocks";
-import * as LoginSceneStories from "../../client/src/routes/LoginScene.stories";
+import * as LoginDialogStories from "../../client/src/components/LoginDialog.stories";
 
-<Meta of={LoginSceneStories} />
+<Meta of={LoginDialogStories} />
 
-# 画面設計書: ログイン画面（LoginScene）
+# 画面設計書: ログイン（LoginDialog）
 
-> 関連: Issue #26 / Issue #70 / Issue #108
+> 関連: Issue #26 / Issue #70 / Issue #454 / Issue #455
 > ADR-0003（client）・ADR-0007（docs）
 
 ## 目的
 
-ログイン画面（`/login`）。ID とパスワードを入力して認証を行い、成功すれば `GET /auth/me`
-キャッシュを invalidate して `/` へ遷移する。未認証のエントリーポイント。
+ログインは MUI Dialog（モーダル）で表示する（Issue #454）。
+`/login` へのアクセスは `/?login=1` へリダイレクトし、ホームフィードを背景に保ちつつモーダルを開く。
+認証手段は **Google OAuth のみ**（Issue #455）。
 
 ## URL / ルート
 
-| URL | 画面 | 認証 |
+| URL | 動作 | 認証 |
 |-----|------|------|
-| `/login` | LoginScene | 不要 |
+| `/login` | `/?login=1` へリダイレクト | 不要 |
+| `/?login=1` | ホームフィード上にログインモーダルを表示 | 不要 |
 
 全画面の URL（ルート）一覧は Storybook の「設計/画面URL一覧（ルーティング表）」ページ（正本: `docs/design/url-list.md`）を参照してください。
 
 ## 認証要否
 
-認証不要。`AuthLayout`（サイドバーなし）を使用する（Issue #70）。
+認証不要。モーダルはホームフィード（公開ページ）の上に重ねて表示する。
 
 ## 状態一覧
 
 | 状態 | 説明 | ストーリー |
 |------|------|----------|
-| 初期 | フォーム空、未送信 | `Default` |
-| ログイン後リダイレクト | auth が admin を返す → `/` へ遷移（ナビゲーション再現） | `AfterLoginRedirect` |
+| 開いた状態 | ログインモーダルが表示されている | `Open` |
+| 閉じた状態 | モーダル非表示（何も表示されない） | `Closed` |
 
 ## データ契約
 
-- `POST /auth/login` → `AuthUser`（成功）/ エラー（401 等）
-- `GET /auth/me` → invalidate 後に再取得
-- `useNavigate` で `/` へ遷移（TanStack Router）
+- Google OAuth リダイレクト → コールバック後に `GET /auth/me` で認証状態を確認
+- ログイン成功後は `/?login=1` search param を除去してホームへ遷移
 
 ## 関連 ADR / Issue
 
-- ADR-0003: client スタック（TanStack Form / TanStack Router）
-- Issue #26（認証ガード）/ #70（AuthLayout）/ #74（TanStack Form 導入）/ #108（本 Story の整備）
+- ADR-0003: client スタック（TanStack Router）
+- Issue #26（認証ガード）/ #70（AuthLayout）/ #454（ログインモーダル化）/ #455（Google 認証のみ）

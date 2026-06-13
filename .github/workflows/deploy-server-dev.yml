@@ -85,4 +85,5 @@ jobs:
             --set-env-vars="GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" \
             --set-env-vars="GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" \
             --set-env-vars="GOOGLE_CALLBACK_URL=${{ secrets.GOOGLE_CALLBACK_URL }}" \
+            --set-env-vars="GCS_BUCKET_NAME=${{ secrets.GCS_BUCKET_NAME }}" \
             --set-env-vars="NODE_ENV=production"

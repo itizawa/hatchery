@@ -29,6 +29,7 @@ import {
 } from "@hatchery/common";
 import type { Community, CreateCommunityInput, UpdateCommunityInput } from "@hatchery/common";
 import { useCommunities, useCreateCommunity, useUpdateCommunity } from "../api/communities.js";
+import { QueryBoundary } from "./QueryBoundary.js";
 
 /** コミュニティ作成フォーム。 */
 function CreateCommunityForm(): ReactElement {
@@ -281,10 +282,60 @@ function CommunityRow({ community }: CommunityRowProps): ReactElement {
   );
 }
 
-/** 管理画面コミュニティタブ（#310）。 */
-export function CommunitiesTab(): ReactElement {
-  const { data: communities = [], isLoading } = useCommunities();
+/** コミュニティ一覧テーブル本体（#310）。useCommunities は Suspense 化済み（#462）。 */
+function CommunityListPanel(): ReactElement {
+  const { data: communities } = useCommunities();
 
+  if (communities.length === 0) {
+    return (
+      <Typography variant="body2" color="text.secondary">
+        コミュニティがありません。
+      </Typography>
+    );
+  }
+
+  return (
+    <Table size="small">
+      <TableHead>
+        <TableRow>
+          <TableCell>slug</TableCell>
+          <TableCell>名前</TableCell>
+          <TableCell>作風・説明</TableCell>
+          <TableCell>操作</TableCell>
+        </TableRow>
+      </TableHead>
+      <TableBody>
+        {communities.map((community) => (
+          <CommunityRow key={community.id} community={community} />
+        ))}
+      </TableBody>
+    </Table>
+  );
+}
+
+/** コミュニティ一覧のローディングスケルトン（Suspense fallback）。 */
+function CommunityListSkeleton(): ReactElement {
+  return (
+    <Box>
+      {Array.from({ length: 3 }, (_, i) => (
+        <Skeleton
+          key={i}
+          variant="text"
+          height={32}
+          data-testid="communities-skeleton-item"
+          sx={{ my: 0.5 }}
+        />
+      ))}
+    </Box>
+  );
+}
+
+/**
+ * 管理画面コミュニティタブ（#310）。
+ * #462: 一覧（useCommunities）は Suspense 化し、作成フォームは即時表示したいので一覧部分のみ
+ * 局所 QueryBoundary（fallback=スケルトン）で包む。
+ */
+export function CommunitiesTab(): ReactElement {
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
       <CreateCommunityForm />
@@ -293,39 +344,9 @@ export function CommunitiesTab(): ReactElement {
         <Typography variant="subtitle1" gutterBottom>
           コミュニティ一覧
         </Typography>
-        {isLoading ? (
-          <Box>
-            {Array.from({ length: 3 }, (_, i) => (
-              <Skeleton
-                key={i}
-                variant="text"
-                height={32}
-                data-testid="communities-skeleton-item"
-                sx={{ my: 0.5 }}
-              />
-            ))}
-          </Box>
-        ) : communities.length === 0 ? (
-          <Typography variant="body2" color="text.secondary">
-            コミュニティがありません。
-          </Typography>
-        ) : (
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>slug</TableCell>
-                <TableCell>名前</TableCell>
-                <TableCell>作風・説明</TableCell>
-                <TableCell>操作</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {communities.map((community) => (
-                <CommunityRow key={community.id} community={community} />
-              ))}
-            </TableBody>
-          </Table>
-        )}
+        <QueryBoundary fallback={<CommunityListSkeleton />}>
+          <CommunityListPanel />
+        </QueryBoundary>
       </Box>
     </Box>
   );

@@ -5,12 +5,11 @@ import type { ReactElement } from "react";
 import { useState } from "react";
 
 import { useUpdateWorker } from "../api/workers.js";
-import { useCommunities } from "../api/communities.js";
 import {
   useSetWorkerCommunities,
   useWorkerCommunities,
 } from "../api/workerCommunities.js";
-import { WorkerCommunitiesSelect } from "./WorkerCommunitiesSelect.js";
+import { WorkerCommunitiesField } from "./WorkerCommunitiesField.js";
 import {
   Alert,
   Box,
@@ -43,11 +42,9 @@ interface EditWorkerDialogProps {
 export function EditWorkerDialog({ worker, open, onClose }: EditWorkerDialogProps): ReactElement {
   const updateMutation = useUpdateWorker();
   const setCommunitiesMutation = useSetWorkerCommunities();
-  const communitiesQuery = useCommunities();
   const workerCommunitiesQuery = useWorkerCommunities(worker.id);
   const [errorOpen, setErrorOpen] = useState(false);
 
-  const communities = communitiesQuery.data ?? [];
   // 現在の参加コミュニティ取得が完了するまではフォームの初期値が確定しないため、
   // 取得完了後に form を再マウントする（defaultValues は非同期更新されないため key で制御）。
   // 取得が「進行中（isLoading）」の間だけ初期化中とみなす。エラー時は isLoading=false になり
@@ -166,12 +163,10 @@ export function EditWorkerDialog({ worker, open, onClose }: EditWorkerDialogProp
               ) : canEditCommunities ? (
                 <form.Field name="communityIds">
                   {(field) => (
-                    <WorkerCommunitiesSelect
+                    <WorkerCommunitiesField
                       labelId="edit-worker-communities-label"
-                      communities={communities}
                       value={field.state.value}
                       onChange={(ids) => field.handleChange(ids)}
-                      disabled={communitiesQuery.isLoading}
                     />
                   )}
                 </form.Field>

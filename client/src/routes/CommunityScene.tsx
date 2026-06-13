@@ -2,10 +2,18 @@ import { Box, Stack, Typography } from "../components/uiParts";
 import { Link as RouterLink, useParams } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 
-import { useCommunityFeed, useSubscribe, useUnsubscribe, useVotePost, usePublicCommunities, useRecentWorkers } from "../api/communities.js";
+import {
+  useCommunityFeed,
+  useSubscribe,
+  useUnsubscribe,
+  useVotePost,
+  usePublicCommunities,
+  useRecentWorkers,
+} from "../api/communities.js";
 import { useAuth } from "../api/auth.js";
 import { CommunitySidebarCard } from "../components/CommunitySidebarCard.js";
 import { PostCard } from "../components/PostCard.js";
+import { QueryBoundary } from "../components/QueryBoundary.js";
 import { RecentWorkersSection } from "../components/RecentWorkersSection.js";
 import { ShareButton } from "../components/ShareButton.js";
 import type { VoteDirection } from "../components/VoteControl.js";
@@ -14,27 +22,38 @@ import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
 import { useSubscriptionStatus } from "../hooks/useSubscriptionStatus.js";
 
 /**
+ * 最近投稿したワーカーパネル（#207）。
+ * #462: useRecentWorkers は Suspense 化。ローディング/エラーは局所 QueryBoundary に委譲し、
+ * コミュニティ本体（feed など）と独立して描画する。
+ */
+const RecentWorkersPanel = ({ slug }: { slug: string }): ReactElement => {
+  const { data: recentWorkers } = useRecentWorkers(slug);
+  return <RecentWorkersSection workers={recentWorkers} />;
+};
+
+/**
  * コミュニティページ（/communities/$slug）。
  * Reddit 風 2 カラムレイアウト（左: Post 一覧 / 右: コミュニティ詳細 sticky サイドバー）。
  * ADR-0018 / Issue #370。
+ * #462: usePublicCommunities・useCommunityFeed は Suspense 化（ローディング/エラーは router の QueryBoundary に委譲）。
+ * useRecentWorkers はサイドバーの局所 QueryBoundary に委譲する。
  */
 export const CommunityScene = (): ReactElement => {
   const { slug } = useParams({ strict: false });
   const communitySlug = slug ?? "";
 
   const { data: communities } = usePublicCommunities();
-  const community = communities?.find((c) => c.slug === communitySlug);
+  const community = communities.find((c) => c.slug === communitySlug);
 
   useDocumentTitle(community ? `${community.name} - Hatchery` : undefined);
 
-  const { data: posts, isLoading } = useCommunityFeed(communitySlug);
+  const { data: posts } = useCommunityFeed(communitySlug);
   const { data: authUser } = useAuth();
   const { subscribed } = useSubscriptionStatus(communitySlug);
 
   const { mutate: subscribe, isPending: isSubscribing } = useSubscribe(communitySlug);
   const { mutate: unsubscribe, isPending: isUnsubscribing } = useUnsubscribe(communitySlug);
   const { mutate: votePost } = useVotePost(communitySlug);
-  const { data: recentWorkers, isLoading: isRecentWorkersLoading, isError: isRecentWorkersError } = useRecentWorkers(communitySlug);
 
   const isSubscriptionPending = isSubscribing || isUnsubscribing;
 
@@ -73,11 +92,7 @@ export const CommunityScene = (): ReactElement => {
       <Box sx={{ display: "flex", gap: 3, alignItems: "flex-start" }}>
         {/* 左カラム: Post 一覧 */}
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          {isLoading ? (
-            <Typography variant="body2" color="text.secondary">
-              読み込み中...
-            </Typography>
-          ) : !posts || posts.length === 0 ? (
+          {posts.length === 0 ? (
             <Box sx={{ textAlign: "center", py: 4 }}>
               <Typography variant="body2" color="text.secondary">
                 このコミュニティにはまだ投稿がありません。
@@ -131,11 +146,20 @@ export const CommunityScene = (): ReactElement => {
                 最近投稿したワーカー
               </Typography>
               <Box sx={{ mb: 2 }}>
-                <RecentWorkersSection
-                  workers={recentWorkers ?? []}
-                  isLoading={isRecentWorkersLoading}
-                  isError={isRecentWorkersError}
-                />
+                <QueryBoundary
+                  fallback={
+                    <Typography variant="body2" color="text.secondary">
+                      読み込み中...
+                    </Typography>
+                  }
+                  errorFallback={() => (
+                    <Typography variant="body2" color="text.secondary">
+                      読み込みに失敗しました
+                    </Typography>
+                  )}
+                >
+                  <RecentWorkersPanel slug={communitySlug} />
+                </QueryBoundary>
               </Box>
             </CommunitySidebarCard>
           </Box>

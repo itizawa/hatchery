@@ -20,6 +20,8 @@ export { SETTINGS_TAB_VALUES, type SettingsTabValue } from "./routes/settingsTab
 import { AuthLayout } from "./routes/AuthLayout";
 import { RootLayout } from "./routes/RootLayout";
 import { MainContentSkeleton } from "./components/MainContentSkeleton";
+import { PostThreadSkeleton } from "./components/PostThreadSkeleton";
+import { QueryBoundary } from "./components/QueryBoundary";
 
 // ルートコンポーネントを lazyRouteComponent で動的 import（コード分割）する。
 // TanStack Router の defaultPreload: "intent" と組み合わせ、ホバー時にプリロードされる。
@@ -105,9 +107,9 @@ const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
   component: () => (
-    <Suspense fallback={null}>
+    <QueryBoundary fallback={<MainContentSkeleton />}>
       <LazyHomeFeedScene />
-    </Suspense>
+    </QueryBoundary>
   ),
 });
 
@@ -116,9 +118,9 @@ const popularRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/popular",
   component: () => (
-    <Suspense fallback={null}>
+    <QueryBoundary fallback={<MainContentSkeleton />}>
       <LazyHomeFeedScene sort="popular" />
-    </Suspense>
+    </QueryBoundary>
   ),
 });
 
@@ -127,9 +129,9 @@ const communitiesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/communities",
   component: () => (
-    <Suspense fallback={<MainContentSkeleton />}>
+    <QueryBoundary fallback={<MainContentSkeleton />}>
       <LazyCommunityBrowseScene />
-    </Suspense>
+    </QueryBoundary>
   ),
 });
 
@@ -138,9 +140,9 @@ const communityRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/communities/$slug",
   component: () => (
-    <Suspense fallback={<MainContentSkeleton />}>
+    <QueryBoundary fallback={<MainContentSkeleton />}>
       <LazyCommunityScene />
-    </Suspense>
+    </QueryBoundary>
   ),
 });
 
@@ -149,9 +151,9 @@ const postRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/posts/$postId",
   component: () => (
-    <Suspense fallback={<MainContentSkeleton />}>
+    <QueryBoundary fallback={<PostThreadSkeleton />}>
       <LazyPostThreadScene />
-    </Suspense>
+    </QueryBoundary>
   ),
 });
 

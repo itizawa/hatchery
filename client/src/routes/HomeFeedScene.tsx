@@ -24,14 +24,9 @@ export interface HomeFeedSceneProps {
  * #367: 無限スクロール（カーソルページネーション）対応。#435: 並び順パラメータ化。
  */
 export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactElement => {
-  const {
-    data,
-    isLoading: feedIsLoading,
-    error,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-  } = useInfiniteHomeFeed(sort);
+  // #462: useInfiniteHomeFeed は Suspense 化。data は non-undefined。
+  // ローディング/エラーは router の QueryBoundary に委譲する。
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteHomeFeed(sort);
   const { mutate: votePost } = useVotePost();
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
@@ -50,27 +45,7 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
     return () => observer.disconnect();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  if (feedIsLoading) {
-    return (
-      <Box component="section" sx={{ p: 3 }}>
-        <Typography variant="body2" color="text.secondary">
-          読み込み中...
-        </Typography>
-      </Box>
-    );
-  }
-
-  if (error) {
-    return (
-      <Box component="section" sx={{ p: 3 }}>
-        <Typography variant="body2" color="error">
-          フィードの取得に失敗しました。
-        </Typography>
-      </Box>
-    );
-  }
-
-  const posts = data?.pages.flatMap((page) => page.posts) ?? [];
+  const posts = data.pages.flatMap((page) => page.posts);
   const hasPosts = posts.length > 0;
 
   return (

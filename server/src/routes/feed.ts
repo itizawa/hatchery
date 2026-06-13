@@ -2,12 +2,15 @@ import { HomeFeedQuerySchema } from "@hatchery/common";
 import { Router } from "express";
 
 import type { PostRepository } from "../persistence/postRepository.js";
+import type { WorkerRepository } from "../persistence/workerRepository.js";
+import { attachAuthorWorker } from "./authorWorker.js";
 
 /**
  * /api/feed ルータ。ホームフィード（全 community の post を新着順で返す公開フィード）。
  * ADR-0019 / ADR-0020 更新: 購読フィルタなし・認証不要。#367 カーソルページネーション対応。
+ * #479: 各 post に発言者の表示用ワーカー情報（author_worker）を付与する。
  */
-export function createFeedRouter(postRepo: PostRepository): Router {
+export function createFeedRouter(postRepo: PostRepository, workerRepo: WorkerRepository): Router {
   const router = Router();
 
   router.get("/", (req, res, next) => {
@@ -24,7 +27,10 @@ export function createFeedRouter(postRepo: PostRepository): Router {
         : postRepo.listLatestPaged(cursor, limit);
 
     fetchPage
-      .then((result) => res.status(200).json(result))
+      .then(async (result) => {
+        const posts = await attachAuthorWorker(result.posts, workerRepo);
+        res.status(200).json({ ...result, posts });
+      })
       .catch((err: unknown) => {
         if (err instanceof Error && err.message === "INVALID_CURSOR") {
           res.status(400).json({ error: "ValidationError", issues: [{ message: "カーソルが不正です" }] });

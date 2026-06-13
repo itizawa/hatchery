@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { AuthorWorkerSchema } from "../worker/authorWorker.js";
+
 /** Post の title の最大文字数（#91）。 */
 export const POST_TITLE_MAX_LENGTH = 100;
 
@@ -22,6 +24,8 @@ export type VoteRequest = z.infer<typeof VoteRequestSchema>;
  * - title / text に .max() 必須（#91）
  * - score は up - down のネット値（ADR-0025）。生成出力には含めず（事後更新フィールド）。
  * - slot_key + seq で定時バッチ内の投稿を識別する（Cron 二重発火ガード）。
+ * - author_worker は発言者の表示用ワーカー情報（任意・#479）。読み取り API のレスポンスで
+ *   server が author（id か displayName）から解決して付与する。生成出力・永続化には含めない。
  */
 export const PostSchema = z.object({
   id: z.string().min(1),
@@ -33,6 +37,7 @@ export const PostSchema = z.object({
   text: z.string().min(1).max(POST_TEXT_MAX_LENGTH),
   score: z.number().int().default(0),
   created_at: z.date(),
+  author_worker: AuthorWorkerSchema.optional(),
 });
 
 export type Post = z.infer<typeof PostSchema>;

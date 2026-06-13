@@ -181,8 +181,8 @@ export function createApp(deps: AppDeps): Express {
     "/api/communities",
     createCommunitiesRouter(communityRepo, postRepo, subscriptionRepo, deps.workerRepository),
   );
-  app.use("/api/feed", createFeedRouter(postRepo));
-  app.use("/api", createPostsRouter(postRepo, commentRepo, voteRepo));
+  app.use("/api/feed", createFeedRouter(postRepo, deps.workerRepository));
+  app.use("/api", createPostsRouter(postRepo, commentRepo, voteRepo, deps.workerRepository));
 
   app.use(errorHandler);
   return app;

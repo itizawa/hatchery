@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { AuthorWorkerSchema } from "../worker/authorWorker.js";
+
 /** Comment の text の最大文字数（#91）。 */
 export const COMMENT_TEXT_MAX_LENGTH = 1000;
 
@@ -10,6 +12,8 @@ export const COMMENT_TEXT_MAX_LENGTH = 1000;
  * - score は up vote の累積数。生成出力には含めず（事後更新フィールド・ADR-0019）。
  * - MVP はフラット構造（parent_comment_id なし）。将来は多段ネスト予定。
  * - slot_key + seq で定時バッチ内のコメントを識別する（Cron 二重発火ガード）。
+ * - author_worker は発言者の表示用ワーカー情報（任意・#479）。読み取り API のレスポンスで
+ *   server が author（id か displayName）から解決して付与する。生成出力・永続化には含めない。
  */
 export const CommentSchema = z.object({
   id: z.string().min(1),
@@ -21,6 +25,7 @@ export const CommentSchema = z.object({
   text: z.string().min(1).max(COMMENT_TEXT_MAX_LENGTH),
   score: z.number().int().default(0),
   created_at: z.date(),
+  author_worker: AuthorWorkerSchema.optional(),
 });
 
 export type Comment = z.infer<typeof CommentSchema>;

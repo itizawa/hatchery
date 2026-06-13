@@ -123,4 +123,65 @@ describe("createInMemoryPostRepository", () => {
       expect(result).toEqual([]);
     });
   });
+
+  describe("listPopularPaged", () => {
+    it("score 降順で返す（同点は createdAt 降順）", async () => {
+      const repo = createInMemoryPostRepository();
+      const [a] = await repo.createMany("community-1", [
+        { slotKey: "s", seq: 0, author: "w", title: "A", text: "t" },
+      ]);
+      await new Promise((r) => setTimeout(r, 5));
+      const [b] = await repo.createMany("community-1", [
+        { slotKey: "s", seq: 1, author: "w", title: "B", text: "t" },
+      ]);
+      await new Promise((r) => setTimeout(r, 5));
+      const [c] = await repo.createMany("community-1", [
+        { slotKey: "s", seq: 2, author: "w", title: "C", text: "t" },
+      ]);
+      await repo.addScore(a.id, 5);
+      await repo.addScore(b.id, 10);
+      await repo.addScore(c.id, 10);
+
+      const { posts } = await repo.listPopularPaged(undefined, 20);
+      // score 降順: B(10),C(10) が先。同点は createdAt 降順なので C(後発) > B
+      expect(posts.map((p) => p.title)).toEqual(["C", "B", "A"]);
+    });
+
+    it("カーソルで次ページを取得でき、重複・欠落がない", async () => {
+      const repo = createInMemoryPostRepository();
+      for (let i = 0; i < 5; i++) {
+        const [p] = await repo.createMany("community-1", [
+          { slotKey: "s", seq: i, author: "w", title: `P${i}`, text: "t" },
+        ]);
+        await repo.addScore(p.id, i); // score: 0,1,2,3,4
+      }
+      const page1 = await repo.listPopularPaged(undefined, 2);
+      expect(page1.posts).toHaveLength(2);
+      expect(page1.nextCursor).not.toBeNull();
+      const page2 = await repo.listPopularPaged(page1.nextCursor!, 2);
+      expect(page2.posts).toHaveLength(2);
+      const page3 = await repo.listPopularPaged(page2.nextCursor!, 2);
+      expect(page3.posts).toHaveLength(1);
+      expect(page3.nextCursor).toBeNull();
+
+      const ids = [...page1.posts, ...page2.posts, ...page3.posts].map((p) => p.id);
+      expect(ids.length).toBe(5);
+      expect(new Set(ids).size).toBe(5);
+      // 全体が score 降順
+      const scores = [...page1.posts, ...page2.posts, ...page3.posts].map((p) => p.score);
+      expect(scores).toEqual([4, 3, 2, 1, 0]);
+    });
+
+    it("post が 0 件のときは空配列・nextCursor=null", async () => {
+      const repo = createInMemoryPostRepository();
+      const result = await repo.listPopularPaged(undefined, 20);
+      expect(result).toEqual({ posts: [], nextCursor: null });
+    });
+
+    it("不正な cursor は INVALID_CURSOR で reject", async () => {
+      const repo = createInMemoryPostRepository();
+      const invalid = Buffer.from("not-json").toString("base64");
+      await expect(repo.listPopularPaged(invalid, 20)).rejects.toThrow("INVALID_CURSOR");
+    });
+  });
 });

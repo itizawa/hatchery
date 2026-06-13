@@ -1,9 +1,10 @@
 # ADR-0019: 公共コミュニティのドメインモデル（Community / Post / Comment / Subscription / score）
 
-- ステータス: Accepted（一部 Superseded by ADR-0025）
+- ステータス: Accepted（一部 Superseded by ADR-0025 / ADR-0031）
 - 日付: 2026-06-09
 - 関連 Issue: なし（ADR-0018 / ADR-0020 のフォローアップ。実装はマイルストーン v1.1.0 の Issue で行う）
 - **注記**: score の定義（up vote 累積・nonnegative・down vote なし）は ADR-0025 により supersede。score は up - down のネット値となり負数も取り得る。
+- **注記**: vote の「`(user_id, target_type, target_id)` で投票対象を多態参照する」設計は **ADR-0031 により supersede**。投票対象は `postId` / `commentId` の本物 FK + CHECK 制約（Exclusive Arc）で表す。
 
 ## コンテキスト（背景）
 

@@ -12,6 +12,9 @@ export const COMMUNITY_DESCRIPTION_MAX_LENGTH = 500;
 /** Community の synopsis の最大文字数（記憶③ / あらすじ）。 */
 export const COMMUNITY_SYNOPSIS_MAX_LENGTH = 2000;
 
+/** Community のアイコン / カバー画像 URL の最大文字数（#457・#91。worker と同値）。 */
+export const COMMUNITY_IMAGE_URL_MAX_LENGTH = 500;
+
 /**
  * slug の形式バリデーション（#310）。
  * - 小文字英数字で始まり終わる
@@ -38,6 +41,8 @@ const communitySlugSchema = z
  * - slug は小文字英数字・ハイフンのみ（#310）
  * - synopsis は世界観記憶③（このコミュニティのあらすじ）。省略可能。
  * - last_slot_key は最後に生成バッチが走った定時キー。省略可能（未生成の場合 null）。
+ * - iconUrl / coverUrl は admin がアップロードした GCS 画像 URL（#457）。
+ *   ともに任意・nullable（未設定時はプレースホルダ表示）。最大 500 文字（#91）。
  */
 export const CommunitySchema = z.object({
   id: z.string().min(1),
@@ -46,6 +51,8 @@ export const CommunitySchema = z.object({
   description: z.string().min(1).max(COMMUNITY_DESCRIPTION_MAX_LENGTH),
   synopsis: z.string().max(COMMUNITY_SYNOPSIS_MAX_LENGTH).optional(),
   last_slot_key: z.string().optional(),
+  iconUrl: z.string().url().max(COMMUNITY_IMAGE_URL_MAX_LENGTH).nullable().optional(),
+  coverUrl: z.string().url().max(COMMUNITY_IMAGE_URL_MAX_LENGTH).nullable().optional(),
   created_at: z.date(),
 });
 

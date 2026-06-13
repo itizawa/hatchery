@@ -3,21 +3,31 @@
  * - 管理者向け CRUD（/api/admin/communities）: #310
  * - 公開ブラウズ・フィード・投票・購読（/api/communities, /api/feed 等）: #307
  */
-import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQueryClient,
+  useSuspenseQuery,
+  useSuspenseInfiniteQuery,
+} from "@tanstack/react-query";
 import { CommunitySchema } from "@hatchery/common";
 import type {
   Community as AdminCommunity,
   CreateCommunityInput,
+  HomeFeedSort,
   UpdateCommunityInput,
   VoteDirection,
 } from "@hatchery/common";
 
 export type { VoteDirection };
 
+import { clientEnv } from "../config/env.js";
 import { openApiClient } from "./client.js";
 import type { components } from "./openapi.gen.js";
 
-// ─── 公開 API 向け型定義（openapi.gen.ts より）───────────────────────────────────────────
+/** community 画像の種別（#457）。 */
+export type CommunityImageKind = "icon" | "cover";
+
+// ─── 公開 API 向け型定義（openapi.gen.ts より）────────────────────────────────────
 export type Community = components["schemas"]["Community"];
 export type Post = components["schemas"]["Post"];
 export type Comment = components["schemas"]["Comment"];
@@ -30,24 +40,27 @@ export type RecentWorker = {
   imageUrl?: string | null;
 };
 
-// ─── 管理者 API 向け型 re-export（@hatchery/common より）────────────────────────
+// ─── 管理者 API 向け型 re-export（@hatchery/common より）──────────────────
 export type { AdminCommunity, CreateCommunityInput, UpdateCommunityInput };
 
-// ─── Query Keys ───────────────────────────────────────────────────────────────────
+// ─── Query Keys ──────────────────────────────────────────────────────────────
 /** 管理者コミュニティ一覧（/api/admin/communities）のキャッシュキー。 */
 export const ADMIN_COMMUNITIES_QUERY_KEY = ["admin", "communities"] as const;
-/** 後方互换のエイリアス（CommunitiesTab.tsx など既存コードが参照）。 */
+/** 後方互換のエイリアス（CommunitiesTab.tsx など既存コードが参照）。 */
 export const COMMUNITIES_QUERY_KEY = ADMIN_COMMUNITIES_QUERY_KEY;
 
 export const communityFeedQueryKey = (slug: string) => ["communities", slug, "feed"] as const;
 export const communityRecentWorkersQueryKey = (slug: string) =>
   ["communities", slug, "recent-workers"] as const;
-export const homeFeedQueryKey = () => ["feed"] as const;
+/** ホームフィードのキャッシュキープレフィックス。全 sort をまとめて無効化する際に使う。 */
+export const homeFeedQueryKeyPrefix = () => ["feed"] as const;
+export const homeFeedQueryKey = (sort: HomeFeedSort = "latest") =>
+  [...homeFeedQueryKeyPrefix(), sort] as const;
 export const postThreadQueryKey = (postId: string) => ["posts", postId] as const;
 export const communitySubscriptionQueryKey = (slug: string) =>
   ["communities", slug, "subscription"] as const;
 
-// ─── 管理者向け API 関数（/api/admin/communities）───────────────────────────────────────
+// ─── 管理者向け API 関数（/api/admin/communities）───────────────────────────────────
 
 /** GET /api/admin/communities — コミュニティ一覧を取得する（admin のみ）。 */
 export async function fetchAdminCommunities(): Promise<AdminCommunity[]> {
@@ -64,7 +77,7 @@ export async function fetchAdminCommunities(): Promise<AdminCommunity[]> {
   );
 }
 
-/** 後方互换: CommunitiesTab.tsx などが参照する fetchCommunities は管理者向けを指す。 */
+/** 後方互換: CommunitiesTab.tsx などが参照する fetchCommunities は管理者向けを指す。 */
 export const fetchCommunities = fetchAdminCommunities;
 
 /** POST /api/admin/communities — コミュニティを作成する（admin のみ）。 */
@@ -99,9 +112,12 @@ export async function updateCommunity(
   });
 }
 
-/** 管理者コミュニティ一覧を TanStack Query で取得するフック（CommunitiesTab.tsx 向け）。 */
+/**
+ * 管理者コミュニティ一覧を TanStack Query（Suspense）で取得するフック（CommunitiesTab.tsx 向け）。
+ * Suspense 化により data は non-undefined（#462）。ローディング/エラーは QueryBoundary に委譲する。
+ */
 export function useCommunities() {
-  return useQuery({
+  return useSuspenseQuery({
     queryKey: ADMIN_COMMUNITIES_QUERY_KEY,
     queryFn: fetchAdminCommunities,
   });
@@ -124,7 +140,61 @@ export function useUpdateCommunity() {
   });
 }
 
-// ─── 公開ブラウズ向け API 関数（/api/communities, /api/feed 等）──────────────────────────
+/**
+ * POST /api/admin/communities/:id/{icon|cover} でコミュニティの画像をアップロードする（#457）。
+ * admin ロール必須。multipart/form-data で `image` フィールドを送信する。
+ * openapi-fetch は multipart/form-data 非対応のため worker 同様 fetch を直接呼ぶ。
+ * baseUrl は clientEnv.apiBaseUrl（クロスオリジン配信 #78）→ window.location.origin の順で解決。
+ */
+export async function uploadCommunityImage(
+  communityId: string,
+  kind: CommunityImageKind,
+  file: File,
+): Promise<{ id: string; iconUrl?: string | null; coverUrl?: string | null }> {
+  const formData = new FormData();
+  formData.append("image", file);
+
+  const base =
+    clientEnv.apiBaseUrl ?? (typeof window !== "undefined" ? window.location.origin : "");
+
+  const res = await fetch(`${base}/api/admin/communities/${communityId}/${kind}`, {
+    method: "POST",
+    body: formData,
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(body.error ?? `Upload failed: ${res.status}`);
+  }
+
+  return res.json() as Promise<{ id: string; iconUrl?: string | null; coverUrl?: string | null }>;
+}
+
+/**
+ * コミュニティ画像アップロードの useMutation フック（#457）。
+ * 成功時に admin / 公開コミュニティ一覧を無効化して最新状態を反映する。
+ */
+export function useUploadCommunityImage() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      communityId,
+      kind,
+      file,
+    }: {
+      communityId: string;
+      kind: CommunityImageKind;
+      file: File;
+    }) => uploadCommunityImage(communityId, kind, file),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ADMIN_COMMUNITIES_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: ["communities"] });
+    },
+  });
+}
+
+// ─── 公開ブラウズ向け API 関数（/api/communities, /api/feed 等）──────────────────────
 
 /** GET /api/communities — 公開コミュニティ一覧を取得する（認証不要）。 */
 export async function fetchPublicCommunities(): Promise<Community[]> {
@@ -149,13 +219,18 @@ export async function fetchCommunityFeed(slug: string): Promise<Post[]> {
 }
 
 /**
- * GET /api/feed — ホームフィードを 1 ページ分取得する（カーソルページネーション #367）。
+ * GET /api/feed — ホームフィードを 1 ページ分取得する（カーソルページネーション #367 / 並び順 #435）。
+ * sort=latest（既定）は後方互換のため query に sort を含めない。
  */
 export async function fetchHomeFeedPage(
   cursor?: string,
+  sort: HomeFeedSort = "latest",
 ): Promise<{ posts: Post[]; nextCursor: string | null }> {
+  const query: { cursor?: string; limit: number; sort?: HomeFeedSort } = { limit: 20 };
+  if (cursor) query.cursor = cursor;
+  if (sort === "popular") query.sort = sort;
   const { data, response } = await openApiClient.GET("/api/feed", {
-    params: { query: cursor ? { cursor, limit: 20 } : { limit: 20 } },
+    params: { query },
     credentials: "include",
   });
   if (!response.ok || !data) throw new Error(`GET /api/feed failed: ${response.status}`);
@@ -245,38 +320,50 @@ export async function fetchRecentWorkers(slug: string): Promise<RecentWorker[]> 
   return res.json() as Promise<RecentWorker[]>;
 }
 
-/** community の最近投稿したワーカー一覧を TanStack Query で取得するフック（#207）。 */
+/**
+ * community の最近投稿したワーカー一覧を TanStack Query（Suspense）で取得するフック（#207 / #462）。
+ * data は non-undefined。ローディング/エラーは QueryBoundary に委譲する。
+ */
 export function useRecentWorkers(slug: string) {
-  return useQuery({
+  return useSuspenseQuery({
     queryKey: communityRecentWorkersQueryKey(slug),
     queryFn: () => fetchRecentWorkers(slug),
     staleTime: 60_000,
   });
 }
 
-/** 公開コミュニティ一覧を TanStack Query で取得するフック（ブラウズ・サイドバー向け）。 */
+/**
+ * 公開コミュニティ一覧を TanStack Query（Suspense）で取得するフック（ブラウズ・サイドバー向け / #462）。
+ * data は non-undefined。ローディング/エラーは QueryBoundary に委譲する。
+ */
 export function usePublicCommunities() {
-  return useQuery({
+  return useSuspenseQuery({
     queryKey: ["communities"],
     queryFn: fetchPublicCommunities,
     staleTime: 60_000,
   });
 }
 
-/** コミュニティフィードを TanStack Query で取得するフック。 */
+/**
+ * コミュニティフィードを TanStack Query（Suspense）で取得するフック（#462）。
+ * data は non-undefined。ローディング/エラーは QueryBoundary に委譲する。
+ */
 export function useCommunityFeed(slug: string) {
-  return useQuery({
+  return useSuspenseQuery({
     queryKey: communityFeedQueryKey(slug),
     queryFn: () => fetchCommunityFeed(slug),
     staleTime: 30_000,
   });
 }
 
-/** ホームフィードを TanStack Query の無限スクロールで取得するフック（#367）。 */
-export function useInfiniteHomeFeed() {
-  return useInfiniteQuery({
-    queryKey: homeFeedQueryKey(),
-    queryFn: ({ pageParam }) => fetchHomeFeedPage(pageParam as string | undefined),
+/**
+ * ホームフィードを TanStack Query（Suspense）の無限スクロールで取得するフック（#367 / 並び順 #435 / #462）。
+ * data は non-undefined。ローディング/エラーは QueryBoundary に委譲する。
+ */
+export function useInfiniteHomeFeed(sort: HomeFeedSort = "latest") {
+  return useSuspenseInfiniteQuery({
+    queryKey: homeFeedQueryKey(sort),
+    queryFn: ({ pageParam }) => fetchHomeFeedPage(pageParam as string | undefined, sort),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     staleTime: 30_000,
@@ -284,37 +371,51 @@ export function useInfiniteHomeFeed() {
   });
 }
 
-/** スレッド（post + comments）を TanStack Query で取得するフック。 */
+/**
+ * スレッド（post + comments）を TanStack Query（Suspense）で取得するフック（#462）。
+ * data は non-undefined。ローディング/エラーは QueryBoundary に委譲する。
+ */
 export function usePostThread(postId: string) {
-  return useQuery({
+  return useSuspenseQuery({
     queryKey: postThreadQueryKey(postId),
     queryFn: () => fetchPostThread(postId),
     staleTime: 30_000,
   });
 }
 
-/** コミュニティ購読ミューテーションフック。成功後に購読状態キャッシュを更新する。 */
+/**
+ * GET /api/communities/{slug}/subscription — 購読状態を取得する（#421）。
+ * 未認証の場合は { subscribed: false } が返る。
+ */
+export async function fetchSubscriptionStatus(slug: string): Promise<{ subscribed: boolean }> {
+  const res = await fetch(`/api/communities/${encodeURIComponent(slug)}/subscription`, {
+    credentials: "include",
+  });
+  if (!res.ok)
+    throw new Error(`GET /api/communities/${slug}/subscription failed: ${res.status}`);
+  return res.json() as Promise<{ subscribed: boolean }>;
+}
+
+/** コミュニティ購読ミューテーションフック。成功後に購読状態クエリを invalidate する（#421）。 */
 export function useSubscribe(slug: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => subscribeCommunity(slug),
     onSuccess: () => {
-      // 購読状態を true に直接更新する（購読一覧 API がないため setQueryData を使用）
-      queryClient.setQueryData(communitySubscriptionQueryKey(slug), true);
-      void queryClient.invalidateQueries({ queryKey: homeFeedQueryKey() });
+      void queryClient.invalidateQueries({ queryKey: communitySubscriptionQueryKey(slug) });
+      void queryClient.invalidateQueries({ queryKey: homeFeedQueryKeyPrefix() });
     },
   });
 }
 
-/** コミュニティ購読解除ミューテーションフック。成功後に購読状態キャッシュを更新する。 */
+/** コミュニティ購読解除ミューテーションフック。成功後に購読状態クエリを invalidate する（#421）。 */
 export function useUnsubscribe(slug: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => unsubscribeCommunity(slug),
     onSuccess: () => {
-      // 購読状態を false に直接更新する
-      queryClient.setQueryData(communitySubscriptionQueryKey(slug), false);
-      void queryClient.invalidateQueries({ queryKey: homeFeedQueryKey() });
+      void queryClient.invalidateQueries({ queryKey: communitySubscriptionQueryKey(slug) });
+      void queryClient.invalidateQueries({ queryKey: homeFeedQueryKeyPrefix() });
     },
   });
 }
@@ -351,7 +452,7 @@ export function useVotePost(communitySlug?: string) {
       if (communitySlug) {
         void queryClient.invalidateQueries({ queryKey: communityFeedQueryKey(communitySlug) });
       }
-      void queryClient.invalidateQueries({ queryKey: homeFeedQueryKey() });
+      void queryClient.invalidateQueries({ queryKey: homeFeedQueryKeyPrefix() });
     },
   });
 }

@@ -7,26 +7,25 @@ import type { OpenAPIObject } from "openapi3-ts/oas31";
 import { z } from "zod";
 
 import {
-  AcceptInvitationSchema,
   AppSettingResponseSchema,
   AuthUserSchema,
   BatchRunLogSchema,
   CommunitySchema,
   CommentSchema,
+  CreateCommentRequestSchema,
   CreateCommunitySchema,
-  CreateInvitationSchema,
+  CreatePostRequestSchema,
   CreateWorkerSchema,
   UpdateCommunitySchema,
   WorkerSchema,
-  InvitationPublicSchema,
-  InvitationSchema,
-  InvitationStatusSchema,
-  LoginRequestSchema,
   PostSchema,
   SubscriptionSchema,
+  SubscriptionStatusSchema,
   TokenUsageLogSchema,
   UpdateAppSettingSchema,
   UpdateWorkerSchema,
+  WorkerCommunityIdsSchema,
+  SetWorkerCommunitiesSchema,
   UpdateProfileSchema,
   UserRoleSchema,
   VoteRequestSchema,
@@ -44,11 +43,6 @@ const AuthUserComponent = registry.register(
   AuthUserSchema.openapi({
     description: "認証済みユーザーの公開情報（passwordHash 等は含まない）",
   }),
-);
-
-const LoginRequestComponent = registry.register(
-  "LoginRequest",
-  LoginRequestSchema.openapi({ description: "ログインリクエストボディ（id / password）" }),
 );
 
 // エラー応答スキーマ。実装（validateBody / errorHandler）が実際に返す形 `{ error: string }` に忠実。
@@ -148,24 +142,59 @@ registry.registerPath({
   },
 });
 
-// 認証（#26 / routes/auth.ts。createApp は /auth プレフィックスでマウント）。
+// admin: ワーカーの参加コミュニティ編集（#490）。認証必須・admin のみ。
+const WorkerCommunityIdsComponent = registry.register(
+  "WorkerCommunityIds",
+  WorkerCommunityIdsSchema.openapi({
+    description: "ワーカーの参加コミュニティ id 集合（#490）",
+  }),
+);
+
+const SetWorkerCommunitiesComponent = registry.register(
+  "SetWorkerCommunities",
+  SetWorkerCommunitiesSchema.openapi({
+    description: "ワーカーの参加コミュニティを置き換えるリクエストボディ（#490）",
+  }),
+);
+
 registry.registerPath({
-  method: "post",
-  path: "/api/auth/login",
-  summary: "ID / パスワードでログイン（passport-local）",
-  request: {
-    body: { content: { "application/json": { schema: LoginRequestComponent } } },
-  },
+  method: "get",
+  path: "/api/admin/workers/{id}/communities",
+  summary: "ワーカーの参加コミュニティ id 一覧を取得（認証必須・admin のみ・#490）",
+  request: { params: z.object({ id: workerPathIdParam }) },
   responses: {
     200: {
-      description: "ログイン成功。認証済みユーザーを返す",
-      content: { "application/json": { schema: AuthUserComponent } },
+      description: "参加コミュニティ id 一覧",
+      content: { "application/json": { schema: WorkerCommunityIdsComponent } },
     },
-    400: { description: "リクエストボディが不正（id / password 空など）", ...errorJson },
-    401: { description: "認証失敗（ID またはパスワード不一致）" },
+    401: { description: "未認証", ...errorJson },
+    403: { description: "admin 権限なし", ...errorJson },
+    404: { description: "Worker が存在しない", ...errorJson },
   },
 });
 
+registry.registerPath({
+  method: "put",
+  path: "/api/admin/workers/{id}/communities",
+  summary: "ワーカーの参加コミュニティを置き換える（認証必須・admin のみ・#490）",
+  request: {
+    params: z.object({ id: workerPathIdParam }),
+    body: { content: { "application/json": { schema: SetWorkerCommunitiesComponent } } },
+  },
+  responses: {
+    200: {
+      description: "置換後の参加コミュニティ id 一覧",
+      content: { "application/json": { schema: WorkerCommunityIdsComponent } },
+    },
+    400: { description: "バリデーションエラー / 存在しない communityId", ...errorJson },
+    401: { description: "未認証", ...errorJson },
+    403: { description: "admin 権限なし", ...errorJson },
+    404: { description: "Worker が存在しない", ...errorJson },
+  },
+});
+
+// 認証（ADR-0029 / routes/auth.ts。createApp は /api/auth プレフィックスでマウント）。
+// #455: POST /api/auth/login は廃止。Google OAuth のみ。
 registry.registerPath({
   method: "post",
   path: "/api/auth/logout",
@@ -208,8 +237,27 @@ registry.registerPath({
       description: "更新後の認証済みユーザー",
       content: { "application/json": { schema: AuthUserComponent } },
     },
-    400: { description: "リクエストボディが不正（displayName 空・avtarUrl 不正など）", ...errorJson },
+    400: { description: "リクエストボディが不正（displayName 空・atvtarUrl 不正など）", ...errorJson },
     401: { description: "未認証", ...errorJson },
+  },
+});
+
+// Google OAuth 認証（#343 / ADR-0027）。GOOGLE_CLIENT_ID 等が設定されている場合のみ有効。
+registry.registerPath({
+  method: "get",
+  path: "/api/auth/google",
+  summary: "Google OAuth 認証画面へリダイレクト（#343）",
+  responses: {
+    302: { description: "Google OAuth 認証画面へリダイレクト（GOOGLE_CLIENT_ID 未設定時は 404）" },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/api/auth/google/callback",
+  summary: "Google OAuth コールバック（#343）",
+  responses: {
+    302: { description: "認証成功: フロントエンドの / へリダイレクト。認証失敗: /login へリダイレクト" },
   },
 });
 
@@ -325,120 +373,7 @@ registry.registerPath({
   },
 });
 
-// 招待リンク API（#131）。管理者が招待リンクを発行・一覧・失効できる。
-registry.register("InvitationStatus", InvitationStatusSchema.openapi({ description: "招待リンクのステータス（#131）" }));
-
-const InvitationComponent = registry.register(
-  "Invitation",
-  InvitationSchema.openapi({ description: "招待リンク（管理者向け。token 含む）" }),
-);
-
-const CreateInvitationComponent = registry.register(
-  "CreateInvitation",
-  CreateInvitationSchema.openapi({ description: "招待リンク発行リクエスト（expiresInHours / memo?）" }),
-);
-
-const invitationIdParam = z.string().openapi({ param: { name: "id", in: "path" } });
-
-registry.registerPath({
-  method: "post",
-  path: "/api/admin/invitations",
-  summary: "招待リンクを発行（認証必須・admin ロール・#131）",
-  request: {
-    body: { content: { "application/json": { schema: CreateInvitationComponent } } },
-  },
-  responses: {
-    201: {
-      description: "発行された招待リンク（token 含む）",
-      content: { "application/json": { schema: InvitationComponent } },
-    },
-    400: { description: "リクエストボディが不正（expiresInHours 範囲外など）", ...errorJson },
-    401: { description: "未認証", ...errorJson },
-    403: { description: "admin 権限なし", ...errorJson },
-  },
-});
-
-registry.registerPath({
-  method: "get",
-  path: "/api/admin/invitations",
-  summary: "招待リンク一覧を取得（認証必須・admin ロール・#131）",
-  responses: {
-    200: {
-      description: "招待リンク一覧（ステータス込み）",
-      content: { "application/json": { schema: z.array(InvitationComponent) } },
-    },
-    401: { description: "未認証", ...errorJson },
-    403: { description: "admin 権限なし", ...errorJson },
-  },
-});
-
-registry.registerPath({
-  method: "post",
-  path: "/api/admin/invitations/{id}/revoke",
-  summary: "招待リンクを手動失効（認証必須・admin ロール・#131）",
-  request: {
-    params: z.object({ id: invitationIdParam }),
-  },
-  responses: {
-    200: {
-      description: "失効後の招待リンク（status: revoked）",
-      content: { "application/json": { schema: InvitationComponent } },
-    },
-    401: { description: "未認証", ...errorJson },
-    403: { description: "admin 権限なし", ...errorJson },
-    404: { description: "招待リンクが存在しない", ...errorJson },
-  },
-});
-
-// 招待受諾 API（#132）。公開エンドポイント（requireAuth なし）。
-const InvitationPublicComponent = registry.register(
-  "InvitationPublic",
-  InvitationPublicSchema.openapi({ description: "招待トークン検証レスポンス（公開・機寧情報なし）" }),
-);
-
-const AcceptInvitationComponent = registry.register(
-  "AcceptInvitation",
-  AcceptInvitationSchema.openapi({ description: "招待受諾リクエスト（id / displayName / password）" }),
-);
-
-const invitationTokenParam = z.string().openapi({ param: { name: "token", in: "path" } });
-
-registry.registerPath({
-  method: "get",
-  path: "/api/invitations/{token}",
-  summary: "招待トークンを検証（公開・認証不要・#132）",
-  request: {
-    params: z.object({ token: invitationTokenParam }),
-  },
-  responses: {
-    200: {
-      description: "トークンのステータスと有効期限",
-      content: { "application/json": { schema: InvitationPublicComponent } },
-    },
-    404: { description: "トークンが存在しない", ...errorJson },
-  },
-});
-
-registry.registerPath({
-  method: "post",
-  path: "/api/invitations/{token}/accept",
-  summary: "招待を受諾して新規ユーザーを登録（公開・認証不要・#132）",
-  request: {
-    params: z.object({ token: invitationTokenParam }),
-    body: { content: { "application/json": { schema: AcceptInvitationComponent } } },
-  },
-  responses: {
-    201: {
-      description: "受諾成功。作成されたユーザーを返す（セッション確立済み）",
-      content: { "application/json": { schema: AuthUserComponent } },
-    },
-    400: { description: "バリデーションエラー（password 短すぎ等）", ...errorJson },
-    404: { description: "トークンが存在しない", ...errorJson },
-    409: { description: "招待が無効（期限切れ・使用済み・失効済み）または id 重複", ...errorJson },
-  },
-});
-
-// ── 公共コミュニティ API（#305 / ADR-0019 / ADR-0020）──────────────────────────────────
+// ── 公共コミュニティ API（#305 / ADR-0019 / ADR-0020）────────────────────────
 
 const CommunityComponent = registry.register(
   "Community",
@@ -458,6 +393,21 @@ const CommentComponent = registry.register(
 registry.register(
   "Subscription",
   SubscriptionSchema.openapi({ description: "コミュニティへの購読。ADR-0019 / ADR-0020" }),
+);
+
+// admin: 任意の worker 名義で post / comment を手動作成するリクエストボディ（#433）。
+const CreatePostRequestComponent = registry.register(
+  "CreatePostRequest",
+  CreatePostRequestSchema.openapi({
+    description: "管理者による手動 post 作成リクエストボディ（#433 / ADR-0020）",
+  }),
+);
+
+const CreateCommentRequestComponent = registry.register(
+  "CreateCommentRequest",
+  CreateCommentRequestSchema.openapi({
+    description: "管理者による手動 comment 作成リクエストボディ（#433 / ADR-0020）",
+  }),
 );
 
 // admin コミュニティ CRUD のリクエストボディ（#310 / #337）。
@@ -532,6 +482,106 @@ registry.registerPath({
   },
 });
 
+// admin: コミュニティのアイコン画像アップロード（認証必須・admin のみ・#457）
+// multipart/form-data の `image` フィールドで送信する。
+const communityImageMultipartBody = {
+  content: {
+    "multipart/form-data": {
+      schema: z.object({
+        image: z.string().openapi({ type: "string", format: "binary" }),
+      }),
+    },
+  },
+};
+
+registry.registerPath({
+  method: "post",
+  path: "/api/admin/communities/{id}/icon",
+  summary: "コミュニティのアイコン画像をアップロード（認証必須・admin のみ・#457）",
+  request: {
+    params: z.object({ id: communityIdParam }),
+    body: communityImageMultipartBody,
+  },
+  responses: {
+    200: {
+      description: "アップロード後の community id と iconUrl",
+      content: {
+        "application/json": {
+          schema: z.object({ id: z.string(), iconUrl: z.string().nullable() }),
+        },
+      },
+    },
+    400: { description: "ファイル不正（MIME / サイズ超過 / 未添付）", ...errorJson },
+    401: { description: "未認証", ...errorJson },
+    403: { description: "admin 権限なし", ...errorJson },
+    404: { description: "コミュニティが存在しない", ...errorJson },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/api/admin/communities/{id}/cover",
+  summary: "コミュニティのカバー画像をアップロード（認証必須・admin のみ・#457）",
+  request: {
+    params: z.object({ id: communityIdParam }),
+    body: communityImageMultipartBody,
+  },
+  responses: {
+    200: {
+      description: "アップロード後の community id と coverUrl",
+      content: {
+        "application/json": {
+          schema: z.object({ id: z.string(), coverUrl: z.string().nullable() }),
+        },
+      },
+    },
+    400: { description: "ファイル不正（MIME / サイズ超過 / 未添付）", ...errorJson },
+    401: { description: "未認証", ...errorJson },
+    403: { description: "admin 権限なし", ...errorJson },
+    404: { description: "コミュニティが存在しない", ...errorJson },
+  },
+});
+
+// admin: 任意の worker 名義で post を手動作成（認証必須・admin のみ・#433）
+registry.registerPath({
+  method: "post",
+  path: "/api/admin/posts",
+  summary: "任意の worker 名義で post を手動作成（認証必須・admin のみ・#433 / ADR-0020）",
+  request: {
+    body: { content: { "application/json": { schema: CreatePostRequestComponent } } },
+  },
+  responses: {
+    201: {
+      description: "作成された Post",
+      content: { "application/json": { schema: PostComponent } },
+    },
+    400: { description: "バリデーションエラー（uuid 不正・title/text 空など）", ...errorJson },
+    401: { description: "未認証", ...errorJson },
+    403: { description: "admin 権限なし", ...errorJson },
+    404: { description: "community / worker（削除済み含む）が存在しない", ...errorJson },
+  },
+});
+
+// admin: 任意の worker 名義で comment を手動作成（認証必須・admin のみ・#433）
+registry.registerPath({
+  method: "post",
+  path: "/api/admin/comments",
+  summary: "任意の worker 名義で comment を手動作成（認証必須・admin のみ・#433 / ADR-0020）",
+  request: {
+    body: { content: { "application/json": { schema: CreateCommentRequestComponent } } },
+  },
+  responses: {
+    201: {
+      description: "作成された Comment（postId の community に紐づく）",
+      content: { "application/json": { schema: CommentComponent } },
+    },
+    400: { description: "バリデーションエラー（uuid 不正・text 空など）", ...errorJson },
+    401: { description: "未認証", ...errorJson },
+    403: { description: "admin 権限なし", ...errorJson },
+    404: { description: "post / worker（削除済み含む）が存在しない", ...errorJson },
+  },
+});
+
 // コミュニティ一覧（認証不要）
 registry.registerPath({
   method: "get",
@@ -570,6 +620,26 @@ registry.registerPath({
     200: {
       description: "最近投稿したワーカー一覧（新着投稿順・distinct）",
       content: { "application/json": { schema: z.array(WorkerComponent) } },
+    },
+    404: { description: "コミュニティが存在しない", ...errorJson },
+  },
+});
+
+// 購読状態取得（認証任意・#421）
+const SubscriptionStatusComponent = registry.register(
+  "SubscriptionStatus",
+  SubscriptionStatusSchema.openapi({ description: "コミュニティへの購読状態（#421）" }),
+);
+
+registry.registerPath({
+  method: "get",
+  path: "/api/communities/{slug}/subscription",
+  summary: "コミュニティへの購読状態を取得（認証任意・未認証は subscribed: false・#421）",
+  request: { params: z.object({ slug: communitySlugParam }) },
+  responses: {
+    200: {
+      description: "購読状態",
+      content: { "application/json": { schema: SubscriptionStatusComponent } },
     },
     404: { description: "コミュニティが存在しない", ...errorJson },
   },
@@ -628,6 +698,10 @@ registry.registerPath({
         .max(100)
         .default(20)
         .openapi({ description: "1 ページあたりの件数（1～100、既定 20）" }),
+      sort: z
+        .enum(["latest", "popular"])
+        .default("latest")
+        .openapi({ description: "並び順（latest=新着順 / popular=vote 数降順、既定 latest）" }),
     }),
   },
   responses: {

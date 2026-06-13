@@ -71,6 +71,28 @@ describe("CommunitySidebarCard", () => {
     expect(screen.getByText("2026年6月1日 作成")).toBeInTheDocument();
   });
 
+  it("created_at が undefined のとき「NaN年...」を出さず作成日行を描画しない（#477）", () => {
+    render(
+      <CommunitySidebarCard
+        {...baseProps}
+        community={{ ...mockCommunity, created_at: undefined as unknown as string }}
+      />,
+    );
+    expect(screen.queryByText(/作成/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
+  });
+
+  it("created_at が不正日付のとき「NaN年...」を出さず作成日行を描画しない（#477）", () => {
+    render(
+      <CommunitySidebarCard
+        {...baseProps}
+        community={{ ...mockCommunity, created_at: "not-a-date" }}
+      />,
+    );
+    expect(screen.queryByText(/作成/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
+  });
+
   it("showSubscribe=true のとき購読ボタンを表示し、クリックで onSubscribe が呼ばれる", async () => {
     const onSubscribe = vi.fn();
     render(<CommunitySidebarCard {...baseProps} onSubscribe={onSubscribe} />);
@@ -94,6 +116,22 @@ describe("CommunitySidebarCard", () => {
   it("シェアボタンを表示する", () => {
     render(<CommunitySidebarCard {...baseProps} />);
     expect(screen.getByRole("button", { name: /共有/i })).toBeInTheDocument();
+  });
+
+  it("iconUrl が設定されているときアイコン画像を表示する（#457）", () => {
+    render(
+      <CommunitySidebarCard
+        {...baseProps}
+        community={{ ...mockCommunity, iconUrl: "https://example.com/icon.png" }}
+      />,
+    );
+    const img = screen.getByRole("img", { name: "AI 開発者の集い" });
+    expect(img).toHaveAttribute("src", "https://example.com/icon.png");
+  });
+
+  it("iconUrl 未設定でもイニシャルのフォールバックで崩れずに表示する（#457）", () => {
+    render(<CommunitySidebarCard {...baseProps} />);
+    expect(screen.getByRole("heading", { name: "AI 開発者の集い" })).toBeInTheDocument();
   });
 
   it("children を追加セクションとして描画する", () => {

@@ -2,12 +2,9 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import {
-  LoginRequestSchema,
   UpdateProfileSchema,
   UpdateAppSettingSchema,
-  AcceptInvitationSchema,
   AVATAR_URL_MAX_LENGTH,
-  LOGIN_ID_MAX_LENGTH,
 } from "@hatchery/common";
 
 import { extractFieldSpecs } from "./extractFieldSpecs.js";
@@ -82,16 +79,14 @@ describe("extractFieldSpecs", () => {
 describe("FORM_SPECS（生成由来のフォーム項目レジストリ）", () => {
   const ids = FORM_SPECS.map((f) => f.id);
 
-  it("AC #2 の入力系スキーマを少なくとも含む", () => {
+  it("入力系スキーマを少なくとも含む（#455: LoginRequestSchema・招待系は廃止）", () => {
     for (const id of [
-      "LoginRequestSchema",
       "UpdateProfileSchema",
       "CreateCommunitySchema",
       "UpdateCommunitySchema",
       "CreateWorkerSchema",
       "UpdateWorkerSchema",
       "UpdateAppSettingSchema",
-      "AcceptInvitationSchema",
     ]) {
       expect(ids).toContain(id);
     }
@@ -105,12 +100,6 @@ describe("FORM_SPECS（生成由来のフォーム項目レジストリ）", () 
   });
 
   it("生成された項目が Zod 定義と一致する（生成由来の検証）", () => {
-    const login = FORM_SPECS.find((f) => f.id === "LoginRequestSchema")!;
-    const loginId = login.fields.find((f) => f.name === "loginId")!;
-    // Zod の正本（LoginRequestSchema）の max と一致すること。
-    expect(loginId.constraints.max).toBe(LOGIN_ID_MAX_LENGTH);
-    expect(loginId.required).toBe(true);
-
     const profile = FORM_SPECS.find((f) => f.id === "UpdateProfileSchema")!;
     const avatar = profile.fields.find((f) => f.name === "avatarUrl")!;
     expect(avatar.constraints.max).toBe(AVATAR_URL_MAX_LENGTH);
@@ -119,10 +108,6 @@ describe("FORM_SPECS（生成由来のフォーム項目レジストリ）", () 
   });
 
   it("extractFieldSpecs を実際の Zod スキーマに適用した結果と一致する（手書きでない）", () => {
-    const expectedLogin = extractFieldSpecs(LoginRequestSchema);
-    const login = FORM_SPECS.find((f) => f.id === "LoginRequestSchema")!;
-    expect(login.fields).toEqual(expectedLogin);
-
     const expectedProfile = extractFieldSpecs(UpdateProfileSchema);
     const profile = FORM_SPECS.find((f) => f.id === "UpdateProfileSchema")!;
     expect(profile.fields).toEqual(expectedProfile);
@@ -130,9 +115,5 @@ describe("FORM_SPECS（生成由来のフォーム項目レジストリ）", () 
     const expectedAppSetting = extractFieldSpecs(UpdateAppSettingSchema);
     const appSetting = FORM_SPECS.find((f) => f.id === "UpdateAppSettingSchema")!;
     expect(appSetting.fields).toEqual(expectedAppSetting);
-
-    const expectedInvitation = extractFieldSpecs(AcceptInvitationSchema);
-    const invitation = FORM_SPECS.find((f) => f.id === "AcceptInvitationSchema")!;
-    expect(invitation.fields).toEqual(expectedInvitation);
   });
 });

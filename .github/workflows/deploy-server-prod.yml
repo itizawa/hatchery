@@ -1,0 +1,85 @@
+name: Deploy Server (prod)
+
+# main マージをトリガーに server を Cloud Run（prod 環境）へ自動デプロイする。
+# 認証は Workload Identity Federation（サービスアカウントキー不要）。
+# ゲート1: main への push のみトリガー。develop への push は含めない。
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: deploy-server-prod
+  cancel-in-progress: true
+
+env:
+  REGION: ${{ secrets.GCP_REGION }}
+  SERVICE_NAME: hatchery-prod
+  REGISTRY: ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/hatchery
+  IMAGE: ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/hatchery/server:${{ github.sha }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud (WIF)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SA_EMAIL }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Cloud Run デプロイより前にマイグレーションを完了させる。
+      # 失敗時はここでワークフローが止まり、デプロイに進まない。
+      # 注意: migrate 成功後に docker build/push が失敗した場合、DB スキーマのみ進んだ状態になる。
+      # また cancel-in-progress により並行 push でジョブが中断した場合も同様。
+      # これはコードと DB の forward-compatible な設計（expand-contract）で吸収する。
+      - name: Run Prisma migration
+        run: pnpm --filter @hatchery/server db:migrate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_PROD }}
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
+      - name: Build and push Docker image
+        run: |
+          docker build -f server/Dockerfile -t ${{ env.IMAGE }} .
+          docker push ${{ env.IMAGE }}
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy ${{ env.SERVICE_NAME }} \
+            --image=${{ env.IMAGE }} \
+            --region=${{ env.REGION }} \
+            --platform=managed \
+            --allow-unauthenticated \
+            --min-instances=0 \
+            --max-instances=3 \
+            --port=8080 \
+            --set-env-vars="DATABASE_URL=${{ secrets.DATABASE_URL_PROD }}" \
+            --set-env-vars="SESSION_SECRET=${{ secrets.SESSION_SECRET }}" \
+            --set-env-vars="APP_SECRET=${{ secrets.APP_SECRET }}" \
+            --set-env-vars="ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}" \
+            --set-env-vars="CORS_ALLOWED_ORIGINS=${{ secrets.CORS_ALLOWED_ORIGINS_PROD }}" \
+            --set-env-vars="NODE_ENV=production"

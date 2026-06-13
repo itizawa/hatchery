@@ -116,6 +116,24 @@ describe("fetchHomeFeedPage (GET /api/feed)", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(401)));
     await expect(fetchHomeFeedPage()).rejects.toThrow();
   });
+
+  it("sort=popular を渡すと URL に sort=popular が含まれる", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, { posts: [], nextCursor: null }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await fetchHomeFeedPage(undefined, "popular");
+    const request = fetchMock.mock.calls[0][0] as Request;
+    expect(request.url).toContain("sort=popular");
+  });
+
+  it("sort=latest（既定）は URL に sort を含めない（後方互換）", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, { posts: [], nextCursor: null }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await fetchHomeFeedPage();
+    const request = fetchMock.mock.calls[0][0] as Request;
+    expect(request.url).not.toContain("sort=");
+  });
 });
 
 describe("fetchPostThread (GET /api/posts/{postId})", () => {

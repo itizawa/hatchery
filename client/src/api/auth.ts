@@ -1,9 +1,19 @@
-import type { AuthUser, LoginRequest, UpdateProfile } from "@hatchery/common";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { AuthUser, UpdateProfile } from "@hatchery/common";
+import { useSuspenseQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { openApiClient } from "./client.js";
+import { apiBaseUrl, openApiClient } from "./client.js";
 
 export const AUTH_ME_QUERY_KEY = ["auth", "me"] as const;
+
+/**
+ * Google ログイン開始エンドポイント（GET /api/auth/google）への全画面遷移先 URL を組み立てる（#78）。
+ * openapi-fetch を通さない素のブラウザ遷移なので baseUrl が効かない。相対パスへ遷移すると
+ * クロスオリジン配信（Cloudflare Pages × Cloud Run）では Pages 側に飛んで Not Found になるため、
+ * API オリジン（apiBaseUrl）を必ず前置する。
+ */
+export function googleLoginUrl(base: string = apiBaseUrl): string {
+  return `${base.replace(/\/$/, "")}/api/auth/google`;
+}
 
 /**
  * GET /auth/me を openapi-fetch（生成型）経由で呼び出す。未ログイン（401）のときは null を返す。
@@ -16,42 +26,25 @@ export async function fetchMe(): Promise<AuthUser | null> {
   return data ?? null;
 }
 
-/**
- * POST /auth/login を呼び出す。成功時は AuthUser を返す。失敗時は例外を投げる。
- * openApiClient 経由で baseUrl（VITE_API_BASE_URL = Cloud Run）を解決する。生の相対 fetch だと
- * クロスオリジン配信（#78: Cloudflare Pages × Cloud Run）で Pages 側へ POST して 405 になる。
- */
-export async function login(body: LoginRequest): Promise<AuthUser> {
-  const { data, response } = await openApiClient.POST("/api/auth/login", {
-    body,
-    credentials: "include",
-  });
-  if (!response.ok || !data) throw new Error(`POST /api/auth/login failed: ${response.status}`);
-  return data;
-}
-
-/** POST /auth/logout を呼び出す。openApiClient 経由で baseUrl を解決する（login と同様）。 */
+/** POST /auth/logout を呼び出す。openApiClient 経由で baseUrl を解決する。 */
 export async function logout(): Promise<void> {
   const { response } = await openApiClient.POST("/api/auth/logout", { credentials: "include" });
   if (!response.ok) throw new Error(`POST /api/auth/logout failed: ${response.status}`);
 }
 
-/** 現在の認証状態を TanStack Query で取得するフック。 */
+/**
+ * 現在の認証状態を Suspense クエリで取得するフック（#461）。
+ * `fetchMe` は未認証（401）を `null` に、サーバエラー（5xx）を throw に変換するため、
+ * useSuspenseQuery では「未認証 = `null` データ（throw しない）」「サーバエラー = ErrorBoundary」
+ * となる。ローディングは呼び出し側を包む Suspense（QueryBoundary）に委譲する。
+ * 戻り値の `data` は `AuthUser | null`。
+ */
 export function useAuth() {
-  return useQuery({
+  return useSuspenseQuery({
     queryKey: AUTH_ME_QUERY_KEY,
     queryFn: fetchMe,
     staleTime: 60_000,
     retry: false,
-  });
-}
-
-/** ログインミューテーションフック。成功後に auth キャッシュを無効化する。 */
-export function useLogin() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: login,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: AUTH_ME_QUERY_KEY }),
   });
 }
 

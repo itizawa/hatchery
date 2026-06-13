@@ -96,6 +96,34 @@ describe("バッチ実行ステップ (受け入れ条件 #3)", () => {
   });
 });
 
+describe("依存ビルドステップ (受け入れ条件 #5: common ビルド + Prisma generate)", () => {
+  it("@hatchery/common をビルドするステップが存在する", () => {
+    const steps = allSteps(loadWorkflow());
+    // pnpm turbo run build --filter=@hatchery/server で common も Turboの依存グラフ経由でビルドされる
+    const buildStep = steps.find(
+      (s) =>
+        /turbo\s+run\s+build/.test(s.run ?? "") &&
+        /--filter[= ]+@hatchery\/server/.test(s.run ?? ""),
+    );
+    expect(buildStep, "@hatchery/server（と依存 common）をビルドするステップが存在する").toBeDefined();
+  });
+
+  it("ビルドステップはバッチ実行ステップより前にある", () => {
+    const steps = allSteps(loadWorkflow());
+    const buildIdx = steps.findIndex(
+      (s) =>
+        /turbo\s+run\s+build/.test(s.run ?? "") &&
+        /--filter[= ]+@hatchery\/server/.test(s.run ?? ""),
+    );
+    const batchIdx = steps.findIndex((s) =>
+      /pnpm.*--filter.*@hatchery\/server.*batch/.test(s.run ?? ""),
+    );
+    expect(buildIdx, "ビルドステップが存在する").toBeGreaterThanOrEqual(0);
+    expect(batchIdx, "バッチ実行ステップが存在する").toBeGreaterThanOrEqual(0);
+    expect(buildIdx, "ビルドは batch より前").toBeLessThan(batchIdx);
+  });
+});
+
 describe("secrets 経由の環境変数 (受け入れ条件 #4)", () => {
   it("ANTHROPIC_API_KEY が secrets 経由で渡される", () => {
     const raw = readFileSync(workflowPath, "utf8");

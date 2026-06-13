@@ -1,5 +1,7 @@
 import { pathToFileURL } from "node:url";
 
+import { loadEnv } from "../config/env.js";
+import { createClaudeConversationGenerator } from "./aiMessageGenerator.js";
 import {
   runCommunityBatch,
   type RunCommunityBatchDeps,
@@ -42,6 +44,8 @@ export async function runCommunityBatchCli(
  * ここで動的 import する（prisma generate 前の環境でもテストが動くようにするため）。
  */
 async function main(): Promise<void> {
+  const env = loadEnv();
+
   const [
     { prisma },
     { createPrismaAppSettingRepository },
@@ -49,6 +53,10 @@ async function main(): Promise<void> {
     { createPrismaCommunityRepository },
     { createPrismaPostRepository },
     { createPrismaCommentRepository },
+    { createPrismaVoteRepository },
+    { createPrismaWorkerCommunityRepository },
+    { createPrismaWorkerRepository },
+    { createPrismaWorldStateRepository },
   ] = await Promise.all([
     import("../persistence/prismaClient.js"),
     import("../persistence/prismaAppSettingRepository.js"),
@@ -56,7 +64,13 @@ async function main(): Promise<void> {
     import("../persistence/prismaCommunityRepository.js"),
     import("../persistence/prismaPostRepository.js"),
     import("../persistence/prismaCommentRepository.js"),
+    import("../persistence/prismaVoteRepository.js"),
+    import("../persistence/prismaWorkerCommunityRepository.js"),
+    import("../persistence/prismaWorkerRepository.js"),
+    import("../persistence/prismaWorldStateRepository.js"),
   ]);
+
+  const workerRepo = createPrismaWorkerRepository(prisma);
 
   await runCommunityBatchCli({
     batchDeps: {
@@ -65,6 +79,19 @@ async function main(): Promise<void> {
       commentRepo: createPrismaCommentRepository(prisma),
       appSettingRepo: createPrismaAppSettingRepository(prisma),
       batchRunLogRepository: createPrismaBatchRunLogRepository(prisma),
+      // vote 重み付き 1 コミュニティ選定の重み算出に使う（#486 / ADR-0030）。
+      voteRepo: createPrismaVoteRepository(prisma),
+      // community 別の登場ワーカーを DB から解決する（#489）。
+      workerCommunityRepo: createPrismaWorkerCommunityRepository(prisma),
+      // 紐づき 0 件 community のフォールバック先（全 Bot ワーカー）。
+      botWorkerProvider: () => workerRepo.listBotWorkers(),
+      // 登場ローテーション（#464）: lastAppearedSlotKey の読み書きで登場ワーカーを公平化する。
+      worldStateRepository: createPrismaWorldStateRepository(prisma),
+      anthropicApiKey: env.anthropicApiKey,
+      // モデル選定の設定化（#389 AC1）: env.batchModel から生成関数を作って注入する。
+      generate: createClaudeConversationGenerator(env.batchModel),
+      // 直近ログ件数の設定化（#389 AC2）: env.batchRecentLimit を recentLimit に反映する。
+      recentLimit: env.batchRecentLimit,
     },
     disconnect: () => prisma.$disconnect(),
   });

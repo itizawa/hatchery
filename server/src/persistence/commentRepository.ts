@@ -3,6 +3,8 @@
  * ユースケースはこのインターフェースにのみ依存する。
  */
 
+import { randomUUID } from "node:crypto";
+
 export interface CommentRecord {
   id: string;
   communityId: string;
@@ -50,7 +52,6 @@ function cloneRecord(r: CommentRecord): CommentRecord {
 /** DB 非依存のインメモリ実装。ユースケース/ルートのテストで注入する。 */
 export function createInMemoryCommentRepository(): CommentRepository {
   const records: CommentRecord[] = [];
-  let seq = 0;
 
   return {
     createMany(communityId: string, inputs: CommentCreateInput[]): Promise<CommentRecord[]> {
@@ -65,9 +66,9 @@ export function createInMemoryCommentRepository(): CommentRepository {
           created.push(cloneRecord(exists));
           continue;
         }
-        seq += 1;
+        // 本番（Prisma）は uuid(7) を採番するため、in-memory も UUID を採番して整合させる（#433）。
         const record: CommentRecord = {
-          id: `comment-${seq}`,
+          id: randomUUID(),
           communityId,
           postId: input.postId,
           slotKey: input.slotKey,

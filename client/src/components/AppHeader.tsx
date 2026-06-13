@@ -5,6 +5,8 @@ import { Link as RouterLink, useNavigate } from "@tanstack/react-router";
 import { type ReactElement, useState } from "react";
 
 import { useAuth, useLogout } from "../api/auth.js";
+import { useLoginModal } from "../hooks/useLoginModal.js";
+import { QueryBoundary } from "./QueryBoundary.js";
 import { SLACK_COLORS } from "../theme.js";
 
 const ACCOUNT_ICON_SIZE = 32;
@@ -14,9 +16,27 @@ export interface AppHeaderProps {
   onMenuOpen?: () => void;
 }
 
-export const AppHeader = ({ onMenuOpen }: AppHeaderProps): ReactElement => {
-  const { data: user, isPending } = useAuth();
+/** 認証確認中（Suspense 中）に表示するアバター型スケルトン（従来の isPending 表示と同じ見た目）。 */
+const AccountSkeleton = (): ReactElement => (
+  <Skeleton
+    variant="circular"
+    width={ACCOUNT_ICON_SIZE}
+    height={ACCOUNT_ICON_SIZE}
+    sx={{ bgcolor: "rgba(0,0,0,0.11)" }}
+    data-testid="account-skeleton"
+  />
+);
+
+/**
+ * ヘッダー右端の認証状態セクション（#461）。
+ * `useAuth`（useSuspenseQuery）で取得した認証状態に応じて、
+ * ログイン済み → ユーザーメニュー、未ログイン → ログインモーダルを開くリンクを表示する。
+ * ローディングは呼び出し側の QueryBoundary（fallback = AccountSkeleton）に委譲する。
+ */
+const AppHeaderAuthSection = (): ReactElement => {
+  const { data: user } = useAuth();
   const { mutate: logout } = useLogout();
+  const { openLogin } = useLoginModal();
   const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
@@ -26,11 +46,87 @@ export const AppHeader = ({ onMenuOpen }: AppHeaderProps): ReactElement => {
 
   const handleLogout = () => {
     handleClose();
+    // #454: ログアウト後はゲスト向け公開ホームへ戻す（ログインモーダルは自動では開かない）。
     logout(undefined, {
-      onSuccess: () => navigate({ to: "/login" }),
+      onSuccess: () => navigate({ to: "/", search: {} }),
     });
   };
 
+  // #454: ログイン導線はページ遷移せず、現在の閲覧コンテキストを保ったままモーダルを開く。
+  const handleLoginClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    openLogin();
+  };
+
+  if (!user) {
+    return (
+      <Link
+        component={RouterLink}
+        // #454: 現在パスを保ったまま ?login=1 を付与してログインモーダルを開く。
+        // href も /?login=1 になりリロード・新規タブでも復元可能（middle-click 互換）。
+        to="."
+        search={((prev: Record<string, unknown>) => ({ ...prev, login: true })) as never}
+        onClick={handleLoginClick}
+        underline="none"
+        sx={{
+          color: SLACK_COLORS.sidebarText,
+          fontWeight: "bold",
+          px: 1.5,
+          py: 0.5,
+          borderRadius: 1,
+          "&:hover": { bgcolor: "rgba(0,0,0,0.08)" },
+        }}
+      >
+        ログイン
+      </Link>
+    );
+  }
+
+  return (
+    <>
+      <ButtonBase
+        onClick={handleOpen}
+        aria-label="ユーザーメニュー"
+        aria-controls={open ? "app-header-user-menu" : undefined}
+        aria-haspopup="true"
+        aria-expanded={open}
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          borderRadius: 1,
+          p: 0.5,
+          "&:hover": { bgcolor: "rgba(0,0,0,0.08)" },
+        }}
+      >
+        <Avatar
+          sx={{
+            width: ACCOUNT_ICON_SIZE,
+            height: ACCOUNT_ICON_SIZE,
+            bgcolor: SLACK_COLORS.blue,
+            fontSize: 14,
+          }}
+        >
+          {user.displayName.charAt(0).toUpperCase()}
+        </Avatar>
+      </ButtonBase>
+      <Menu
+        id="app-header-user-menu"
+        anchorEl={anchorEl}
+        open={open}
+        onClose={handleClose}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        transformOrigin={{ vertical: "top", horizontal: "right" }}
+      >
+        <MenuItem component={RouterLink} to="/account" onClick={handleClose}>
+          アカウント設定
+        </MenuItem>
+        <MenuItem onClick={handleLogout}>ログアウト</MenuItem>
+      </Menu>
+    </>
+  );
+};
+
+export const AppHeader = ({ onMenuOpen }: AppHeaderProps): ReactElement => {
   return (
     <Box
       component="header"
@@ -67,67 +163,10 @@ export const AppHeader = ({ onMenuOpen }: AppHeaderProps): ReactElement => {
       </Link>
 
       <Box sx={{ ml: "auto" }}>
-        {isPending ? (
-          <Skeleton
-            variant="circular"
-            width={ACCOUNT_ICON_SIZE}
-            height={ACCOUNT_ICON_SIZE}
-            sx={{ bgcolor: "rgba(0,0,0,0.11)" }}
-            data-testid="account-skeleton"
-          />
-        ) : user ? (
-          <>
-            <ButtonBase
-              onClick={handleOpen}
-              aria-label="ユーザーメニュー"
-              aria-controls={open ? "app-header-user-menu" : undefined}
-              aria-haspopup="true"
-              aria-expanded={open}
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                borderRadius: 1,
-                p: 0.5,
-                "&:hover": { bgcolor: "rgba(0,0,0,0.08)" },
-              }}
-            >
-              <Avatar
-                sx={{ width: ACCOUNT_ICON_SIZE, height: ACCOUNT_ICON_SIZE, bgcolor: SLACK_COLORS.blue, fontSize: 14 }}
-              >
-                {user.displayName.charAt(0).toUpperCase()}
-              </Avatar>
-            </ButtonBase>
-            <Menu
-              id="app-header-user-menu"
-              anchorEl={anchorEl}
-              open={open}
-              onClose={handleClose}
-              anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-              transformOrigin={{ vertical: "top", horizontal: "right" }}
-            >
-              <MenuItem component={RouterLink} to="/account" onClick={handleClose}>
-                アカウント設定
-              </MenuItem>
-              <MenuItem onClick={handleLogout}>ログアウト</MenuItem>
-            </Menu>
-          </>
-        ) : (
-          <Link
-            component={RouterLink}
-            to="/login"
-            underline="none"
-            sx={{
-              color: SLACK_COLORS.sidebarText,
-              fontWeight: "bold",
-              px: 1.5,
-              py: 0.5,
-              borderRadius: 1,
-              "&:hover": { bgcolor: "rgba(0,0,0,0.08)" },
-            }}
-          >
-            ログイン
-          </Link>
-        )}
+        {/* 認証状態の取得（Suspense）は局所的に QueryBoundary で受け、確認中は AccountSkeleton を表示する。 */}
+        <QueryBoundary fallback={<AccountSkeleton />}>
+          <AppHeaderAuthSection />
+        </QueryBoundary>
       </Box>
     </Box>
   );

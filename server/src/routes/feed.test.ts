@@ -14,6 +14,8 @@ const makeCommunity = (overrides: Partial<CommunityRecord> = {}): CommunityRecor
   description: "テクノロジーコミュニティ",
   synopsis: null,
   lastSlotKey: null,
+  iconUrl: null,
+  coverUrl: null,
   createdAt: new Date("2026-01-01"),
   ...overrides,
 });
@@ -57,9 +59,7 @@ describe("GET /api/feed", () => {
     });
     const app = createApp(deps);
 
-    const loginRes = await request(app)
-      .post("/api/auth/login")
-      .send({ loginId: "testuser", password: "testpass" });
+    const loginRes = await request(app).post("/api/auth/dev-login");
     const cookie = loginRes.headers["set-cookie"] as string[];
 
     const res = await request(app).get("/api/feed").set("Cookie", cookie);
@@ -198,5 +198,65 @@ describe("GET /api/feed", () => {
     const allIds = [p1, p2, p3].flatMap((r) => r.body.posts.map((p: { id: string }) => p.id)) as string[];
     expect(allIds.length).toBe(3);
     expect(new Set(allIds).size).toBe(3);
+  });
+
+  it("sort=popular で score 降順に取得できる", async () => {
+    const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
+    const postRepo = createInMemoryPostRepository();
+    const created = await postRepo.createMany("community-1", [
+      { slotKey: "s", seq: 0, author: "w", title: "Low", text: "t" },
+      { slotKey: "s", seq: 1, author: "w", title: "High", text: "t" },
+      { slotKey: "s", seq: 2, author: "w", title: "Mid", text: "t" },
+    ]);
+    await postRepo.addScore(created[0].id, 1);
+    await postRepo.addScore(created[1].id, 100);
+    await postRepo.addScore(created[2].id, 10);
+
+    const deps = await createTestDeps({
+      communityRepository: communityRepo,
+      postRepository: postRepo,
+    });
+    const app = createApp(deps);
+
+    const res = await request(app).get("/api/feed?sort=popular");
+    expect(res.status).toBe(200);
+    expect(res.body.posts.map((p: { title: string }) => p.title)).toEqual(["High", "Mid", "Low"]);
+  });
+
+  it("sort=latest（明示）は新着順で返す（後方互換）", async () => {
+    const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
+    const postRepo = createInMemoryPostRepository();
+    await postRepo.createMany("community-1", [
+      { slotKey: "s", seq: 0, author: "w", title: "Old", text: "t" },
+    ]);
+    await new Promise((r) => setTimeout(r, 5));
+    await postRepo.createMany("community-1", [
+      { slotKey: "s", seq: 1, author: "w", title: "New", text: "t" },
+    ]);
+
+    const deps = await createTestDeps({
+      communityRepository: communityRepo,
+      postRepository: postRepo,
+    });
+    const app = createApp(deps);
+
+    const res = await request(app).get("/api/feed?sort=latest");
+    expect(res.status).toBe(200);
+    expect(res.body.posts[0].title).toBe("New");
+  });
+
+  it("不正な sort 値は 400 を返す", async () => {
+    const deps = await createTestDeps();
+    const app = createApp(deps);
+    const res = await request(app).get("/api/feed?sort=hot");
+    expect(res.status).toBe(400);
+  });
+
+  it("sort=popular でも不正な cursor は 400 を返す", async () => {
+    const deps = await createTestDeps();
+    const app = createApp(deps);
+    const invalidCursor = Buffer.from("not-valid-json").toString("base64");
+    const res = await request(app).get(`/api/feed?sort=popular&cursor=${invalidCursor}`);
+    expect(res.status).toBe(400);
   });
 });

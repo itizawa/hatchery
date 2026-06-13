@@ -59,6 +59,27 @@ export function createPrismaWorkerRepository(prisma: PrismaClient): WorkerReposi
         .map((row) => toRecord(row));
     },
 
+    async resolveByAuthors(authors: string[]): Promise<WorkerRecord[]> {
+      if (authors.length === 0) return [];
+      // author は id か displayName のどちらか。両方を OR で 1 クエリ取得し、メモリ側で解決する。
+      const rows = await prisma.worker.findMany({
+        where: {
+          deletedAt: null,
+          OR: [{ id: { in: authors } }, { displayName: { in: authors } }],
+        },
+      });
+      const byId = new Map(rows.map((row) => [row.id, row]));
+      // 同名 displayName が複数あっても先勝ち（最初の 1 件）にする。
+      const byDisplayName = new Map<string, (typeof rows)[number]>();
+      for (const row of rows) {
+        if (!byDisplayName.has(row.displayName)) byDisplayName.set(row.displayName, row);
+      }
+      return authors
+        .map((author) => byId.get(author) ?? byDisplayName.get(author))
+        .filter((row): row is NonNullable<typeof row> => row != null)
+        .map((row) => toRecord(row));
+    },
+
     async listBotWorkers(): Promise<WorkerRecord[]> {
       const rows = await prisma.worker.findMany({ where: { deletedAt: null } });
       return rows.map((row) => toRecord(row));

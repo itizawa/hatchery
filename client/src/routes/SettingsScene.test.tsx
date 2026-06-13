@@ -1,4 +1,3 @@
-import * as invitationsApi from "../api/invitations.js";
 import * as adminApi from "../api/admin.js";
 import { DEFAULT_WORKERS } from "@hatchery/common";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -152,31 +151,80 @@ describe("APIキー入力欄 autocomplete 属性（#180）", () => {
   });
 });
 
-describe("招待タブ（#133）", () => {
+describe("API トークン設定フォーム（#417 useForm 移行）", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     vi.spyOn(authApi, "fetchMe").mockResolvedValue({ id: "user1", displayName: "Alice", role: "admin" });
-    vi.spyOn(invitationsApi, "fetchInvitations").mockResolvedValue([]);
+    vi.spyOn(adminApi, "useAdminSettings").mockReturnValue({
+      data: [],
+      isLoading: false,
+    } as ReturnType<typeof adminApi.useAdminSettings>);
   });
 
-  it("「招待」タブが表示される", async () => {
-    renderApp("/admin");
-    expect(await screen.findByRole("tab", { name: /招待/ })).toBeInTheDocument();
-  });
+  it("APIキーを入力して保存ボタンを押すと mutateAsync が呼ばれる", async () => {
+    const mutateAsync = vi.fn().mockResolvedValue(undefined);
+    vi.spyOn(adminApi, "useSaveAdminSetting").mockReturnValue({
+      mutateAsync,
+      isPending: false,
+    } as unknown as ReturnType<typeof adminApi.useSaveAdminSetting>);
 
-  it("?tab=invitations で開くと「招待」タブがアクティブになる", async () => {
-    renderApp("/admin?tab=invitations");
-    const invitationsTab = await screen.findByRole("tab", { name: /招待/ });
-    expect(invitationsTab).toHaveAttribute("aria-selected", "true");
-  });
+    renderApp("/admin?tab=api-token", { id: "user1", displayName: "Alice", role: "admin" });
 
-  it("「招待」タブをクリックすると URL が ?tab=invitations になる", async () => {
-    const { router } = renderApp("/admin");
-    await screen.findByRole("tab", { name: /ワーカー管理/ });
-    await userEvent.click(screen.getByRole("tab", { name: /招待/ }));
+    const input = await screen.findByLabelText(/Claude API キー/);
+    await userEvent.type(input, "sk-ant-api03-test");
+    await userEvent.click(screen.getByRole("button", { name: /保存/ }));
 
     await waitFor(() => {
-      expect(router.state.location.searchStr).toContain("tab=invitations");
+      expect(mutateAsync).toHaveBeenCalledWith({ key: "CLAUDE_API_KEY", value: "sk-ant-api03-test" });
     });
+  });
+
+  it("保存成功後に入力フィールドがクリアされ成功地博れが表示される", async () => {
+    const mutateAsync = vi.fn().mockResolvedValue(undefined);
+    vi.spyOn(adminApi, "useSaveAdminSetting").mockReturnValue({
+      mutateAsync,
+      isPending: false,
+    } as unknown as ReturnType<typeof adminApi.useSaveAdminSetting>);
+
+    renderApp("/admin?tab=api-token", { id: "user1", displayName: "Alice", role: "admin" });
+
+    const input = await screen.findByLabelText(/Claude API キー/);
+    await userEvent.type(input, "sk-ant-api03-test");
+    await userEvent.click(screen.getByRole("button", { name: /保存/ }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/APIキーを保存しました/)).toBeInTheDocument();
+    });
+    expect(input).toHaveValue("");
+  });
+
+  it("保存失敗時にエラー地博れが表示される", async () => {
+    const mutateAsync = vi.fn().mockRejectedValue(new Error("save failed"));
+    vi.spyOn(adminApi, "useSaveAdminSetting").mockReturnValue({
+      mutateAsync,
+      isPending: false,
+    } as unknown as ReturnType<typeof adminApi.useSaveAdminSetting>);
+
+    renderApp("/admin?tab=api-token", { id: "user1", displayName: "Alice", role: "admin" });
+
+    const input = await screen.findByLabelText(/Claude API キー/);
+    await userEvent.type(input, "invalid-key");
+    await userEvent.click(screen.getByRole("button", { name: /保存/ }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/APIキーの保存に失敗しました/)).toBeInTheDocument();
+    });
+  });
+
+  it("保存中は保存ボタンが disabled になる", async () => {
+    vi.spyOn(adminApi, "useSaveAdminSetting").mockReturnValue({
+      mutateAsync: vi.fn().mockResolvedValue(undefined),
+      isPending: true,
+    } as unknown as ReturnType<typeof adminApi.useSaveAdminSetting>);
+
+    renderApp("/admin?tab=api-token", { id: "user1", displayName: "Alice", role: "admin" });
+
+    const saveButton = await screen.findByRole("button", { name: /保存/ });
+    expect(saveButton).toBeDisabled();
   });
 });

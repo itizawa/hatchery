@@ -15,6 +15,10 @@
     <meta property="og:url" content="%VITE_OGP_URL%" />
     <meta property="og:image" content="%VITE_OGP_URL%/ogp.svg" />
     <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- Cloudflare Web Analytics ビーコン（ADR-0026 / #439）。ビルド時に VITE_CF_BEACON_TOKEN で注入する。 -->
+    <!-- トークン未設定時は何も出力されない（vite.config.ts の cfBeaconHtmlPlugin）。 -->
+    %VITE_CF_BEACON_TOKEN_SCRIPT%
   </head>
   <body>
     <div id="root"></div>

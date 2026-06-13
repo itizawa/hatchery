@@ -43,7 +43,18 @@ jobs:
             exit 0
           fi
 
-          title="Release: develop -> main ($(date -u +%Y-%m-%d))"
+          # 直近 open マイルストーン（due_on 昇順）の名前を取得してタイトルに含める。
+          # API 失敗時・マイルストーン未設定時はフォールバックタイトルを使用し、ジョブを失敗させない。
+          milestone_name=$(gh api \
+            "repos/$GITHUB_REPOSITORY/milestones?state=open&sort=due_on&direction=asc&per_page=1" \
+            --jq '.[0].title // ""' 2>/dev/null || true)
+
+          if [ -n "$milestone_name" ]; then
+            title="Release ${milestone_name}: develop -> main ($(date -u +%Y-%m-%d))"
+          else
+            title="Release: develop -> main ($(date -u +%Y-%m-%d))"
+          fi
+
           # main..develop のコミット一覧（リリース内容）を本文に詰める。
           commits=$(git log --no-merges --pretty=format:'- %s (%h)' "origin/${base}..origin/${head}")
           body=$(printf '## リリース内容 (develop -> main)\n\n本番昇格はこの PR を **人間がマージ** することで行います（Dark Factory ゲート1）。自動マージはしません。\n\n### 含まれるコミット (%s 件)\n\n%s\n\n---\n🤖 develop への push を検知して自動作成／更新されたリリース PR です。\n' "$ahead" "$commits")

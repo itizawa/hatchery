@@ -1,0 +1,46 @@
+name: Deploy Client (prod)
+
+# main マージをトリガーに client（Vite SPA）を Cloudflare Pages（prod 環境）へ自動デプロイする。
+# VITE_API_BASE_URL は GitHub Actions Secret（CLOUD_RUN_PROD_URL）から渡す。
+# ゲート1: main への push のみトリガー。develop への push は含まない。
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: deploy-client-prod
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build client
+        env:
+          VITE_API_BASE_URL: ${{ secrets.CLOUD_RUN_PROD_URL }}
+        run: pnpm turbo run build --filter=@hatchery/client
+
+      # client の devDependency に固定した wrangler を pnpm exec で直接実行し、動的インストールを排除する。
+      # --branch main は Cloudflare Pages の本番エイリアスとして機能する。
+      - name: Deploy to Cloudflare Pages
+        working-directory: client
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: pnpm exec wrangler pages deploy dist/web --project-name=hatchery --branch main

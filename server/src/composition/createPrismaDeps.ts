@@ -4,7 +4,7 @@ import type { AppDeps } from "../app.js";
 import { createPrismaAppSettingRepository } from "../persistence/prismaAppSettingRepository.js";
 import { createPrismaBatchRunLogRepository } from "../persistence/prismaBatchRunLogRepository.js";
 import { createPrismaWorkerRepository } from "../persistence/prismaWorkerRepository.js";
-import { createPrismaInvitationLinkRepository } from "../persistence/prismaInvitationLinkRepository.js";
+import { createPrismaWorkerCommunityRepository } from "../persistence/prismaWorkerCommunityRepository.js";
 import { createPrismaTokenUsageLogRepository } from "../persistence/prismaTokenUsageLogRepository.js";
 import { createPrismaUserRepository } from "../persistence/prismaUserRepository.js";
 import { createPrismaCommunityRepository } from "../persistence/prismaCommunityRepository.js";
@@ -24,8 +24,7 @@ import { GcsStorageService, InMemoryStorageService } from "../services/storageSe
  * DI コンテナは使わず手動 DI のまま（ADR-0012）。
  * common への DI 基盤の漏洩なし（ADR-0001 / ADR-0005）。
  */
-export function createPrismaDeps(prisma: PrismaClient): Omit<AppDeps, "security" | "sessionStore"> {
-  const gcsBucketName = process.env.GCS_BUCKET_NAME;
+export function createPrismaDeps(prisma: PrismaClient, gcsBucketName?: string): Omit<AppDeps, "security" | "sessionStore"> {
   const storageService = gcsBucketName
     ? new GcsStorageService(gcsBucketName)
     : new InMemoryStorageService();
@@ -33,9 +32,9 @@ export function createPrismaDeps(prisma: PrismaClient): Omit<AppDeps, "security"
   return {
     userRepository: createPrismaUserRepository(prisma),
     workerRepository: createPrismaWorkerRepository(prisma),
+    workerCommunityRepository: createPrismaWorkerCommunityRepository(prisma),
     appSettingRepository: createPrismaAppSettingRepository(prisma),
     batchRunLogRepository: createPrismaBatchRunLogRepository(prisma),
-    invitationLinkRepository: createPrismaInvitationLinkRepository(prisma),
     tokenUsageLogRepository: createPrismaTokenUsageLogRepository(prisma),
     communityRepository: createPrismaCommunityRepository(prisma),
     postRepository: createPrismaPostRepository(prisma),

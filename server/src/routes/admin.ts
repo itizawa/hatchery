@@ -12,26 +12,14 @@ import { Router } from "express";
 import { requireAdmin } from "../middleware/requireAdmin.js";
 import { requireAuth } from "../middleware/requireAuth.js";
 import { validateBody } from "../middleware/validateBody.js";
+import { toCommunityResponse } from "./communityResponse.js";
 import type { AppSettingRepository } from "../persistence/appSettingRepository.js";
-import type { CommunityRecord, CommunityRepository } from "../persistence/communityRepository.js";
+import type { CommunityRepository } from "../persistence/communityRepository.js";
 import type { WorkerRepository } from "../persistence/workerRepository.js";
 import { decrypt, encrypt, maskApiKey } from "../utils/crypto.js";
 import { getApiKey } from "../utils/apiKey.js";
 
 const MASKED_KEYS = new Set(["CLAUDE_API_KEY"]);
-
-/** CommunityRecord（camelCase）をクライアント向け Community（snake_case）に変換する（#310）。 */
-function toCommunityResponse(r: CommunityRecord) {
-  return {
-    id: r.id,
-    slug: r.slug,
-    name: r.name,
-    description: r.description,
-    synopsis: r.synopsis ?? undefined,
-    last_slot_key: r.lastSlotKey ?? undefined,
-    created_at: r.createdAt,
-  };
-}
 
 function toResponse(key: string, encryptedValue: string) {
   let rawValue = "";

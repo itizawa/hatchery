@@ -7,7 +7,7 @@ import type { CommentRepository } from "../persistence/commentRepository.js";
 import type { PostRepository } from "../persistence/postRepository.js";
 import type { VoteRepository } from "../persistence/voteRepository.js";
 import type { WorkerRepository } from "../persistence/workerRepository.js";
-import { attachAuthorWorker } from "./authorWorker.js";
+import { buildAuthorWorkerEnricher } from "./authorWorker.js";
 
 /**
  * /api/posts・/api/comments ルータ。
@@ -34,8 +34,10 @@ export function createPostsRouter(
           throw new NotFoundError("PostNotFound");
         }
         return commentRepo.listByPost(postId).then(async (comments) => {
-          const [enrichedPost] = await attachAuthorWorker([post], workerRepo);
-          const enrichedComments = await attachAuthorWorker(comments, workerRepo);
+          // post と comments を 1 回のワーカー取得で付与する（重複クエリを避ける）。
+          const enrich = await buildAuthorWorkerEnricher(workerRepo);
+          const [enrichedPost] = enrich([post]);
+          const enrichedComments = enrich(comments);
           res.status(200).json({ post: enrichedPost, comments: enrichedComments });
         });
       })

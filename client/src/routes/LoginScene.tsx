@@ -1,3 +1,4 @@
+import { googleLoginUrl } from "../api/auth";
 import { Box, Button, Typography } from "../components/uiParts";
 
 import type { ReactElement } from "react";
@@ -18,7 +19,7 @@ export const LoginScene = (): ReactElement => {
         variant="contained"
         fullWidth
         onClick={() => {
-          window.location.href = "/api/auth/google";
+          window.location.href = googleLoginUrl();
         }}
       >
         Google でログイン

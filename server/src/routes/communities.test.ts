@@ -31,6 +31,21 @@ describe("GET /api/communities", () => {
     expect(res.body[0]).toMatchObject({ id: "community-1", slug: "technology" });
   });
 
+  it("OpenAPI 契約どおり created_at（snake_case）を返し camelCase の createdAt は含めない（#477）", async () => {
+    const communityRepo = createInMemoryCommunityRepository([
+      makeCommunity({ createdAt: new Date("2026-06-09T23:08:20.519Z") }),
+    ]);
+    const deps = await createTestDeps({ communityRepository: communityRepo });
+    const app = createApp(deps);
+    const res = await request(app).get("/api/communities");
+    expect(res.status).toBe(200);
+    expect(res.body[0]).toHaveProperty("created_at");
+    expect(res.body[0]).not.toHaveProperty("createdAt");
+    expect(new Date(res.body[0].created_at as string).toISOString()).toBe(
+      "2026-06-09T23:08:20.519Z",
+    );
+  });
+
   it("community が無い場合は空配列を返す", async () => {
     const deps = await createTestDeps();
     const app = createApp(deps);

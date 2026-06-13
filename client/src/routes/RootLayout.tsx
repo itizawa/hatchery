@@ -12,7 +12,9 @@ import {
 import { isAdmin, type AuthUser } from "@hatchery/common";
 import AddIcon from "@mui/icons-material/Add";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
+import DescriptionIcon from "@mui/icons-material/Description";
 import HomeIcon from "@mui/icons-material/Home";
+import PrivacyTipIcon from "@mui/icons-material/PrivacyTip";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import { Link as RouterLink, Outlet, useLocation } from "@tanstack/react-router";
 import { Suspense, useEffect, useState, type ReactElement } from "react";
@@ -125,6 +127,26 @@ const SidebarContent = (): ReactElement => {
             </ListItemButton>
           </ListItem>
         )}
+      </List>
+      {/* リーガルリンク（#484）。全ユーザー（未ログイン含む）がいつでも参照できるよう常時表示する。 */}
+      <Divider sx={{ my: 1 }} />
+      <List dense>
+        <ListItem disablePadding>
+          <ListItemButton component={RouterLink} to="/terms" sx={{ color: SLACK_COLORS.sidebarText }}>
+            <ListItemIcon sx={SIDEBAR_ICON_SX}>
+              <DescriptionIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText primary="利用規約" />
+          </ListItemButton>
+        </ListItem>
+        <ListItem disablePadding>
+          <ListItemButton component={RouterLink} to="/privacy" sx={{ color: SLACK_COLORS.sidebarText }}>
+            <ListItemIcon sx={SIDEBAR_ICON_SX}>
+              <PrivacyTipIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText primary="プライバシーポリシー" />
+          </ListItemButton>
+        </ListItem>
       </List>
     </>
   );

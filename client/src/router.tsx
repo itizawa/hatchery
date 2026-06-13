@@ -62,6 +62,8 @@ const LazyPostThreadScene = lazyRouteComponent(
 const LazyLandingScene = lazyRouteComponent(() => import("./routes/LandingScene"), "LandingScene");
 const LazySettingsScene = lazyRouteComponent(() => import("./routes/SettingsScene"), "SettingsScene");
 const LazyAccountScene = lazyRouteComponent(() => import("./routes/AccountScene"), "AccountScene");
+const LazyTermsScene = lazyRouteComponent(() => import("./routes/TermsScene"), "TermsScene");
+const LazyPrivacyScene = lazyRouteComponent(() => import("./routes/PrivacyScene"), "PrivacyScene");
 
 /**
  * 認証ガード（#454）: 未ログイン（fetchMe が null）またはネットワークエラーの場合、
@@ -247,6 +249,28 @@ const accountRoute = createRoute({
   beforeLoad: requireAuth,
 });
 
+/** 利用規約ページ（/terms）。認証不要の公開ページ。サイドバー付きの通常シェルで描画する（#484）。 */
+const termsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/terms",
+  component: () => (
+    <Suspense fallback={null}>
+      <LazyTermsScene />
+    </Suspense>
+  ),
+});
+
+/** プライバシーポリシーページ（/privacy）。認証不要の公開ページ。サイドバー付きの通常シェルで描画する（#484）。 */
+const privacyRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/privacy",
+  component: () => (
+    <Suspense fallback={null}>
+      <LazyPrivacyScene />
+    </Suspense>
+  ),
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   popularRoute,
@@ -257,6 +281,8 @@ const routeTree = rootRoute.addChildren([
   lpRoute,
   adminRoute,
   accountRoute,
+  termsRoute,
+  privacyRoute,
 ]);
 
 export interface CreateAppRouterOptions {

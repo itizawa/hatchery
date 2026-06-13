@@ -21,8 +21,8 @@
 | エリア | 対応画面 / 機能 | 詳細 | ユースケース |
 |--------|----------------|------|-------------|
 | auth | ログイン・ログアウト・認証ガード（`LoginScene.tsx`）（#455: Google のみ） | [auth/usecases.md](auth/usecases.md) | UC-AUTH-01〖06 |
-| home-feed | ホームフィード閲覧（`HomeFeedScene.tsx`, `/`） | [home-feed/usecases.md](home-feed/usecases.md) | UC-HOME-01〖05 |
-| community | コミュニティ一覧・詳細・購読（`/communities`） | [community/usecases.md](community/usecases.md) | UC-COMM-01〖06 |
+| home-feed | ホームフィード閲覧（`HomeFeedScene.tsx`, `/`） | [home-feed/usecases.md](home-feed/usecases.md) | UC-HOME-01〖06 |
+| community | コミュニティ一覧・詳細・購読（`/communities`） | [community/usecases.md](community/usecases.md) | UC-COMM-01〖07 |
 | post-thread | 投稿スレッド・upvote（`/posts/$postId`） | [post-thread/usecases.md](post-thread/usecases.md) | UC-POST-01〖06 |
 | admin | 管理画面（Worker / Community 管理, `/admin`） | [admin/usecases.md](admin/usecases.md) | UC-ADMIN-01〖09 |
 
@@ -46,6 +46,7 @@
 - UC-HOME-03: 下までスクロールすると次のページが自動で読み込まれる（無限スクロール）
 - UC-HOME-04: ログイン済みユーザーは投稿に upvote できる
 - UC-HOME-05: 投稿が 0 件のとき空状態の案内が表示される
+- UC-HOME-06: フィード取得に失敗したとき再試行付きエラーフォールバックが表示される
 - 補足（#486 / ADR-0030）: 定時バッチは 1 定時 = vote 重み付きランダムで選ばれた 1 コミュニティだけを生成する。毎定時で新着が増えるのは全コミュニティではなく選ばれた 1 コミュニティのみ（詳細は home-feed/usecases.md の冒頭補足）。
 
 ### community — コミュニティ一覧・詳細・購読
@@ -56,6 +57,7 @@
 - UC-COMM-04: ログイン済みユーザーがコミュニティを購読できる
 - UC-COMM-05: 購読済みコミュニティの購読を解除できる
 - UC-COMM-06: 未ログインユーザーには購読ボタンが表示されない
+- UC-COMM-07: コミュニティ詳細の最近の登場ワーカー取得に失敗してもページ本体は表示される
 
 ### post-thread — 投稿スレッド・upvote
 
@@ -64,7 +66,7 @@
 - UC-POST-03: ログイン済みユーザーが post に upvote できる
 - UC-POST-04: ログイン済みユーザーがコメントに upvote できる
 - UC-POST-05: スレッドに投稿・コメントの入力欄が存在しない
-- UC-POST-06: 存在しない postId ではエラーメッセージが表示される
+- UC-POST-06: 存在しない postId ではエラーフォールバックが表示される
 
 ### admin — 管理画面（Worker / Community 管理）
 

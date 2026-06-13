@@ -1,10 +1,13 @@
+import express from "express";
 import session from "express-session";
 import request from "supertest";
 import { describe, expect, it } from "vitest";
 
 import { createApp } from "../app.js";
+import type { PassportInstance } from "../auth/passport.js";
 import type { UserRepository } from "../persistence/userRepository.js";
 import { createInMemoryUserRepository, createTestUserRepository } from "../persistence/userRepository.js";
+import { createAuthRouter } from "./auth.js";
 import { createTestDeps } from "../testing/createTestDeps.js";
 
 function buildApp(userRepo?: UserRepository) {
@@ -257,5 +260,40 @@ describe("GET /api/auth/google (#343)", () => {
     const app = buildApp();
     const res = await request(app).get("/api/auth/google");
     expect(res.status).toBe(404);
+  });
+});
+
+// #78: クロスオリジン配信（Cloudflare Pages × Cloud Run）で OAuth 後のリダイレクト先が
+// API オリジン相対だとフロントに戻れず 404 になる回帰を防ぐ。フロントの絶対 URL へ戻すこと。
+describe("OAuth コールバックのリダイレクト先（フロント絶対 URL）", () => {
+  // passport.authenticate をパススルー（成功扱い）にスタブし、コールバックの成功ハンドラに到達させる。
+  const passthroughPassport = {
+    authenticate: () => (_req: express.Request, _res: express.Response, next: express.NextFunction) => next(),
+  } as unknown as PassportInstance;
+
+  const googleConfig = {
+    clientId: "test-client-id",
+    clientSecret: "test-client-secret",
+    callbackUrl: "http://localhost/api/auth/google/callback",
+  };
+
+  function buildAuthApp(frontendBaseUrl: string) {
+    const app = express();
+    app.use(
+      "/api/auth",
+      createAuthRouter(passthroughPassport, createTestUserRepository(), googleConfig, "production", frontendBaseUrl),
+    );
+    return app;
+  }
+
+  it("コールバック成功時はフロントのトップ（絶対 URL）へリダイレクトする", async () => {
+    const res = await request(buildAuthApp("https://develop.hatchery.pages.dev")).get("/api/auth/google/callback");
+    expect(res.status).toBe(302);
+    expect(res.headers["location"]).toBe("https://develop.hatchery.pages.dev/");
+  });
+
+  it("フロント URL の末尾スラッシュは重複しない", async () => {
+    const res = await request(buildAuthApp("https://develop.hatchery.pages.dev/")).get("/api/auth/google/callback");
+    expect(res.headers["location"]).toBe("https://develop.hatchery.pages.dev/");
   });
 });

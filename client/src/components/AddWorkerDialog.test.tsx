@@ -117,4 +117,46 @@ describe("AddWorkerDialog（#217 / #329）", () => {
     await userEvent.click(screen.getByRole("button", { name: "キャンセル" }));
     expect(onClose).toHaveBeenCalled();
   });
+
+  it("参加コミュニティの複数選択 UI が表示される（#490）", async () => {
+    stubFetch(201, {});
+    const onClose = vi.fn();
+    renderWithClient(<AddWorkerDialog open={true} onClose={onClose} />);
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByLabelText(/参加コミュニティ/)).toBeInTheDocument(),
+    );
+  });
+
+  it("作成後に参加コミュニティ置換 API（PUT .../communities）が呼ばれる（#490）", async () => {
+    const fetchSpy = vi.fn((input: Request | string) => {
+      const url = typeof input === "string" ? input : input.url;
+      if (url.includes("/auth/me")) {
+        return Promise.resolve(jsonResponse(200, { id: "u1", displayName: "Admin" }));
+      }
+      if (url.includes("/admin/workers") && url.includes("/communities")) {
+        // PUT /api/admin/workers/:id/communities
+        return Promise.resolve(jsonResponse(200, { communityIds: [] }));
+      }
+      if (url.includes("/admin/workers")) {
+        return Promise.resolve(jsonResponse(201, { id: "new-id", displayName: "テストワーカー" }));
+      }
+      return Promise.resolve(jsonResponse(200, []));
+    });
+    vi.stubGlobal("fetch", fetchSpy);
+    const onClose = vi.fn();
+    renderWithClient(<AddWorkerDialog open={true} onClose={onClose} />);
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    await userEvent.type(screen.getByRole("textbox", { name: "表示名" }), "テストワーカー");
+    await userEvent.click(screen.getByRole("button", { name: "追加" }));
+
+    await waitFor(() => {
+      const calledCommunitiesPut = fetchSpy.mock.calls.some(([input]) => {
+        const url = typeof input === "string" ? input : (input as Request).url;
+        return url.includes("/admin/workers/new-id/communities");
+      });
+      expect(calledCommunitiesPut).toBe(true);
+    });
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+  });
 });

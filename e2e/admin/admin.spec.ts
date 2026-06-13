@@ -19,3 +19,7 @@ test.todo("UC-ADMIN-05: admin ユーザーが Worker を新規作成できる");
 test.todo("UC-ADMIN-06: admin ユーザーが Worker を削除できる");
 
 test.todo("UC-ADMIN-07: admin ユーザーがコミュニティ管理タブで一覧を閲覧できる");
+
+test.todo("UC-ADMIN-08: admin ユーザーが Worker の参加コミュニティを編集できる");
+
+test.todo("UC-ADMIN-09: admin ユーザーが Worker 新規作成時に参加コミュニティを指定できる");

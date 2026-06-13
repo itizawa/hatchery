@@ -5,10 +5,17 @@ import type { ReactElement } from "react";
 import { useState } from "react";
 
 import { useUpdateWorker } from "../api/workers.js";
+import { useCommunities } from "../api/communities.js";
+import {
+  useSetWorkerCommunities,
+  useWorkerCommunities,
+} from "../api/workerCommunities.js";
+import { WorkerCommunitiesSelect } from "./WorkerCommunitiesSelect.js";
 import {
   Alert,
   Box,
   Button,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -29,19 +36,29 @@ interface EditWorkerDialogProps {
 }
 
 /**
- * ワーカーの表示名・役割・性格を編集するダイアログ（#181 / #329）。
+ * ワーカーの表示名・役割・性格・参加コミュニティを編集するダイアログ（#181 / #329 / #490）。
  * admin 管理画面から呼び出す。@tanstack/react-form を使いフォーム状態を管理する（CLAUDE.md フォーム規約）。
  * 各入力フィールドに inputProps.maxLength を設定し、サーバー側 Zod と二重防御する（CLAUDE.md バリデーションルール）。
  */
 export function EditWorkerDialog({ worker, open, onClose }: EditWorkerDialogProps): ReactElement {
   const updateMutation = useUpdateWorker();
+  const setCommunitiesMutation = useSetWorkerCommunities();
+  const communitiesQuery = useCommunities();
+  const workerCommunitiesQuery = useWorkerCommunities(worker.id);
   const [errorOpen, setErrorOpen] = useState(false);
+
+  const communities = communitiesQuery.data ?? [];
+  // 現在の参加コミュニティ取得が完了するまではフォームの初期値が確定しないため、
+  // 取得完了後に form を再マウントする（defaultValues は非同期更新されないため key で制御）。
+  const initialCommunityIds = workerCommunitiesQuery.data;
+  const isInitializing = workerCommunitiesQuery.isLoading || initialCommunityIds === undefined;
 
   const form = useForm({
     defaultValues: {
       displayName: worker.displayName,
       role: worker.role ?? "",
       personality: worker.personality ?? "",
+      communityIds: initialCommunityIds ?? [],
     },
     onSubmit: async ({ value }) => {
       try {
@@ -53,6 +70,10 @@ export function EditWorkerDialog({ worker, open, onClose }: EditWorkerDialogProp
             personality: value.personality || undefined,
           },
         });
+        await setCommunitiesMutation.mutateAsync({
+          workerId: worker.id,
+          communityIds: value.communityIds,
+        });
         onClose();
       } catch {
         setErrorOpen(true);
@@ -60,9 +81,18 @@ export function EditWorkerDialog({ worker, open, onClose }: EditWorkerDialogProp
     },
   });
 
+  const isPending = updateMutation.isPending || setCommunitiesMutation.isPending;
+
   return (
     <>
-      <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <Dialog
+        // 取得完了タイミングで初期値を反映するため form を再マウントする。
+        key={isInitializing ? "loading" : "ready"}
+        open={open}
+        onClose={onClose}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>ワーカー編集</DialogTitle>
         <Box
           component="form"
@@ -119,13 +149,31 @@ export function EditWorkerDialog({ worker, open, onClose }: EditWorkerDialogProp
                   />
                 )}
               </form.Field>
+              {isInitializing ? (
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <CircularProgress size={16} />
+                  参加コミュニティを読み込み中…
+                </Box>
+              ) : (
+                <form.Field name="communityIds">
+                  {(field) => (
+                    <WorkerCommunitiesSelect
+                      labelId="edit-worker-communities-label"
+                      communities={communities}
+                      value={field.state.value}
+                      onChange={(ids) => field.handleChange(ids)}
+                      disabled={communitiesQuery.isLoading}
+                    />
+                  )}
+                </form.Field>
+              )}
             </Box>
           </DialogContent>
           <DialogActions>
-            <Button onClick={onClose} disabled={updateMutation.isPending}>
+            <Button onClick={onClose} disabled={isPending}>
               キャンセル
             </Button>
-            <Button type="submit" variant="contained" disabled={updateMutation.isPending}>
+            <Button type="submit" variant="contained" disabled={isPending || isInitializing}>
               保存
             </Button>
           </DialogActions>

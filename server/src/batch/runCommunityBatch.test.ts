@@ -11,6 +11,7 @@ import {
   type InMemoryWorkerCommunityData,
 } from "../persistence/workerCommunityRepository.js";
 import type { WorkerRecord } from "../persistence/workerRepository.js";
+import { createInMemoryWorldStateRepository } from "../persistence/worldStateRepository.js";
 
 import { runCommunityBatch } from "./runCommunityBatch.js";
 
@@ -365,5 +366,167 @@ describe("runCommunityBatch (#306)", () => {
     expect(generate).not.toHaveBeenCalled();
     expect(result.posts.length).toBe(0);
     expect(result.comments.length).toBe(0);
+  });
+});
+
+describe("runCommunityBatch worldState 登場ローテーション (#464)", () => {
+  beforeEach(() => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const buildDeps = (
+    communities: CommunityRecord[],
+    workerCommunityData: InMemoryWorkerCommunityData = { workers: [], links: [] },
+  ) => {
+    const communityRepo = createInMemoryCommunityRepository(communities);
+    const postRepo = createInMemoryPostRepository();
+    const commentRepo = createInMemoryCommentRepository();
+    const appSettingRepo = createInMemoryAppSettingRepository();
+    const batchRunLogRepository = createInMemoryBatchRunLogRepository();
+    const workerCommunityRepo = createInMemoryWorkerCommunityRepository(workerCommunityData);
+    const voteRepo = createInMemoryVoteRepository();
+    const worldStateRepository = createInMemoryWorldStateRepository();
+    const botWorkerProvider = (): Promise<readonly WorkerRecord[]> => Promise.resolve(botWorkers);
+    return {
+      communityRepo,
+      postRepo,
+      commentRepo,
+      appSettingRepo,
+      batchRunLogRepository,
+      workerCommunityRepo,
+      voteRepo,
+      worldStateRepository,
+      botWorkerProvider,
+      anthropicApiKey: "test-key",
+      rng: () => 0,
+    };
+  };
+
+  it("生成成功時、登場した全ワーカーの lastAppearedSlotKey が当該 slotKey に更新される", async () => {
+    const deps = buildDeps([community1]);
+    // validGenerationOutput の author は haru / ken。
+    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+    const slotKey = "2026-06-13T09:00";
+
+    await runCommunityBatch({ ...deps, generate, slotKey });
+
+    const state = await deps.worldStateRepository.get();
+    expect(state).not.toBeNull();
+    // 登場した haru / ken は当該 slotKey に更新される。
+    expect(state?.workerStates["haru"]?.lastAppearedSlotKey).toBe(slotKey);
+    expect(state?.workerStates["ken"]?.lastAppearedSlotKey).toBe(slotKey);
+  });
+
+  it("既存の lastAppearedSlotKey は今回登場したワーカーのみ更新され、他は保持される", async () => {
+    const deps = buildDeps([community1]);
+    // mei は過去に登場済み（今回 community1 の登場ワーカーには含まれない author 出力）。
+    await deps.worldStateRepository.upsert({
+      summaryVersion: 0,
+      workerStates: { mei: { lastAppearedSlotKey: "2026-06-12T09:00" } },
+    });
+    const generate = vi.fn().mockResolvedValue(validGenerationOutput); // author: haru / ken
+    const slotKey = "2026-06-13T12:00";
+
+    await runCommunityBatch({ ...deps, generate, slotKey });
+
+    const state = await deps.worldStateRepository.get();
+    // 今回登場した haru / ken は更新。
+    expect(state?.workerStates["haru"]?.lastAppearedSlotKey).toBe(slotKey);
+    expect(state?.workerStates["ken"]?.lastAppearedSlotKey).toBe(slotKey);
+    // 今回登場していない mei の slotKey は保持される。
+    expect(state?.workerStates["mei"]?.lastAppearedSlotKey).toBe("2026-06-12T09:00");
+  });
+
+  it("生成スキップ（二重発火）時は lastAppearedSlotKey を更新しない", async () => {
+    const deps = buildDeps([community1]);
+    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+    const slotKey = "2026-06-13T15:00";
+
+    // 1 回目で更新される。
+    await runCommunityBatch({ ...deps, generate, slotKey });
+    const afterFirst = await deps.worldStateRepository.get();
+    const updatedAtFirst = afterFirst?.updatedAt;
+
+    // 2 回目（同一 slotKey）は post が重複追加されない＝実質スキップ。
+    await runCommunityBatch({ ...deps, generate, slotKey });
+    const afterSecond = await deps.worldStateRepository.get();
+
+    // slotKey 自体は変わらないが、二重発火で post が増えないことを確認。
+    expect(afterSecond?.workerStates["haru"]?.lastAppearedSlotKey).toBe(slotKey);
+    const allPosts = await deps.postRepo.listByCommunity("community-1");
+    expect(allPosts.length).toBe(2);
+    expect(updatedAtFirst).toBeInstanceOf(Date);
+  });
+
+  it("worldStateRepository 未注入でも従来どおり生成・永続化される（後方互換）", async () => {
+    const deps = buildDeps([community1]);
+    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+
+    const result = await runCommunityBatch({
+      ...deps,
+      worldStateRepository: undefined,
+      generate,
+    });
+
+    expect(result.posts.length).toBe(2);
+    expect(result.comments.length).toBe(2);
+  });
+
+  it("appearingWorkerCount で登場ワーカーを絞り、最近登場していないワーカーを優先する", async () => {
+    // community1 に haru/ken/mei を紐づけ。haru は直近登場済み → 後回し。
+    const deps = buildDeps([community1], {
+      workers: [botWorkers[0]!, botWorkers[1]!, botWorkers[2]!],
+      links: [
+        { workerId: "haru", communityId: "community-1" },
+        { workerId: "ken", communityId: "community-1" },
+        { workerId: "mei", communityId: "community-1" },
+      ],
+    });
+    // haru を直近 slotKey で登場済みにする → ローテーションで後回し。
+    await deps.worldStateRepository.upsert({
+      summaryVersion: 0,
+      workerStates: { haru: { lastAppearedSlotKey: "2026-06-13T09:00" } },
+    });
+
+    let receivedPrompt = "";
+    const generate = vi.fn().mockImplementation((prompt: string) => {
+      receivedPrompt = prompt;
+      // ken / mei（未登場）を author にした出力。haru は絞られて含まれない想定。
+      return Promise.resolve(
+        JSON.stringify({
+          topic: "rotation",
+          posts: [
+            { id: "p1", author: "ken", title: "t", text: "x", comments: [] },
+            { id: "p2", author: "mei", title: "t2", text: "y", comments: [] },
+          ],
+        }),
+      );
+    });
+
+    const result = await runCommunityBatch({
+      ...deps,
+      generate,
+      appearingWorkerCount: 2,
+      slotKey: "2026-06-13T12:00",
+    });
+
+    // 未登場の ken / mei が選ばれ、直近登場の haru はプロンプトに含まれない。
+    expect(receivedPrompt).toContain("ken");
+    expect(receivedPrompt).toContain("mei");
+    expect(receivedPrompt).not.toContain("haru");
+    expect(result.posts.map((p) => p.author).sort()).toEqual(["ken", "mei"]);
+
+    // 登場した ken / mei のみ slotKey が更新される。
+    const state = await deps.worldStateRepository.get();
+    expect(state?.workerStates["ken"]?.lastAppearedSlotKey).toBe("2026-06-13T12:00");
+    expect(state?.workerStates["mei"]?.lastAppearedSlotKey).toBe("2026-06-13T12:00");
+    // haru は今回登場していないので前の slotKey を保持。
+    expect(state?.workerStates["haru"]?.lastAppearedSlotKey).toBe("2026-06-13T09:00");
   });
 });

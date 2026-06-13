@@ -149,6 +149,8 @@ model Post {
   score       Int       @default(0)
   createdAt   DateTime  @default(now())
   comments    Comment[]
+  /// この post への vote（#453: Exclusive Arc 化の逆リレーション。Post 削除で cascade）。
+  votes       Vote[]
 
   @@unique([communityId, slotKey, seq])
   @@index([communityId, createdAt])
@@ -173,6 +175,8 @@ model Comment {
   /// up vote の累積数（ADR-0019）。生成出力には含めない。
   score       Int       @default(0)
   createdAt   DateTime  @default(now())
+  /// この comment への vote（#453: Exclusive Arc 化の逆リレーション。Comment 削除で cascade）。
+  votes       Vote[]
 
   @@unique([communityId, slotKey, seq])
   @@index([postId, createdAt])
@@ -202,32 +206,34 @@ model WorldState {
   updatedAt      DateTime @updatedAt
 }
 
-/// vote レコード。ADR-0019 / ADR-0025（down vote 追加）。
-/// 二重投票防止のため (userId, targetType, targetId) をユニーク制約で保護する。
-/// targetType は "post" または "comment"。direction は up/down。
-enum VoteTargetType {
-  post
-  comment
-}
-
 /// vote 方向（ADR-0025: down vote 追加）。
 enum VoteDirection {
   up
   down
 }
 
-/// Vote.targetId は多態参照（Post または Comment の id）のため DB FK を張らない。
-/// アプリケーション層（vote API）でターゲットの存在確認を行う。
+/// vote レコード。ADR-0019 / ADR-0025 / ADR-0031（#453: Exclusive Arc）。
+/// 投票対象（Post / Comment の 2 種固定）を多態参照ではなく
+/// postId? / commentId? の本物 FK（onDelete: Cascade）で表す。
+/// ちょうど片方だけ非 null を強制する CHECK 制約はマイグレーション SQL で付与する
+///（Prisma スキーマでは宣言不可）。二重投票防止は (userId, postId) / (userId, commentId)
+/// のユニーク制約で担保する（PostgreSQL は NULL を一意制約上区別するため両立する）。
 model Vote {
-  id         String         @id @default(uuid(7))
-  userId     String
-  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  targetType VoteTargetType
-  targetId   String
+  id        String        @id @default(uuid(7))
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// 投票対象が Post のとき非 null。Comment 票のときは null（Exclusive Arc）。
+  postId    String?
+  post      Post?         @relation(fields: [postId], references: [id], onDelete: Cascade)
+  /// 投票対象が Comment のとき非 null。Post 票のときは null（Exclusive Arc）。
+  commentId String?
+  comment   Comment?      @relation(fields: [commentId], references: [id], onDelete: Cascade)
   /// vote 方向（ADR-0025）。既存レコードのデフォルトは up。
-  direction  VoteDirection  @default(up)
-  createdAt  DateTime       @default(now())
+  direction VoteDirection @default(up)
+  createdAt DateTime      @default(now())
 
-  @@unique([userId, targetType, targetId])
-  @@index([targetType, targetId])
+  @@unique([userId, postId])
+  @@unique([userId, commentId])
+  @@index([postId])
+  @@index([commentId])
 }

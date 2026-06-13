@@ -198,6 +198,18 @@ describe.skipIf(!DATABASE_URL)("createPrismaVoteRepository (integration)", () =>
       const votes = await prisma.vote.findMany({ where: { userId } });
       expect(votes).toHaveLength(0);
     });
+
+    it("同一ユーザーが異なる post には独立して vote できる（NULL 区別の複合ユニーク・AC4）", async () => {
+      await setupFixtures();
+      const repo = createPrismaVoteRepository(prisma);
+
+      await repo.vote(userId, "post", postId, "up");
+      await repo.vote(userId, "post", postId2, "up");
+
+      expect((await repo.findVote(userId, "post", postId))?.direction).toBe("up");
+      expect((await repo.findVote(userId, "post", postId2))?.direction).toBe("up");
+      expect(await prisma.vote.count({ where: { userId } })).toBe(2);
+    });
   });
 
   describe("Exclusive Arc 制約 (#453)", () => {

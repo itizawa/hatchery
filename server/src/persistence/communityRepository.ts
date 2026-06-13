@@ -13,6 +13,10 @@ export interface CommunityRecord {
   description: string;
   synopsis: string | null;
   lastSlotKey: string | null;
+  /** GCS 上のアイコン画像 URL（#457）。未設定は null。 */
+  iconUrl: string | null;
+  /** GCS 上のカバー画像 URL（#457）。未設定は null。 */
+  coverUrl: string | null;
   createdAt: Date;
 }
 
@@ -23,10 +27,14 @@ export interface CreateCommunityRecordInput {
   description: string;
 }
 
-/** コミュニティ更新の入力型（#310）。slug は不変。 */
+/** コミュニティ更新の入力型（#310 / #457）。slug は不変。 */
 export interface UpdateCommunityRecordInput {
   name?: string;
   description?: string;
+  /** アイコン画像 URL の更新（#457・アップロード API から渡す）。 */
+  iconUrl?: string;
+  /** カバー画像 URL の更新（#457・アップロード API から渡す）。 */
+  coverUrl?: string;
 }
 
 export interface CommunityRepository {
@@ -76,6 +84,8 @@ export function createInMemoryCommunityRepository(
         description: input.description,
         synopsis: null,
         lastSlotKey: null,
+        iconUrl: null,
+        coverUrl: null,
         createdAt: new Date(),
       };
       records.push(record);
@@ -87,6 +97,8 @@ export function createInMemoryCommunityRepository(
       if (!record) return Promise.resolve(null);
       if (input.name !== undefined) record.name = input.name;
       if (input.description !== undefined) record.description = input.description;
+      if (input.iconUrl !== undefined) record.iconUrl = input.iconUrl;
+      if (input.coverUrl !== undefined) record.coverUrl = input.coverUrl;
       return Promise.resolve(cloneRecord(record));
     },
   };

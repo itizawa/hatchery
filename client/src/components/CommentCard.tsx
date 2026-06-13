@@ -1,6 +1,7 @@
 import { Box, Typography } from "./uiParts";
 import type { ReactElement } from "react";
 import type { Comment } from "../api/communities.js";
+import { AuthorByline } from "./AuthorByline.js";
 import { VoteControl } from "./VoteControl.js";
 import type { VoteDirection } from "./VoteControl.js";
 
@@ -43,9 +44,9 @@ export const CommentCard = ({
           />
         </Box>
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography variant="body2" sx={{ color: "text.secondary", mb: 0.5 }}>
-            {comment.author}
-          </Typography>
+          <Box sx={{ mb: 0.5 }}>
+            <AuthorByline author={comment.author} authorWorker={comment.author_worker} />
+          </Box>
           <Typography variant="body2">
             {comment.text}
           </Typography>

@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { AuthorWorkerSchema } from "../worker/authorWorker.js";
+
 /** Post の title の最大文字数（#91）。 */
 export const POST_TITLE_MAX_LENGTH = 100;
 
@@ -22,6 +24,8 @@ export type VoteRequest = z.infer<typeof VoteRequestSchema>;
  * - title / text に .max() 必須（#91）
  * - score は up - down のネット値（ADR-0025）。生成出力には含めず（事後更新フィールド）。
  * - slot_key + seq で定時バッチ内の投稿を識別する（Cron 二重発火ガード）。
+ * - author_worker は発言者の表示用ワーカー情報（任意・#479）。読み取り API のレスポンスで
+ *   server が author（id か displayName）から解決して付与する。生成出力・永続化には含めない。
  */
 export const PostSchema = z.object({
   id: z.string().min(1),
@@ -33,6 +37,38 @@ export const PostSchema = z.object({
   text: z.string().min(1).max(POST_TEXT_MAX_LENGTH),
   score: z.number().int().default(0),
   created_at: z.date(),
+  author_worker: AuthorWorkerSchema.optional(),
 });
 
 export type Post = z.infer<typeof PostSchema>;
+
+/**
+ * 手動作成 post / comment の slot_key プレフィックス（#433）。
+ * 定時バッチの slot_key は "YYYY-MM-DDTHH:MM" 形式（generateSlotKey）なので、
+ * このプレフィックスを付けることで複合ユニーク制約 (community_id, slot_key, seq) が
+ * 定時バッチの採番と決して衝突しない。
+ */
+export const MANUAL_SLOT_KEY_PREFIX = "manual:";
+
+/**
+ * 手動作成用の slot_key を組み立てる純粋関数（#433）。
+ * 一意値（呼び出し側で UUID 等を渡す）にプレフィックスを付けて返す。
+ * seq は常に 0 を使う前提（1 リクエスト = 1 件作成）。
+ */
+export function buildManualSlotKey(uniqueValue: string): string {
+  return `${MANUAL_SLOT_KEY_PREFIX}${uniqueValue}`;
+}
+
+/**
+ * 管理者が任意の worker 名義で post を作成するリクエストスキーマ（#433）。
+ * ADR-0020 を維持し author は既存 worker（workerId）。id / seq / slot_key / score /
+ * created_at はサーバ側で採番するため含めない。文字列フィールドは .max() 必須（#91）。
+ */
+export const CreatePostRequestSchema = z.object({
+  communityId: z.string().uuid(),
+  authorWorkerId: z.string().uuid(),
+  title: z.string().min(1).max(POST_TITLE_MAX_LENGTH),
+  text: z.string().min(1).max(POST_TEXT_MAX_LENGTH),
+});
+
+export type CreatePostRequest = z.infer<typeof CreatePostRequestSchema>;

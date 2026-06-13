@@ -138,6 +138,64 @@ describe("createInMemoryWorkerRepository", () => {
     });
   });
 
+  describe("resolveByAuthors", () => {
+    it("author が id（UUID 等）に一致するワーカーを返す", async () => {
+      const repo = createInMemoryWorkerRepository([
+        makeWorker({ id: "c9226003-uuid", displayName: "haru" }),
+      ]);
+      const result = await repo.resolveByAuthors(["c9226003-uuid"]);
+      expect(result.map((w) => w.id)).toEqual(["c9226003-uuid"]);
+    });
+
+    it("author が displayName に一致するワーカーを返す（旧データ互換）", async () => {
+      const repo = createInMemoryWorkerRepository([
+        makeWorker({ id: "c9226003-uuid", displayName: "haru" }),
+        makeWorker({ id: "d89954ec-uuid", displayName: "ken" }),
+        makeWorker({ id: "e0000000-uuid", displayName: "mei" }),
+      ]);
+      const result = await repo.resolveByAuthors(["haru", "ken", "mei"]);
+      expect(result.map((w) => w.displayName)).toEqual(["haru", "ken", "mei"]);
+    });
+
+    it("入力 author の順序を保持する", async () => {
+      const repo = createInMemoryWorkerRepository([
+        makeWorker({ id: "u1", displayName: "haru" }),
+        makeWorker({ id: "u2", displayName: "ken" }),
+      ]);
+      const result = await repo.resolveByAuthors(["ken", "haru"]);
+      expect(result.map((w) => w.displayName)).toEqual(["ken", "haru"]);
+    });
+
+    it("解決できない author は結果から除外される", async () => {
+      const repo = createInMemoryWorkerRepository([makeWorker({ id: "u1", displayName: "haru" })]);
+      const result = await repo.resolveByAuthors(["haru", "unknown"]);
+      expect(result.map((w) => w.displayName)).toEqual(["haru"]);
+    });
+
+    it("論理削除済みのワーカーは displayName 照合でも除外される", async () => {
+      const repo = createInMemoryWorkerRepository([
+        makeWorker({ id: "u1", displayName: "haru", deletedAt: new Date("2026-01-01") }),
+      ]);
+      const result = await repo.resolveByAuthors(["haru"]);
+      expect(result).toEqual([]);
+    });
+
+    it("id 一致を displayName 一致より優先する", async () => {
+      // 「haru」という文字列が、あるワーカーの id でもあり別ワーカーの displayName でもある場合。
+      const repo = createInMemoryWorkerRepository([
+        makeWorker({ id: "other", displayName: "haru" }),
+        makeWorker({ id: "haru", displayName: "本物" }),
+      ]);
+      const result = await repo.resolveByAuthors(["haru"]);
+      expect(result.map((w) => w.id)).toEqual(["haru"]);
+    });
+
+    it("空配列を渡すと空配列を返す", async () => {
+      const repo = createInMemoryWorkerRepository([makeWorker()]);
+      expect(await repo.resolveByAuthors([])).toEqual([]);
+    });
+  });
+
   describe("listBotWorkers", () => {
     it("論理削除されていない worker を全件返す", async () => {
       const repo = createInMemoryWorkerRepository([

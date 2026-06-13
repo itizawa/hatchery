@@ -16,6 +16,7 @@ export { default as Tooltip } from "@mui/material/Tooltip";
 export { default as Checkbox } from "@mui/material/Checkbox";
 export { default as Chip } from "@mui/material/Chip";
 export { default as CircularProgress } from "@mui/material/CircularProgress";
+export { default as Collapse } from "@mui/material/Collapse";
 export { default as FormControl } from "@mui/material/FormControl";
 export { default as FormControlLabel } from "@mui/material/FormControlLabel";
 export { default as FormHelperText } from "@mui/material/FormHelperText";

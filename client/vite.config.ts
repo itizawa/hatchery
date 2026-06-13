@@ -20,6 +20,35 @@ function ogpUrlHtmlPlugin(): Plugin {
   };
 }
 
+/** Cloudflare Web Analytics ビーコンの差し込み先プレースホルダ（index.html の `<head>`）。 */
+const CF_BEACON_PLACEHOLDER = "%VITE_CF_BEACON_TOKEN_SCRIPT%";
+
+/**
+ * index.html の `%VITE_CF_BEACON_TOKEN_SCRIPT%` を Cloudflare Web Analytics のビーコン script に
+ * 置換するプラグイン（ADR-0026 / #439）。
+ *
+ * - `VITE_CF_BEACON_TOKEN` が設定されている場合のみ、token を埋め込んだ beacon script を出力する。
+ * - 未設定（空・空白のみ）の場合はプレースホルダを空文字に置換し、壊れた空 token のタグを残さない。
+ * - token は `JSON.stringify` でエスケープして `data-cf-beacon` の JSON に埋め込み、不正トークンでも
+ *   HTML/JSON が壊れないようにする。
+ *
+ * 注: トークンはコードにハードコードせず、デプロイ時に env で注入する（OGP の #256 と同方式）。
+ */
+export function cfBeaconHtmlPlugin(): Plugin {
+  return {
+    name: "hatchery-cf-beacon",
+    transformIndexHtml(html) {
+      const token = process.env.VITE_CF_BEACON_TOKEN?.trim();
+      if (!token) {
+        return html.replaceAll(CF_BEACON_PLACEHOLDER, "");
+      }
+      const beacon = JSON.stringify({ token });
+      const script = `<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='${beacon}'></script>`;
+      return html.replaceAll(CF_BEACON_PLACEHOLDER, script);
+    },
+  };
+}
+
 /**
  * Vite（dev / build）と Vitest（test）の単一設定（ADR-0003）。
  * - SPA エントリは index.html → src/main.tsx。
@@ -27,7 +56,7 @@ function ogpUrlHtmlPlugin(): Plugin {
  * - test は jsdom 環境 + RTL セットアップ。
  */
 export default defineConfig({
-  plugins: [react(), ogpUrlHtmlPlugin()],
+  plugins: [react(), ogpUrlHtmlPlugin(), cfBeaconHtmlPlugin()],
   server: {
     // dev では SPA(5173) から API(3000) へプロキシする。
     // /api プレフィックスに統一したことでルータ追加時も proxy を触らなくて済む（#168）。
@@ -44,8 +73,12 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
-    include: ["src/**/*.test.{ts,tsx}", "functions/**/*.test.ts"],
+    include: ["src/**/*.test.{ts,tsx}", "functions/**/*.test.ts", "vite.config.test.ts"],
     css: false,
+    // #461 / #459: Suspense クエリ移行でルート全体描画テストが「fallback → 解決後」の 2 パスになり、
+    // CI の低速ランナーでは findBy 解決が既定 5s を超えうる。setup.ts の asyncUtilTimeout(5s) を
+    // 待ちきれるよう、テスト自体のタイムアウトもそれより長く取る（描画は確実に完了する）。
+    testTimeout: 10000,
     coverage: {
       provider: "v8",
       reporter: ["text", "json-summary", "lcov"],

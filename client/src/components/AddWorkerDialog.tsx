@@ -14,9 +14,8 @@ import type { ReactElement } from "react";
 
 import { WORKER_DISPLAY_NAME_MAX_LENGTH, WORKER_ROLE_MAX_LENGTH } from "@hatchery/common";
 import { useCreateAdminWorker } from "../api/admin.js";
-import { useCommunities } from "../api/communities.js";
 import { useSetWorkerCommunities } from "../api/workerCommunities.js";
-import { WorkerCommunitiesSelect } from "./WorkerCommunitiesSelect.js";
+import { WorkerCommunitiesField } from "./WorkerCommunitiesField.js";
 
 interface AddWorkerDialogProps {
   open: boolean;
@@ -31,8 +30,6 @@ interface AddWorkerDialogProps {
 export const AddWorkerDialog = ({ open, onClose }: AddWorkerDialogProps): ReactElement => {
   const createWorker = useCreateAdminWorker();
   const setCommunities = useSetWorkerCommunities();
-  const communitiesQuery = useCommunities();
-  const communities = communitiesQuery.data ?? [];
 
   const form = useForm({
     defaultValues: {
@@ -109,12 +106,10 @@ export const AddWorkerDialog = ({ open, onClose }: AddWorkerDialogProps): ReactE
           </form.Field>
           <form.Field name="communityIds">
             {(field) => (
-              <WorkerCommunitiesSelect
+              <WorkerCommunitiesField
                 labelId="add-worker-communities-label"
-                communities={communities}
                 value={field.state.value}
                 onChange={(ids) => field.handleChange(ids)}
-                disabled={communitiesQuery.isLoading}
               />
             )}
           </form.Field>

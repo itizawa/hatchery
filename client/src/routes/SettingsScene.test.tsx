@@ -55,7 +55,6 @@ describe("管理画面（#50）", () => {
     vi.spyOn(authApi, "fetchMe").mockResolvedValue({ id: "user1", displayName: "Alice", role: "admin" });
     vi.spyOn(adminApi, "useAdminWorkers").mockReturnValue({
       data: DEFAULT_WORKERS.map((w) => ({ ...w })),
-      isLoading: false,
     } as ReturnType<typeof adminApi.useAdminWorkers>);
     renderApp("/admin");
 
@@ -140,7 +139,6 @@ describe("APIキー入力欄 autocomplete 属性（#180）", () => {
     vi.spyOn(authApi, "fetchMe").mockResolvedValue({ id: "user1", displayName: "Alice", role: "admin" });
     vi.spyOn(adminApi, "useAdminSettings").mockReturnValue({
       data: [],
-      isLoading: false,
     } as ReturnType<typeof adminApi.useAdminSettings>);
   });
 
@@ -157,7 +155,6 @@ describe("API トークン設定フォーム（#417 useForm 移行）", () => {
     vi.spyOn(authApi, "fetchMe").mockResolvedValue({ id: "user1", displayName: "Alice", role: "admin" });
     vi.spyOn(adminApi, "useAdminSettings").mockReturnValue({
       data: [],
-      isLoading: false,
     } as ReturnType<typeof adminApi.useAdminSettings>);
   });
 
@@ -226,5 +223,91 @@ describe("API トークン設定フォーム（#417 useForm 移行）", () => {
 
     const saveButton = await screen.findByRole("button", { name: /保存/ });
     expect(saveButton).toBeDisabled();
+  });
+});
+
+/**
+ * #463: 各タブのサーバ状態取得が useSuspenseQuery + QueryBoundary に移行されたことを検証する。
+ * バッチログ／トークン使用量タブを実フックで描画し、global fetch をスタブして
+ * 成功表示・ローディング fallback・取得失敗フォールバックを確認する。
+ * （認証は fetchMe スパイで通すため、fetch スタブは各タブのデータ取得にのみ効く）
+ */
+describe("管理画面タブの Suspense / QueryBoundary（#463）", () => {
+  function jsonResponse(status: number, body?: unknown): Response {
+    return new Response(body === undefined ? null : JSON.stringify(body), {
+      status,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(authApi, "fetchMe").mockResolvedValue({ id: "user1", displayName: "Alice", role: "admin" });
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("バッチログタブ: 取得成功でログ行が表示される", async () => {
+    // 各 fetch 呼び出しごとに新しい Response を返す（mockResolvedValue だと同一 Response
+    // インスタンスが共有され、サイドバーの /api/communities など複数の並列 fetch で
+    // body が二重読みされ "Body has already been read" になるため mockImplementation で都度生成する）。
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation(() =>
+        Promise.resolve(
+          jsonResponse(200, [
+            {
+              id: "log1",
+              status: "success",
+              messageCount: 3,
+              errorMessage: null,
+              errorCode: null,
+              executedAt: "2026-06-01T00:00:00.000Z",
+            },
+          ]),
+        ),
+      ),
+    );
+    renderApp("/admin?tab=batch-logs", { id: "user1", displayName: "Alice", role: "admin" });
+
+    expect(await screen.findByText(/直近 50 件のバッチ実行ログ/, undefined, { timeout: 3000 })).toBeInTheDocument();
+    expect(await screen.findByText("成功")).toBeInTheDocument();
+  });
+
+  it("バッチログタブ: 取得失敗で QueryBoundary の再試行フォールバックが表示される", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(500, { error: "boom" }))),
+    );
+    renderApp("/admin?tab=batch-logs", { id: "user1", displayName: "Alice", role: "admin" });
+
+    // createQueryClient は retry:1 のため、リトライのバックオフ込みで待つ。
+    expect(
+      await screen.findByRole("button", { name: "再試行" }, { timeout: 5000 }),
+    ).toBeInTheDocument();
+  });
+
+  it("バッチログタブ: ローディング中は Suspense fallback（スケルトン）が表示される", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise<Response>(() => {})));
+    renderApp("/admin?tab=batch-logs", { id: "user1", displayName: "Alice", role: "admin" });
+
+    await waitFor(() =>
+      expect(screen.getAllByTestId("batch-logs-skeleton").length).toBeGreaterThanOrEqual(1),
+    );
+  });
+
+  it("トークン使用量タブ: 取得失敗で QueryBoundary の再試行フォールバックが表示される", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(500, { error: "boom" }))),
+    );
+    renderApp("/admin?tab=token-usage", { id: "user1", displayName: "Alice", role: "admin" });
+
+    // createQueryClient は retry:1 のため、リトライのバックオフ込みで待つ。
+    expect(
+      await screen.findByRole("button", { name: "再試行" }, { timeout: 5000 }),
+    ).toBeInTheDocument();
   });
 });

@@ -20,6 +20,14 @@ describe("crypto", () => {
     expect(() => decrypt("invalid-ciphertext")).toThrow();
   });
 
+  it("区切りが 2 個未満（要素が 3 個に満たない）の暗号文は形式エラーを投げる", () => {
+    expect(() => decrypt("only-two:parts")).toThrow("Invalid ciphertext format");
+  });
+
+  it("区切りが多すぎる（4 要素以上）暗号文は形式エラーを投げる", () => {
+    expect(() => decrypt("a:b:c:d")).toThrow("Invalid ciphertext format");
+  });
+
   it("空文字列を暗号化・復号できる", () => {
     const encrypted = encrypt("");
     expect(decrypt(encrypted)).toBe("");

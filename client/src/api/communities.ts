@@ -3,7 +3,12 @@
  * - 管理者向け CRUD（/api/admin/communities）: #310
  * - 公開ブラウズ・フィード・投票・購読（/api/communities, /api/feed 等）: #307
  */
-import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQueryClient,
+  useSuspenseQuery,
+  useSuspenseInfiniteQuery,
+} from "@tanstack/react-query";
 import { CommunitySchema } from "@hatchery/common";
 import type {
   Community as AdminCommunity,
@@ -15,8 +20,12 @@ import type {
 
 export type { VoteDirection };
 
+import { clientEnv } from "../config/env.js";
 import { openApiClient } from "./client.js";
 import type { components } from "./openapi.gen.js";
+
+/** community 画像の種別（#457）。 */
+export type CommunityImageKind = "icon" | "cover";
 
 // ─── 公開 API 向け型定義（openapi.gen.ts より）────────────────────────────────────
 export type Community = components["schemas"]["Community"];
@@ -103,9 +112,12 @@ export async function updateCommunity(
   });
 }
 
-/** 管理者コミュニティ一覧を TanStack Query で取得するフック（CommunitiesTab.tsx 向け）。 */
+/**
+ * 管理者コミュニティ一覧を TanStack Query（Suspense）で取得するフック（CommunitiesTab.tsx 向け）。
+ * Suspense 化により data は non-undefined（#462）。ローディング/エラーは QueryBoundary に委譲する。
+ */
 export function useCommunities() {
-  return useQuery({
+  return useSuspenseQuery({
     queryKey: ADMIN_COMMUNITIES_QUERY_KEY,
     queryFn: fetchAdminCommunities,
   });
@@ -125,6 +137,60 @@ export function useUpdateCommunity() {
     mutationFn: ({ id, input }: { id: string; input: UpdateCommunityInput }) =>
       updateCommunity(id, input),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ADMIN_COMMUNITIES_QUERY_KEY }),
+  });
+}
+
+/**
+ * POST /api/admin/communities/:id/{icon|cover} でコミュニティの画像をアップロードする（#457）。
+ * admin ロール必須。multipart/form-data で `image` フィールドを送信する。
+ * openapi-fetch は multipart/form-data 非対応のため worker 同様 fetch を直接呼ぶ。
+ * baseUrl は clientEnv.apiBaseUrl（クロスオリジン配信 #78）→ window.location.origin の順で解決。
+ */
+export async function uploadCommunityImage(
+  communityId: string,
+  kind: CommunityImageKind,
+  file: File,
+): Promise<{ id: string; iconUrl?: string | null; coverUrl?: string | null }> {
+  const formData = new FormData();
+  formData.append("image", file);
+
+  const base =
+    clientEnv.apiBaseUrl ?? (typeof window !== "undefined" ? window.location.origin : "");
+
+  const res = await fetch(`${base}/api/admin/communities/${communityId}/${kind}`, {
+    method: "POST",
+    body: formData,
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(body.error ?? `Upload failed: ${res.status}`);
+  }
+
+  return res.json() as Promise<{ id: string; iconUrl?: string | null; coverUrl?: string | null }>;
+}
+
+/**
+ * コミュニティ画像アップロードの useMutation フック（#457）。
+ * 成功時に admin / 公開コミュニティ一覧を無効化して最新状態を反映する。
+ */
+export function useUploadCommunityImage() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      communityId,
+      kind,
+      file,
+    }: {
+      communityId: string;
+      kind: CommunityImageKind;
+      file: File;
+    }) => uploadCommunityImage(communityId, kind, file),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ADMIN_COMMUNITIES_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: ["communities"] });
+    },
   });
 }
 
@@ -254,36 +320,48 @@ export async function fetchRecentWorkers(slug: string): Promise<RecentWorker[]> 
   return res.json() as Promise<RecentWorker[]>;
 }
 
-/** community の最近投稿したワーカー一覧を TanStack Query で取得するフック（#207）。 */
+/**
+ * community の最近投稿したワーカー一覧を TanStack Query（Suspense）で取得するフック（#207 / #462）。
+ * data は non-undefined。ローディング/エラーは QueryBoundary に委譲する。
+ */
 export function useRecentWorkers(slug: string) {
-  return useQuery({
+  return useSuspenseQuery({
     queryKey: communityRecentWorkersQueryKey(slug),
     queryFn: () => fetchRecentWorkers(slug),
     staleTime: 60_000,
   });
 }
 
-/** 公開コミュニティ一覧を TanStack Query で取得するフック（ブラウズ・サイドバー向け）。 */
+/**
+ * 公開コミュニティ一覧を TanStack Query（Suspense）で取得するフック（ブラウズ・サイドバー向け / #462）。
+ * data は non-undefined。ローディング/エラーは QueryBoundary に委譲する。
+ */
 export function usePublicCommunities() {
-  return useQuery({
+  return useSuspenseQuery({
     queryKey: ["communities"],
     queryFn: fetchPublicCommunities,
     staleTime: 60_000,
   });
 }
 
-/** コミュニティフィードを TanStack Query で取得するフック。 */
+/**
+ * コミュニティフィードを TanStack Query（Suspense）で取得するフック（#462）。
+ * data は non-undefined。ローディング/エラーは QueryBoundary に委譲する。
+ */
 export function useCommunityFeed(slug: string) {
-  return useQuery({
+  return useSuspenseQuery({
     queryKey: communityFeedQueryKey(slug),
     queryFn: () => fetchCommunityFeed(slug),
     staleTime: 30_000,
   });
 }
 
-/** ホームフィードを TanStack Query の無限スクロールで取得するフック（#367 / 並び順 #435）。 */
+/**
+ * ホームフィードを TanStack Query（Suspense）の無限スクロールで取得するフック（#367 / 並び順 #435 / #462）。
+ * data は non-undefined。ローディング/エラーは QueryBoundary に委譲する。
+ */
 export function useInfiniteHomeFeed(sort: HomeFeedSort = "latest") {
-  return useInfiniteQuery({
+  return useSuspenseInfiniteQuery({
     queryKey: homeFeedQueryKey(sort),
     queryFn: ({ pageParam }) => fetchHomeFeedPage(pageParam as string | undefined, sort),
     initialPageParam: undefined as string | undefined,
@@ -293,9 +371,12 @@ export function useInfiniteHomeFeed(sort: HomeFeedSort = "latest") {
   });
 }
 
-/** スレッド（post + comments）を TanStack Query で取得するフック。 */
+/**
+ * スレッド（post + comments）を TanStack Query（Suspense）で取得するフック（#462）。
+ * data は non-undefined。ローディング/エラーは QueryBoundary に委譲する。
+ */
 export function usePostThread(postId: string) {
-  return useQuery({
+  return useSuspenseQuery({
     queryKey: postThreadQueryKey(postId),
     queryFn: () => fetchPostThread(postId),
     staleTime: 30_000,

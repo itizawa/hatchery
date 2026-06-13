@@ -3,6 +3,8 @@
  * ユースケースはこのインターフェースにのみ依存する。
  */
 
+import { randomUUID } from "node:crypto";
+
 export interface PostRecord {
   id: string;
   communityId: string;
@@ -144,7 +146,6 @@ function comparePopular(a: PostRecord, b: PostRecord): number {
 /** DB 非依存のインメモリ実装。ユースケース/ルートのテストで注入する。 */
 export function createInMemoryPostRepository(): PostRepository {
   const records: PostRecord[] = [];
-  let seq = 0;
 
   return {
     createMany(communityId: string, inputs: PostCreateInput[]): Promise<PostRecord[]> {
@@ -160,9 +161,9 @@ export function createInMemoryPostRepository(): PostRepository {
           created.push(cloneRecord(exists));
           continue;
         }
-        seq += 1;
+        // 本番（Prisma）は uuid(7) を採番するため、in-memory も UUID を採番して整合させる（#433）。
         const record: PostRecord = {
-          id: `post-${seq}`,
+          id: randomUUID(),
           communityId,
           slotKey: input.slotKey,
           seq: input.seq,
@@ -238,7 +239,8 @@ export function createInMemoryPostRepository(): PostRepository {
       const fetched = filtered.slice(0, limit + 1);
       const hasMore = fetched.length > limit;
       const posts = hasMore ? fetched.slice(0, limit) : fetched;
-      const nextCursor = hasMore ? encodeCursor(posts[posts.length - 1]!) : null;
+      const last = posts.at(-1);
+      const nextCursor = hasMore && last ? encodeCursor(last) : null;
 
       return Promise.resolve({ posts: posts.map(cloneRecord), nextCursor });
     },
@@ -275,7 +277,8 @@ export function createInMemoryPostRepository(): PostRepository {
       const fetched = filtered.slice(0, limit + 1);
       const hasMore = fetched.length > limit;
       const posts = hasMore ? fetched.slice(0, limit) : fetched;
-      const nextCursor = hasMore ? encodePopularCursor(posts[posts.length - 1]!) : null;
+      const last = posts.at(-1);
+      const nextCursor = hasMore && last ? encodePopularCursor(last) : null;
 
       return Promise.resolve({ posts: posts.map(cloneRecord), nextCursor });
     },

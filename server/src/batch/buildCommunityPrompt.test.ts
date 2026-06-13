@@ -11,6 +11,8 @@ describe("buildCommunityPrompt (#306)", () => {
       description: "テクノロジーとプログラミングの話題を楽しむコミュニティ。",
       synopsis: null,
       lastSlotKey: null,
+      iconUrl: null,
+      coverUrl: null,
       createdAt: new Date("2026-01-01"),
     },
     workers: [

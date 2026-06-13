@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { BatchRunLogSchema } from "@hatchery/common";
 import type { BatchRunLog } from "@hatchery/common";
 
@@ -22,8 +22,12 @@ export async function fetchBatchLogs(): Promise<BatchRunLog[]> {
   return BatchRunLogSchema.array().parse(data);
 }
 
+/**
+ * バッチ実行ログを取得するフック（#75）。
+ * useSuspenseQuery（#459/#463）。ローディング・エラーは呼び出し元の QueryBoundary に委譲する。
+ */
 export function useBatchLogs() {
-  return useQuery({
+  return useSuspenseQuery({
     queryKey: BATCH_LOGS_QUERY_KEY,
     queryFn: fetchBatchLogs,
   });

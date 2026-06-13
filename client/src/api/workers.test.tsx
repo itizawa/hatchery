@@ -1,11 +1,13 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
-import type { ReactNode } from "react";
+import { Suspense, type ReactElement, type ReactNode } from "react";
+import { ErrorBoundary } from "react-error-boundary";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   BOT_WORKERS_QUERY_KEY,
   uploadWorkerImage,
+  useAllBotWorkers,
   useBotWorkers,
   useUpdateWorker,
   useUploadWorkerImage,
@@ -29,6 +31,34 @@ function createWrapper() {
   };
 }
 
+/**
+ * Suspense クエリ用の wrapper。`useSuspenseQuery` は取得中に throw して Suspend し、
+ * 失敗時にエラーを throw するため、`<Suspense>` + `ErrorBoundary` で包む必要がある。
+ * `errors` 配列に捕捉したエラーを push して、テストから失敗を観測できるようにする。
+ */
+function createSuspenseWrapper() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  const errors: Error[] = [];
+  return {
+    queryClient,
+    errors,
+    wrapper: ({ children }: { children: ReactNode }): ReactElement => (
+      <QueryClientProvider client={queryClient}>
+        <ErrorBoundary
+          fallbackRender={({ error }: { error: unknown }) => {
+            errors.push(error as Error);
+            return <div data-testid="suspense-error" />;
+          }}
+        >
+          <Suspense fallback={<div data-testid="suspense-loading" />}>{children}</Suspense>
+        </ErrorBoundary>
+      </QueryClientProvider>
+    ),
+  };
+}
+
 const mockWorker = {
   id: "worker-haru",
   displayName: "haru",
@@ -39,27 +69,49 @@ const mockWorker = {
   lastAppearedSlotKey: null,
 };
 
-describe("useBotWorkers (GET /api/workers)", () => {
+describe("useBotWorkers (GET /api/workers, useSuspenseQuery)", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
 
-  it("200 のとき Worker 配列を返す", async () => {
+  it("200 のとき Worker 配列を data として解決する（data は undefined を取らない）", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(200, [mockWorker])));
-    const { wrapper } = createWrapper();
+    const { wrapper } = createSuspenseWrapper();
     const { result } = renderHook(() => useBotWorkers(), { wrapper });
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(result.current.data).toEqual([mockWorker]);
+    await waitFor(() => expect(result.current.data).toEqual([mockWorker]));
   });
 
-  it("エラー応答のとき error 状態になる", async () => {
+  it("エラー応答のとき throw され ErrorBoundary に捕捉される", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(500, { error: "Server Error" })));
-    const { wrapper } = createWrapper();
-    const { result } = renderHook(() => useBotWorkers(), { wrapper });
+    const { wrapper, errors } = createSuspenseWrapper();
+    renderHook(() => useBotWorkers(), { wrapper });
 
-    await waitFor(() => expect(result.current.isError).toBe(true));
-    expect(result.current.error).toBeInstanceOf(Error);
+    await waitFor(() => expect(errors.length).toBeGreaterThan(0));
+    expect(errors[0]).toBeInstanceOf(Error);
+  });
+});
+
+describe("useAllBotWorkers (GET /api/workers, useSuspenseQuery)", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("200 のとき Worker 配列を data として解決する（data は undefined を取らない）", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(200, [mockWorker])));
+    const { wrapper } = createSuspenseWrapper();
+    const { result } = renderHook(() => useAllBotWorkers(), { wrapper });
+
+    await waitFor(() => expect(result.current.data).toEqual([mockWorker]));
+  });
+
+  it("エラー応答のとき throw され ErrorBoundary に捕捉される", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(500, { error: "Server Error" })));
+    const { wrapper, errors } = createSuspenseWrapper();
+    renderHook(() => useAllBotWorkers(), { wrapper });
+
+    await waitFor(() => expect(errors.length).toBeGreaterThan(0));
+    expect(errors[0]).toBeInstanceOf(Error);
   });
 });
 

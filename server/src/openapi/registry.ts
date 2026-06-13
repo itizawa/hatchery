@@ -8,11 +8,14 @@ import { z } from "zod";
 
 import {
   AppSettingResponseSchema,
+  AuthorWorkerSchema,
   AuthUserSchema,
   BatchRunLogSchema,
   CommunitySchema,
   CommentSchema,
+  CreateCommentRequestSchema,
   CreateCommunitySchema,
+  CreatePostRequestSchema,
   CreateWorkerSchema,
   UpdateCommunitySchema,
   WorkerSchema,
@@ -235,7 +238,7 @@ registry.registerPath({
       description: "更新後の認証済みユーザー",
       content: { "application/json": { schema: AuthUserComponent } },
     },
-    400: { description: "リクエストボディが不正（displayName 空・atvtarUrl 不正など）", ...errorJson },
+    400: { description: "リクエストボディが不正（displayName 空セatvtarUrl 不正など）", ...errorJson },
     401: { description: "未認証", ...errorJson },
   },
 });
@@ -371,11 +374,19 @@ registry.registerPath({
   },
 });
 
-// ── 公共コミュニティ API（#305 / ADR-0019 / ADR-0020）────────────────────────
+// ── 公共コミュニティ API（#305 / ADR-0019 / ADR-0020）────────────────
 
 const CommunityComponent = registry.register(
   "Community",
   CommunitySchema.openapi({ description: "コミュニティ（サブレディット相当）。ADR-0019" }),
+);
+
+// 発言者の表示用ワーカー情報（#479）。Post / Comment の author_worker が参照する。
+registry.register(
+  "AuthorWorker",
+  AuthorWorkerSchema.openapi({
+    description: "post / comment の発言者の表示用ワーカー情報（アバター画像 + 表示名・#479）",
+  }),
 );
 
 const PostComponent = registry.register(
@@ -391,6 +402,21 @@ const CommentComponent = registry.register(
 registry.register(
   "Subscription",
   SubscriptionSchema.openapi({ description: "コミュニティへの購読。ADR-0019 / ADR-0020" }),
+);
+
+// admin: 任意の worker 名義で post / comment を手動作成するリクエストボディ（#433）。
+const CreatePostRequestComponent = registry.register(
+  "CreatePostRequest",
+  CreatePostRequestSchema.openapi({
+    description: "管理者による手動 post 作成リクエストボディ（#433 / ADR-0020）",
+  }),
+);
+
+const CreateCommentRequestComponent = registry.register(
+  "CreateCommentRequest",
+  CreateCommentRequestSchema.openapi({
+    description: "管理者による手動 comment 作成リクエストボディ（#433 / ADR-0020）",
+  }),
 );
 
 // admin コミュニティ CRUD のリクエストボディ（#310 / #337）。
@@ -462,6 +488,106 @@ registry.registerPath({
     401: { description: "未認証", ...errorJson },
     403: { description: "admin 権限なし", ...errorJson },
     404: { description: "コミュニティが存在しない", ...errorJson },
+  },
+});
+
+// admin: コミュニティのアイコン画像アップロード（認証必須・admin のみ・#457）
+// multipart/form-data の `image` フィールドで送信する。
+const communityImageMultipartBody = {
+  content: {
+    "multipart/form-data": {
+      schema: z.object({
+        image: z.string().openapi({ type: "string", format: "binary" }),
+      }),
+    },
+  },
+};
+
+registry.registerPath({
+  method: "post",
+  path: "/api/admin/communities/{id}/icon",
+  summary: "コミュニティのアイコン画像をアップロード（認証必須・admin のみ・#457）",
+  request: {
+    params: z.object({ id: communityIdParam }),
+    body: communityImageMultipartBody,
+  },
+  responses: {
+    200: {
+      description: "アップロード後の community id と iconUrl",
+      content: {
+        "application/json": {
+          schema: z.object({ id: z.string(), iconUrl: z.string().nullable() }),
+        },
+      },
+    },
+    400: { description: "ファイル不正（MIME / サイズ超過 / 未添付）", ...errorJson },
+    401: { description: "未認証", ...errorJson },
+    403: { description: "admin 権限なし", ...errorJson },
+    404: { description: "コミュニティが存在しない", ...errorJson },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/api/admin/communities/{id}/cover",
+  summary: "コミュニティのカバー画像をアップロード（認証必須・admin のみ・#457）",
+  request: {
+    params: z.object({ id: communityIdParam }),
+    body: communityImageMultipartBody,
+  },
+  responses: {
+    200: {
+      description: "アップロード後の community id と coverUrl",
+      content: {
+        "application/json": {
+          schema: z.object({ id: z.string(), coverUrl: z.string().nullable() }),
+        },
+      },
+    },
+    400: { description: "ファイル不正（MIME / サイズ超過 / 未添付）", ...errorJson },
+    401: { description: "未認証", ...errorJson },
+    403: { description: "admin 権限なし", ...errorJson },
+    404: { description: "コミュニティが存在しない", ...errorJson },
+  },
+});
+
+// admin: 任意の worker 名義で post を手動作成（認証必須・admin のみ・#433）
+registry.registerPath({
+  method: "post",
+  path: "/api/admin/posts",
+  summary: "任意の worker 名義で post を手動作成（認証必須・admin のみ・#433 / ADR-0020）",
+  request: {
+    body: { content: { "application/json": { schema: CreatePostRequestComponent } } },
+  },
+  responses: {
+    201: {
+      description: "作成された Post",
+      content: { "application/json": { schema: PostComponent } },
+    },
+    400: { description: "バリデーションエラー（uuid 不正・title/text 空など）", ...errorJson },
+    401: { description: "未認証", ...errorJson },
+    403: { description: "admin 権限なし", ...errorJson },
+    404: { description: "community / worker（削除済み含む）が存在しない", ...errorJson },
+  },
+});
+
+// admin: 任意の worker 名義で comment を手動作成（認証必須・admin のみ・#433）
+registry.registerPath({
+  method: "post",
+  path: "/api/admin/comments",
+  summary: "任意の worker 名義で comment を手動作成（認証必須・admin のみ・#433 / ADR-0020）",
+  request: {
+    body: { content: { "application/json": { schema: CreateCommentRequestComponent } } },
+  },
+  responses: {
+    201: {
+      description: "作成された Comment（postId の community に紐づく）",
+      content: { "application/json": { schema: CommentComponent } },
+    },
+    400: { description: "バリデーションエラー（uuid 不正・text 空など）", ...errorJson },
+    401: { description: "未認証", ...errorJson },
+    403: { description: "admin 権限なし", ...errorJson },
+    404: { description: "post / worker（削除済み含む）が存在しない", ...errorJson },
   },
 });
 

@@ -5,31 +5,14 @@ import type { RecentWorker } from "../api/communities.js";
 
 interface RecentWorkersSectionProps {
   workers: RecentWorker[];
-  isLoading: boolean;
-  isError?: boolean;
 }
 
 /**
  * community に最近投稿したワーカー一覧を表示するセクション（#207）。
- * サイドバーに埋め込むことを想定した presentational コンポーネント。
+ * サイドバーに埋め込むことを想定した純表示（presentational）コンポーネント。
+ * #462: ローディング/エラーは呼び出し側の QueryBoundary に委譲するため、isLoading/isError props は持たない。
  */
-export const RecentWorkersSection = ({ workers, isLoading, isError }: RecentWorkersSectionProps): ReactElement => {
-  if (isLoading) {
-    return (
-      <Typography variant="body2" color="text.secondary">
-        読み込み中...
-      </Typography>
-    );
-  }
-
-  if (isError) {
-    return (
-      <Typography variant="body2" color="text.secondary">
-        読み込みに失敗しました
-      </Typography>
-    );
-  }
-
+export const RecentWorkersSection = ({ workers }: RecentWorkersSectionProps): ReactElement => {
   if (workers.length === 0) {
     return (
       <Typography variant="body2" color="text.secondary">

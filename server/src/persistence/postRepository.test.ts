@@ -124,6 +124,45 @@ describe("createInMemoryPostRepository", () => {
     });
   });
 
+  describe("listLatestPaged", () => {
+    it("カーソルで次ページを取得でき、重複・欠落がない（新着順）", async () => {
+      const repo = createInMemoryPostRepository();
+      for (let i = 0; i < 5; i++) {
+        await repo.createMany("community-1", [
+          { slotKey: "s", seq: i, author: "w", title: `P${i}`, text: "t" },
+        ]);
+        await new Promise((r) => setTimeout(r, 2)); // createdAt に差を付ける
+      }
+      const page1 = await repo.listLatestPaged(undefined, 2);
+      expect(page1.posts).toHaveLength(2);
+      expect(page1.nextCursor).not.toBeNull();
+      const page2 = await repo.listLatestPaged(page1.nextCursor!, 2);
+      expect(page2.posts).toHaveLength(2);
+      const page3 = await repo.listLatestPaged(page2.nextCursor!, 2);
+      expect(page3.posts).toHaveLength(1);
+      expect(page3.nextCursor).toBeNull();
+
+      const ids = [...page1.posts, ...page2.posts, ...page3.posts].map((p) => p.id);
+      expect(ids.length).toBe(5);
+      expect(new Set(ids).size).toBe(5);
+      // 全体が新着順（後発が先頭）
+      const titles = [...page1.posts, ...page2.posts, ...page3.posts].map((p) => p.title);
+      expect(titles).toEqual(["P4", "P3", "P2", "P1", "P0"]);
+    });
+
+    it("post が 0 件のときは空配列・nextCursor=null", async () => {
+      const repo = createInMemoryPostRepository();
+      const result = await repo.listLatestPaged(undefined, 20);
+      expect(result).toEqual({ posts: [], nextCursor: null });
+    });
+
+    it("不正な cursor は INVALID_CURSOR で reject", async () => {
+      const repo = createInMemoryPostRepository();
+      const invalid = Buffer.from("not-json").toString("base64");
+      await expect(repo.listLatestPaged(invalid, 20)).rejects.toThrow("INVALID_CURSOR");
+    });
+  });
+
   describe("listPopularPaged", () => {
     it("score 降順で返す（同点は createdAt 降順）", async () => {
       const repo = createInMemoryPostRepository();

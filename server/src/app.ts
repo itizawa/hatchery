@@ -25,6 +25,7 @@ import type { WorldStateRepository } from "./persistence/worldStateRepository.js
 import { createAdminRouter } from "./routes/admin.js";
 import { createApiDocsRouter, isApiDocsEnabled } from "./routes/apiDocs.js";
 import { createAdminWorkerImageRouter } from "./routes/adminWorkerImage.js";
+import { createAdminCommunityImageRouter } from "./routes/adminCommunityImage.js";
 import { createAdminWorkerCommunitiesRouter } from "./routes/adminWorkerCommunities.js";
 import { createBatchLogsRouter } from "./routes/batch-logs.js";
 import { createTokenUsageRouter } from "./routes/token-usage.js";
@@ -166,9 +167,16 @@ export function createApp(deps: AppDeps): Express {
   app.use("/api/admin/token-usage", createTokenUsageRouter(deps.tokenUsageLogRepository));
   app.use(
     "/api/admin",
-    createAdminRouter(deps.appSettingRepository, deps.workerRepository, communityRepo),
+    createAdminRouter(
+      deps.appSettingRepository,
+      deps.workerRepository,
+      communityRepo,
+      postRepo,
+      commentRepo,
+    ),
   );
   app.use("/api/admin", createAdminWorkerImageRouter(deps.workerRepository, deps.storageService));
+  app.use("/api/admin", createAdminCommunityImageRouter(communityRepo, deps.storageService));
   app.use(
     "/api/admin",
     createAdminWorkerCommunitiesRouter(
@@ -181,8 +189,8 @@ export function createApp(deps: AppDeps): Express {
     "/api/communities",
     createCommunitiesRouter(communityRepo, postRepo, subscriptionRepo, deps.workerRepository),
   );
-  app.use("/api/feed", createFeedRouter(postRepo));
-  app.use("/api", createPostsRouter(postRepo, commentRepo, voteRepo));
+  app.use("/api/feed", createFeedRouter(postRepo, deps.workerRepository));
+  app.use("/api", createPostsRouter(postRepo, commentRepo, voteRepo, deps.workerRepository));
 
   app.use(errorHandler);
   return app;

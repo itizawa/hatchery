@@ -173,6 +173,67 @@ describe.skipIf(!DATABASE_URL)("createPrismaWorkerRepository (integration)", () 
     });
   });
 
+  describe("resolveByAuthors", () => {
+    it("author が id に一致するワーカーを返す", async () => {
+      const repo = createPrismaWorkerRepository(prisma);
+      await repo.create({ id: "uuid-haru", displayName: "haru" });
+
+      const result = await repo.resolveByAuthors(["uuid-haru"]);
+
+      expect(result.map((w) => w.id)).toEqual(["uuid-haru"]);
+    });
+
+    it("author が displayName に一致するワーカーを返す（旧データ互換）", async () => {
+      const repo = createPrismaWorkerRepository(prisma);
+      await repo.create({ id: "uuid-haru", displayName: "haru" });
+      await repo.create({ id: "uuid-ken", displayName: "ken" });
+
+      const result = await repo.resolveByAuthors(["haru", "ken"]);
+
+      const displayNames = result.map((w) => w.displayName);
+      expect(displayNames).toContain("haru");
+      expect(displayNames).toContain("ken");
+      expect(displayNames).toHaveLength(2);
+    });
+
+    it("入力 author の順序を保持する", async () => {
+      const repo = createPrismaWorkerRepository(prisma);
+      await repo.create({ id: "uuid-haru", displayName: "haru" });
+      await repo.create({ id: "uuid-ken", displayName: "ken" });
+
+      const result = await repo.resolveByAuthors(["ken", "haru"]);
+
+      expect(result.map((w) => w.displayName)).toEqual(["ken", "haru"]);
+    });
+
+    it("解決できない author は除外される", async () => {
+      const repo = createPrismaWorkerRepository(prisma);
+      await repo.create({ id: "uuid-haru", displayName: "haru" });
+
+      const result = await repo.resolveByAuthors(["haru", "unknown"]);
+
+      expect(result.map((w) => w.displayName)).toEqual(["haru"]);
+    });
+
+    it("論理削除済みのワーカーは displayName 照合でも除外される", async () => {
+      const repo = createPrismaWorkerRepository(prisma);
+      await repo.create({ id: "uuid-haru", displayName: "haru" });
+      await repo.softDelete("uuid-haru");
+
+      const result = await repo.resolveByAuthors(["haru"]);
+
+      expect(result).toEqual([]);
+    });
+
+    it("空配列を渡すと空配列を返す", async () => {
+      const repo = createPrismaWorkerRepository(prisma);
+
+      const result = await repo.resolveByAuthors([]);
+
+      expect(result).toEqual([]);
+    });
+  });
+
   describe("listBotWorkers", () => {
     it("論理削除されていない worker を全件返す", async () => {
       const repo = createPrismaWorkerRepository(prisma);

@@ -9,9 +9,11 @@ const mockWorkers: RecentWorker[] = [
   { id: "worker-2", displayName: "ken", role: "ベテラン", imageUrl: null },
 ];
 
+// #462: RecentWorkersSection は純表示コンポーネント（workers のみ）。
+// ローディング/エラーは呼び出し側の QueryBoundary に委譲するため、ここでは検証しない。
 describe("RecentWorkersSection", () => {
   it("ワーカーがいるとき displayName と role を表示する", () => {
-    render(<RecentWorkersSection workers={mockWorkers} isLoading={false} />);
+    render(<RecentWorkersSection workers={mockWorkers} />);
     expect(screen.getByText("haru")).toBeInTheDocument();
     expect(screen.getByText("ムードメーカー")).toBeInTheDocument();
     expect(screen.getByText("ken")).toBeInTheDocument();
@@ -19,17 +21,7 @@ describe("RecentWorkersSection", () => {
   });
 
   it("workers が 0 件のとき空状態メッセージを表示する", () => {
-    render(<RecentWorkersSection workers={[]} isLoading={false} />);
+    render(<RecentWorkersSection workers={[]} />);
     expect(screen.getByText("まだ投稿がありません")).toBeInTheDocument();
-  });
-
-  it("isLoading=true のとき読み込み中テキストを表示する", () => {
-    render(<RecentWorkersSection workers={[]} isLoading={true} />);
-    expect(screen.getByText("読み込み中...")).toBeInTheDocument();
-  });
-
-  it("isError=true のとき読み込み失敗テキストを表示する", () => {
-    render(<RecentWorkersSection workers={[]} isLoading={false} isError={true} />);
-    expect(screen.getByText("読み込みに失敗しました")).toBeInTheDocument();
   });
 });

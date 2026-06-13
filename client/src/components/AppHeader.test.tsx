@@ -135,8 +135,29 @@ describe("AppHeader", () => {
     });
   });
 
-  it("ログアウト成功後に /login へ遷移する", async () => {
-    stubFetch(true);
+  // #454: ログアウト後はゲスト向け公開ホームへ戻り、ログインモーダルは自動では開かない（ヘッダーにログイン導線が出る）。
+  it("ログアウト成功後にゲスト表示（ヘッダーのログインリンク）に切り替わる", async () => {
+    // ログアウト後の再フェッチで未ログイン（401）になるよう、呼び出しで状態を切り替える。
+    let loggedIn = true;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation((input: RequestInfo | URL) => {
+        const url = input instanceof Request ? input.url : String(input);
+        if (url.includes("/auth/logout")) {
+          loggedIn = false;
+          return Promise.resolve(jsonResponse(200));
+        }
+        if (url.includes("/auth/me")) {
+          return Promise.resolve(
+            loggedIn ? jsonResponse(200, { id: "user1", displayName: "Alice" }) : jsonResponse(401),
+          );
+        }
+        if (url.includes("/api/feed")) {
+          return Promise.resolve(jsonResponse(200, { posts: [], nextCursor: null }));
+        }
+        return Promise.resolve(jsonResponse(200, []));
+      }),
+    );
     renderApp("/");
 
     const trigger = await screen.findByRole("button", { name: /ユーザーメニュー/ });
@@ -145,7 +166,26 @@ describe("AppHeader", () => {
     const logoutItem = await screen.findByRole("menuitem", { name: /ログアウト/ });
     await userEvent.click(logoutItem);
 
-    expect(await screen.findByRole("heading", { name: /ログイン/ })).toBeInTheDocument();
+    // ログインモーダル（heading "ログイン"）は開かず、ヘッダーのログインリンクが表示される。
+    expect(await screen.findByRole("link", { name: /ログイン/ })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /^ログイン$/ })).not.toBeInTheDocument();
+  });
+
+  // #454: ヘッダーのログインリンクをクリックすると、ページ遷移せずログインモーダルが開く（背景が保持される）。
+  it("ログインリンクをクリックするとログインモーダルが開き、背景のコンテンツが保持される", async () => {
+    stubFetch(false);
+    renderApp("/");
+
+    // 背景にホームフィードが描画されていることを確認（モーダルを開く前は role でも見つかる）。
+    await screen.findByRole("heading", { name: /ホームフィード/ });
+    const loginLink = await screen.findByRole("link", { name: /ログイン/ });
+    await userEvent.click(loginLink);
+
+    // モーダル（Google でログイン）が開く。
+    expect(await screen.findByRole("button", { name: /Google でログイン/ })).toBeInTheDocument();
+    // 背景のホームフィードは DOM 上に残ったまま（ページ遷移していない）。
+    // モーダル展開後は背景が aria-hidden になるため role ではなく text で存在を確認する。
+    expect(screen.getByText("ホームフィード")).toBeInTheDocument();
   });
 
   it("未ログイン時は displayName が表示されない", async () => {
@@ -187,5 +227,57 @@ describe("AppHeader", () => {
 
     await screen.findByRole("button", { name: /ユーザーメニュー/ });
     expect(screen.queryByRole("link", { name: /ログイン/ })).not.toBeInTheDocument();
+  });
+
+  // Issue #485: ヘッダー高さの一定化・区切りの borderBottom 化
+  describe("ヘッダーの高さ一定化と区切り（#485）", () => {
+    const EXPECTED_SLOT_HEIGHT = "40px";
+
+    it("ログイン時：右端スロットが固定高さ 40px を持つ", async () => {
+      stubFetch(true);
+      renderApp("/");
+
+      await screen.findByRole("button", { name: /ユーザーメニュー/ });
+      const slot = screen.getByTestId("header-right-slot");
+      expect(slot).toHaveStyle({ height: EXPECTED_SLOT_HEIGHT });
+    });
+
+    it("未ログイン時：右端スロットが固定高さ 40px を持つ（ログイン時と同一）", async () => {
+      stubFetch(false);
+      renderApp("/channels/zatsudan");
+
+      await screen.findByRole("link", { name: /ログイン/ });
+      const slot = screen.getByTestId("header-right-slot");
+      expect(slot).toHaveStyle({ height: EXPECTED_SLOT_HEIGHT });
+    });
+
+    it("認証ローディング時：右端スロットが固定高さ 40px を持つ（他状態と同一）", async () => {
+      vi.stubGlobal("fetch", vi.fn().mockImplementation(() => new Promise(() => {})));
+      renderApp("/channels/test-channel");
+
+      await screen.findByTestId("account-skeleton");
+      const slot = screen.getByTestId("header-right-slot");
+      expect(slot).toHaveStyle({ height: EXPECTED_SLOT_HEIGHT });
+    });
+
+    it("ヘッダー本文との区切りが薄い borderBottom（divider）で表現される", async () => {
+      stubFetch(true);
+      renderApp("/");
+
+      await screen.findByRole("button", { name: /ユーザーメニュー/ });
+      const header = screen.getByTestId("app-header");
+      expect(header).toHaveStyle({ borderBottomStyle: "solid" });
+      expect(header).toHaveStyle({ borderBottomWidth: "1px" });
+    });
+
+    it("ヘッダーの区切りに boxShadow を使わない", async () => {
+      stubFetch(true);
+      renderApp("/");
+
+      await screen.findByRole("button", { name: /ユーザーメニュー/ });
+      const header = screen.getByTestId("app-header");
+      const boxShadow = window.getComputedStyle(header).boxShadow;
+      expect(boxShadow === "" || boxShadow === "none").toBe(true);
+    });
   });
 });

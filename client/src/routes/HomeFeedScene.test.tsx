@@ -1,6 +1,7 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider, createMemoryHistory } from "@tanstack/react-router";
 import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createQueryClient } from "../queryClient.js";
@@ -25,34 +26,45 @@ function stubFetch({ authenticated, feedPosts = [] }: FetchStubOptions) {
   const user = authenticated
     ? { id: "user1", displayName: "Alice", role: "member", email: "alice@example.com" }
     : undefined;
-  vi.stubGlobal(
-    "fetch",
-    vi.fn().mockImplementation((input: RequestInfo | URL) => {
-      const url = input instanceof Request ? input.url : String(input);
-      if (url.includes("/auth/me")) {
-        return Promise.resolve(
-          new Response(authenticated ? JSON.stringify(user) : null, {
-            status: authenticated ? 200 : 401,
-            headers: { "Content-Type": "application/json" },
-          }),
-        );
-      }
-      if (url.includes("/api/feed")) {
-        return Promise.resolve(
-          new Response(JSON.stringify({ posts: feedPosts, nextCursor: null }), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          }),
-        );
-      }
+  const fetchMock = vi.fn().mockImplementation((input: RequestInfo | URL) => {
+    const url = input instanceof Request ? input.url : String(input);
+    if (url.includes("/auth/me")) {
       return Promise.resolve(
-        new Response(JSON.stringify([]), {
+        new Response(authenticated ? JSON.stringify(user) : null, {
+          status: authenticated ? 200 : 401,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+    }
+    if (url.includes("/vote")) {
+      // vote API は authenticated のみ成功する想定。返り値は更新後の Post。
+      const voted = feedPosts[0]
+        ? { ...feedPosts[0], score: feedPosts[0].score + 1 }
+        : { id: "post-1", score: 1 };
+      return Promise.resolve(
+        new Response(JSON.stringify(voted), {
           status: 200,
           headers: { "Content-Type": "application/json" },
         }),
       );
-    }),
-  );
+    }
+    if (url.includes("/api/feed")) {
+      return Promise.resolve(
+        new Response(JSON.stringify({ posts: feedPosts, nextCursor: null }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+    }
+    return Promise.resolve(
+      new Response(JSON.stringify([]), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  return fetchMock;
 }
 
 function renderApp(initialPath: string) {
@@ -217,5 +229,64 @@ describe("HomeFeedScene — 人気フィード (/popular) (#435)", () => {
       });
       expect(popularCalls.length).toBeGreaterThan(0);
     });
+  });
+});
+
+describe("HomeFeedScene — ゲストの vote 押下でログイン誘導 (#481)", () => {
+  const guestPost = {
+    id: "post-1",
+    community_id: "community-1",
+    slot_key: "2026-06-10-morning",
+    seq: 1,
+    author: "worker-haru",
+    title: "ゲスト vote テスト投稿",
+    text: "内容",
+    score: 3,
+    created_at: "2026-06-10T00:00:00Z",
+  };
+
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("未認証ユーザーが vote ボタンを押すとログイン誘導が表示され、vote API は呼ばれない", async () => {
+    const fetchMock = stubFetch({ authenticated: false, feedPosts: [guestPost] });
+    renderApp("/");
+
+    const upVote = await screen.findByRole("button", { name: /up vote/i });
+    await userEvent.click(upVote);
+
+    // ログイン誘導（スナックバー）が表示される。
+    expect(await screen.findByText(/投票するにはログインが必要です/)).toBeInTheDocument();
+
+    // vote API（/vote）は一度も呼ばれない（サイレント 401 を出さない）。
+    const voteCalls = fetchMock.mock.calls.filter((args: unknown[]) => {
+      const url = args[0] instanceof Request ? args[0].url : String(args[0]);
+      return url.includes("/vote");
+    });
+    expect(voteCalls.length).toBe(0);
+  });
+
+  it("認証済みユーザーが vote ボタンを押すと vote API が呼ばれる（回帰）", async () => {
+    const fetchMock = stubFetch({ authenticated: true, feedPosts: [guestPost] });
+    renderApp("/");
+
+    const upVote = await screen.findByRole("button", { name: /up vote/i });
+    await userEvent.click(upVote);
+
+    await waitFor(() => {
+      const voteCalls = fetchMock.mock.calls.filter((args: unknown[]) => {
+        const url = args[0] instanceof Request ? args[0].url : String(args[0]);
+        return url.includes("/vote");
+      });
+      expect(voteCalls.length).toBeGreaterThan(0);
+    });
+
+    // 認証済みではログイン誘導は表示されない。
+    expect(screen.queryByText(/投票するにはログインが必要です/)).not.toBeInTheDocument();
   });
 });

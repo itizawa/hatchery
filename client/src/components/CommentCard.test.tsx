@@ -43,4 +43,46 @@ describe("CommentCard", () => {
     render(<CommentCard comment={mockComment} onVote={vi.fn()} />);
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
   });
+
+  describe("author_worker（発言者のアバター + 表示名・#479）", () => {
+    const commentWithWorker = {
+      ...mockComment,
+      author: "uuid-ken",
+      author_worker: {
+        id: "uuid-ken",
+        display_name: "ken",
+        image_url: "https://example.com/ken.png",
+      },
+    };
+
+    it("author_worker.image_url があるときアバター画像（alt=表示名）を表示する", () => {
+      render(<CommentCard comment={commentWithWorker} onVote={vi.fn()} />);
+      const img = screen.getByRole("img", { name: "ken" });
+      expect(img).toHaveAttribute("src", "https://example.com/ken.png");
+    });
+
+    it("author_worker.display_name（表示名）を表示し、生の author ID は表示しない", () => {
+      render(<CommentCard comment={commentWithWorker} onVote={vi.fn()} />);
+      expect(screen.getByText("ken")).toBeInTheDocument();
+      expect(screen.queryByText("uuid-ken")).not.toBeInTheDocument();
+    });
+
+    it("image_url が null のときは画像を出さずフォールバック（頭文字）＋表示名を表示する", () => {
+      const comment = {
+        ...mockComment,
+        author: "uuid-mei",
+        author_worker: { id: "uuid-mei", display_name: "mei", image_url: null },
+      };
+      render(<CommentCard comment={comment} onVote={vi.fn()} />);
+      expect(screen.queryByRole("img")).not.toBeInTheDocument();
+      expect(screen.getByText("mei")).toBeInTheDocument();
+      expect(screen.getByText("M")).toBeInTheDocument();
+    });
+
+    it("author_worker が無いときは生の author 文字列を表示する（フォールバック・破綻しない）", () => {
+      render(<CommentCard comment={mockComment} onVote={vi.fn()} />);
+      expect(screen.getByText("worker-ken")).toBeInTheDocument();
+      expect(screen.queryByRole("img")).not.toBeInTheDocument();
+    });
+  });
 });

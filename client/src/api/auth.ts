@@ -1,5 +1,5 @@
 import type { AuthUser, UpdateProfile } from "@hatchery/common";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useSuspenseQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { apiBaseUrl, openApiClient } from "./client.js";
 
@@ -32,9 +32,15 @@ export async function logout(): Promise<void> {
   if (!response.ok) throw new Error(`POST /api/auth/logout failed: ${response.status}`);
 }
 
-/** 現在の認証状態を TanStack Query で取得するフック。 */
+/**
+ * 現在の認証状態を Suspense クエリで取得するフック（#461）。
+ * `fetchMe` は未認証（401）を `null` に、サーバエラー（5xx）を throw に変換するため、
+ * useSuspenseQuery では「未認証 = `null` データ（throw しない）」「サーバエラー = ErrorBoundary」
+ * となる。ローディングは呼び出し側を包む Suspense（QueryBoundary）に委譲する。
+ * 戻り値の `data` は `AuthUser | null`。
+ */
 export function useAuth() {
-  return useQuery({
+  return useSuspenseQuery({
     queryKey: AUTH_ME_QUERY_KEY,
     queryFn: fetchMe,
     staleTime: 60_000,

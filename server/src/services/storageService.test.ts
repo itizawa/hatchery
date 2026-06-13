@@ -86,3 +86,46 @@ describe("InMemoryStorageService", () => {
     expect(url2).toContain("/ken/");
   });
 });
+
+describe("InMemoryStorageService.uploadCommunityImage（#457）", () => {
+  it("StorageService インターフェースに uploadCommunityImage を持つ", () => {
+    const service: StorageService = new InMemoryStorageService();
+    expect(typeof service.uploadCommunityImage).toBe("function");
+  });
+
+  it("icon 画像をアップロードすると communities/{id}/icon/{uuid}.{ext} 形式の URL を返す", async () => {
+    const service = new InMemoryStorageService();
+    const result = await service.uploadCommunityImage({
+      communityId: "comm-1",
+      kind: "icon",
+      mimeType: "image/png",
+      buffer: Buffer.from("fake"),
+    });
+    expect(result).toMatch(/^inmemory:\/\/communities\/comm-1\/icon\/.+\.png$/);
+  });
+
+  it("cover 画像をアップロードすると communities/{id}/cover/{uuid}.{ext} 形式の URL を返す", async () => {
+    const service = new InMemoryStorageService();
+    const result = await service.uploadCommunityImage({
+      communityId: "comm-1",
+      kind: "cover",
+      mimeType: "image/webp",
+      buffer: Buffer.from("fake"),
+    });
+    expect(result).toMatch(/^inmemory:\/\/communities\/comm-1\/cover\/.+\.webp$/);
+  });
+
+  it("アップロードされた画像のデータを getUploadedData で取得できる", async () => {
+    const service = new InMemoryStorageService();
+    const buffer = Buffer.from("cover-content");
+    const url = await service.uploadCommunityImage({
+      communityId: "comm-1",
+      kind: "cover",
+      mimeType: "image/jpeg",
+      buffer,
+    });
+    const stored = service.getUploadedData(url);
+    expect(stored?.mimeType).toBe("image/jpeg");
+    expect(stored?.buffer.equals(buffer)).toBe(true);
+  });
+});

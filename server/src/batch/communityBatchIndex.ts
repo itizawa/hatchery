@@ -55,6 +55,7 @@ async function main(): Promise<void> {
     { createPrismaVoteRepository },
     { createPrismaWorkerCommunityRepository },
     { createPrismaWorkerRepository },
+    { createPrismaWorldStateRepository },
   ] = await Promise.all([
     import("../persistence/prismaClient.js"),
     import("../persistence/prismaAppSettingRepository.js"),
@@ -65,6 +66,7 @@ async function main(): Promise<void> {
     import("../persistence/prismaVoteRepository.js"),
     import("../persistence/prismaWorkerCommunityRepository.js"),
     import("../persistence/prismaWorkerRepository.js"),
+    import("../persistence/prismaWorldStateRepository.js"),
   ]);
 
   const workerRepo = createPrismaWorkerRepository(prisma);
@@ -82,6 +84,8 @@ async function main(): Promise<void> {
       workerCommunityRepo: createPrismaWorkerCommunityRepository(prisma),
       // 紐づき 0 件 community のフォールバック先（全 Bot ワーカー）。
       botWorkerProvider: () => workerRepo.listBotWorkers(),
+      // 登場ローテーション（#464）: lastAppearedSlotKey の読み書きで登場ワーカーを公平化する。
+      worldStateRepository: createPrismaWorldStateRepository(prisma),
       anthropicApiKey: env.anthropicApiKey,
     },
     disconnect: () => prisma.$disconnect(),

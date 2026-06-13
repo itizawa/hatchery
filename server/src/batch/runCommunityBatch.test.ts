@@ -3,7 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createInMemoryAppSettingRepository } from "../persistence/appSettingRepository.js";
 import { createInMemoryBatchRunLogRepository } from "../persistence/batchRunLogRepository.js";
 import { createInMemoryCommentRepository } from "../persistence/commentRepository.js";
-import { createInMemoryCommunityRepository, type CommunityRecord } from "../persistence/communityRepository.js";
+import {
+  createInMemoryCommunityRepository,
+  type CommunityRecord,
+} from "../persistence/communityRepository.js";
 import { createInMemoryPostRepository } from "../persistence/postRepository.js";
 import { createInMemoryVoteRepository } from "../persistence/voteRepository.js";
 import {
@@ -17,9 +20,30 @@ import { runCommunityBatch } from "./runCommunityBatch.js";
 
 /** テスト用 Bot ワーカー（フォールバック候補）。 */
 const botWorkers: WorkerRecord[] = [
-  { id: "haru", displayName: "haru", role: "ムードメーカー", personality: null, imageUrl: null, deletedAt: null },
-  { id: "ken", displayName: "ken", role: "ベテラン", personality: null, imageUrl: null, deletedAt: null },
-  { id: "mei", displayName: "mei", role: "新人", personality: null, imageUrl: null, deletedAt: null },
+  {
+    id: "haru",
+    displayName: "haru",
+    role: "ムードメーカー",
+    personality: null,
+    imageUrl: null,
+    deletedAt: null,
+  },
+  {
+    id: "ken",
+    displayName: "ken",
+    role: "ベテラン",
+    personality: null,
+    imageUrl: null,
+    deletedAt: null,
+  },
+  {
+    id: "mei",
+    displayName: "mei",
+    role: "新人",
+    personality: null,
+    imageUrl: null,
+    deletedAt: null,
+  },
 ];
 
 /** テスト用のコミュニティ */
@@ -313,7 +337,13 @@ describe("runCommunityBatch (#306)", () => {
     const meiOutput = JSON.stringify({
       topic: "test",
       posts: [
-        { id: "p1", author: "mei", title: "新人の投稿", text: "よろしくお願いします", comments: [] },
+        {
+          id: "p1",
+          author: "mei",
+          title: "新人の投稿",
+          text: "よろしくお願いします",
+          comments: [],
+        },
       ],
     });
     const haruOutput = JSON.stringify({

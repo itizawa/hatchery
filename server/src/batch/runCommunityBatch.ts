@@ -4,8 +4,10 @@ import {
   formatRecentLog,
   type RecentEntry,
   selectCommunityWorkers,
+  selectRotatedWorkers,
   selectWeightedCommunity,
   validateGenerationOutput,
+  type WorkerState,
 } from "@hatchery/common";
 
 import type { AppSettingRepository } from "../persistence/appSettingRepository.js";
@@ -16,9 +18,13 @@ import type { PostRecord, PostRepository } from "../persistence/postRepository.j
 import type { VoteRepository } from "../persistence/voteRepository.js";
 import type { WorkerCommunityRepository } from "../persistence/workerCommunityRepository.js";
 import type { WorkerRecord } from "../persistence/workerRepository.js";
+import type { WorldStateRepository } from "../persistence/worldStateRepository.js";
 import { getApiKey } from "../utils/apiKey.js";
 
-import { generateConversationWithClaude, type ConversationGenerator } from "./aiMessageGenerator.js";
+import {
+  generateConversationWithClaude,
+  type ConversationGenerator,
+} from "./aiMessageGenerator.js";
 import { buildCommunityPrompt, type WorkerDef } from "./buildCommunityPrompt.js";
 
 /** プロンプトに載せる直近 post/comment の既定件数。 */
@@ -60,6 +66,18 @@ export interface RunCommunityBatchDeps {
   botWorkerProvider?: () => Promise<readonly WorkerRecord[]>;
   /** バッチ実行ログの永続化（省略時はログ保存しない）。 */
   batchRunLogRepository?: BatchRunLogRepository;
+  /**
+   * 登場ローテーション用の WorldState 永続化（#464）。
+   * 注入されたときのみ、(a) 解決した登場ワーカーを lastAppearedSlotKey の新旧で並べ替え（最近登場
+   * していないワーカー優先）、(b) 生成・永続化に成功した定時の登場ワーカーの lastAppearedSlotKey を
+   * 当該 slotKey に upsert する。省略時はローテーション・更新を行わない（後方互換）。
+   */
+  worldStateRepository?: WorldStateRepository;
+  /**
+   * 1 定時に登場させる最大ワーカー人数（#464）。worldStateRepository があるときに有効。
+   * 省略時は解決した全ワーカーを対象にする（既存挙動を維持）。
+   */
+  appearingWorkerCount?: number;
   /** テスト用に注入可能な AI 生成関数。省略時は Claude を使う。 */
   generate?: ConversationGenerator;
   /** プロンプトに載せる直近 post/comment 件数（既定 30）。 */
@@ -167,6 +185,14 @@ export async function runCommunityBatch(
   const savedComments: CommentRecord[] = [];
   const errors: string[] = [];
 
+  // 登場ローテーション（#464）: worldStateRepository があれば現在の workerStates を読み、
+  // 生成成功後に登場ワーカーの lastAppearedSlotKey を更新する。
+  const worldStateRepo = deps.worldStateRepository;
+  const currentWorldState = worldStateRepo ? await worldStateRepo.get() : null;
+  const currentWorkerStates: Record<string, WorkerState> = currentWorldState?.workerStates ?? {};
+  // 今回の定時で実際に登場した（プロンプト・検証に使った）ワーカー id を集める。
+  const appearedWorkerIds = new Set<string>();
+
   // vote 重み付きランダムで 1 コミュニティを選ぶ（#486 / ADR-0030）。
   const selected = await selectOneCommunity(communities, deps.voteRepo, rng, now);
   if (!selected) {
@@ -195,7 +221,20 @@ export async function runCommunityBatch(
         );
         continue;
       }
-      const workers: readonly WorkerDef[] = resolvedWorkers.map((w) => ({
+      // 登場ローテーション（#464）: lastAppearedSlotKey の新旧で「最近登場していないワーカー」を
+      // 優先して並べ替え・絞り込む。worldStateRepository 未注入時は全員を解決順のまま使う。
+      const rotatedWorkers = worldStateRepo
+        ? (() => {
+            const count = deps.appearingWorkerCount ?? resolvedWorkers.length;
+            const orderedIds = selectRotatedWorkers(resolvedWorkers, currentWorkerStates, count);
+            const byId = new Map(resolvedWorkers.map((w) => [w.id, w]));
+            return orderedIds.flatMap((id) => {
+              const w = byId.get(id);
+              return w ? [w] : [];
+            });
+          })()
+        : resolvedWorkers;
+      const workers: readonly WorkerDef[] = rotatedWorkers.map((w) => ({
         id: w.id,
         displayName: w.displayName,
         role: w.role,
@@ -302,14 +341,36 @@ export async function runCommunityBatch(
         const createdComments = await deps.commentRepo.createMany(community.id, commentInputs);
         savedComments.push(...createdComments);
       }
+
+      // 生成・永続化に成功したので、この定時で登場したワーカーを記録する（#464）。
+      // post に author として現れたワーカーのみを登場扱いにする（コメントだけの author も含む）。
+      for (const post of output.posts) {
+        appearedWorkerIds.add(post.author);
+        for (const comment of post.comments) {
+          appearedWorkerIds.add(comment.author);
+        }
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      console.error(
-        `[communityBatch] community ${community.id} の処理に失敗しました:`,
-        err,
-      );
+      console.error(`[communityBatch] community ${community.id} の処理に失敗しました:`, err);
       errors.push(`${community.id}: ${message}`);
     }
+  }
+
+  // 登場ローテーション更新（#464）: 今回登場したワーカーの lastAppearedSlotKey を当該 slotKey に
+  // upsert する。worldStateRepository 未注入時・登場ワーカー 0（スキップ・生成失敗）時は更新しない。
+  if (worldStateRepo && appearedWorkerIds.size > 0) {
+    const nextWorkerStates: Record<string, WorkerState> = { ...currentWorkerStates };
+    for (const workerId of appearedWorkerIds) {
+      nextWorkerStates[workerId] = {
+        ...nextWorkerStates[workerId],
+        lastAppearedSlotKey: slotKey,
+      };
+    }
+    await worldStateRepo.upsert({
+      summaryVersion: currentWorldState?.summaryVersion ?? 0,
+      workerStates: nextWorkerStates,
+    });
   }
 
   // バッチ実行ログを保存

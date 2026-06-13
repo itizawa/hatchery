@@ -20,6 +20,7 @@ import { handlers } from "../mocks/handlers.js";
 import { mockCommunities, mockPosts } from "../mocks/data/fixtures.js";
 import type { Community, Comment } from "../api/communities.js";
 import type React from "react";
+import { Suspense } from "react";
 
 const mockComments: Comment[] = [
   {
@@ -67,7 +68,15 @@ function Wrapper({ children }: { children: React.ReactNode }) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   });
-  return <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
+  // #461: useAuth は useSuspenseQuery 化された。これらのテストは post スレッドの描画/ローディングが
+  // 関心事のため、認証クエリは事前シードして即解決させ（Suspense を起こさせない）、
+  // 念のため Suspense 祖先（実アプリではルートの Suspense 相当）も用意する。
+  qc.setQueryData(AUTH_ME_QUERY_KEY, null);
+  return (
+    <QueryClientProvider client={qc}>
+      <Suspense fallback={null}>{children}</Suspense>
+    </QueryClientProvider>
+  );
 }
 
 describe("PostThreadScene (#380)", () => {
@@ -98,9 +107,7 @@ describe("PostThreadScene (#380)", () => {
 
   it("コメント 0 件のとき空状態の文言が表示される", async () => {
     server.use(
-      http.get("/api/posts/:postId", () =>
-        HttpResponse.json({ post: mockPosts[0], comments: [] }),
-      ),
+      http.get("/api/posts/:postId", () => HttpResponse.json({ post: mockPosts[0], comments: [] })),
     );
     render(<PostThreadScene />, { wrapper: Wrapper });
 
@@ -127,9 +134,7 @@ describe("PostThreadScene (#380)", () => {
   });
 
   it("取得に失敗したときエラーメッセージが表示される", async () => {
-    server.use(
-      http.get("/api/posts/:postId", () => new HttpResponse(null, { status: 500 })),
-    );
+    server.use(http.get("/api/posts/:postId", () => new HttpResponse(null, { status: 500 })));
     render(<PostThreadScene />, { wrapper: Wrapper });
 
     expect(await screen.findByText("投稿の取得に失敗しました。")).toBeInTheDocument();
@@ -148,10 +153,14 @@ function createWrapper({ communities }: { communities: Community[] }) {
       comments: [mockComments[0]],
     });
     qc.setQueryData(["communities"], communities);
-    qc.setQueryData(communitySubscriptionQueryKey("ai-dev"), false);
+    qc.setQueryData(communitySubscriptionQueryKey("ai-dev"), { subscribed: false });
     qc.setQueryData(AUTH_ME_QUERY_KEY, null);
 
-    return <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
+    return (
+      <QueryClientProvider client={qc}>
+        <Suspense fallback={null}>{children}</Suspense>
+      </QueryClientProvider>
+    );
   };
 }
 
@@ -159,7 +168,9 @@ describe("PostThreadScene サイドバー (#390)", () => {
   it("post 本文とコメントを表示する（既存表示の維持）", async () => {
     render(<PostThreadScene />, { wrapper: createWrapper({ communities: mockCommunities }) });
     expect(await screen.findByText("今日も元気に始めましょう")).toBeInTheDocument();
-    expect(screen.getByText("おはようございます！今日もよろしくお願いします。")).toBeInTheDocument();
+    expect(
+      screen.getByText("おはようございます！今日もよろしくお願いします。"),
+    ).toBeInTheDocument();
     expect(screen.getByText("コメント 1 件")).toBeInTheDocument();
     expect(screen.getByText("いい一日になりそうですね！")).toBeInTheDocument();
   });
@@ -210,9 +221,13 @@ describe("PostThreadScene レイアウトシフト解消 (#409)", () => {
         post: mockPosts[0],
         comments: [],
       });
-      qc.setQueryData(communitySubscriptionQueryKey("ai-dev"), false);
+      qc.setQueryData(communitySubscriptionQueryKey("ai-dev"), { subscribed: false });
       qc.setQueryData(AUTH_ME_QUERY_KEY, null);
-      return <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
+      return (
+        <QueryClientProvider client={qc}>
+          <Suspense fallback={null}>{children}</Suspense>
+        </QueryClientProvider>
+      );
     };
   }
 

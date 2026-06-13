@@ -24,6 +24,10 @@ function stubFetch(isLoggedIn: boolean) {
       if (url.includes("/auth/me")) {
         return Promise.resolve(jsonResponse(isLoggedIn ? 200 : 401, user));
       }
+      // ホームフィードは { posts, nextCursor } 形を返す（HomeFeedScene が pages.posts を flatMap するため）。
+      if (url.includes("/api/feed")) {
+        return Promise.resolve(jsonResponse(200, { posts: [], nextCursor: null }));
+      }
       return Promise.resolve(jsonResponse(200, []));
     }),
   );
@@ -41,7 +45,7 @@ function renderApp(initialPath: string) {
   );
 }
 
-describe("AccountScene スケルトン UI（#241）", () => {
+describe("AccountScene ローディング（#241 / #461: Suspense へ委譲）", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
@@ -50,15 +54,23 @@ describe("AccountScene スケルトン UI（#241）", () => {
     vi.unstubAllGlobals();
   });
 
-  it("useAuth() が isLoading=true のときスケルトンが表示される", async () => {
-    vi.spyOn(authApi, "fetchMe").mockResolvedValue({ id: "user1", displayName: "Alice" });
-    vi.spyOn(authApi, "useAuth").mockReturnValue({
-      data: undefined,
-      isLoading: true,
-    } as ReturnType<typeof authApi.useAuth>);
+  // #461: useAuth が useSuspenseQuery 化され、認証ローディングはルートの Suspense に委譲される。
+  // 認証が解決するまでアカウント設定フォーム（見出し）は描画されず、解決後に表示される。
+  it("認証ローディング中はアカウント設定見出しを表示せず、解決後に表示する", async () => {
+    let resolveMe: (user: { id: string; displayName: string }) => void = () => {};
+    vi.spyOn(authApi, "fetchMe").mockReturnValue(
+      new Promise((resolve) => {
+        resolveMe = resolve;
+      }),
+    );
     renderApp("/account");
 
-    expect(await screen.findByTestId("account-scene-skeleton")).toBeInTheDocument();
+    // 認証未解決の間は見出しが出ない（per-scene スケルトンは廃止し Suspense に委譲）。
+    expect(screen.queryByRole("heading", { name: /アカウント設定/ })).not.toBeInTheDocument();
+
+    resolveMe({ id: "user1", displayName: "Alice" });
+
+    expect(await screen.findByRole("heading", { name: /アカウント設定/ })).toBeInTheDocument();
   });
 });
 

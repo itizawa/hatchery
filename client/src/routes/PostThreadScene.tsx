@@ -14,8 +14,8 @@ import { useAuth } from "../api/auth.js";
 import { PostCard } from "../components/PostCard.js";
 import { CommentCard } from "../components/CommentCard.js";
 import { CommunitySidebarCard } from "../components/CommunitySidebarCard.js";
+import { SubscriptionStatus } from "../components/SubscriptionStatus.js";
 import type { VoteDirection } from "../components/VoteControl.js";
-import { useSubscriptionStatus } from "../hooks/useSubscriptionStatus.js";
 
 /**
  * 投稿スレッド（/posts/$postId）。
@@ -37,7 +37,6 @@ export const PostThreadScene = (): ReactElement => {
   const communitySlug = community?.slug ?? "";
 
   const { data: authUser } = useAuth();
-  const { subscribed } = useSubscriptionStatus(communitySlug);
   const { mutate: subscribe, isPending: isSubscribing } = useSubscribe(communitySlug);
   const { mutate: unsubscribe, isPending: isUnsubscribing } = useUnsubscribe(communitySlug);
 
@@ -75,9 +74,7 @@ export const PostThreadScene = (): ReactElement => {
 
   const { post, comments } = data;
   const postUrl = `${window.location.origin}/posts/${post.id}`;
-  const communityUrl = community
-    ? `${window.location.origin}/communities/${community.slug}`
-    : "";
+  const communityUrl = community ? `${window.location.origin}/communities/${community.slug}` : "";
 
   return (
     <Box component="section" sx={{ p: 3, maxWidth: 1200, mx: "auto" }}>
@@ -136,17 +133,21 @@ export const PostThreadScene = (): ReactElement => {
               />
             ) : (
               community && (
-                <CommunitySidebarCard
-                  community={community}
-                  shareUrl={communityUrl}
-                  shareTitle={community.name}
-                  showSubscribe={Boolean(authUser)}
-                  subscribed={subscribed}
-                  subscriptionPending={isSubscribing || isUnsubscribing}
-                  onSubscribe={() => subscribe()}
-                  onUnsubscribe={() => unsubscribe()}
-                  nameLink
-                />
+                <SubscriptionStatus communitySlug={communitySlug}>
+                  {(subscribed) => (
+                    <CommunitySidebarCard
+                      community={community}
+                      shareUrl={communityUrl}
+                      shareTitle={community.name}
+                      showSubscribe={Boolean(authUser)}
+                      subscribed={subscribed}
+                      subscriptionPending={isSubscribing || isUnsubscribing}
+                      onSubscribe={() => subscribe()}
+                      onUnsubscribe={() => unsubscribe()}
+                      nameLink
+                    />
+                  )}
+                </SubscriptionStatus>
               )
             )}
           </Box>

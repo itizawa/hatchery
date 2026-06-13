@@ -141,6 +141,24 @@ describe("createAppRouter", () => {
     render(renderRouter(router));
     expect(await screen.findByRole("heading", { name: /管理画面/ })).toBeInTheDocument();
   });
+
+  // 受け入れ条件 #484-1,2: 利用規約ページ（/terms）をルートとして描画する。
+  it("利用規約ルート（/terms）で利用規約の見出しを描画する", async () => {
+    const router = createAppRouter({
+      history: createMemoryHistory({ initialEntries: ["/terms"] }),
+    });
+    render(renderRouter(router));
+    expect(await screen.findByRole("heading", { name: /利用規約/ })).toBeInTheDocument();
+  });
+
+  // 受け入れ条件 #484-1,2: プライバシーポリシーページ（/privacy）をルートとして描画する。
+  it("プライバシーポリシールート（/privacy）でプライバシーポリシーの見出しを描画する", async () => {
+    const router = createAppRouter({
+      history: createMemoryHistory({ initialEntries: ["/privacy"] }),
+    });
+    render(renderRouter(router));
+    expect(await screen.findByRole("heading", { name: /プライバシーポリシー/ })).toBeInTheDocument();
+  });
 });
 
 // 認証ガード: 未ログインで保護ルートを開くと /login へリダイレクトする。
@@ -189,5 +207,25 @@ describe("認証ガード（未ログイン時のリダイレクト）", () => {
     render(renderRouter(router));
     expect(await screen.findByRole("heading", { name: /コミュニティを探す/ })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: /ログイン/ })).not.toBeInTheDocument();
+  });
+
+  // 受け入れ条件 #484-6: 利用規約は認証不要（公開ページ）
+  it("未認証で利用規約（/terms）を開いても /login へリダイレクトしない", async () => {
+    const router = createAppRouter({
+      history: createMemoryHistory({ initialEntries: ["/terms"] }),
+    });
+    render(renderRouter(router));
+    expect(await screen.findByRole("heading", { name: /利用規約/ })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /^ログイン$/ })).not.toBeInTheDocument();
+  });
+
+  // 受け入れ条件 #484-6: プライバシーポリシーは認証不要（公開ページ）
+  it("未認証でプライバシーポリシー（/privacy）を開いても /login へリダイレクトしない", async () => {
+    const router = createAppRouter({
+      history: createMemoryHistory({ initialEntries: ["/privacy"] }),
+    });
+    render(renderRouter(router));
+    expect(await screen.findByRole("heading", { name: /プライバシーポリシー/ })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /^ログイン$/ })).not.toBeInTheDocument();
   });
 });

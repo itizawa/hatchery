@@ -601,10 +601,10 @@ describe("generateSlotKey (#469)", () => {
     expect(generateSlotKey(utcDate)).toBe("2026-01-01T00:00");
   });
 
-  it("JST 深夜 (UTC 前日) の日付はローカル時刻ではなく UTC 日付で返す", () => {
-    // JST (UTC+9) では 2026-06-10 08:30 でも UTC では 2026-06-09T23:30 となる。
+  it("UTC とローカル時刻で日付が異なる場合も UTC 日付で返す", () => {
+    // UTC 23:30 は JST (UTC+9) では翌日 08:30—日付が変わるケース。
     // UTC 基準なら "2026-06-09T23:30" を返すべき。
-    const date = new Date("2026-06-09T23:30:00Z"); // UTC 23:30
+    const date = new Date("2026-06-09T23:30:00Z"); // UTC 23:30 = JST 翌日 08:30
     expect(generateSlotKey(date)).toBe("2026-06-09T23:30");
   });
 });

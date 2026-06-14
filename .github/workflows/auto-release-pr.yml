@@ -24,7 +24,7 @@ jobs:
     steps:
       # main..develop の差分件数・コミット一覧を計算するため全履歴を取得する。
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 

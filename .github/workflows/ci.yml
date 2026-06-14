@@ -19,16 +19,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # pnpm バージョンはルート package.json の packageManager フィールドから解決する。
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       # Node バージョンは .nvmrc 単一情報源（ADR-0002: Node 26）から取得する。
       # cache: pnpm で pnpm ストアの依存キャッシュを有効化する。
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
           cache: pnpm
@@ -63,7 +63,7 @@ jobs:
         run: pnpm exec vitest run --coverage
 
       - name: Upload coverage (common)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: coverage-common
@@ -71,7 +71,7 @@ jobs:
           retention-days: 7
 
       - name: Upload coverage (server)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: coverage-server
@@ -79,7 +79,7 @@ jobs:
           retention-days: 7
 
       - name: Upload coverage (client)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: coverage-client

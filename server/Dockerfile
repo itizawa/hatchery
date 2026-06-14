@@ -33,7 +33,8 @@ RUN pnpm --filter @hatchery/server build
 # --prod で devDependencies（tsx / prisma CLI / supertest 等）を除外し、
 # workspace 依存（@hatchery/common）は実体注入される。--legacy で
 # 仮想ストアではなく実体の node_modules を持つツリーを作る。
-# onlyBuiltDependencies により bcrypt ネイティブも /prod 内でビルドされる。
+# （bcrypt は #455 の Google-only auth 移行で廃止済みのため本番依存に含まれない。
+#  onlyBuiltDependencies に残るのは @prisma/engines 等で、Prisma 成果物は次段で供給する。）
 RUN pnpm --filter @hatchery/server deploy --prod --legacy /prod
 
 # pnpm deploy は本番依存を新規 install するため、builder で `prisma generate` 済みの

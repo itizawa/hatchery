@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { CACHE_DEFAULTS } from "./security.js";
+
 /** server プロセスの実行設定。環境変数から読み出す（テスト容易性のため source を注入可能にする）。 */
 export interface ServerEnv {
   /** Express API プロセスの待受ポート。未指定なら 3000。 */
@@ -36,6 +38,10 @@ export interface ServerEnv {
   batchModel: BatchModel;
   /** プロンプトに載せる直近 post/comment 件数（#389 AC2）。1〜50。既定 30。 */
   batchRecentLimit: number;
+  /** 公開 GET の Cache-Control s-maxage（秒・#559）。未指定なら CACHE_DEFAULTS.sMaxageSeconds。 */
+  cacheSMaxageSeconds: number;
+  /** 公開 GET の Cache-Control stale-while-revalidate（秒・#559）。未指定なら CACHE_DEFAULTS.staleWhileRevalidateSeconds。 */
+  cacheStaleWhileRevalidateSeconds: number;
 }
 
 /**
@@ -114,6 +120,17 @@ const EnvSchema = z.object({
     .min(BATCH_RECENT_LIMIT_MIN)
     .max(BATCH_RECENT_LIMIT_MAX)
     .default(DEFAULT_BATCH_RECENT_LIMIT),
+  // 公開 GET の Cache-Control 秒数（#559）。未設定は CACHE_DEFAULTS。非正・非数値は parse 時に throw。
+  CACHE_S_MAXAGE_SECONDS: z.coerce
+    .number()
+    .int()
+    .nonnegative()
+    .default(CACHE_DEFAULTS.sMaxageSeconds),
+  CACHE_STALE_WHILE_REVALIDATE_SECONDS: z.coerce
+    .number()
+    .int()
+    .nonnegative()
+    .default(CACHE_DEFAULTS.staleWhileRevalidateSeconds),
 });
 
 /** 環境変数から ServerEnv を構築する。不正な値は ZodError を投げて起動時に気付けるようにする。 */
@@ -136,6 +153,8 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): ServerEnv {
     GCS_BUCKET_NAME: source.GCS_BUCKET_NAME,
     BATCH_MODEL: source.BATCH_MODEL,
     BATCH_RECENT_LIMIT: source.BATCH_RECENT_LIMIT,
+    CACHE_S_MAXAGE_SECONDS: source.CACHE_S_MAXAGE_SECONDS,
+    CACHE_STALE_WHILE_REVALIDATE_SECONDS: source.CACHE_STALE_WHILE_REVALIDATE_SECONDS,
   });
   return {
     port: parsed.PORT,
@@ -155,5 +174,7 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): ServerEnv {
     gcsBucketName: parsed.GCS_BUCKET_NAME,
     batchModel: parsed.BATCH_MODEL,
     batchRecentLimit: parsed.BATCH_RECENT_LIMIT,
+    cacheSMaxageSeconds: parsed.CACHE_S_MAXAGE_SECONDS,
+    cacheStaleWhileRevalidateSeconds: parsed.CACHE_STALE_WHILE_REVALIDATE_SECONDS,
   };
 }

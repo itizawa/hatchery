@@ -35,6 +35,8 @@ const app = createApp({
     // セッション cookie を SameSite=None + Secure にしないとログインが維持できない（#78）。
     crossSiteCookie: process.env.NODE_ENV === "production",
     sessionSecret: env.sessionSecret,
+    cacheSMaxageSeconds: env.cacheSMaxageSeconds,
+    cacheStaleWhileRevalidateSeconds: env.cacheStaleWhileRevalidateSeconds,
   },
 });
 

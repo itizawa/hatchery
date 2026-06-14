@@ -208,7 +208,7 @@ test("UC-POST-03: ログイン済みユーザーが post に upvote できる", 
   await page.goto(`/posts/${MOCK_POST.id}`);
 
   // 初期スコアが表示されている
-  await expect(page.getByText(String(initialScore)).first()).toBeVisible();
+  await expect(page.getByText(String(initialScore), { exact: true }).first()).toBeVisible();
 
   const urlBefore = page.url();
 
@@ -216,7 +216,7 @@ test("UC-POST-03: ログイン済みユーザーが post に upvote できる", 
   await page.getByRole("button", { name: "up vote" }).first().click();
 
   // 楽観更新でスコアが即時に +1 される
-  await expect(page.getByText(String(initialScore + 1)).first()).toBeVisible();
+  await expect(page.getByText(String(initialScore + 1), { exact: true }).first()).toBeVisible();
 
   // ページ遷移が起きていないこと（#411 回帰防止）
   expect(page.url()).toBe(urlBefore);
@@ -262,7 +262,7 @@ test("UC-POST-04: ログイン済みユーザーがコメントに upvote でき
 
   // 楽観更新でコメントのスコアが +1 される
   await expect(
-    page.getByText(String(initialCommentScore + 1)).first(),
+    page.getByText(String(initialCommentScore + 1), { exact: true }).first(),
   ).toBeVisible();
 });
 
@@ -296,6 +296,7 @@ test("UC-POST-06: 存在しない postId ではエラーフォールバックが
 }) => {
   await mockUnauthenticated(page);
   await mockCommunitiesApi(page);
+  await mockSubscriptionApi(page, MOCK_COMMUNITY.slug, false);
 
   const nonExistentId = "non-existent-id";
 
@@ -395,7 +396,7 @@ test(
     await expect(page.getByText("投票するにはログインが必要です")).toBeVisible();
 
     // スコアは変化しない（API は呼ばれない）
-    await expect(page.getByText(String(MOCK_POST.score)).first()).toBeVisible();
+    await expect(page.getByText(String(MOCK_POST.score), { exact: true }).first()).toBeVisible();
   },
 );
 

@@ -1,7 +1,7 @@
 name: Deploy Client (prod)
 
 # main マージをトリガーに client（Vite SPA）を Cloudflare Pages（prod 環境）へ自動デプロイする。
-# VITE_API_BASE_URL は GitHub Actions Secret（CLOUD_RUN_PROD_URL）から渡す。
+# VITE_API_BASE_URL は空文字（同一オリジン相対パス）にして Pages Function プロキシ経由にする。
 # ゲート1: main への push のみトリガー。develop への push は含まない。
 on:
   push:
@@ -33,7 +33,7 @@ jobs:
 
       - name: Build client
         env:
-          VITE_API_BASE_URL: ${{ secrets.CLOUD_RUN_PROD_URL }}
+          VITE_API_BASE_URL: ""
         run: pnpm turbo run build --filter=@hatchery/client
 
       # client の devDependency に固定した wrangler を pnpm exec で直接実行し、動的インストールを排除する。

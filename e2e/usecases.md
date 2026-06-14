@@ -21,8 +21,8 @@
 | エリア | 対応画面 / 機能 | 詳細 | ユースケース |
 |--------|----------------|------|-------------|
 | auth | ログイン・ログアウト・認証ガード（`LoginDialog.tsx` モーダル / #454, #455: Google のみ） | [auth/usecases.md](auth/usecases.md) | UC-AUTH-01〖07 |
-| home-feed | ホームフィード閲覧（`HomeFeedScene.tsx`, `/`） | [home-feed/usecases.md](home-feed/usecases.md) | UC-HOME-01〖09 |
-| community | コミュニティ一覧・詳細・購読（`/communities`）・サイドバーのコミュニティセクション開閉・共有メニュー | [community/usecases.md](community/usecases.md) | UC-COMM-01〖10 |
+| home-feed | ホームフィード閲覧（`HomeFeedScene.tsx`, `/`） | [home-feed/usecases.md](home-feed/usecases.md) | UC-HOME-01〖10 |
+| community | コミュニティ一覧・詳細・購読（`/communities`）・サイドバーのコミュニティセクション開閉・共有メニュー | [community/usecases.md](community/usecases.md) | UC-COMM-01〖11 |
 | post-thread | 投稿スレッド・upvote（`/posts/$postId`） | [post-thread/usecases.md](post-thread/usecases.md) | UC-POST-01〖09 |
 | admin | 管理画面（Worker / Community 管理, `/admin`） | [admin/usecases.md](admin/usecases.md) | UC-ADMIN-01〖14 |
 | account | アカウント設定・プロフィール編集（`/account`） | [account/usecases.md](account/usecases.md) | UC-ACCOUNT-01〖04 |

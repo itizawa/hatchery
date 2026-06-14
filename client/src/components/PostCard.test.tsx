@@ -135,6 +135,29 @@ describe("PostCard", () => {
     });
   });
 
+  describe("truncateText（フィード一覧での本文省略・#501）", () => {
+    const longPost = {
+      ...mockPost,
+      text: "1段落目はとても長い本文です。\n\n2段落目も続きます。\n\n3段落目もあります。\n\n4段落目まで続く長文。",
+    };
+
+    it("truncateText 有効時は本文に line-clamp スタイルが適用される", () => {
+      render(<PostCard post={longPost} onVote={vi.fn()} truncateText />);
+      const textEl = screen.getByText(/1段落目はとても長い本文です/);
+      expect(textEl).toHaveStyle({
+        display: "-webkit-box",
+        WebkitLineClamp: "3",
+        overflow: "hidden",
+      });
+    });
+
+    it("truncateText 無効（デフォルト）時は line-clamp スタイルを適用せず全文表示する", () => {
+      render(<PostCard post={longPost} onVote={vi.fn()} />);
+      const textEl = screen.getByText(/1段落目はとても長い本文です/);
+      expect(textEl).not.toHaveStyle({ display: "-webkit-box" });
+    });
+  });
+
   describe("voteStopPropagation", () => {
     it.each([
       ["up vote", /up vote/i],

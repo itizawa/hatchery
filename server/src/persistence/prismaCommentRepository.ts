@@ -77,6 +77,21 @@ export function createPrismaCommentRepository(prisma: PrismaClient): CommentRepo
       return row ? toRecord(row) : null;
     },
 
+    async countByPostIds(postIds: string[]): Promise<Map<string, number>> {
+      const counts = new Map<string, number>();
+      if (postIds.length === 0) return counts;
+      // N+1 回避: groupBy で 1 クエリにまとめて集計する（#500）。
+      const grouped = await prisma.comment.groupBy({
+        by: ["postId"],
+        where: { postId: { in: postIds } },
+        _count: { _all: true },
+      });
+      for (const g of grouped) {
+        counts.set(g.postId, g._count._all);
+      }
+      return counts;
+    },
+
     async addScore(id: string, delta: number): Promise<CommentRecord | null> {
       try {
         const row = await prisma.comment.update({

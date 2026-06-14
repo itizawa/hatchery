@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { createApp } from "../app.js";
 import { createInMemoryCommunityRepository } from "../persistence/communityRepository.js";
 import type { CommunityRecord } from "../persistence/communityRepository.js";
+import { createInMemoryCommentRepository } from "../persistence/commentRepository.js";
 import { createInMemoryPostRepository } from "../persistence/postRepository.js";
 import { createInMemoryWorkerRepository } from "../persistence/workerRepository.js";
 import { createTestDeps } from "../testing/createTestDeps.js";
@@ -284,6 +285,80 @@ describe("GET /api/feed", () => {
     const invalidCursor = Buffer.from("not-valid-json").toString("base64");
     const res = await request(app).get(`/api/feed?sort=popular&cursor=${invalidCursor}`);
     expect(res.status).toBe(400);
+  });
+});
+
+describe("GET /api/feed comment_count（#500）", () => {
+  it("各 post にコメント件数（comment_count）を含める", async () => {
+    const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
+    const postRepo = createInMemoryPostRepository();
+    const [postA, postB] = await postRepo.createMany("community-1", [
+      { slotKey: "s", seq: 0, author: "w", title: "A", text: "t" },
+      { slotKey: "s", seq: 1, author: "w", title: "B", text: "t" },
+    ]);
+    const commentRepo = createInMemoryCommentRepository();
+    await commentRepo.createMany("community-1", [
+      { postId: postA.id, slotKey: "s", seq: 10, author: "w", text: "c1" },
+      { postId: postA.id, slotKey: "s", seq: 11, author: "w", text: "c2" },
+    ]);
+
+    const deps = await createTestDeps({
+      communityRepository: communityRepo,
+      postRepository: postRepo,
+      commentRepository: commentRepo,
+    });
+    const app = createApp(deps);
+
+    const res = await request(app).get("/api/feed");
+    expect(res.status).toBe(200);
+    const byId = Object.fromEntries(
+      res.body.posts.map((p: { id: string; comment_count: number }) => [p.id, p.comment_count]),
+    );
+    expect(byId[postA.id]).toBe(2);
+    expect(byId[postB.id]).toBe(0);
+  });
+
+  it("コメントが無い post は comment_count=0", async () => {
+    const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
+    const postRepo = createInMemoryPostRepository();
+    await postRepo.createMany("community-1", [
+      { slotKey: "s", seq: 0, author: "w", title: "A", text: "t" },
+    ]);
+
+    const deps = await createTestDeps({
+      communityRepository: communityRepo,
+      postRepository: postRepo,
+    });
+    const app = createApp(deps);
+
+    const res = await request(app).get("/api/feed");
+    expect(res.status).toBe(200);
+    expect(res.body.posts[0].comment_count).toBe(0);
+  });
+});
+
+describe("GET /api/communities/:slug/feed comment_count（#500）", () => {
+  it("各 post にコメント件数（comment_count）を含める", async () => {
+    const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
+    const postRepo = createInMemoryPostRepository();
+    const [postA] = await postRepo.createMany("community-1", [
+      { slotKey: "s", seq: 0, author: "w", title: "A", text: "t" },
+    ]);
+    const commentRepo = createInMemoryCommentRepository();
+    await commentRepo.createMany("community-1", [
+      { postId: postA.id, slotKey: "s", seq: 10, author: "w", text: "c1" },
+    ]);
+
+    const deps = await createTestDeps({
+      communityRepository: communityRepo,
+      postRepository: postRepo,
+      commentRepository: commentRepo,
+    });
+    const app = createApp(deps);
+
+    const res = await request(app).get("/api/communities/technology/feed");
+    expect(res.status).toBe(200);
+    expect(res.body[0].comment_count).toBe(1);
   });
 });
 

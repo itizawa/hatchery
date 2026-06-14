@@ -41,7 +41,19 @@ describe("toPostResponse", () => {
       text: "Body",
       score: 3,
       created_at: basePost.createdAt,
+      comment_count: 0,
     });
+  });
+
+  it("commentCount を渡すと comment_count として出力する（#500）", () => {
+    const enriched = { ...basePost, commentCount: 7 };
+    const res = toPostResponse(enriched) as Record<string, unknown>;
+    expect(res.comment_count).toBe(7);
+  });
+
+  it("commentCount 省略時は comment_count=0（#500）", () => {
+    const res = toPostResponse(basePost) as Record<string, unknown>;
+    expect(res.comment_count).toBe(0);
   });
 
   it("camelCase キー（communityId / slotKey / createdAt）を含まない", () => {

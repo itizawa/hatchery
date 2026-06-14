@@ -14,6 +14,7 @@ const mockPost = {
   text: "おはようございます！今日もよろしくお願いします。",
   score: 5,
   created_at: "2026-06-01T09:00:00Z",
+  comment_count: 3,
 };
 
 describe("PostCard", () => {
@@ -66,6 +67,29 @@ describe("PostCard", () => {
   it("投稿欄・コメント入力欄は表示しない（ADR-0020）", () => {
     render(<PostCard post={mockPost} onVote={vi.fn()} />);
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+  });
+
+  describe("comment_count（コメント数表示・#500）", () => {
+    it("コメント数を「💬 N」相当で表示する（N>0）", () => {
+      render(<PostCard post={mockPost} onVote={vi.fn()} />);
+      const el = screen.getByLabelText("コメント 3 件");
+      expect(el).toBeInTheDocument();
+      expect(el).toHaveTextContent("3");
+    });
+
+    it("コメントが無い場合は「💬 0」を表示する（N=0）", () => {
+      render(<PostCard post={{ ...mockPost, comment_count: 0 }} onVote={vi.fn()} />);
+      const el = screen.getByLabelText("コメント 0 件");
+      expect(el).toBeInTheDocument();
+      expect(el).toHaveTextContent("0");
+    });
+
+    it("comment_count が未指定でも 0 として表示する（後方互換）", () => {
+      const postWithout = { ...mockPost };
+      delete (postWithout as { comment_count?: number }).comment_count;
+      render(<PostCard post={postWithout} onVote={vi.fn()} />);
+      expect(screen.getByLabelText("コメント 0 件")).toBeInTheDocument();
+    });
   });
 
   describe("author_worker（発言者のアバター + 表示名・#479）", () => {

@@ -53,6 +53,7 @@ export const mockPosts: Post[] = [
     text: "おはようございます！今日もよろしくお願いします。",
     score: 5,
     created_at: "2026-06-01T09:00:00Z",
+    comment_count: 2,
   },
   {
     id: "post-2",
@@ -64,6 +65,7 @@ export const mockPosts: Post[] = [
     text: "昨日からずっと追っていたバグ、ようやく原因がわかった。型エラーだった。",
     score: 12,
     created_at: "2026-06-01T09:01:00Z",
+    comment_count: 0,
   },
 ];
 

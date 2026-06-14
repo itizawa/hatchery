@@ -4,11 +4,13 @@ import { Router } from "express";
 import { buildPrivateCacheControl } from "../config/security.js";
 import { requireAuth } from "../middleware/requireAuth.js";
 import { toCommunityResponse } from "./communityResponse.js";
+import type { CommentRepository } from "../persistence/commentRepository.js";
 import type { CommunityRepository } from "../persistence/communityRepository.js";
 import type { PostRepository } from "../persistence/postRepository.js";
 import type { SubscriptionRepository } from "../persistence/subscriptionRepository.js";
 import type { WorkerRepository } from "../persistence/workerRepository.js";
 import { attachAuthorWorker } from "./authorWorker.js";
+import { attachCommentCount } from "./commentCount.js";
 import { toPostResponse } from "./postResponse.js";
 
 const RECENT_WORKERS_LIMIT = 10;
@@ -23,6 +25,7 @@ export function createCommunitiesRouter(
   postRepo: PostRepository,
   subscriptionRepo: SubscriptionRepository,
   workerRepo: WorkerRepository,
+  commentRepo: CommentRepository,
 ): Router {
   const router = Router();
 
@@ -47,6 +50,8 @@ export function createCommunitiesRouter(
         return postRepo.listByCommunity(community.id);
       })
       .then((posts) => attachAuthorWorker(posts, workerRepo))
+      // 各 post にコメント件数を付与する（N+1 回避・#500）。
+      .then((posts) => attachCommentCount(posts, commentRepo))
       // OpenAPI 契約（snake_case）へ整形して返す（#499）。
       .then((posts) => res.status(200).json(posts.map(toPostResponse)))
       .catch(next);

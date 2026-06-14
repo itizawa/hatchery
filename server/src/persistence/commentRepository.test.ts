@@ -52,6 +52,47 @@ describe("createInMemoryCommentRepository", () => {
     });
   });
 
+  describe("countByPostIds（#500）", () => {
+    it("postId ごとのコメント件数を Map で返す", async () => {
+      const repo = createInMemoryCommentRepository();
+      await repo.createMany("community-1", [
+        { postId: "post-1", slotKey: "s", seq: 0, author: "w", text: "c1" },
+        { postId: "post-1", slotKey: "s", seq: 1, author: "w", text: "c2" },
+        { postId: "post-2", slotKey: "s", seq: 2, author: "w", text: "c3" },
+      ]);
+      const counts = await repo.countByPostIds(["post-1", "post-2"]);
+      expect(counts.get("post-1")).toBe(2);
+      expect(counts.get("post-2")).toBe(1);
+    });
+
+    it("コメントが無い postId は Map に現れない（呼び出し側で 0 とみなす）", async () => {
+      const repo = createInMemoryCommentRepository();
+      await repo.createMany("community-1", [
+        { postId: "post-1", slotKey: "s", seq: 0, author: "w", text: "c1" },
+      ]);
+      const counts = await repo.countByPostIds(["post-1", "post-empty"]);
+      expect(counts.get("post-1")).toBe(1);
+      expect(counts.has("post-empty")).toBe(false);
+    });
+
+    it("空配列を渡すと空の Map を返す", async () => {
+      const repo = createInMemoryCommentRepository();
+      const counts = await repo.countByPostIds([]);
+      expect(counts.size).toBe(0);
+    });
+
+    it("対象外の postId のコメントは数えない", async () => {
+      const repo = createInMemoryCommentRepository();
+      await repo.createMany("community-1", [
+        { postId: "post-1", slotKey: "s", seq: 0, author: "w", text: "c1" },
+        { postId: "post-other", slotKey: "s", seq: 1, author: "w", text: "c2" },
+      ]);
+      const counts = await repo.countByPostIds(["post-1"]);
+      expect(counts.get("post-1")).toBe(1);
+      expect(counts.has("post-other")).toBe(false);
+    });
+  });
+
   describe("findById", () => {
     it("存在する id で取得できる", async () => {
       const repo = createInMemoryCommentRepository();

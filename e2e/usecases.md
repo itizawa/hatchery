@@ -21,7 +21,7 @@
 | エリア | 対応画面 / 機能 | 詳細 | ユースケース |
 |--------|----------------|------|-------------|
 | auth | ログイン・ログアウト・認証ガード（`LoginDialog.tsx` モーダル / #454, #455: Google のみ） | [auth/usecases.md](auth/usecases.md) | UC-AUTH-01〖07 |
-| home-feed | ホームフィード閲覧（`HomeFeedScene.tsx`, `/`） | [home-feed/usecases.md](home-feed/usecases.md) | UC-HOME-01〖08 |
+| home-feed | ホームフィード閲覧（`HomeFeedScene.tsx`, `/`） | [home-feed/usecases.md](home-feed/usecases.md) | UC-HOME-01〖09 |
 | community | コミュニティ一覧・詳細・購読（`/communities`）・サイドバーのコミュニティセクション開閉・共有メニュー | [community/usecases.md](community/usecases.md) | UC-COMM-01〖10 |
 | post-thread | 投稿スレッド・upvote（`/posts/$postId`） | [post-thread/usecases.md](post-thread/usecases.md) | UC-POST-01〖09 |
 | admin | 管理画面（Worker / Community 管理, `/admin`） | [admin/usecases.md](admin/usecases.md) | UC-ADMIN-01〖14 |
@@ -52,6 +52,7 @@
 - UC-HOME-06: フィード取得に失敗したとき再試行付きエラーフォールバックが表示される
 - UC-HOME-07: 投稿カードの発言者がアバター画像＋表示名で表示される（#479）
 - UC-HOME-08: 未ログインユーザーが vote を押すとログイン誘導が表示される（#481）
+- UC-HOME-09: 投稿カードにコメント数（💬 N）が表示される（#500）
 - 補足（#486 / ADR-0030）: 定時バッチは 1 定時 = vote 重み付きランダムで選ばれた 1 コミュニティだけを生成する。毎定時で新着が増えるのは全コミュニティではなく選ばれた 1 コミュニティのみ（詳細は home-feed/usecases.md の冒頭補足）。
 
 ### community — コミュニティ一覧・詳細・購読

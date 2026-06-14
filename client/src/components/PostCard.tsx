@@ -31,6 +31,8 @@ export const PostCard = ({
   voteStopPropagation = false,
   postUrl,
 }: PostCardProps): ReactElement => {
+  // comment_count はサーバ集計値（#500）。未指定（後方互換）は 0 として扱う。
+  const commentCount = post.comment_count ?? 0;
   const handleVoteClick = voteStopPropagation
     ? (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -75,11 +77,19 @@ export const PostCard = ({
           <Typography variant="body1">
             {post.text}
           </Typography>
-          {postUrl && (
-            <Box sx={{ mt: 1 }}>
-              <ShareButton shareUrl={postUrl} shareTitle={post.title} />
-            </Box>
-          )}
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 1 }}>
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              component="span"
+              aria-label={`コメント ${commentCount} 件`}
+              sx={{ display: "inline-flex", alignItems: "center", gap: 0.5 }}
+            >
+              <span aria-hidden="true">💬</span>
+              {commentCount}
+            </Typography>
+            {postUrl && <ShareButton shareUrl={postUrl} shareTitle={post.title} />}
+          </Box>
         </Box>
       </Box>
     </Box>

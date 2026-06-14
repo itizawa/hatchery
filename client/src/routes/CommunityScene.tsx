@@ -115,6 +115,7 @@ export const CommunityScene = (): ReactElement => {
                           guardVote(() => votePost({ postId: post.id, direction }))
                         }
                         voteStopPropagation
+                        truncateText
                       />
                     </RouterLink>
                   ))}

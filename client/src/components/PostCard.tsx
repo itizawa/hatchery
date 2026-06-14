@@ -16,6 +16,8 @@ interface PostCardProps {
   voteStopPropagation?: boolean;
   /** 共有ボタンに使う post の URL。指定時のみ ShareButton を表示する。 */
   postUrl?: string;
+  /** フィード一覧での一覧性向上のため、有効時は本文を CSS line-clamp（3 行）で省略表示する。スレッド詳細では false（全文表示）。 */
+  truncateText?: boolean;
 }
 
 /**
@@ -30,6 +32,7 @@ export const PostCard = ({
   voteDisabled = false,
   voteStopPropagation = false,
   postUrl,
+  truncateText = false,
 }: PostCardProps): ReactElement => {
   // comment_count はサーバ集計値（#500）。未指定（後方互換）は 0 として扱う。
   const commentCount = post.comment_count ?? 0;
@@ -74,7 +77,19 @@ export const PostCard = ({
           <Box sx={{ mb: 1 }}>
             <AuthorByline author={post.author} authorWorker={post.author_worker} />
           </Box>
-          <Typography variant="body1">
+          <Typography
+            variant="body1"
+            sx={
+              truncateText
+                ? {
+                    display: "-webkit-box",
+                    WebkitLineClamp: 3,
+                    WebkitBoxOrient: "vertical",
+                    overflow: "hidden",
+                  }
+                : undefined
+            }
+          >
             {post.text}
           </Typography>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 1 }}>

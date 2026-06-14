@@ -85,6 +85,7 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
                   guardVote(() => votePost({ postId: post.id, direction }))
                 }
                 voteStopPropagation
+                truncateText
               />
             </RouterLink>
           ))}

@@ -3,6 +3,7 @@ import type { ReactElement } from "react";
 import type React from "react";
 import type { Post } from "../api/communities.js";
 import { AuthorByline } from "./AuthorByline.js";
+import { PostedTime } from "./PostedTime.js";
 import { VoteControl } from "./VoteControl.js";
 import { ShareButton } from "./ShareButton.js";
 import type { VoteDirection } from "./VoteControl.js";
@@ -74,8 +75,9 @@ export const PostCard = ({
           >
             {post.title}
           </Typography>
-          <Box sx={{ mb: 1 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1, flexWrap: "wrap" }}>
             <AuthorByline author={post.author} authorWorker={post.author_worker} />
+            <PostedTime createdAt={post.created_at} />
           </Box>
           <Typography
             variant="body1"

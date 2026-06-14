@@ -2,6 +2,7 @@ import { Box, Typography } from "./uiParts";
 import type { ReactElement } from "react";
 import type { Comment } from "../api/communities.js";
 import { AuthorByline } from "./AuthorByline.js";
+import { PostedTime } from "./PostedTime.js";
 import { VoteControl } from "./VoteControl.js";
 import type { VoteDirection } from "./VoteControl.js";
 
@@ -44,8 +45,9 @@ export const CommentCard = ({
           />
         </Box>
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Box sx={{ mb: 0.5 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5, flexWrap: "wrap" }}>
             <AuthorByline author={comment.author} authorWorker={comment.author_worker} />
+            <PostedTime createdAt={comment.created_at} />
           </Box>
           <Typography variant="body2">
             {comment.text}

@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CommentCard } from "./CommentCard";
 
@@ -42,6 +42,36 @@ describe("CommentCard", () => {
   it("コメント入力欄は表示しない（ADR-0020）", () => {
     render(<CommentCard comment={mockComment} onVote={vi.fn()} />);
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+  });
+
+  describe("投稿時刻の相対表示（#502）", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+      // mockComment.created_at = 2026-06-01T09:01:00Z の59分後を現在時刻に固定
+      vi.setSystemTime(new Date("2026-06-01T10:00:00Z"));
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("created_at を相対時間（N分前）で表示する", () => {
+      render(<CommentCard comment={mockComment} onVote={vi.fn()} />);
+      expect(screen.getByText("59分前")).toBeInTheDocument();
+    });
+
+    it("時刻は time 要素で表示し dateTime に ISO 文字列を持つ", () => {
+      const { container } = render(<CommentCard comment={mockComment} onVote={vi.fn()} />);
+      const timeEl = container.querySelector("time");
+      expect(timeEl).not.toBeNull();
+      expect(timeEl).toHaveAttribute("dateTime", new Date(mockComment.created_at).toISOString());
+    });
+
+    it("created_at が未指定（後方互換）のときは時刻を描画しない", () => {
+      const commentWithout = { ...mockComment };
+      delete (commentWithout as { created_at?: string }).created_at;
+      const { container } = render(<CommentCard comment={commentWithout} onVote={vi.fn()} />);
+      expect(container.querySelector("time")).toBeNull();
+    });
   });
 
   describe("author_worker（発言者のアバター + 表示名・#479）", () => {

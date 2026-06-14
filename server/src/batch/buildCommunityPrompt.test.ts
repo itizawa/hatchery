@@ -147,3 +147,47 @@ describe("buildCommunityPrompt (#306)", () => {
     });
   });
 });
+
+describe("generationInstruction フォールバック（#488）", () => {
+  const workers = [{ id: "w1", displayName: "Alice" }];
+
+  it("generationInstruction が設定されていればプロンプトに含まれる", () => {
+    const prompt = buildCommunityPrompt({
+      community: {
+        id: "c1", slug: "s", name: "N", description: "公開概要（含まれない）",
+        generationInstruction: "内部指示：脱さん付け",
+        synopsis: null, lastSlotKey: null, iconUrl: null, coverUrl: null, createdAt: new Date(),
+      },
+      workers,
+      recentLog: [],
+    });
+    expect(prompt).toContain("内部指示：脱さん付け");
+    expect(prompt).not.toContain("公開概要（含まれない）");
+  });
+
+  it("generationInstruction が null のとき description にフォールバックする", () => {
+    const prompt = buildCommunityPrompt({
+      community: {
+        id: "c1", slug: "s", name: "N", description: "公開概要（フォールバック）",
+        generationInstruction: null,
+        synopsis: null, lastSlotKey: null, iconUrl: null, coverUrl: null, createdAt: new Date(),
+      },
+      workers,
+      recentLog: [],
+    });
+    expect(prompt).toContain("公開概要（フォールバック）");
+  });
+
+  it("generationInstruction が空文字のとき description にフォールバックする", () => {
+    const prompt = buildCommunityPrompt({
+      community: {
+        id: "c1", slug: "s", name: "N", description: "公開概要（空フォールバック）",
+        generationInstruction: "",
+        synopsis: null, lastSlotKey: null, iconUrl: null, coverUrl: null, createdAt: new Date(),
+      },
+      workers,
+      recentLog: [],
+    });
+    expect(prompt).toContain("公開概要（空フォールバック）");
+  });
+});

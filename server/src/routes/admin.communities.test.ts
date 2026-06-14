@@ -217,3 +217,76 @@ describe("PATCH /api/admin/communities/:id (#310)", () => {
     expect(res.status).toBe(400);
   });
 });
+
+describe("generationInstruction の admin CRUD（#488）", () => {
+  const baseBody = {
+    slug: "gen-test",
+    name: "生成テスト",
+    description: "公開用概要",
+  };
+
+  it("POST /api/admin/communities で generationInstruction を設定できる", async () => {
+    const app = await makeApp();
+    const agent = await loginAgent(app);
+    const res = await agent.post("/api/admin/communities").send({
+      ...baseBody,
+      generationInstruction: "脱さん付け・率直に話す。",
+    });
+    expect(res.status).toBe(201);
+    expect((res.body as { generationInstruction: string }).generationInstruction).toBe(
+      "脱さん付け・率直に話す。",
+    );
+  });
+
+  it("POST /api/admin/communities で generationInstruction を省略できる（null が返る）", async () => {
+    const app = await makeApp();
+    const agent = await loginAgent(app);
+    const res = await agent.post("/api/admin/communities").send(baseBody);
+    expect(res.status).toBe(201);
+    expect((res.body as { generationInstruction: unknown }).generationInstruction).toBeNull();
+  });
+
+  it("PATCH /api/admin/communities/:id で generationInstruction を更新できる", async () => {
+    const repo = createInMemoryCommunityRepository();
+    const community = await repo.create({
+      slug: "patch-instr-test",
+      name: "更新テスト",
+      description: "説明",
+    });
+    const app = await makeApp(repo);
+    const agent = await loginAgent(app);
+    const res = await agent.patch(`/api/admin/communities/${community.id}`).send({
+      generationInstruction: "更新後の指示",
+    });
+    expect(res.status).toBe(200);
+    expect((res.body as { generationInstruction: string }).generationInstruction).toBe("更新後の指示");
+  });
+
+  it("GET /api/admin/communities は generationInstruction を返す", async () => {
+    const repo = createInMemoryCommunityRepository();
+    await repo.create({
+      slug: "instr-community",
+      name: "指示付きコミュニティ",
+      description: "概要",
+      generationInstruction: "秘密の指示",
+    });
+    const app = await makeApp(repo);
+    const agent = await loginAgent(app);
+    const res = await agent.get("/api/admin/communities");
+    expect(res.status).toBe(200);
+    const found = (res.body as Array<{ slug: string; generationInstruction?: string }>).find(
+      (c) => c.slug === "instr-community",
+    );
+    expect(found?.generationInstruction).toBe("秘密の指示");
+  });
+
+  it("generationInstruction が 2001 文字の場合は 400 を返す", async () => {
+    const app = await makeApp();
+    const agent = await loginAgent(app);
+    const res = await agent.post("/api/admin/communities").send({
+      ...baseBody,
+      generationInstruction: "a".repeat(2001),
+    });
+    expect(res.status).toBe(400);
+  });
+});

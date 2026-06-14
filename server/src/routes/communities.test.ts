@@ -371,3 +371,29 @@ describe("GET /api/communities/:slug/recent-workers", () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe("公開 API に generationInstruction が露出しない（#488）", () => {
+  const communityWithInstruction = (): CommunityRecord => ({
+    ...makeCommunity(),
+    generationInstruction: "脱さん付け・率直に。絶対に公開しない指示。",
+  });
+
+  it("GET /api/communities のレスポンスに generationInstruction が含まれない", async () => {
+    const communityRepo = createInMemoryCommunityRepository([communityWithInstruction()]);
+    const deps = await createTestDeps({ communityRepository: communityRepo });
+    const app = createApp(deps);
+    const res = await request(app).get("/api/communities");
+    expect(res.status).toBe(200);
+    expect(res.body[0]).not.toHaveProperty("generationInstruction");
+  });
+
+  it("GET /api/communities/:slug/feed のレスポンスに generationInstruction が含まれない", async () => {
+    const communityRepo = createInMemoryCommunityRepository([communityWithInstruction()]);
+    const deps = await createTestDeps({ communityRepository: communityRepo });
+    const app = createApp(deps);
+    const res = await request(app).get("/api/communities/technology/feed");
+    expect(res.status).toBe(200);
+    // コミュニティ自体はフィードレスポンスに含まれないが、念のため確認
+    expect(JSON.stringify(res.body)).not.toContain("generationInstruction");
+  });
+});

@@ -15,7 +15,7 @@ import { Router } from "express";
 import { requireAdmin } from "../middleware/requireAdmin.js";
 import { requireAuth } from "../middleware/requireAuth.js";
 import { validateBody } from "../middleware/validateBody.js";
-import { toCommunityResponse } from "./communityResponse.js";
+import { toAdminCommunityResponse } from "./communityResponse.js";
 import type { AppSettingRepository } from "../persistence/appSettingRepository.js";
 import type { CommentRepository } from "../persistence/commentRepository.js";
 import type { CommunityRepository } from "../persistence/communityRepository.js";
@@ -110,7 +110,7 @@ export function createAdminRouter(
   router.get("/communities", async (_req, res, next) => {
     try {
       const communities = await communityRepository.list();
-      res.json(communities.map(toCommunityResponse));
+      res.json(communities.map(toAdminCommunityResponse));
     } catch (err) {
       next(err);
     }
@@ -121,18 +121,24 @@ export function createAdminRouter(
     validateBody(CreateCommunitySchema),
     async (req, res, next) => {
       try {
-        const { slug, name, description } = req.body as {
+        const { slug, name, description, generationInstruction } = req.body as {
           slug: string;
           name: string;
           description: string;
+          generationInstruction?: string;
         };
         const existing = await communityRepository.findBySlug(slug);
         if (existing) {
           next(new ConflictError("CommunitySlugAlreadyExists"));
           return;
         }
-        const community = await communityRepository.create({ slug, name, description });
-        res.status(201).json(toCommunityResponse(community));
+        const community = await communityRepository.create({
+          slug,
+          name,
+          description,
+          generationInstruction: generationInstruction ?? null,
+        });
+        res.status(201).json(toAdminCommunityResponse(community));
       } catch (err) {
         next(err);
       }
@@ -145,13 +151,17 @@ export function createAdminRouter(
     async (req, res, next) => {
       try {
         const { id } = req.params as { id: string };
-        const input = req.body as { name?: string; description?: string };
+        const input = req.body as {
+          name?: string;
+          description?: string;
+          generationInstruction?: string;
+        };
         const community = await communityRepository.update(id, input);
         if (!community) {
           next(new NotFoundError("CommunityNotFound"));
           return;
         }
-        res.json(toCommunityResponse(community));
+        res.json(toAdminCommunityResponse(community));
       } catch (err) {
         next(err);
       }

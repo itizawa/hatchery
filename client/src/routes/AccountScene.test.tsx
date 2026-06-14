@@ -228,6 +228,31 @@ describe("プロフィール編集フォーム (#51)", () => {
     expect(await screen.findByText(/保存しました/)).toBeInTheDocument();
   });
 
+  it("保存失敗時にエラーメッセージが表示される（#472）", async () => {
+    const mockUser = { id: "user1", displayName: "Alice" };
+    // updateProfile が reject する状態を作り、失敗フィードバックの有無を検証する。
+    // auth.ts の updateProfile は失敗を Error.message に乗せて throw するため、
+    // サーバ由来文言が getApiErrorMessage 経由で Snackbar に出ることを確認する。
+    vi.spyOn(authApi, "updateProfile").mockRejectedValue(new Error("表示名は既に使われています"));
+    vi.spyOn(authApi, "fetchMe").mockResolvedValue(mockUser);
+    vi.spyOn(authApi, "useAuth").mockReturnValue({
+      data: mockUser,
+      isLoading: false,
+    } as ReturnType<typeof authApi.useAuth>);
+    renderApp("/account");
+
+    const input = await screen.findByDisplayValue("Alice");
+    await userEvent.clear(input);
+    await userEvent.type(input, "New Name");
+
+    const button = screen.getByRole("button", { name: /保存/ });
+    await userEvent.click(button);
+
+    // サーバが返したエラー文言が表示され、成功 Snackbar は出ない。
+    expect(await screen.findByText("表示名は既に使われています")).toBeInTheDocument();
+    expect(screen.queryByText(/保存しました/)).not.toBeInTheDocument();
+  });
+
   it("avatarUrl に不正な URL を入力したとき保存ボタンが無効化またはエラーが表示される（#187）", async () => {
     stubAuthFetch({ id: "user1", displayName: "Alice" });
     renderApp("/account");

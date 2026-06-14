@@ -6,6 +6,7 @@ import { type ReactElement, useEffect, useRef, useState } from "react";
 
 import { AVATAR_URL_MAX_LENGTH, DISPLAY_NAME_MAX_LENGTH } from "@hatchery/common";
 import * as authApi from "../api/auth.js";
+import { getApiErrorMessage } from "../api/errors.js";
 
 function validateUrl(value: string): string | undefined {
   if (!value) return undefined;
@@ -38,11 +39,19 @@ export const AccountScene = (): ReactElement => {
       avatarUrl: authUser?.avatarUrl ?? "",
     },
     onSubmit: async ({ value }) => {
-      await updateMutation.mutateAsync({
-        displayName: value.displayName,
-        ...(value.avatarUrl ? { avatarUrl: value.avatarUrl } : {}),
-      });
-      setSnackbarOpen(true);
+      // 失敗フィードバックは updateMutation.isError / error に集約する（独立ローカル state を持たない・#476）。
+      // mutateAsync の reject を握りつぶさないよう try/catch するが、catch では何もしない
+      // （未処理 Promise rejection を避けるためだけ）。成功 Snackbar は正常系末尾でのみ出し、
+      // 失敗時は出さない（保存成否を取り違えないため・#472）。
+      try {
+        await updateMutation.mutateAsync({
+          displayName: value.displayName,
+          ...(value.avatarUrl ? { avatarUrl: value.avatarUrl } : {}),
+        });
+        setSnackbarOpen(true);
+      } catch {
+        // 表示は updateMutation の状態（error Snackbar）に委ねる。
+      }
     },
   });
 
@@ -161,6 +170,17 @@ export const AccountScene = (): ReactElement => {
       >
         <Alert severity="success" onClose={() => setSnackbarOpen(false)}>
           保存しました
+        </Alert>
+      </Snackbar>
+
+      <Snackbar
+        open={updateMutation.isError}
+        autoHideDuration={6000}
+        onClose={() => updateMutation.reset()}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert severity="error" onClose={() => updateMutation.reset()}>
+          {getApiErrorMessage(updateMutation.error, "プロフィールの更新に失敗しました")}
         </Alert>
       </Snackbar>
     </Box>

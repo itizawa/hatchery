@@ -2,15 +2,16 @@
 
 対応画面: `client/src/routes/SettingsScene.tsx`（/admin、タブ構成）・対応 API: `client/src/api/admin.ts`
 
-/admin は admin ロール専用（未ログインは /login、非 admin は / へリダイレクト・#136）。
-各ユースケースの見出し（`## UC-ADMIN-NN: ...`）は `admin.spec.ts` の `test.todo()` と 1:1 で対応する。
+/admin は admin ロール専用（未ログインは `/?login=1`、非 admin は `/` へリダイレクト・#136）。
+各ユースケースの見出し（`## UC-ADMIN-NN: ...`）は `admin.spec.ts` の `test()` と 1:1 で対応する。
 
-## UC-ADMIN-01: 未ログインで /admin にアクセスすると /login へリダイレクトされる
+## UC-ADMIN-01: 未ログインで /admin にアクセスすると /?login=1 へリダイレクトされログインモーダルが開く
 
 - 前提条件: 未ログイン状態。
 - ステップ:
   1. `/admin` を直接開く。
-- 期待動作: `/login` へリダイレクトされ、管理画面の内容は表示されない。
+- 期待動作: `/?login=1` へリダイレクトされ、ホーム上にログインモーダルが開く。管理画面の内容は表示されない。
+- 備考: #454 で `/login` ルートは廃止され `/?login=1` モーダル方式へ移行済み。`router.tsx` の `requireAdminRoute` が認証失敗時に `redirect({ to: "/", search: { login: true } })` を投げる。
 
 ## UC-ADMIN-02: 非 admin ユーザーが /admin にアクセスするとホームへリダイレクトされる
 
@@ -48,6 +49,10 @@
 - ステップ:
   1. `/admin` の Worker タブで対象 Worker の削除を実行する。
 - 期待動作: 一覧から対象 Worker が消え、再読込後も表示されない。
+- **現状のギャップ（#430）**: 削除 API（`DELETE /api/admin/workers/:id`）は実装済みだが、
+  `AdminWorkerTableInner` が `WorkerTable` へ `onDelete` prop を渡していないため、
+  削除ボタンが管理画面 UI に表示されない。現テストは「削除ボタンが表示されていない」現状を検証する。
+  削除 UI の接続は別 Issue で対応する。
 
 ## UC-ADMIN-07: admin ユーザーがコミュニティ管理タブで一覧を閲覧できる
 

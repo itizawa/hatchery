@@ -19,8 +19,17 @@ export type SummaryGenerator = (prompt: string, apiKey: string) => Promise<strin
  */
 const SUMMARY_MODEL: BatchModel = "claude-sonnet-4-6";
 
-/** 会話生成の max_tokens（複数 post/comment の掛け合いを 1 コールで生成するため広めに取る）。 */
+/**
+ * 会話生成の max_tokens（複数 post/comment の掛け合いを 1 コールで生成するため広めに取る）。
+ * #401 で max_tokens 不足による会話 JSON の切り詰めを修正済み。切り詰め回避のため大きめに保つ。
+ */
 const CONVERSATION_MAX_TOKENS = 8192;
+
+/**
+ * あらすじ生成の max_tokens。あらすじは短文要約のため会話生成より小さく取る。
+ * 値を変える際はこの定数を調整する（リテラル直書きの分散を避けるため集約・#471）。
+ */
+const SUMMARY_MAX_TOKENS = 512;
 
 /** Claude にプロンプトを投げ、最初のテキストブロックを返す共通処理。 */
 async function callClaudeText(
@@ -65,7 +74,7 @@ export const generateConversationWithClaude: ConversationGenerator =
 
 /** Claude であらすじを生成する既定実装（#53）。 */
 export const generateSummaryWithClaude: SummaryGenerator = (prompt, apiKey) =>
-  callClaudeText(new Anthropic({ apiKey }), prompt, SUMMARY_MODEL, 512);
+  callClaudeText(new Anthropic({ apiKey }), prompt, SUMMARY_MODEL, SUMMARY_MAX_TOKENS);
 
 /**
  * Batches API 経路の ConversationGenerator を作る依存（#389 AC3・DI でテスト可能にする）。

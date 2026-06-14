@@ -89,7 +89,7 @@ describe("aiMessageGenerator (#401)", () => {
   });
 
   describe("generateSummaryWithClaude", () => {
-    it("messages.create を max_tokens: 512 で呼ぶ（スコープ外・変更なし）", async () => {
+    it("messages.create を max_tokens: 512（SUMMARY_MAX_TOKENS）で呼ぶ", async () => {
       mockCreate.mockResolvedValue(makeMessage("end_turn", "summary text"));
 
       await generateSummaryWithClaude("test prompt", "api-key");

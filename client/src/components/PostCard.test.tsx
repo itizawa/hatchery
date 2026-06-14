@@ -216,4 +216,46 @@ describe("PostCard", () => {
       expect(onVote).toHaveBeenCalledWith("down");
     });
   });
+
+  describe("所属コミュニティ名表示（ホーム混在フィード・#503）", () => {
+    const community = { slug: "zenn", name: "Zenn感想部" };
+
+    it("community 指定時は c/{slug} を表示する", () => {
+      render(<PostCard post={mockPost} onVote={vi.fn()} community={community} />);
+      expect(screen.getByText("c/zenn")).toBeInTheDocument();
+    });
+
+    it("community 未指定時は c/ 表示を出さない（単一コミュニティ文脈の出し分け）", () => {
+      render(<PostCard post={mockPost} onVote={vi.fn()} />);
+      expect(screen.queryByText(/^c\//)).not.toBeInTheDocument();
+    });
+
+    it("onCommunityClick 指定時、c/{slug} クリックでコールバックが呼ばれ親へ伝播しない", () => {
+      const onCommunityClick = vi.fn();
+      render(
+        <PostCard
+          post={mockPost}
+          onVote={vi.fn()}
+          community={community}
+          onCommunityClick={onCommunityClick}
+        />,
+      );
+
+      const event = new MouseEvent("click", { bubbles: true, cancelable: true });
+      const stopPropagationSpy = vi.spyOn(event, "stopPropagation");
+      const preventDefaultSpy = vi.spyOn(event, "preventDefault");
+
+      fireEvent(screen.getByRole("button", { name: "c/zenn" }), event);
+
+      expect(onCommunityClick).toHaveBeenCalledTimes(1);
+      expect(stopPropagationSpy).toHaveBeenCalled();
+      expect(preventDefaultSpy).toHaveBeenCalled();
+    });
+
+    it("onCommunityClick 未指定時はクリック可能なボタンにしない（テキストのみ）", () => {
+      render(<PostCard post={mockPost} onVote={vi.fn()} community={community} />);
+      expect(screen.getByText("c/zenn")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "c/zenn" })).not.toBeInTheDocument();
+    });
+  });
 });

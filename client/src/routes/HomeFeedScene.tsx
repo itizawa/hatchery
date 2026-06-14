@@ -1,9 +1,9 @@
 import { Box, Typography, Button } from "../components/uiParts";
 import type { HomeFeedSort } from "@hatchery/common";
-import { Link as RouterLink } from "@tanstack/react-router";
-import { useEffect, useRef, type ReactElement } from "react";
+import { Link as RouterLink, useNavigate } from "@tanstack/react-router";
+import { useEffect, useMemo, useRef, type ReactElement } from "react";
 
-import { useInfiniteHomeFeed, useVotePost } from "../api/communities.js";
+import { useInfiniteHomeFeed, usePublicCommunities, useVotePost } from "../api/communities.js";
 import { LoginPromptSnackbar } from "../components/LoginPromptSnackbar.js";
 import { PostCard } from "../components/PostCard.js";
 import type { VoteDirection } from "../components/VoteControl.js";
@@ -31,7 +31,18 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteHomeFeed(sort);
   const { mutate: votePost } = useVotePost();
   const { guardVote, promptOpen, closePrompt } = useGuestVoteGuard();
+  const navigate = useNavigate();
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  // #503: 混在フィードで「どの community の投稿か」を表示するため community_id → community を引く。
+  const { data: communities } = usePublicCommunities();
+  const communityById = useMemo(() => {
+    const map = new Map<string, { slug: string; name: string }>();
+    if (Array.isArray(communities)) {
+      for (const c of communities) map.set(c.id, { slug: c.slug, name: c.name });
+    }
+    return map;
+  }, [communities]);
 
   useEffect(() => {
     const el = sentinelRef.current;
@@ -72,23 +83,32 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
         </Box>
       ) : (
         <Box>
-          {posts.map((post) => (
-            <RouterLink
-              key={post.id}
-              to="/posts/$postId"
-              params={{ postId: post.id }}
-              style={{ display: "block", textDecoration: "none", color: "inherit" }}
-            >
-              <PostCard
-                post={post}
-                onVote={(direction: VoteDirection) =>
-                  guardVote(() => votePost({ postId: post.id, direction }))
-                }
-                voteStopPropagation
-                truncateText
-              />
-            </RouterLink>
-          ))}
+          {posts.map((post) => {
+            const community = communityById.get(post.community_id);
+            return (
+              <RouterLink
+                key={post.id}
+                to="/posts/$postId"
+                params={{ postId: post.id }}
+                style={{ display: "block", textDecoration: "none", color: "inherit" }}
+              >
+                <PostCard
+                  post={post}
+                  onVote={(direction: VoteDirection) =>
+                    guardVote(() => votePost({ postId: post.id, direction }))
+                  }
+                  voteStopPropagation
+                  truncateText
+                  community={community}
+                  onCommunityClick={
+                    community
+                      ? () => void navigate({ to: "/communities/$slug", params: { slug: community.slug } })
+                      : undefined
+                  }
+                />
+              </RouterLink>
+            );
+          })}
           <Box ref={sentinelRef} sx={{ py: 1 }}>
             {isFetchingNextPage && (
               <Typography variant="body2" color="text.secondary" textAlign="center">

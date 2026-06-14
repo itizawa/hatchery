@@ -20,9 +20,10 @@ type FetchStubOptions = {
     score: number;
     created_at: string;
   }>;
+  communities?: Array<{ id: string; slug: string; name: string }>;
 };
 
-function stubFetch({ authenticated, feedPosts = [] }: FetchStubOptions) {
+function stubFetch({ authenticated, feedPosts = [], communities = [] }: FetchStubOptions) {
   const user = authenticated
     ? { id: "user1", displayName: "Alice", role: "member", email: "alice@example.com" }
     : undefined;
@@ -51,6 +52,15 @@ function stubFetch({ authenticated, feedPosts = [] }: FetchStubOptions) {
     if (url.includes("/api/feed")) {
       return Promise.resolve(
         new Response(JSON.stringify({ posts: feedPosts, nextCursor: null }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+    }
+    // #503: 所属コミュニティ名解決用。GET /api/communities を community 一覧で返す。
+    if (/\/api\/communities$/.test(url)) {
+      return Promise.resolve(
+        new Response(JSON.stringify(communities), {
           status: 200,
           headers: { "Content-Type": "application/json" },
         }),
@@ -286,6 +296,67 @@ describe("HomeFeedScene — 投稿カードからスレッドへ遷移 (#498)", 
     ).toBeInTheDocument();
     // フィードの見出しは消えている（ページが切り替わった）。
     expect(screen.queryByRole("heading", { name: /ホームフィード/ })).not.toBeInTheDocument();
+  });
+});
+
+describe("HomeFeedScene — 所属コミュニティ名表示（混在フィード・#503）", () => {
+  const communities = [
+    { id: "community-1", slug: "hatchery", name: "Hatchery メタ" },
+    { id: "community-2", slug: "zenn", name: "Zenn感想部" },
+  ];
+  const mixedPosts = [
+    {
+      id: "post-1",
+      community_id: "community-1",
+      slot_key: "2026-06-10-morning",
+      seq: 1,
+      author: "worker-haru",
+      title: "hatchery の投稿",
+      text: "内容A",
+      score: 0,
+      created_at: "2026-06-10T00:00:00Z",
+    },
+    {
+      id: "post-2",
+      community_id: "community-2",
+      slot_key: "2026-06-10-morning",
+      seq: 2,
+      author: "worker-ken",
+      title: "zenn の投稿",
+      text: "内容B",
+      score: 0,
+      created_at: "2026-06-10T01:00:00Z",
+    },
+  ];
+
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("異なる community の投稿が混在するフィードで各カードに c/{slug} が表示される", async () => {
+    stubFetch({ authenticated: false, feedPosts: mixedPosts, communities });
+    renderApp("/");
+
+    expect(await screen.findByText("hatchery の投稿")).toBeInTheDocument();
+    expect(await screen.findByText("c/hatchery")).toBeInTheDocument();
+    expect(await screen.findByText("c/zenn")).toBeInTheDocument();
+  });
+
+  it("c/{slug} をクリックするとそのコミュニティページ（/communities/$slug）へ遷移する", async () => {
+    stubFetch({ authenticated: false, feedPosts: mixedPosts, communities });
+    renderApp("/");
+
+    const communityLink = await screen.findByRole("button", { name: "c/zenn" });
+    await userEvent.click(communityLink);
+
+    // コミュニティページへ遷移し、ホームの見出しは消えている。
+    await waitFor(() => {
+      expect(screen.queryByRole("heading", { name: /ホームフィード/ })).not.toBeInTheDocument();
+    });
   });
 });
 

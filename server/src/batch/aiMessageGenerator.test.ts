@@ -31,7 +31,7 @@ describe("aiMessageGenerator (#401)", () => {
     MockedAnthropic.mockImplementation(
       () => ({ messages: { create: mockCreate } }) as unknown as Anthropic,
     );
-    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.spyOn(console, "log").mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -49,22 +49,24 @@ describe("aiMessageGenerator (#401)", () => {
       expect(callArgs.max_tokens).toBeGreaterThanOrEqual(4096);
     });
 
-    it("stop_reason が 'max_tokens' のとき console.warn を呼ぶ", async () => {
+    it("stop_reason が 'max_tokens' のとき構造化ログ（console.log）を出す", async () => {
       mockCreate.mockResolvedValue(makeMessage("max_tokens", '{"topic":"test","po'));
 
       await generateConversationWithClaude("community: テクノロジー テストプロンプト", "api-key");
 
-      expect(console.warn).toHaveBeenCalledOnce();
-      const warnArg = (console.warn as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
-      expect(warnArg).toContain("max_tokens");
+      expect(console.log).toHaveBeenCalledOnce();
+      const logArg = (console.log as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
+      const parsed = JSON.parse(logArg) as Record<string, unknown>;
+      expect(parsed.level).toBe("info");
+      expect(parsed.event).toBe("ai_generation.max_tokens_truncated");
     });
 
-    it("stop_reason が 'end_turn' のとき console.warn を呼ばない", async () => {
+    it("stop_reason が 'end_turn' のとき構造化ログを出さない", async () => {
       mockCreate.mockResolvedValue(makeMessage("end_turn", '{"topic":"test","posts":[]}'));
 
       await generateConversationWithClaude("test prompt", "api-key");
 
-      expect(console.warn).not.toHaveBeenCalled();
+      expect(console.log).not.toHaveBeenCalled();
     });
 
     it("stop_reason が 'max_tokens' でもスローせずテキストを返す", async () => {

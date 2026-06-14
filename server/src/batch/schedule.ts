@@ -5,6 +5,8 @@
  * 外部スケジューラ依存（node-schedule 等）を持たず、setTimeout ベースの SystemScheduler を既定とする。
  */
 
+import { logBatchError } from "./logger.js";
+
 /** MVP の既定の定時（ローカル時刻の時）。1 日 4 回。 */
 export const DEFAULT_BATCH_HOURS = [9, 12, 15, 18] as const;
 
@@ -113,7 +115,7 @@ export function startMessageBatchScheduler(
   const cancels = hours.map((hour) =>
     scheduler.scheduleDaily(hour, minute, () => {
       void run().catch((err: unknown) => {
-        console.error("[batch] 定時実行に失敗しました", err);
+        logBatchError("scheduled_run.failed", err);
       });
     }),
   );

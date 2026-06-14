@@ -2,6 +2,8 @@ import Anthropic from "@anthropic-ai/sdk";
 
 import { DEFAULT_BATCH_MODEL, type BatchModel } from "../config/env.js";
 
+import { logBatchError, logBatchInfo } from "./logger.js";
+
 /**
  * チャンネル会話を生成する関数（#53）。プロンプトと API キーを受け、モデルの生テキストを返す。
  * テストではスタブを注入し、本番は Claude を使う（依存注入パターン）。
@@ -33,10 +35,11 @@ async function callClaudeText(
     messages: [{ role: "user", content: prompt }],
   });
   if (message.stop_reason === "max_tokens") {
-    const snippet = prompt.length > 100 ? `"${prompt.slice(0, 100)}..."` : `"${prompt}"`;
-    console.warn(
-      `[aiMessageGenerator] 出力が max_tokens (${maxTokens}) で切り詰められました。プロンプト先頭: ${snippet}`,
-    );
+    const snippet = prompt.length > 100 ? `${prompt.slice(0, 100)}...` : prompt;
+    logBatchInfo("ai_generation.max_tokens_truncated", {
+      maxTokens,
+      promptSnippet: snippet,
+    });
   }
   return extractFirstText(message.content);
 }
@@ -142,9 +145,10 @@ export function createBatchConversationGenerator(
       status = polled.processing_status;
     }
     if (status !== "ended") {
-      console.warn(
-        `[aiMessageGenerator] Batch ${batch.id} が ${maxPolls} 回のポーリングで ended になりませんでした。`,
-      );
+      logBatchInfo("ai_generation.batch_not_ended", {
+        batchId: batch.id,
+        maxPolls,
+      });
       return "";
     }
 
@@ -157,8 +161,10 @@ export function createBatchConversationGenerator(
       if (result.result.type === "succeeded") {
         return extractFirstText(result.result.message.content);
       }
-      console.error(
-        `[aiMessageGenerator] Batch 結果が ${result.result.type} でした（custom_id: ${result.custom_id}）。`,
+      logBatchError(
+        "ai_generation.batch_result_failed",
+        `batch result type was ${result.result.type}`,
+        { customId: result.custom_id, resultType: result.result.type },
       );
       return "";
     }

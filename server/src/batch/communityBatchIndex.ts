@@ -2,6 +2,7 @@ import { pathToFileURL } from "node:url";
 
 import { loadEnv } from "../config/env.js";
 import { createClaudeConversationGenerator } from "./aiMessageGenerator.js";
+import { logBatchError, logBatchInfo } from "./logger.js";
 import {
   runCommunityBatch,
   type RunCommunityBatchDeps,
@@ -27,9 +28,10 @@ export async function runCommunityBatchCli(
   try {
     const result = await runCommunityBatch(cliDeps.batchDeps);
 
-    console.log(
-      `[communityBatch] 完了: ${result.posts.length} posts, ${result.comments.length} comments created`,
-    );
+    logBatchInfo("community_batch.completed", {
+      posts: result.posts.length,
+      comments: result.comments.length,
+    });
 
     return result;
   } finally {
@@ -104,7 +106,7 @@ const isDirectRun =
 
 if (isDirectRun) {
   main().catch((err: unknown) => {
-    console.error("[communityBatch] エラー:", err);
+    logBatchError("community_batch.cli_failed", err);
     process.exitCode = 1;
   });
 }

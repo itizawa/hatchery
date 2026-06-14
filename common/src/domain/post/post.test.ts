@@ -82,6 +82,20 @@ describe("PostSchema", () => {
     expect(result.created_at).toBeInstanceOf(Date);
   });
 
+  it("comment_count は省略時 0（既定）になる（#500）", () => {
+    const result = PostSchema.parse(validPost);
+    expect(result.comment_count).toBe(0);
+  });
+
+  it("comment_count を持てる（コメント件数・非負整数・#500）", () => {
+    const result = PostSchema.parse({ ...validPost, comment_count: 7 });
+    expect(result.comment_count).toBe(7);
+  });
+
+  it("comment_count が負数だと reject する（#500）", () => {
+    expect(PostSchema.safeParse({ ...validPost, comment_count: -1 }).success).toBe(false);
+  });
+
   it("author_worker は任意で、省略しても有効（後方互換）", () => {
     const result = PostSchema.parse(validPost);
     expect(result.author_worker).toBeUndefined();

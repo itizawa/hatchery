@@ -16,7 +16,7 @@ import {
 import type { WorkerRecord } from "../persistence/workerRepository.js";
 import { createInMemoryWorldStateRepository } from "../persistence/worldStateRepository.js";
 
-import { runCommunityBatch } from "./runCommunityBatch.js";
+import { generateSlotKey, runCommunityBatch } from "./runCommunityBatch.js";
 
 /** テスト用 Bot ワーカー（フォールバック候補）。 */
 const botWorkers: WorkerRecord[] = [
@@ -258,7 +258,7 @@ describe("runCommunityBatch (#306)", () => {
   it("選定したコミュニティの生成出力が JSON パース失敗のときは何も永続化しない", async () => {
     // rng=0 → community1 が選定される。その生成出力がパース失敗 → 永続化なし。
     const deps = buildDeps([community1, community2]);
-    const generate = vi.fn().mockResolvedValue("不正なJSON{{{");
+    const generate = vi.fn().mockResolvedValue("不正なJSON{");
 
     const result = await runCommunityBatch({ ...deps, generate, rng: () => 0 });
 
@@ -585,5 +585,26 @@ describe("runCommunityBatch worldState 登場ローテーション (#464)", () =
     expect(state?.workerStates["mei"]?.lastAppearedSlotKey).toBe("2026-06-13T12:00");
     // haru は今回登場していないので前の slotKey を保持。
     expect(state?.workerStates["haru"]?.lastAppearedSlotKey).toBe("2026-06-13T09:00");
+  });
+});
+
+describe("generateSlotKey (#469)", () => {
+  it("UTC 固定日時から UTC 基準の slot_key を生成する", () => {
+    // 2026-06-10T09:30:00Z → UTC では 09:30 → "2026-06-10T09:30"
+    const utcDate = new Date("2026-06-10T09:30:00Z");
+    expect(generateSlotKey(utcDate)).toBe("2026-06-10T09:30");
+  });
+
+  it("UTC 真夜中はゼロ埋めされた slot_key を返す", () => {
+    // 2026-01-01T00:00:00Z → "2026-01-01T00:00"
+    const utcDate = new Date("2026-01-01T00:00:00Z");
+    expect(generateSlotKey(utcDate)).toBe("2026-01-01T00:00");
+  });
+
+  it("JST 深夜 (UTC 前日) の日付はローカル時刻ではなく UTC 日付で返す", () => {
+    // JST (UTC+9) では 2026-06-10 08:30 でも UTC では 2026-06-09T23:30 となる。
+    // UTC 基準なら "2026-06-09T23:30" を返すべき。
+    const date = new Date("2026-06-09T23:30:00Z"); // UTC 23:30
+    expect(generateSlotKey(date)).toBe("2026-06-09T23:30");
   });
 });

@@ -17,6 +17,7 @@ const makeCommunity = (overrides: Partial<CommunityRecord> = {}): CommunityRecor
   lastSlotKey: null,
   iconUrl: null,
   coverUrl: null,
+  generationInstruction: null,
   createdAt: new Date("2026-01-01"),
   ...overrides,
 });
@@ -224,7 +225,7 @@ describe("GET /api/feed", () => {
     expect(res.body.posts.map((p: { title: string }) => p.title)).toEqual(["High", "Mid", "Low"]);
   });
 
-  it("sort=latest（明示）は新着順で返す（後方互換）", async () => {
+  it("sort=latest（明示）は新着順で返す（後方互换）", async () => {
     const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
     const postRepo = createInMemoryPostRepository();
     await postRepo.createMany("community-1", [
@@ -289,7 +290,7 @@ describe("GET /api/feed author_worker enrichment（#479）", () => {
     });
   });
 
-  it("post.author が UUID id でも author_worker を付与する（後方互換）", async () => {
+  it("post.author が UUID id でも author_worker を付与する（後方互换）", async () => {
     const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
     const postRepo = createInMemoryPostRepository();
     await postRepo.createMany("community-1", [

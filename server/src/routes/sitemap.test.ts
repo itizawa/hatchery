@@ -17,6 +17,7 @@ const makeCommunity = (overrides: Partial<CommunityRecord> = {}): CommunityRecor
   lastSlotKey: null,
   iconUrl: null,
   coverUrl: null,
+  generationInstruction: null,
   createdAt: new Date("2026-01-01T00:00:00.000Z"),
   ...overrides,
 });
@@ -65,7 +66,6 @@ describe("GET /sitemap.xml (#259)", () => {
       makeCommunity({ slug: "technology", lastSlotKey: "2026-06-10T09:00" }),
     ]);
     const res = await request(app).get("/sitemap.xml");
-    // lastSlotKey から導出した ISO 日付を含む
     expect(res.text).toMatch(/<lastmod>2026-06-10/);
   });
 

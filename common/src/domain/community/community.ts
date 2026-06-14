@@ -9,8 +9,11 @@ export const COMMUNITY_NAME_MAX_LENGTH = 50;
 /** Community の description の最大文字数（#91）。 */
 export const COMMUNITY_DESCRIPTION_MAX_LENGTH = 500;
 
-/** Community の synopsis の最大文字数（記憶③ / あらすじ）。 */
+/** Community の synopsis の最大文字数（記憑④ / あらすじ）。 */
 export const COMMUNITY_SYNOPSIS_MAX_LENGTH = 2000;
+
+/** Community の generationInstruction（非公開・生成プロンプト指示）の最大文字数（#488・#91）。 */
+export const COMMUNITY_GENERATION_INSTRUCTION_MAX_LENGTH = 2000;
 
 /** Community のアイコン / カバー画像 URL の最大文字数（#457・#91。worker と同値）。 */
 export const COMMUNITY_IMAGE_URL_MAX_LENGTH = 500;
@@ -39,11 +42,12 @@ const communitySlugSchema = z
  * admin が CRUD できる第一級エンティティ。
  * - slug / name / description に .max() 必須（#91）
  * - slug は小文字英数字・ハイフンのみ（#310）
- * - synopsis は世界観記憶③（このコミュニティのあらすじ）。省略可能。
+ * - synopsis は世界観記憶④（このコミュニティのあらすじ）。省略可能。
  * - last_slot_key は最後に生成バッチが走った定時キー。省略可能（未生成の場合 null）。
  * - iconUrl / coverUrl は admin がアップロードした GCS 画像 URL（#457）。
- *   ともに任意・nullable（未設定時はプレースホルダ表示）。最大 500 文字（#91）。
+ *   ともに任意セnullable（未設定時はプレースホルダ表示）。最大 500 文字（#91）。
  */
+/** 公開コミュニティスキーマ。`generationInstruction` は含まない（#488）。 */
 export const CommunitySchema = z.object({
   id: z.string().min(1),
   slug: communitySlugSchema,
@@ -59,6 +63,21 @@ export const CommunitySchema = z.object({
 export type Community = z.infer<typeof CommunitySchema>;
 
 /**
+ * admin 向けコミュニティスキーマ（#488）。
+ * 公開スキーマを extends し `generationInstruction`（非公開・生成プロンプト指示）を追加する。
+ * admin API のレスポンスのみで使用し、公開エンドポイントには絶対に含めない。
+ */
+export const AdminCommunitySchema = CommunitySchema.extend({
+  generationInstruction: z
+    .string()
+    .max(COMMUNITY_GENERATION_INSTRUCTION_MAX_LENGTH)
+    .nullable()
+    .optional(),
+});
+
+export type AdminCommunity = z.infer<typeof AdminCommunitySchema>;
+
+/**
  * コミュニティ作成リクエストスキーマ（#310）。
  * admin が community を新規作成する際のバリデーション。
  * id / created_at はサーバ側で採番するため含めない。
@@ -67,6 +86,10 @@ export const CreateCommunitySchema = z.object({
   slug: communitySlugSchema,
   name: z.string().min(1).max(COMMUNITY_NAME_MAX_LENGTH),
   description: z.string().min(1).max(COMMUNITY_DESCRIPTION_MAX_LENGTH),
+  generationInstruction: z
+    .string()
+    .max(COMMUNITY_GENERATION_INSTRUCTION_MAX_LENGTH)
+    .optional(),
 });
 
 export type CreateCommunityInput = z.infer<typeof CreateCommunitySchema>;
@@ -80,6 +103,11 @@ export type CreateCommunityInput = z.infer<typeof CreateCommunitySchema>;
 export const UpdateCommunitySchema = z.object({
   name: z.string().min(1).max(COMMUNITY_NAME_MAX_LENGTH).optional(),
   description: z.string().min(1).max(COMMUNITY_DESCRIPTION_MAX_LENGTH).optional(),
+  generationInstruction: z
+    .string()
+    .max(COMMUNITY_GENERATION_INSTRUCTION_MAX_LENGTH)
+    .nullable()
+    .optional(),
 });
 
 export type UpdateCommunityInput = z.infer<typeof UpdateCommunitySchema>;

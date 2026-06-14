@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  AdminCommunitySchema,
   COMMUNITY_DESCRIPTION_MAX_LENGTH,
+  COMMUNITY_GENERATION_INSTRUCTION_MAX_LENGTH,
   COMMUNITY_NAME_MAX_LENGTH,
   COMMUNITY_SLUG_MAX_LENGTH,
   CommunitySchema,
@@ -180,6 +182,23 @@ describe("CreateCommunitySchema（#310）", () => {
     const longDesc = "a".repeat(COMMUNITY_DESCRIPTION_MAX_LENGTH + 1);
     expect(CreateCommunitySchema.safeParse({ ...valid, description: longDesc }).success).toBe(false);
   });
+
+  it("generationInstruction を省略できる（optional）", () => {
+    expect(CreateCommunitySchema.safeParse(valid).success).toBe(true);
+  });
+
+  it("generationInstruction を指定できる", () => {
+    expect(
+      CreateCommunitySchema.safeParse({ ...valid, generationInstruction: "脱さん付け指示" }).success,
+    ).toBe(true);
+  });
+
+  it(`generationInstruction が ${COMMUNITY_GENERATION_INSTRUCTION_MAX_LENGTH} 文字を超えると拒否する（#91）`, () => {
+    const longInstr = "a".repeat(COMMUNITY_GENERATION_INSTRUCTION_MAX_LENGTH + 1);
+    expect(
+      CreateCommunitySchema.safeParse({ ...valid, generationInstruction: longInstr }).success,
+    ).toBe(false);
+  });
 });
 
 describe("UpdateCommunitySchema（#310）", () => {
@@ -220,5 +239,54 @@ describe("UpdateCommunitySchema（#310）", () => {
   it(`description が ${COMMUNITY_DESCRIPTION_MAX_LENGTH} 文字を超えると拒否する`, () => {
     const longDesc = "a".repeat(COMMUNITY_DESCRIPTION_MAX_LENGTH + 1);
     expect(UpdateCommunitySchema.safeParse({ description: longDesc }).success).toBe(false);
+  });
+
+  it("generationInstruction を省略できる（optional）", () => {
+    expect(UpdateCommunitySchema.safeParse({ name: "名前" }).success).toBe(true);
+  });
+
+  it("generationInstruction を指定できる", () => {
+    expect(
+      UpdateCommunitySchema.safeParse({ generationInstruction: "脱さん付け指示" }).success,
+    ).toBe(true);
+  });
+
+  it(`generationInstruction が ${COMMUNITY_GENERATION_INSTRUCTION_MAX_LENGTH} 文字を超えると拒否する（#91）`, () => {
+    const longInstr = "a".repeat(COMMUNITY_GENERATION_INSTRUCTION_MAX_LENGTH + 1);
+    expect(
+      UpdateCommunitySchema.safeParse({ generationInstruction: longInstr }).success,
+    ).toBe(false);
+  });
+});
+
+describe("CommunitySchema / AdminCommunitySchema のフィールド分離（#488）", () => {
+  const basePublic = {
+    id: "c1",
+    slug: "tech",
+    name: "Tech",
+    description: "公開概要",
+    created_at: new Date("2026-01-01"),
+  };
+
+  it("公開 CommunitySchema は generationInstruction を含まない", () => {
+    const result = CommunitySchema.parse({ ...basePublic, generationInstruction: "秘密の指示" });
+    expect(result).not.toHaveProperty("generationInstruction");
+  });
+
+  it("AdminCommunitySchema は generationInstruction を含む", () => {
+    const result = AdminCommunitySchema.parse({ ...basePublic, generationInstruction: "秘密の指示" });
+    expect(result).toHaveProperty("generationInstruction", "秘密の指示");
+  });
+
+  it("AdminCommunitySchema の generationInstruction は省略可能", () => {
+    const result = AdminCommunitySchema.safeParse(basePublic);
+    expect(result.success).toBe(true);
+  });
+
+  it(`AdminCommunitySchema の generationInstruction が ${COMMUNITY_GENERATION_INSTRUCTION_MAX_LENGTH} 文字を超えると拒否する（#91）`, () => {
+    const longInstr = "a".repeat(COMMUNITY_GENERATION_INSTRUCTION_MAX_LENGTH + 1);
+    expect(
+      AdminCommunitySchema.safeParse({ ...basePublic, generationInstruction: longInstr }).success,
+    ).toBe(false);
   });
 });

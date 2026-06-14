@@ -127,6 +127,8 @@ model Community {
   iconUrl       String?
   /// GCS 上のカバー（ヘッダー）画像 URL（#457）。admin がアップロード後に設定される。最大 500 文字（#91）。
   coverUrl      String?
+  /// 非公開の生成プロンプト指示（#488）。admin のみが設定・閲覧できる。公開 API には返さない。
+  generationInstruction String?
   createdAt     DateTime       @default(now())
   posts         Post[]
   comments      Comment[]

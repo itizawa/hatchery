@@ -7,6 +7,7 @@ import type { OpenAPIObject } from "openapi3-ts/oas31";
 import { z } from "zod";
 
 import {
+  AdminCommunitySchema,
   AppSettingResponseSchema,
   AuthorWorkerSchema,
   AuthUserSchema,
@@ -381,6 +382,14 @@ const CommunityComponent = registry.register(
   CommunitySchema.openapi({ description: "コミュニティ（サブレディット相当）。ADR-0019" }),
 );
 
+const AdminCommunityComponent = registry.register(
+  "AdminCommunity",
+  AdminCommunitySchema.openapi({
+    description:
+      "admin 向けコミュニティ（generationInstruction を含む。公開 API には含めない・#488）",
+  }),
+);
+
 // 発言者の表示用ワーカー情報（#479）。Post / Comment の author_worker が参照する。
 registry.register(
   "AuthorWorker",
@@ -435,22 +444,22 @@ const communityIdParam = z.string().openapi({ param: { name: "id", in: "path" } 
 const postIdParam = z.string().openapi({ param: { name: "postId", in: "path" } });
 const commentIdParam = z.string().openapi({ param: { name: "commentId", in: "path" } });
 
-// admin: コミュニティ一覧（認証必須・admin のみ・#310 / #337）
+// admin: コミュニティ一覧（認証必須・admin のみ・#310 / #337 / #488）
 registry.registerPath({
   method: "get",
   path: "/api/admin/communities",
   summary: "コミュニティ一覧を取得（認証必須・admin のみ・#310 / #337）",
   responses: {
     200: {
-      description: "コミュニティ一覧",
-      content: { "application/json": { schema: z.array(CommunityComponent) } },
+      description: "コミュニティ一覧（generationInstruction を含む・#488）",
+      content: { "application/json": { schema: z.array(AdminCommunityComponent) } },
     },
     401: { description: "未認証", ...errorJson },
     403: { description: "admin 権限なし", ...errorJson },
   },
 });
 
-// admin: コミュニティ作成（認証必須・admin のみ・#310 / #337）
+// admin: コミュニティ作成（認証必須・admin のみ・#310 / #337 / #488）
 registry.registerPath({
   method: "post",
   path: "/api/admin/communities",
@@ -460,8 +469,8 @@ registry.registerPath({
   },
   responses: {
     201: {
-      description: "作成されたコミュニティ",
-      content: { "application/json": { schema: CommunityComponent } },
+      description: "作成されたコミュニティ（generationInstruction を含む・#488）",
+      content: { "application/json": { schema: AdminCommunityComponent } },
     },
     400: { description: "バリデーションエラー（slug 不正など）", ...errorJson },
     401: { description: "未認証", ...errorJson },
@@ -470,7 +479,7 @@ registry.registerPath({
   },
 });
 
-// admin: コミュニティ更新（認証必須・admin のみ・#310 / #337）
+// admin: コミュニティ更新（認証必須・admin のみ・#310 / #337 / #488）
 registry.registerPath({
   method: "patch",
   path: "/api/admin/communities/{id}",
@@ -481,8 +490,8 @@ registry.registerPath({
   },
   responses: {
     200: {
-      description: "更新後のコミュニティ",
-      content: { "application/json": { schema: CommunityComponent } },
+      description: "更新後のコミュニティ（generationInstruction を含む・#488）",
+      content: { "application/json": { schema: AdminCommunityComponent } },
     },
     400: { description: "バリデーションエラー", ...errorJson },
     401: { description: "未認証", ...errorJson },

@@ -24,7 +24,7 @@
 | home-feed | ホームフィード閲覧（`HomeFeedScene.tsx`, `/`） | [home-feed/usecases.md](home-feed/usecases.md) | UC-HOME-01〖08 |
 | community | コミュニティ一覧・詳細・購読（`/communities`）・サイドバーのコミュニティセクション開閉 | [community/usecases.md](community/usecases.md) | UC-COMM-01〖09 |
 | post-thread | 投稿スレッド・upvote（`/posts/$postId`） | [post-thread/usecases.md](post-thread/usecases.md) | UC-POST-01〖08 |
-| admin | 管理画面（Worker / Community 管理, `/admin`） | [admin/usecases.md](admin/usecases.md) | UC-ADMIN-01〖13 |
+| admin | 管理画面（Worker / Community 管理, `/admin`） | [admin/usecases.md](admin/usecases.md) | UC-ADMIN-01〖14 |
 | legal | 利用規約・プライバシーポリシー（`/terms`・`/privacy`） | [legal/usecases.md](legal/usecases.md) | UC-LEGAL-01〖04 |
 
 ## ユースケース一覧（サマリ）
@@ -91,6 +91,7 @@
 - UC-ADMIN-11: 管理画面タブのデータ取得に失敗すると再試行フォールバックが表示される
 - UC-ADMIN-12: Worker 編集の保存に失敗するとエラー内容が表示される
 - UC-ADMIN-13: API トークン設定の保存に失敗するとエラー内容が表示される
+- UC-ADMIN-14: admin ユーザーがコミュニティに生成プロンプト指示（非公開）を設定できる
 
 ### legal — 利用規約・プライバシーポリシー
 

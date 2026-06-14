@@ -18,6 +18,7 @@ const makeCommunity = (overrides: Partial<CommunityRecord> = {}): CommunityRecor
   lastSlotKey: null,
   iconUrl: null,
   coverUrl: null,
+  generationInstruction: null,
   createdAt: new Date("2026-01-01"),
   ...overrides,
 });
@@ -128,7 +129,6 @@ describe("POST /api/communities/:slug/subscribe", () => {
     const deps = await createTestDeps({ communityRepository: communityRepo });
     const app = createApp(deps);
 
-    // ログイン
     const loginRes = await request(app).post("/api/auth/dev-login");
     expect(loginRes.status).toBe(200);
     const cookie = loginRes.headers["set-cookie"] as string[];
@@ -174,12 +174,10 @@ describe("DELETE /api/communities/:slug/subscribe", () => {
     const loginRes = await request(app).post("/api/auth/dev-login");
     const cookie = loginRes.headers["set-cookie"] as string[];
 
-    // まず購読
     await request(app)
       .post("/api/communities/technology/subscribe")
       .set("Cookie", cookie);
 
-    // 購読解除
     const res = await request(app)
       .delete("/api/communities/technology/subscribe")
       .set("Cookie", cookie);
@@ -232,7 +230,6 @@ describe("GET /api/communities/:slug/subscription", () => {
     const loginRes = await request(app).post("/api/auth/dev-login");
     const cookie = loginRes.headers["set-cookie"] as string[];
 
-    // 購読する
     await request(app)
       .post("/api/communities/technology/subscribe")
       .set("Cookie", cookie);
@@ -301,13 +298,11 @@ describe("GET /api/communities/:slug/recent-workers", () => {
   it("post.author が displayName 文字列でも DB ワーカー（UUID id）を解決して返す（#478）", async () => {
     const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
     const postRepo = createInMemoryPostRepository();
-    // DB ワーカーは UUID の id を持ち、displayName が "haru" 等。
     const workerRepo = createInMemoryWorkerRepository([
       { id: "c9226003-uuid", displayName: "haru", role: "ムードメーカー" },
       { id: "d89954ec-uuid", displayName: "ken", role: "ベテラン" },
       { id: "e0000000-uuid", displayName: "mei", role: "新人" },
     ]);
-    // 旧バッチ由来の post は author に displayName 文字列を保存している。
     await postRepo.createMany("community-1", [
       { slotKey: "slot-1", seq: 1, author: "haru", title: "T1", text: "X" },
       { slotKey: "slot-1", seq: 2, author: "ken", title: "T2", text: "X" },
@@ -369,5 +364,30 @@ describe("GET /api/communities/:slug/recent-workers", () => {
     const app = createApp(deps);
     const res = await request(app).get("/api/communities/not-exists/recent-workers");
     expect(res.status).toBe(404);
+  });
+});
+
+describe("公開 API に generationInstruction が露出しない（#488）", () => {
+  const communityWithInstruction = (): CommunityRecord => ({
+    ...makeCommunity(),
+    generationInstruction: "脱さん付け・率直に。絶対に公開しない指示。",
+  });
+
+  it("GET /api/communities のレスポンスに generationInstruction が含まれない", async () => {
+    const communityRepo = createInMemoryCommunityRepository([communityWithInstruction()]);
+    const deps = await createTestDeps({ communityRepository: communityRepo });
+    const app = createApp(deps);
+    const res = await request(app).get("/api/communities");
+    expect(res.status).toBe(200);
+    expect(res.body[0]).not.toHaveProperty("generationInstruction");
+  });
+
+  it("GET /api/communities/:slug/feed のレスポンスに generationInstruction が含まれない", async () => {
+    const communityRepo = createInMemoryCommunityRepository([communityWithInstruction()]);
+    const deps = await createTestDeps({ communityRepository: communityRepo });
+    const app = createApp(deps);
+    const res = await request(app).get("/api/communities/technology/feed");
+    expect(res.status).toBe(200);
+    expect(JSON.stringify(res.body)).not.toContain("generationInstruction");
   });
 });

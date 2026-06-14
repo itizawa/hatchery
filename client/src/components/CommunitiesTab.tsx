@@ -23,11 +23,12 @@ import { type ReactElement, useState } from "react";
 
 import {
   COMMUNITY_DESCRIPTION_MAX_LENGTH,
+  COMMUNITY_GENERATION_INSTRUCTION_MAX_LENGTH,
   COMMUNITY_NAME_MAX_LENGTH,
   COMMUNITY_SLUG_MAX_LENGTH,
   COMMUNITY_SLUG_REGEX,
 } from "@hatchery/common";
-import type { Community, CreateCommunityInput, UpdateCommunityInput } from "@hatchery/common";
+import type { AdminCommunity, CreateCommunityInput, UpdateCommunityInput } from "@hatchery/common";
 import { useCommunities, useCreateCommunity, useUpdateCommunity } from "../api/communities.js";
 import { CommunityImageUpload } from "./CommunityImageUpload.js";
 import { QueryBoundary } from "./QueryBoundary.js";
@@ -39,7 +40,7 @@ function CreateCommunityForm(): ReactElement {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const form = useForm({
-    defaultValues: { slug: "", name: "", description: "" } as CreateCommunityInput,
+    defaultValues: { slug: "", name: "", description: "", generationInstruction: "" } as CreateCommunityInput,
     onSubmit: async ({ value }) => {
       setErrorMsg(null);
       try {
@@ -123,7 +124,7 @@ function CreateCommunityForm(): ReactElement {
       >
         {(field) => (
           <TextField
-            label="作風・説明（定時バッチの生成プロンプトに使用）"
+            label="コミュニティ概要（公開）"
             size="small"
             required
             multiline
@@ -134,6 +135,21 @@ function CreateCommunityForm(): ReactElement {
             inputProps={{ maxLength: COMMUNITY_DESCRIPTION_MAX_LENGTH }}
             error={field.state.meta.errors.length > 0}
             helperText={field.state.meta.errors[0] ?? `最大 ${COMMUNITY_DESCRIPTION_MAX_LENGTH} 文字`}
+          />
+        )}
+      </form.Field>
+      <form.Field name="generationInstruction">
+        {(field) => (
+          <TextField
+            label="生成プロンプト指示（管理者のみ・非公開）定時バッチの生成プロンプトに使用"
+            size="small"
+            multiline
+            rows={4}
+            value={field.state.value ?? ""}
+            onChange={(e) => field.handleChange(e.target.value)}
+            onBlur={field.handleBlur}
+            inputProps={{ maxLength: COMMUNITY_GENERATION_INSTRUCTION_MAX_LENGTH }}
+            helperText={`最大 ${COMMUNITY_GENERATION_INSTRUCTION_MAX_LENGTH} 文字（省略時は概要を使用）`}
           />
         )}
       </form.Field>
@@ -160,7 +176,7 @@ function CreateCommunityForm(): ReactElement {
 
 /** コミュニティ編集フォーム（インライン）。 */
 interface EditCommunityFormProps {
-  community: Community;
+  community: AdminCommunity;
   onCancel: () => void;
 }
 
@@ -169,7 +185,11 @@ function EditCommunityForm({ community, onCancel }: EditCommunityFormProps): Rea
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const form = useForm({
-    defaultValues: { name: community.name, description: community.description } as UpdateCommunityInput,
+    defaultValues: {
+      name: community.name,
+      description: community.description,
+      generationInstruction: community.generationInstruction ?? "",
+    } as UpdateCommunityInput,
     onSubmit: async ({ value }) => {
       setErrorMsg(null);
       try {
@@ -246,7 +266,7 @@ function EditCommunityForm({ community, onCancel }: EditCommunityFormProps): Rea
       >
         {(field) => (
           <TextField
-            label="作風・説明（定時バッチの生成プロンプトに使用）"
+            label="コミュニティ概要（公開）"
             size="small"
             required
             multiline
@@ -257,6 +277,21 @@ function EditCommunityForm({ community, onCancel }: EditCommunityFormProps): Rea
             inputProps={{ maxLength: COMMUNITY_DESCRIPTION_MAX_LENGTH }}
             error={field.state.meta.errors.length > 0}
             helperText={field.state.meta.errors[0] ?? `最大 ${COMMUNITY_DESCRIPTION_MAX_LENGTH} 文字`}
+          />
+        )}
+      </form.Field>
+      <form.Field name="generationInstruction">
+        {(field) => (
+          <TextField
+            label="生成プロンプト指示（管理者のみ・非公開）定時バッチの生成プロンプトに使用"
+            size="small"
+            multiline
+            rows={4}
+            value={field.state.value ?? ""}
+            onChange={(e) => field.handleChange(e.target.value)}
+            onBlur={field.handleBlur}
+            inputProps={{ maxLength: COMMUNITY_GENERATION_INSTRUCTION_MAX_LENGTH }}
+            helperText={`最大 ${COMMUNITY_GENERATION_INSTRUCTION_MAX_LENGTH} 文字（省略時は概要を使用）`}
           />
         )}
       </form.Field>
@@ -274,7 +309,7 @@ function EditCommunityForm({ community, onCancel }: EditCommunityFormProps): Rea
 
 /** コミュニティ一覧テーブル行（編集モード切替を持つ）。 */
 interface CommunityRowProps {
-  community: Community;
+  community: AdminCommunity;
 }
 
 function CommunityRow({ community }: CommunityRowProps): ReactElement {
@@ -324,7 +359,7 @@ function CommunityListPanel(): ReactElement {
         <TableRow>
           <TableCell>slug</TableCell>
           <TableCell>名前</TableCell>
-          <TableCell>作風・説明</TableCell>
+          <TableCell>概要（公開）</TableCell>
           <TableCell>操作</TableCell>
         </TableRow>
       </TableHead>

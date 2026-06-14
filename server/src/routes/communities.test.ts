@@ -73,7 +73,30 @@ describe("GET /api/communities/:slug/feed", () => {
     const res = await request(app).get("/api/communities/technology/feed");
     expect(res.status).toBe(200);
     expect(res.body).toHaveLength(1);
-    expect(res.body[0]).toMatchObject({ title: "Title", communityId: "community-1" });
+    // OpenAPI スキーマ（PostSchema）は snake_case の community_id が正本（#499）
+    expect(res.body[0]).toMatchObject({ title: "Title", community_id: "community-1" });
+  });
+
+  it("各 post のフィールド名が OpenAPI スキーマ（snake_case）と一致し camelCase を含まない（#499）", async () => {
+    const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
+    const postRepo = createInMemoryPostRepository();
+    await postRepo.createMany("community-1", [
+      { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "Title", text: "Text" },
+    ]);
+    const deps = await createTestDeps({
+      communityRepository: communityRepo,
+      postRepository: postRepo,
+    });
+    const app = createApp(deps);
+    const res = await request(app).get("/api/communities/technology/feed");
+    expect(res.status).toBe(200);
+    const post = res.body[0];
+    expect(post).toHaveProperty("community_id", "community-1");
+    expect(post).toHaveProperty("slot_key");
+    expect(post).toHaveProperty("created_at");
+    expect(post).not.toHaveProperty("communityId");
+    expect(post).not.toHaveProperty("slotKey");
+    expect(post).not.toHaveProperty("createdAt");
   });
 
   it("存在しない slug は 404 を返す", async () => {

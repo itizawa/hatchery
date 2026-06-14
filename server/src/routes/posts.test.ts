@@ -33,6 +33,44 @@ describe("GET /api/posts/:postId", () => {
     expect(res.body.comments[0]).toMatchObject({ text: "Reply" });
   });
 
+  it("レスポンスのフィールド名が OpenAPI スキーマ（snake_case）と一致し camelCase を含まない（#499）", async () => {
+    const postRepo = createInMemoryPostRepository();
+    const commentRepo = createInMemoryCommentRepository();
+
+    const [post] = await postRepo.createMany("community-1", [
+      { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "T", text: "Body" },
+    ]);
+    await commentRepo.createMany("community-1", [
+      { postId: post.id, slotKey: "2026-06-10T09:00", seq: 0, author: "worker-2", text: "Reply" },
+    ]);
+
+    const deps = await createTestDeps({
+      postRepository: postRepo,
+      commentRepository: commentRepo,
+    });
+    const app = createApp(deps);
+
+    const res = await request(app).get(`/api/posts/${post.id}`);
+    expect(res.status).toBe(200);
+
+    // post は community_id / slot_key / created_at（snake_case）を持ち camelCase を持たない
+    expect(res.body.post).toHaveProperty("community_id", "community-1");
+    expect(res.body.post).toHaveProperty("slot_key");
+    expect(res.body.post).toHaveProperty("created_at");
+    expect(res.body.post).not.toHaveProperty("communityId");
+    expect(res.body.post).not.toHaveProperty("slotKey");
+    expect(res.body.post).not.toHaveProperty("createdAt");
+
+    // comment は community_id / post_id（snake_case）を持ち camelCase を持たない
+    const comment = res.body.comments[0];
+    expect(comment).toHaveProperty("community_id", "community-1");
+    expect(comment).toHaveProperty("post_id", post.id);
+    expect(comment).not.toHaveProperty("communityId");
+    expect(comment).not.toHaveProperty("postId");
+    expect(comment).not.toHaveProperty("slotKey");
+    expect(comment).not.toHaveProperty("createdAt");
+  });
+
   it("存在しない post は 404 を返す", async () => {
     const deps = await createTestDeps();
     const app = createApp(deps);

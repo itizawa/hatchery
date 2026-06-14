@@ -8,6 +8,7 @@ import type { PostRepository } from "../persistence/postRepository.js";
 import type { VoteRepository } from "../persistence/voteRepository.js";
 import type { WorkerRepository } from "../persistence/workerRepository.js";
 import { buildAuthorWorkerEnricher } from "./authorWorker.js";
+import { toCommentResponse, toPostResponse } from "./postResponse.js";
 
 /**
  * /api/posts・/api/comments ルータ。
@@ -37,8 +38,13 @@ export function createPostsRouter(
           // post と comments を 1 回のワーカー取得で付与する（重複クエリを避ける）。
           const enrich = await buildAuthorWorkerEnricher(workerRepo);
           const [enrichedPost] = enrich([post]);
+          // enrich([post]) は必ず 1 要素返る（post は上の null ガード済み）。
           const enrichedComments = enrich(comments);
-          res.status(200).json({ post: enrichedPost, comments: enrichedComments });
+          // OpenAPI 契約（snake_case）へ整形して返す（#499）。
+          res.status(200).json({
+            post: enrichedPost ? toPostResponse(enrichedPost) : toPostResponse(post),
+            comments: enrichedComments.map(toCommentResponse),
+          });
         });
       })
       .catch(next);
@@ -66,7 +72,8 @@ export function createPostsRouter(
               postRepo.addScore(postId, delta).then((r) => r?.score ?? null),
             )
             .then(({ score }) => {
-              res.status(200).json({ ...post, score: score ?? post.score });
+              // OpenAPI 契約（snake_case）へ整形して返す（#499）。
+              res.status(200).json(toPostResponse({ ...post, score: score ?? post.score }));
             });
         })
         .catch(next);
@@ -95,7 +102,8 @@ export function createPostsRouter(
               commentRepo.addScore(commentId, delta).then((r) => r?.score ?? null),
             )
             .then(({ score }) => {
-              res.status(200).json({ ...comment, score: score ?? comment.score });
+              // OpenAPI 契約（snake_case）へ整形して返す（#499）。
+              res.status(200).json(toCommentResponse({ ...comment, score: score ?? comment.score }));
             });
         })
         .catch(next);

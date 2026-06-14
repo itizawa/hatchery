@@ -4,6 +4,7 @@ import { Router } from "express";
 import type { PostRepository } from "../persistence/postRepository.js";
 import type { WorkerRepository } from "../persistence/workerRepository.js";
 import { attachAuthorWorker } from "./authorWorker.js";
+import { toPostResponse } from "./postResponse.js";
 
 /**
  * /api/feed ルータ。ホームフィード（全 community の post を新着順で返す公開フィード）。
@@ -28,7 +29,9 @@ export function createFeedRouter(postRepo: PostRepository, workerRepo: WorkerRep
 
     fetchPage
       .then(async (result) => {
-        const posts = await attachAuthorWorker(result.posts, workerRepo);
+        const enriched = await attachAuthorWorker(result.posts, workerRepo);
+        // OpenAPI 契約（snake_case）へ整形して返す（#499）。
+        const posts = enriched.map(toPostResponse);
         res.status(200).json({ ...result, posts });
       })
       .catch((err: unknown) => {

@@ -8,6 +8,7 @@ import type { PostRepository } from "../persistence/postRepository.js";
 import type { SubscriptionRepository } from "../persistence/subscriptionRepository.js";
 import type { WorkerRepository } from "../persistence/workerRepository.js";
 import { attachAuthorWorker } from "./authorWorker.js";
+import { toPostResponse } from "./postResponse.js";
 
 const RECENT_WORKERS_LIMIT = 10;
 
@@ -45,7 +46,8 @@ export function createCommunitiesRouter(
         return postRepo.listByCommunity(community.id);
       })
       .then((posts) => attachAuthorWorker(posts, workerRepo))
-      .then((posts) => res.status(200).json(posts))
+      // OpenAPI 契約（snake_case）へ整形して返す（#499）。
+      .then((posts) => res.status(200).json(posts.map(toPostResponse)))
       .catch(next);
   });
 

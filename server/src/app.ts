@@ -3,8 +3,10 @@ import session, { type Store } from "express-session";
 
 import { createPassport, type GoogleAuthConfig } from "./auth/passport.js";
 import { DEFAULT_PUBLIC_BASE_URL, SECURITY_DEFAULTS } from "./config/env.js";
+import { CACHE_DEFAULTS } from "./config/security.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { createCors } from "./middleware/cors.js";
+import { createNoStoreCache, createPublicCache } from "./middleware/cacheControl.js";
 import { createRateLimiter } from "./middleware/rateLimiter.js";
 import { createRequestLogger } from "./middleware/requestLogger.js";
 import { createJsonBodyParser, createRequestTimeout } from "./middleware/requestLimits.js";
@@ -47,6 +49,10 @@ export interface SecurityOptions {
   enableHsts?: boolean;
   crossSiteCookie?: boolean;
   sessionSecret?: string;
+  /** 公開 GET の Cache-Control s-maxage（秒・#559）。未指定なら CACHE_DEFAULTS.sMaxageSeconds。 */
+  cacheSMaxageSeconds?: number;
+  /** 公開 GET の Cache-Control stale-while-revalidate（秒・#559）。未指定なら CACHE_DEFAULTS。 */
+  cacheStaleWhileRevalidateSeconds?: number;
 }
 
 const DEFAULT_SECURITY: Required<SecurityOptions> = {
@@ -55,6 +61,8 @@ const DEFAULT_SECURITY: Required<SecurityOptions> = {
   enableHsts: false,
   crossSiteCookie: false,
   sessionSecret: "hatchery-dev-secret",
+  cacheSMaxageSeconds: CACHE_DEFAULTS.sMaxageSeconds,
+  cacheStaleWhileRevalidateSeconds: CACHE_DEFAULTS.staleWhileRevalidateSeconds,
 };
 
 export function buildSessionCookieOptions(crossSiteCookie: boolean) {
@@ -142,6 +150,14 @@ export function createApp(deps: AppDeps): Express {
   const subscriptionRepo = deps.subscriptionRepository;
   const voteRepo = deps.voteRepository;
 
+  // Cache-Control 方針（#559）。公開・コンテンツのみの GET（未認証時）はエッジ/ブラウザに
+  // キャッシュさせ、認証系・管理系・ユーザー個別の応答は共有キャッシュに載せない。
+  const publicCache = createPublicCache({
+    sMaxageSeconds: security.cacheSMaxageSeconds,
+    staleWhileRevalidateSeconds: security.cacheStaleWhileRevalidateSeconds,
+  });
+  const noStoreCache = createNoStoreCache();
+
   if (isApiDocsEnabled(process.env)) {
     app.use("/", createApiDocsRouter());
   }
@@ -149,10 +165,12 @@ export function createApp(deps: AppDeps): Express {
   app.use("/health", healthRouter);
   app.use(
     "/sitemap.xml",
+    publicCache,
     createSitemapRouter(communityRepo, deps.publicBaseUrl ?? DEFAULT_PUBLIC_BASE_URL),
   );
   app.use(
     "/api/auth",
+    noStoreCache,
     createAuthRouter(
       passportInstance,
       deps.userRepository,
@@ -162,11 +180,16 @@ export function createApp(deps: AppDeps): Express {
       deps.publicBaseUrl ?? DEFAULT_PUBLIC_BASE_URL,
     ),
   );
-  app.use("/api/workers", createWorkersRouter(deps.workerRepository));
-  app.use("/api/admin/batch-logs", createBatchLogsRouter(deps.batchRunLogRepository));
-  app.use("/api/admin/token-usage", createTokenUsageRouter(deps.tokenUsageLogRepository));
+  app.use("/api/workers", publicCache, createWorkersRouter(deps.workerRepository));
+  app.use("/api/admin/batch-logs", noStoreCache, createBatchLogsRouter(deps.batchRunLogRepository));
+  app.use(
+    "/api/admin/token-usage",
+    noStoreCache,
+    createTokenUsageRouter(deps.tokenUsageLogRepository),
+  );
   app.use(
     "/api/admin",
+    noStoreCache,
     createAdminRouter(
       deps.appSettingRepository,
       deps.workerRepository,
@@ -175,10 +198,19 @@ export function createApp(deps: AppDeps): Express {
       commentRepo,
     ),
   );
-  app.use("/api/admin", createAdminWorkerImageRouter(deps.workerRepository, deps.storageService));
-  app.use("/api/admin", createAdminCommunityImageRouter(communityRepo, deps.storageService));
   app.use(
     "/api/admin",
+    noStoreCache,
+    createAdminWorkerImageRouter(deps.workerRepository, deps.storageService),
+  );
+  app.use(
+    "/api/admin",
+    noStoreCache,
+    createAdminCommunityImageRouter(communityRepo, deps.storageService),
+  );
+  app.use(
+    "/api/admin",
+    noStoreCache,
     createAdminWorkerCommunitiesRouter(
       deps.workerRepository,
       deps.workerCommunityRepository,
@@ -187,10 +219,15 @@ export function createApp(deps: AppDeps): Express {
   );
   app.use(
     "/api/communities",
+    publicCache,
     createCommunitiesRouter(communityRepo, postRepo, subscriptionRepo, deps.workerRepository),
   );
-  app.use("/api/feed", createFeedRouter(postRepo, deps.workerRepository));
-  app.use("/api", createPostsRouter(postRepo, commentRepo, voteRepo, deps.workerRepository));
+  app.use("/api/feed", publicCache, createFeedRouter(postRepo, deps.workerRepository));
+  app.use(
+    "/api",
+    publicCache,
+    createPostsRouter(postRepo, commentRepo, voteRepo, deps.workerRepository),
+  );
 
   app.use(errorHandler);
   return app;

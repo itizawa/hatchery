@@ -1,6 +1,7 @@
 import { NotFoundError } from "@hatchery/common";
 import { Router } from "express";
 
+import { buildPrivateCacheControl } from "../config/security.js";
 import { requireAuth } from "../middleware/requireAuth.js";
 import { toCommunityResponse } from "./communityResponse.js";
 import type { CommunityRepository } from "../persistence/communityRepository.js";
@@ -81,7 +82,10 @@ export function createCommunitiesRouter(
   });
 
   // 購読状態取得（認証任意・未認証は subscribed: false を返す・#421）
+  // ユーザー個別データを返すため、未認証時でも公開（共有）キャッシュには載せない（#559 AC3）。
+  // ルータ全体の publicCache が未認証 GET に付ける public ヘッダをここで private, no-store に上書きする。
   router.get("/:slug/subscription", (req, res, next) => {
+    res.setHeader("Cache-Control", buildPrivateCacheControl());
     const { slug } = req.params as { slug: string };
     communityRepo
       .findBySlug(slug)

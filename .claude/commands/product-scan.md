@@ -1,5 +1,5 @@
 ---
-description: デプロイ済みプロダクト（develop.hatchery.pages.dev）を実際に散策して「プロダクト体験の課題」と「追加機能の提案」を発掘し、マイルストーン無しで GitHub Issue を1回の実行で複数件まとめて起票する。Routine（無人スケジュール実行）前提でユーザー確認を挟まず自動起票する。/scan-issues が「コードベース起点」で技術的負債を棚卸しするのに対し、こちらは「プロダクト体験起点」（API でデータ取得・Playwright でスクショ・client コード読み・プロダクト自身を論じる hatchery コミュニティでの AI ワーカーの議論を課題ヒント源として参照）で機能レベルの課題・提案を backlog に積む。実装はしない（起票のみ）。
+description: デプロイ済みの本番プロダクト（hatchery-works.com）を実際に散策して「プロダクト体験の課題」と「追加機能の提案」を発掘し、マイルストーン無しで GitHub Issue を1回の実行で複数件まとめて起票する。Routine（無人スケジュール実行）前提でユーザー確認を挟まず自動起票する。/scan-issues が「コードベース起点」で技術的負債を棚卸しするのに対し、こちらは「プロダクト体験起点」（公開 API でデータ取得・Playwright でゲスト散策しスクショ・client コード読み・プロダクト自身を論じる hatchery コミュニティでの AI ワーカーの議論を課題ヒント源として参照）で機能レベルの課題・提案を backlog に積む。読み取り専用で本番データは一切変更しない。実装はしない（起票のみ）。
 argument-hint: "[任意: 散策対象を絞るヒント（例: ホームフィード, コミュニティ詳細, 投稿スレッド, 生成会話の質, 空状態/エラー表示）。空なら全体を散策]"
 allowed-tools: Bash(gh issue list:*), Bash(gh issue view:*), Bash(gh issue create:*), Bash(gh label list:*), Bash(gh repo view:*), Bash(gh api:*), Bash(git log:*), Bash(curl:*), Bash(jq:*), Bash(mktemp:*), Bash(npx playwright:*), Bash(node:*), Bash(echo:*), Bash(cat:*), Bash(head:*), Bash(tail:*), Bash(ls:*), Bash(wc:*), Bash(grep:*), Bash(find:*), Bash(sort:*), Bash(uniq:*), Read, Glob, Grep, WebFetch
 ---
@@ -7,7 +7,9 @@ allowed-tools: Bash(gh issue list:*), Bash(gh issue view:*), Bash(gh issue creat
 # /product-scan — プロダクト体験起点で課題・機能を発掘し一括起票
 
 あなたはこのプロダクト（Hatchery）の **プロダクトオーナー代理（散策・棚卸し担当）** です。
-コードを読むだけでなく **実際にデプロイ済みの develop 環境を「ユーザーとして散策」して**、放置して眺める観察エンタメとしての体験を評価し、**「直すべきプロダクト課題」と「足したい機能」を発見**して、`/df` で後から実装着手できる粒度の Issue を 1 回の実行で**複数件まとめて起票**します。
+コードを読むだけでなく **実際にデプロイ済みの本番環境（https://hatchery-works.com）を「ユーザーとして散策」して**、放置して眺める観察エンタメとしての体験を評価し、**「直すべきプロダクト課題」と「足したい機能」を発見**して、`/df` で後から実装着手できる粒度の Issue を 1 回の実行で**複数件まとめて起票**します。
+
+> **本番環境を散策する。読み取り専用を厳守する。** 散策は公開 GET（フィード・コミュニティ・投稿スレッド）のみで行い、ログイン・vote・購読・管理操作など**本番データを変更しうる操作は一切しない**。本番は実ユーザーに見えているため、誤って書き込むと実害になる。認証は不要（公開コンテンツはゲストで全閲覧できる）。
 
 > **起票数の目安: 5 件以上（複数件）**。1 回の実行で根拠の取れる課題・提案を **5 件以上**集めて起票する。ただし**根拠の無い水増しはしない**（散策の裏付け＝API レスポンス・スクショ・コード該当箇所のいずれかが取れない提案で件数を稼がない）。本当に課題が乏しい領域はその旨を報告する。
 
@@ -51,11 +53,14 @@ allowed-tools: Bash(gh issue list:*), Bash(gh issue view:*), Bash(gh issue creat
    - **定時方式**: community ごと 1 API コールで複数 post / comment をまとめ生成。常時稼働しない（ADR-0009 / 0018）。
    - **純粋な会話観察に集中（ADR-0023）**: 外部成果物生成・goal 機構・進化/経験値/関係値/mood といった成長メカニクスは**持たない**。これらを「追加機能」として提案してはいけない（廃止済みの方向性）。
 2. `CLAUDE.md` の MVP 制約（社員3・community 2・定時 2 回、ホームフィードは新着順）を確認する。MVP を超える提案は本文「スコープ外 / 将来拡張」に切り出す。
-3. **develop 環境の調査用アカウント認証情報**（記憶 `dev-account` が正本。変わっていれば実値を優先）:
-   - サイト URL: `https://develop.hatchery.pages.dev`
-   - API ベース URL: `https://hatchery-1017536464940.asia-northeast1.run.app`
-   - ログイン ID: `claude-dev` / パスワード: `Claude-Dev-2026!`（ロール: member）
-4. **既存 Issue を取得して重複を避ける**:
+3. **本番環境のアクセス情報（読み取り専用・ログイン不要）**:
+   - サイト URL: `https://hatchery-works.com`
+   - API ベース URL: `https://hatchery-works.com/api`（**同一オリジンプロキシ**。Cloudflare Pages Functions が Cloud Run へ転送する。Cloud Run の直 URL は使わない）
+   - **認証は不要・してはいけない**。公開 GET（`/api/feed`・`/api/communities`・`/api/communities/<slug>/feed`・`/api/posts/<postId>`）はゲストで全閲覧できる。認証は Google ログインのみに統一済み（#455。ID/パスワードログインは廃止された）ため、**本番ではログインせずゲストとして散策する**。vote・購読・管理など認証が要る操作は読み取り専用方針からも対象外（やらない）。
+4. **稼働タイミングの前提（重要）**: 定時バッチによる会話生成は **2026-06-15 から開始**する。それより前、および開始直後はフィードが空 / 疎な可能性が高い（cold start）。
+   - フィードが空 / 投稿が極端に少ないのは**仕様どおりの初期状態であり、それ自体を「データが空のバグ」として起票しない**。代わりに**空状態 / 初期状態の UX**（ゲストが最初に来たとき何が見えるか・誘導があるか）を観点 A として評価する。
+   - 観点 B（生成コンテンツの質）は、評価に足る量の投稿・コメントが存在する場合のみ採点する。会話がまだ十分生成されていなければ、その旨を報告に残し、観点 B の起票は無理に行わない（質の評価は実データが揃ってから）。
+5. **既存 Issue を取得して重複を避ける**:
    ```bash
    gh issue list --state all --limit 200 --json number,title,state --jq '.[] | "#\(.number)\t\(.state)\t\(.title)"'
    ```
@@ -70,26 +75,21 @@ allowed-tools: Bash(gh issue list:*), Bash(gh issue view:*), Bash(gh issue creat
 - **1A〜1C は「根拠」を取る散策**（API レスポンス・スクショ画像・コード該当箇所）。起票の根拠は必ずこの 3 つのいずれか具体的なものを添える。
 - **1D は「ヒント」を拾う散策**（プロダクト自身を論じる hatchery コミュニティで AI ワーカーが挙げている不満・要望）。1D は着眼点を増やす目的で、**それ単独では起票根拠にしない**（必ず 1A〜1C で裏取りする）。
 
-### 1A. API でデータ体験（生成会話の質・データ面）
+### 1A. 公開 API でデータ体験（生成会話の質・データ面）
 
-Cookie セッション認証。ログインしてフィード・コミュニティ・投稿スレッドの実データ（JSON）を取得し、**生成された会話の中身**を読む。
+**認証不要・ゲストで GET のみ。** 公開 API からフィード・コミュニティ・投稿スレッドの実データ（JSON）を取得し、**生成された会話の中身**を読む。Cookie もログインも不要。
 
 ```bash
-API="https://hatchery-1017536464940.asia-northeast1.run.app"
-COOKIE="$(mktemp)"
-# ログイン（Cookie を保存）
-curl -s -c "$COOKIE" -X POST "$API/api/auth/login" \
-  -H 'Content-Type: application/json' \
-  -d '{"loginId":"claude-dev","password":"Claude-Dev-2026!"}' | jq .
-# ホームフィード（新着順の post 一覧）
-curl -s -b "$COOKIE" "$API/api/feed" | jq .
+API="https://hatchery-works.com/api"
+# ホームフィード（新着順の post 一覧）。レスポンスは { nextCursor, posts } 構造
+curl -s "$API/feed" | jq '{nextCursor, count: (.posts|length), posts}'
 # コミュニティ一覧 → 各 community の feed → 投稿スレッド（comment 含む）
-curl -s -b "$COOKIE" "$API/api/communities" | jq '.[] | {slug, name}'
-curl -s -b "$COOKIE" "$API/api/communities/<slug>/feed" | jq .
-curl -s -b "$COOKIE" "$API/api/posts/<postId>" | jq .
+curl -s "$API/communities" | jq '.[] | {slug, name}'
+curl -s "$API/communities/<slug>/feed" | jq '{count: (.posts|length), posts}'
+curl -s "$API/posts/<postId>" | jq .
 ```
 
-> 公開ルートの正本は `server/src/routes/*.ts`（`feed.ts` / `communities.ts` / `posts.ts` / `auth.ts`）。エンドポイントやパラメータが上と違えばコードを正とする。`<slug>` `<postId>` は前段のレスポンスから埋める。
+> 公開ルートの正本は `server/src/routes/*.ts`（`feed.ts` / `communities.ts` / `posts.ts`）。エンドポイントやパラメータ・レスポンス構造が上と違えばコードを正とする（`/feed` と `/communities/<slug>/feed` は `{ nextCursor, posts }` を返す）。`<slug>` `<postId>` は前段のレスポンスから埋める。**書き込み系（POST/DELETE）は叩かない**。
 
 **この観点で評価する**（観察エンタメの価値に直結）:
 - 会話の**リアルさ・掛け合いの自然さ**。ワーカー同士が噛み合っているか、独り言の羅列になっていないか。
@@ -97,40 +97,39 @@ curl -s -b "$COOKIE" "$API/api/posts/<postId>" | jq .
 - **キャラ立ち**: ワーカーごとの個性（role / 口調）が会話に出ているか。
 - **データの破綻**: 空フィード・コメント 0・文字化け・極端に長い/短い本文・壊れた参照。
 
-### 1B. Playwright で画面をスクショして視覚評価
+### 1B. Playwright でゲスト散策しスクショして視覚評価
 
-`@playwright/test` は導入済み。アドホックなスクリプトで develop 環境にログインし、主要画面をスクショ → `Read` で画像を視覚評価する。
+`@playwright/test` は導入済み。アドホックなスクリプトで本番環境を **ゲスト（未ログイン）として**開き、主要画面をスクショ → `Read` で画像を視覚評価する。**ログインはしない**（本番データを変更しないため・公開ページはゲストで全閲覧できるため）。
 
-1. **ログイン UI のセレクタを実装から確認**する（`client/src/routes/LoginScene.tsx`。`useForm` + `form.Field` + MUI `TextField`）。
-2. 一時スクリプトを書いて実行する（ブラウザバイナリ未取得なら先に `npx playwright install chromium`）:
+1. 一時スクリプトを書いて実行する（ブラウザバイナリ未取得なら先に `npx playwright install chromium`）:
    ```js
-   // /tmp/product-scan-shots.mjs（例。セレクタは LoginScene.tsx に合わせる）
+   // /tmp/product-scan-shots.mjs（例。ゲスト閲覧・ログイン操作はしない）
    import { chromium } from "playwright";
-   const SITE = "https://develop.hatchery.pages.dev";
+   const SITE = "https://hatchery-works.com";
    const browser = await chromium.launch();
-   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
-   await page.goto(`${SITE}/login`);
-   await page.getByLabel(/ログインID|loginId/i).fill("claude-dev");
-   await page.getByLabel(/パスワード|password/i).fill("Claude-Dev-2026!");
-   await page.getByRole("button", { name: /ログイン|サインイン/i }).click();
-   await page.waitForLoadState("networkidle");
-   const shots = ["/", "/communities"]; // 主要画面。community 詳細・投稿スレッドの実URLも足す
-   for (const [i, path] of shots.entries()) {
-     await page.goto(`${SITE}${path}`);
-     await page.waitForLoadState("networkidle");
-     await page.screenshot({ path: `e2e/screenshots/product-scan-${i}.png`, fullPage: true });
+   // デスクトップ + モバイルの両幅で撮ってレスポンシブも見る
+   for (const [label, viewport] of [["desktop", { width: 1280, height: 900 }], ["mobile", { width: 390, height: 844 }]]) {
+     const page = await browser.newPage({ viewport });
+     // 主要画面。community 詳細（/communities/hatchery）・投稿スレッド（/posts/<id>）の実URLも 1A の結果から足す
+     const shots = ["/", "/communities", "/communities/hatchery"];
+     for (const [i, path] of shots.entries()) {
+       await page.goto(`${SITE}${path}`);
+       await page.waitForLoadState("networkidle");
+       await page.screenshot({ path: `e2e/screenshots/product-scan-${label}-${i}.png`, fullPage: true });
+     }
+     await page.close();
    }
    await browser.close();
    ```
    ```bash
    node /tmp/product-scan-shots.mjs
    ```
-3. 撮った PNG を `Read` で開き、**視覚的に評価**する:
-   - **空状態 / ローディング / エラー表示**の有無と質（フィードが空のとき、購読 0 のとき、通信失敗時に何が出るか）。
+2. 撮った PNG を `Read` で開き、**視覚的に評価**する:
+   - **空状態 / 初期状態 / ローディング / エラー表示**の有無と質（フィードが空のとき・投稿が少ないとき、ゲストに何が見えどう誘導されるか。※ 会話開始前後の空フィードは仕様どおりなので「空＝バグ」とはしない。空状態 UX の良し悪しを評価する）。
    - **ナビゲーション・情報設計**: 迷子にならないか、戻る導線、現在地の分かりやすさ。
-   - **レイアウト破綻 / レスポンシブ**: 長文・長いコミュニティ名でのはみ出し、余白・整列の乱れ。
+   - **レイアウト破綻 / レスポンシブ**: デスクトップ/モバイル両幅で、長文・長いコミュニティ名でのはみ出し、余白・整列の乱れ。
    - **Reddit 風 UI / Slack 風テーマ**として成立しているか、観察して楽しい見た目か。
-   - vote・購読の**操作フィードバック**（押した結果が分かるか）。
+   - **ゲストの操作導線**: vote・購読を押そうとしたときのログイン誘導が分かりやすいか（押下による実書き込みはしない。導線の有無・分かりやすさを見た目で評価する）。
 
 > スクショ取得が環境都合（ブラウザ未取得・ネットワーク制限等）で失敗した場合は、その旨を報告に残し、**1A（API）と 1C（コード読み）の根拠で散策を続行**する（Playwright が無いと止まる、にはしない）。
 
@@ -143,16 +142,16 @@ curl -s -b "$COOKIE" "$API/api/posts/<postId>" | jq .
 
 ### 1D. Hatchery メタコミュニティの議論を「課題ヒント源」として読む
 
-Hatchery には**プロダクト自身を語るメタコミュニティ**（slug: `hatchery` / `https://develop.hatchery.pages.dev/communities/hatchery`）があり、AI ワーカーが「Hatchery のここが惜しい・こんな機能が欲しい」を実際に議論している（観測例: 過去スレの**検索性**、**通知の粒度**（スレ単位の ON/OFF 制御）、スレの**議論中/完了ステータス**が見た目で分からない、等）。これは**内側からのドッグフーディング的フィードバック源**で、外から散策するだけでは気づきにくい着眼点を効率よく増やせる。
+Hatchery には**プロダクト自身を語るメタコミュニティ**（slug: `hatchery` / `https://hatchery-works.com/communities/hatchery`）があり、AI ワーカーが「Hatchery のここが惜しい・こんな機能が欲しい」を実際に議論している（観測例: 過去スレの**検索性**、**通知の粒度**（スレ単位の ON/OFF 制御）、スレの**議論中/完了ステータス**が見た目で分からない、等）。これは**内側からのドッグフーディング的フィードバック源**で、外から散策するだけでは気づきにくい着眼点を効率よく増やせる。**認証不要・GET のみ**で読む。
 
 ```bash
 # メタコミュニティの最新スレ一覧（タイトルで気になる議論を当たりづける）
-curl -s -b "$COOKIE" "$API/api/communities/hatchery/feed" | jq '[.[] | {id, author, title}]'
+curl -s "$API/communities/hatchery/feed" | jq '[.posts[] | {id, author, title}]'
 # 気になるスレの掛け合い（comment 含む）を読む
-curl -s -b "$COOKIE" "$API/api/posts/<postId>" | jq '[.comments[] | {author, text}]'
+curl -s "$API/posts/<postId>" | jq '[.comments[] | {author, text}]'
 ```
 
-> エンドポイント・レスポンス構造の正本は `server/src/routes/{communities,posts}.ts`。jq のパスは実レスポンスに合わせる。`hatchery` 以外にもメタ寄りの community があれば同様に読む。
+> エンドポイント・レスポンス構造の正本は `server/src/routes/{communities,posts}.ts`。`/communities/<slug>/feed` は `{ nextCursor, posts }` を返すので `.posts[]` を辿る。jq のパスは実レスポンスに合わせる。`hatchery` 以外にもメタ寄りの community があれば同様に読む。**会話開始前は空の可能性がある**（STEP 0 の稼働タイミング前提を参照。空なら無理にヒントを作らない）。
 
 **扱い方（最重要・誤用しやすい）**:
 
@@ -287,5 +286,6 @@ EOF
 - ❌ 1 つに詰め込みすぎた巨大 Issue（`/df` が 1 回で完走できる粒度に割る）。
 - ❌ 件数稼ぎの過剰分割・根拠の無い提案で水増しする。
 - ❌ 起票前にユーザーへ確認・承認を求めて待つ（Routine 無人実行が止まる。セルフチェックを通して自動起票する）。
-- ❌ develop 環境のデータを**変更**する操作（投稿・購読・vote・管理操作）を散策中に実行する（読み取り＝GET 中心に留める。認証は調査用 `claude-dev` のみ）。
-- ❌ 認証情報（パスワード）を Issue 本文・ログに書き出す。
+- ❌ **本番環境のデータを変更**する操作（ログイン・投稿・購読・vote・管理操作などの POST/DELETE）を散策中に実行する。散策は**ゲストの公開 GET のみ**に厳守する（本番は実ユーザーに見えており、書き込みは実害）。
+- ❌ ログインを試みる（本番は Google ログインのみで、散策に認証は不要。公開コンテンツはゲストで全閲覧できる）。
+- ❌ 会話開始前 / 直後の**空フィード・投稿の少なさを「データが空のバグ」として起票**する（cold start の仕様どおり。空状態 UX の良し悪しは評価してよい）。

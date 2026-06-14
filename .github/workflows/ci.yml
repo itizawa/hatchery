@@ -17,13 +17,38 @@ concurrency:
 jobs:
   build-test-lint:
     runs-on: ubuntu-latest
+
+    # Issue #509: CI 上で PostgreSQL を起動し、skipIf(!DATABASE_URL) でゲートされた
+    # server の統合テスト（src/persistence/prisma*Repository.test.ts）を実際に走らせる。
+    # イメージは本番 Cloud SQL の POSTGRES_16・develop/stg の Neon(PG16) と整合させる。
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: hatchery
+          POSTGRES_PASSWORD: hatchery
+          POSTGRES_DB: hatchery_test
+        ports:
+          - 5432:5432
+        # postgres コンテナが接続可能になるまで待つ（healthy になってからステップが進む）。
+        options: >-
+          --health-cmd "pg_isready -U hatchery -d hatchery_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     # Turborepo Remote Caching（ADR-0002 追補 / #508）。
     # turbo が lint/test/build のキャッシュを CI 実行間で共有し、変更のないワークスペースの再計算をスキップする。
     # 認証情報は GitHub Secrets / Variables 経由でのみ渡し、リポジトリに平文を残さない。
     # TURBO_TOKEN / TURBO_TEAM が未設定（空）の場合、turbo は Remote を無効化しローカルキャッシュにフォールバックする。
+    #
+    # DATABASE_URL（#509）: 上記 services の PostgreSQL を指す CI 専用の使い捨て接続。
+    # これを job 全体へ注入することで統合テストの skipIf(!DATABASE_URL) が解除され実行される。
+    # 本番・dev・stg の DATABASE_URL（GitHub Secrets 管理）とは一切無関係。
     env:
       TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
       TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+      DATABASE_URL: postgresql://hatchery:hatchery@localhost:5432/hatchery_test?schema=public
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -49,13 +74,38 @@ jobs:
       - name: Dependency audit
         run: pnpm audit --audit-level=high --prod
 
+      # ⚠️ CI 専用（#509）。耐久性を捨てて速度を優先する PostgreSQL チューニング。
+      # 適用パラメータ（postgresql.conf 表記）: synchronous_commit=off / fsync=off / full_page_writes=off。
+      # commit ごとのディスク同期待ちを無くしテスト DB I/O を高速化する（記事(3) 相当）。
+      # クラッシュ時にデータ破損し得るため本番では絶対に使わない設定だが、CI の DB は
+      # 1 実行ごとに破棄される使い捨てのため許容できる。
+      # 設定は services の postgres コンテナ内で ALTER SYSTEM し pg_reload_conf で反映する。
+      # この設定は本 workflow（CI）に閉じており、deploy-server-*.yml / 本番 DB には一切適用しない。
+      - name: Apply CI-only PostgreSQL durability-off tuning
+        env:
+          PGPASSWORD: hatchery
+        run: |
+          psql -h localhost -U hatchery -d hatchery_test -v ON_ERROR_STOP=1 <<'SQL'
+          ALTER SYSTEM SET synchronous_commit = 'off';
+          ALTER SYSTEM SET fsync = 'off';
+          ALTER SYSTEM SET full_page_writes = 'off';
+          SELECT pg_reload_conf();
+          SQL
+
+      # CI 上の PostgreSQL に Prisma マイグレーションを適用する（#509 / db:migrate = prisma migrate deploy）。
+      # turbo test より前に置くことで、統合テストが走る時点でスキーマが用意されている。
+      # deploy-server-dev.yml の "Run Prisma migration" ステップが雛形。
+      - name: Run Prisma migration (CI)
+        run: pnpm --filter @hatchery/server db:migrate
+
       # ADR-0002 のタスク定義をそのまま回す。Turborepo が依存順と並列を解決する。
       # #507: 各 WS の test script は `vitest run --coverage`。この turbo の test 実行で
       # common/server/client の coverage/ が生成されるため、別途 vitest を再実行しない
       # （テストを CI 1 実行あたり 1 回だけに統合し、2 重実行を解消する）。
       # @hatchery/server#test は turbo.json で ^build / db:generate に依存するため、
       # coverage 付きでも build / Prisma 生成の前提が満たされた状態でテストが走る。
-      # DATABASE_URL が無い CI 環境では .int.test.ts は skipIf で自動スキップされる。
+      # #509: job env に DATABASE_URL を注入済みのため、skipIf(!DATABASE_URL) でゲートされた
+      # server の統合テストもスキップされず CI 上で実際に実行される（スキップ 0）。
       - name: Lint / Test (coverage) / Build
         run: pnpm turbo run lint test build
 

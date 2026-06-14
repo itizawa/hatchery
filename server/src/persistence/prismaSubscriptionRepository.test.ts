@@ -29,10 +29,10 @@ describe.skipIf(!DATABASE_URL)("createPrismaSubscriptionRepository (integration)
 
   async function setupFixtures() {
     const u1 = await prisma.user.create({
-      data: { loginId: "sub-user-1", displayName: "User 1" },
+      data: { email: "sub-user-1@example.com", googleId: "sub-google-1", displayName: "User 1" },
     });
     const u2 = await prisma.user.create({
-      data: { loginId: "sub-user-2", displayName: "User 2" },
+      data: { email: "sub-user-2@example.com", googleId: "sub-google-2", displayName: "User 2" },
     });
     userId = u1.id;
     userId2 = u2.id;

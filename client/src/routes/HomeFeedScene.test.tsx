@@ -56,6 +56,16 @@ function stubFetch({ authenticated, feedPosts = [] }: FetchStubOptions) {
         }),
       );
     }
+    // #498: スレッド遷移テスト用。GET /api/posts/{postId} を post + comments で返す。
+    if (/\/api\/posts\/[^/]+$/.test(url)) {
+      const post = feedPosts[0] ?? { id: "post-1", title: "投稿", text: "", score: 0 };
+      return Promise.resolve(
+        new Response(JSON.stringify({ post, comments: [] }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+    }
     return Promise.resolve(
       new Response(JSON.stringify([]), {
         status: 200,
@@ -229,6 +239,53 @@ describe("HomeFeedScene — 人気フィード (/popular) (#435)", () => {
       });
       expect(popularCalls.length).toBeGreaterThan(0);
     });
+  });
+});
+
+describe("HomeFeedScene — 投稿カードからスレッドへ遷移 (#498)", () => {
+  const post = {
+    id: "post-thread-1",
+    community_id: "community-1",
+    slot_key: "2026-06-10-morning",
+    seq: 1,
+    author: "worker-haru",
+    title: "スレッド遷移テスト投稿",
+    text: "内容",
+    score: 0,
+    created_at: "2026-06-10T00:00:00Z",
+  };
+
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("投稿カードが /posts/$postId への href を持つリンクで囲まれている", async () => {
+    stubFetch({ authenticated: false, feedPosts: [post] });
+    renderApp("/");
+
+    const title = await screen.findByText("スレッド遷移テスト投稿");
+    const link = title.closest("a");
+    expect(link).not.toBeNull();
+    expect(link).toHaveAttribute("href", `/posts/${post.id}`);
+  });
+
+  it("投稿カードのタイトルをクリックするとスレッド（/posts/$postId）へ遷移する", async () => {
+    stubFetch({ authenticated: false, feedPosts: [post] });
+    renderApp("/");
+
+    const title = await screen.findByText("スレッド遷移テスト投稿");
+    await userEvent.click(title);
+
+    // スレッド（/posts/$postId）へ遷移し、スレッド固有のコメント空状態が表示される。
+    expect(
+      await screen.findByText(/まだコメントはありません/),
+    ).toBeInTheDocument();
+    // フィードの見出しは消えている（ページが切り替わった）。
+    expect(screen.queryByRole("heading", { name: /ホームフィード/ })).not.toBeInTheDocument();
   });
 });
 

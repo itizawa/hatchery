@@ -38,10 +38,11 @@ export function createPostsRouter(
           // post と comments を 1 回のワーカー取得で付与する（重複クエリを避ける）。
           const enrich = await buildAuthorWorkerEnricher(workerRepo);
           const [enrichedPost] = enrich([post]);
+          // enrich([post]) は必ず 1 要素返る（post は上の null ガード済み）。
           const enrichedComments = enrich(comments);
           // OpenAPI 契約（snake_case）へ整形して返す（#499）。
           res.status(200).json({
-            post: toPostResponse(enrichedPost),
+            post: enrichedPost ? toPostResponse(enrichedPost) : toPostResponse(post),
             comments: enrichedComments.map(toCommentResponse),
           });
         });

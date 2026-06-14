@@ -16,7 +16,7 @@ import {
 import type { WorkerRecord } from "../persistence/workerRepository.js";
 import { createInMemoryWorldStateRepository } from "../persistence/worldStateRepository.js";
 
-import { runCommunityBatch } from "./runCommunityBatch.js";
+import { generateSlotKey, runCommunityBatch } from "./runCommunityBatch.js";
 
 /** テスト用 Bot ワーカー（フォールバック候補）。 */
 const botWorkers: WorkerRecord[] = [
@@ -585,5 +585,34 @@ describe("runCommunityBatch worldState 登場ローテーション (#464)", () =
     expect(state?.workerStates["mei"]?.lastAppearedSlotKey).toBe("2026-06-13T12:00");
     // haru は今回登場していないので前の slotKey を保持。
     expect(state?.workerStates["haru"]?.lastAppearedSlotKey).toBe("2026-06-13T09:00");
+  });
+});
+
+describe("generateSlotKey", () => {
+  it("UTC 時刻を 'YYYY-MM-DDTHH:MM' 形式にフォーマットする", () => {
+    const date = new Date("2026-01-15T03:05:00Z");
+    expect(generateSlotKey(date)).toBe("2026-01-15T03:05");
+  });
+
+  it("月・日・時・分を 2 桁にゼロ埋めする", () => {
+    const date = new Date("2026-01-01T00:00:00Z");
+    expect(generateSlotKey(date)).toBe("2026-01-01T00:00");
+  });
+
+  it("年末 23:59 UTC を正しくフォーマットする", () => {
+    const date = new Date("2026-12-31T23:59:00Z");
+    expect(generateSlotKey(date)).toBe("2026-12-31T23:59");
+  });
+
+  it("引数省略時は文字列を返す", () => {
+    expect(typeof generateSlotKey()).toBe("string");
+    expect(generateSlotKey()).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/);
+  });
+
+  it("UTC と異なるローカル時刻の Date でも UTC 値を返す", () => {
+    // 2026-06-13T00:30:00Z は JST では 2026-06-13T09:30:00+09:00
+    // UTC 基準なら "2026-06-13T00:30"、ローカル（JST）なら "2026-06-13T09:30" になる
+    const date = new Date("2026-06-13T00:30:00Z");
+    expect(generateSlotKey(date)).toBe("2026-06-13T00:30");
   });
 });

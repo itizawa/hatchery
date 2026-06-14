@@ -2,7 +2,7 @@
 
 対応画面: `client/src/components/LoginDialog.tsx`（ログインモーダル / #454）・`client/src/components/AppHeader.tsx`（ログイン導線・ログアウト）
 
-各ユースケースの見出し（`## UC-AUTH-NN: ...`）は `auth.spec.ts` の `test.todo()` と 1:1 で対応する。
+各ユースケースの見出し（`## UC-AUTH-NN: ...`）は `auth.spec.ts` の `test()` と 1:1 で対応する。
 
 > #454: ログインは専用ページ（旧 `/login`）からモーダル（MUI `Dialog`）へ変更した。開閉は URL の
 > search param（`?login=1`）駆動で、ページ遷移せず背景の閲覧コンテキストを保ったままログインできる。

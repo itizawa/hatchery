@@ -233,9 +233,7 @@ describe("プロフィール編集フォーム (#51)", () => {
     // updateProfile が reject する状態を作り、失敗フィードバックの有無を検証する。
     // auth.ts の updateProfile は失敗を Error.message に乗せて throw するため、
     // サーバ由来文言が getApiErrorMessage 経由で Snackbar に出ることを確認する。
-    vi.spyOn(authApi, "updateProfile").mockRejectedValue(
-      new Error("表示名は既に使われています"),
-    );
+    vi.spyOn(authApi, "updateProfile").mockRejectedValue(new Error("表示名は既に使われています"));
     vi.spyOn(authApi, "fetchMe").mockResolvedValue(mockUser);
     vi.spyOn(authApi, "useAuth").mockReturnValue({
       data: mockUser,

@@ -42,6 +42,30 @@ describe("GET /api/feed", () => {
     expect(res.body.posts[0]).toMatchObject({ title: "My Post" });
   });
 
+  it("各 post のフィールド名が OpenAPI スキーマ（snake_case）と一致し camelCase を含まない（#499）", async () => {
+    const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
+    const postRepo = createInMemoryPostRepository();
+    await postRepo.createMany("community-1", [
+      { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "My Post", text: "Text" },
+    ]);
+
+    const deps = await createTestDeps({
+      communityRepository: communityRepo,
+      postRepository: postRepo,
+    });
+    const app = createApp(deps);
+
+    const res = await request(app).get("/api/feed");
+    expect(res.status).toBe(200);
+    const post = res.body.posts[0];
+    expect(post).toHaveProperty("community_id", "community-1");
+    expect(post).toHaveProperty("slot_key");
+    expect(post).toHaveProperty("created_at");
+    expect(post).not.toHaveProperty("communityId");
+    expect(post).not.toHaveProperty("slotKey");
+    expect(post).not.toHaveProperty("createdAt");
+  });
+
   it("認証済みユーザーでも購読に関係なく全 community の投稿を取得できる", async () => {
     const communityRepo = createInMemoryCommunityRepository([
       makeCommunity({ id: "community-1", slug: "tech" }),

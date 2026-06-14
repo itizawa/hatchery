@@ -88,6 +88,22 @@ describe("AC1: PostgreSQL を services コンテナとして起動する", () =>
   });
 });
 
+describe("AC3: turbo の strict env mode で DATABASE_URL がテストタスクへ渡る", () => {
+  // turbo 2.x は strict env mode のため、宣言されていない env var はタスクの process.env から
+  // 除外される。@hatchery/server#test の env に DATABASE_URL が無いと、CI で DB を立てても
+  // 統合テストが skipIf(!DATABASE_URL) で「サイレントにスキップ」され AC3 が満たされない。
+  it("turbo.json の @hatchery/server#test が env に DATABASE_URL を宣言している", () => {
+    const turboPath = path.join(repoRoot, "turbo.json");
+    const turbo = JSON.parse(readRaw(turboPath)) as {
+      tasks?: Record<string, { env?: string[]; passThroughEnv?: string[] }>;
+    };
+    const task = turbo.tasks?.["@hatchery/server#test"];
+    expect(task, "@hatchery/server#test タスクが定義されている").toBeDefined();
+    const declared = [...(task?.env ?? []), ...(task?.passThroughEnv ?? [])];
+    expect(declared).toContain("DATABASE_URL");
+  });
+});
+
 describe("AC2: テスト前に Prisma マイグレーションを適用する", () => {
   it("db:migrate を実行するステップが存在する", () => {
     const steps = allSteps(ciWorkflow());

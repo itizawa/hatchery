@@ -49,6 +49,13 @@ Issue 本文は `*.int.test.ts` という命名を想定しているが、本リ
 - `vitest.config.ts` は `fileParallelism: false`（直列実行）なので、複数の統合テストファイルが
   単一 DB を共有しても**ファイル間で同時書き込みが起きない**。各ファイルは `afterEach` で
   対象テーブルを `deleteMany` してクリーンアップ済み（AC5 参照）。
+- **turbo strict env mode の落とし穴**: turbo 2.x は strict env mode のため、`turbo.json` の
+  タスクに宣言されていない env var はタスクの `process.env` から除外される。`DATABASE_URL` を
+  job env に入れるだけでは `@hatchery/server#test`（turbo 経由）に渡らず、統合テストが
+  `skipIf(!DATABASE_URL)` で**サイレントにスキップ**されてしまう（CI は緑のまま AC3 違反）。
+  そのため `turbo.json` の `@hatchery/server#test` に `"env": ["DATABASE_URL"]` を宣言し、
+  値変化でキャッシュも適切にバストされるようにする。`tests/ci-integration-db.test.ts` で
+  この宣言の存在を回帰テストとしてガードする。
 
 ### AC4: CI 限定の耐久性無効チューニング
 
@@ -106,6 +113,8 @@ Issue 本文は `*.int.test.ts` という命名を想定しているが、本リ
 
 - `.github/workflows/ci.yml`（services.postgres 追加 / env.DATABASE_URL / 耐久性 off チューニング /
   migrate ステップ）
+- `turbo.json`（`@hatchery/server#test` に `env: ["DATABASE_URL"]` を宣言し strict env mode で
+  統合テストへ DATABASE_URL を渡す）
 - `server/prisma/migrations/20260614120000_add_token_usage_log/migration.sql`（欠落 migration 補完）
 - `server/src/persistence/prismaSubscriptionRepository.test.ts`（stale fixture 修正）
 - `tests/ci-integration-db.test.ts`（CI 構造の規約テスト）

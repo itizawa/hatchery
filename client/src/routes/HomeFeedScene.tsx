@@ -73,14 +73,20 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
       ) : (
         <Box>
           {posts.map((post) => (
-            <PostCard
+            <RouterLink
               key={post.id}
-              post={post}
-              onVote={(direction: VoteDirection) =>
-                guardVote(() => votePost({ postId: post.id, direction }))
-              }
-              voteStopPropagation
-            />
+              to="/posts/$postId"
+              params={{ postId: post.id }}
+              style={{ display: "block", textDecoration: "none", color: "inherit" }}
+            >
+              <PostCard
+                post={post}
+                onVote={(direction: VoteDirection) =>
+                  guardVote(() => votePost({ postId: post.id, direction }))
+                }
+                voteStopPropagation
+              />
+            </RouterLink>
           ))}
           <Box ref={sentinelRef} sx={{ py: 1 }}>
             {isFetchingNextPage && (

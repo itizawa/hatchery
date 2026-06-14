@@ -40,7 +40,7 @@ function CreateCommunityForm(): ReactElement {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const form = useForm({
-    defaultValues: { slug: "", name: "", description: "", generationInstruction: "" } as CreateCommunityInput,
+    defaultValues: { slug: "", name: "", description: "", generationInstruction: undefined } as CreateCommunityInput,
     onSubmit: async ({ value }) => {
       setErrorMsg(null);
       try {
@@ -146,7 +146,7 @@ function CreateCommunityForm(): ReactElement {
             multiline
             rows={4}
             value={field.state.value ?? ""}
-            onChange={(e) => field.handleChange(e.target.value)}
+            onChange={(e) => field.handleChange(e.target.value || undefined)}
             onBlur={field.handleBlur}
             inputProps={{ maxLength: COMMUNITY_GENERATION_INSTRUCTION_MAX_LENGTH }}
             helperText={`最大 ${COMMUNITY_GENERATION_INSTRUCTION_MAX_LENGTH} 文字（省略時は概要を使用）`}
@@ -188,7 +188,7 @@ function EditCommunityForm({ community, onCancel }: EditCommunityFormProps): Rea
     defaultValues: {
       name: community.name,
       description: community.description,
-      generationInstruction: community.generationInstruction ?? "",
+      generationInstruction: community.generationInstruction ?? undefined,
     } as UpdateCommunityInput,
     onSubmit: async ({ value }) => {
       setErrorMsg(null);
@@ -288,7 +288,7 @@ function EditCommunityForm({ community, onCancel }: EditCommunityFormProps): Rea
             multiline
             rows={4}
             value={field.state.value ?? ""}
-            onChange={(e) => field.handleChange(e.target.value)}
+            onChange={(e) => field.handleChange(e.target.value || undefined)}
             onBlur={field.handleBlur}
             inputProps={{ maxLength: COMMUNITY_GENERATION_INSTRUCTION_MAX_LENGTH }}
             helperText={`最大 ${COMMUNITY_GENERATION_INSTRUCTION_MAX_LENGTH} 文字（省略時は概要を使用）`}

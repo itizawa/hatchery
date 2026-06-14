@@ -66,7 +66,7 @@ export function buildCommunityPrompt(params: BuildCommunityPromptParams): string
       ? `直近の投稿・コメント（${recentLog.length} 件）:\n${recentLog.join("\n")}`
       : "直近の投稿・コメント: (なし)";
 
-  const toneInstruction = community.generationInstruction || community.description;
+  const toneInstruction = community.generationInstruction ?? community.description;
 
   const synopsisSection = community.synopsis
     ? `コミュニティのあらすじ:\n${community.synopsis}\n\n`

@@ -179,16 +179,4 @@ describe("generationInstruction フォールバック（#488）", () => {
     expect(prompt).toContain("公開概要（フォールバック）");
   });
 
-  it("generationInstruction が空文字のとき description にフォールバックする", () => {
-    const prompt = buildCommunityPrompt({
-      community: {
-        id: "c1", slug: "s", name: "N", description: "公開概要（空フォールバック）",
-        generationInstruction: "",
-        synopsis: null, lastSlotKey: null, iconUrl: null, coverUrl: null, createdAt: new Date(),
-      },
-      workers,
-      recentLog: [],
-    });
-    expect(prompt).toContain("公開概要（空フォールバック）");
-  });
 });

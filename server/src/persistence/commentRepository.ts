@@ -39,6 +39,12 @@ export interface CommentRepository {
   /** ID で comment を取得する。存在しない場合は null を返す。 */
   findById(id: string): Promise<CommentRecord | null>;
   /**
+   * 複数 post のコメント件数をまとめて集計する（フィードの N+1 回避・#500）。
+   * postId → 件数の Map を返す。コメントが 0 件の postId は Map に現れない
+   * （呼び出し側で 0 とみなす）。空配列を渡したら空 Map を返す。
+   */
+  countByPostIds(postIds: string[]): Promise<Map<string, number>>;
+  /**
    * comment の score に delta を加算する。
    * 存在しない場合は null を返す。
    */
@@ -102,6 +108,18 @@ export function createInMemoryCommentRepository(): CommentRepository {
     findById(id: string): Promise<CommentRecord | null> {
       const found = records.find((r) => r.id === id);
       return Promise.resolve(found ? cloneRecord(found) : null);
+    },
+
+    countByPostIds(postIds: string[]): Promise<Map<string, number>> {
+      const counts = new Map<string, number>();
+      if (postIds.length === 0) return Promise.resolve(counts);
+      const target = new Set(postIds);
+      for (const r of records) {
+        if (target.has(r.postId)) {
+          counts.set(r.postId, (counts.get(r.postId) ?? 0) + 1);
+        }
+      }
+      return Promise.resolve(counts);
     },
 
     addScore(id: string, delta: number): Promise<CommentRecord | null> {

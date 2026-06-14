@@ -15,8 +15,8 @@ import type { PostRecord } from "../persistence/postRepository.js";
  * 後段で行い、存在する場合のみ透過する（解決できない author は付与しない）。
  */
 
-/** PostRecord に author_worker（任意）を付けた enrich 後の形。 */
-type EnrichedPostRecord = PostRecord & { author_worker?: AuthorWorker };
+/** PostRecord に author_worker（任意）と commentCount（任意）を付けた enrich 後の形。 */
+type EnrichedPostRecord = PostRecord & { author_worker?: AuthorWorker; commentCount?: number };
 
 /** CommentRecord に author_worker（任意）を付けた enrich 後の形。 */
 type EnrichedCommentRecord = CommentRecord & { author_worker?: AuthorWorker };
@@ -33,6 +33,8 @@ export function toPostResponse(r: EnrichedPostRecord) {
     text: r.text,
     score: r.score,
     created_at: r.createdAt,
+    // コメント件数（#500）。enrich されていない場合は 0 を返す。
+    comment_count: r.commentCount ?? 0,
   };
   return r.author_worker ? { ...base, author_worker: r.author_worker } : base;
 }

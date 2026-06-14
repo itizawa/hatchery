@@ -220,9 +220,15 @@ export function createApp(deps: AppDeps): Express {
   app.use(
     "/api/communities",
     publicCache,
-    createCommunitiesRouter(communityRepo, postRepo, subscriptionRepo, deps.workerRepository),
+    createCommunitiesRouter(
+      communityRepo,
+      postRepo,
+      subscriptionRepo,
+      deps.workerRepository,
+      commentRepo,
+    ),
   );
-  app.use("/api/feed", publicCache, createFeedRouter(postRepo, deps.workerRepository));
+  app.use("/api/feed", publicCache, createFeedRouter(postRepo, deps.workerRepository, commentRepo));
   app.use(
     "/api",
     publicCache,

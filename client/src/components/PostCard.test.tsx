@@ -85,7 +85,8 @@ describe("PostCard", () => {
     });
 
     it("comment_count が未指定でも 0 として表示する（後方互換）", () => {
-      const { comment_count: _omit, ...postWithout } = mockPost;
+      const postWithout = { ...mockPost };
+      delete (postWithout as { comment_count?: number }).comment_count;
       render(<PostCard post={postWithout} onVote={vi.fn()} />);
       expect(screen.getByLabelText("コメント 0 件")).toBeInTheDocument();
     });

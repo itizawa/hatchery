@@ -17,6 +17,8 @@ export interface CommunityRecord {
   iconUrl: string | null;
   /** GCS 上のカバー画像 URL（#457）。未設定は null。 */
   coverUrl: string | null;
+  /** 非公開の生成プロンプト指示（#488）。admin のみが設定・閲覧できる。公開 API には返さない。 */
+  generationInstruction: string | null;
   createdAt: Date;
 }
 
@@ -25,9 +27,10 @@ export interface CreateCommunityRecordInput {
   slug: string;
   name: string;
   description: string;
+  generationInstruction?: string | null;
 }
 
-/** コミュニティ更新の入力型（#310 / #457）。slug は不変。 */
+/** コミュニティ更新の入力型（#310 / #457 / #488）。slug は不変。 */
 export interface UpdateCommunityRecordInput {
   name?: string;
   description?: string;
@@ -35,6 +38,8 @@ export interface UpdateCommunityRecordInput {
   iconUrl?: string;
   /** カバー画像 URL の更新（#457・アップロード API から渡す）。 */
   coverUrl?: string;
+  /** 非公開の生成プロンプト指示の更新（#488）。 */
+  generationInstruction?: string | null;
 }
 
 export interface CommunityRepository {
@@ -86,6 +91,7 @@ export function createInMemoryCommunityRepository(
         lastSlotKey: null,
         iconUrl: null,
         coverUrl: null,
+        generationInstruction: input.generationInstruction ?? null,
         createdAt: new Date(),
       };
       records.push(record);
@@ -99,6 +105,8 @@ export function createInMemoryCommunityRepository(
       if (input.description !== undefined) record.description = input.description;
       if (input.iconUrl !== undefined) record.iconUrl = input.iconUrl;
       if (input.coverUrl !== undefined) record.coverUrl = input.coverUrl;
+      if (input.generationInstruction !== undefined)
+        record.generationInstruction = input.generationInstruction;
       return Promise.resolve(cloneRecord(record));
     },
   };

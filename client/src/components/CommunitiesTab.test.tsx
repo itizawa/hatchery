@@ -17,6 +17,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 
 import {
   COMMUNITY_DESCRIPTION_MAX_LENGTH,
+  COMMUNITY_GENERATION_INSTRUCTION_MAX_LENGTH,
   COMMUNITY_NAME_MAX_LENGTH,
   COMMUNITY_SLUG_MAX_LENGTH,
 } from "@hatchery/common";
@@ -82,7 +83,7 @@ function getCreateFormInputs() {
   return {
     slug: screen.getByRole("textbox", { name: /slug（URL 識別子）/ }),
     name: screen.getAllByRole("textbox", { name: /コミュニティ名/ })[0],
-    description: screen.getAllByRole("textbox", { name: /作風・説明/ })[0],
+    description: screen.getAllByRole("textbox", { name: /コミュニティ概要（公開）/ })[0],
   };
 }
 
@@ -94,7 +95,7 @@ describe("CommunitiesTab（#381）", () => {
     expect(screen.getByText("新しいコミュニティを作成")).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: /slug（URL 識別子）/ })).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: /コミュニティ名/ })).toBeInTheDocument();
-    expect(screen.getByRole("textbox", { name: /作風・説明/ })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: /コミュニティ概要（公開）/ })).toBeInTheDocument();
     // 一覧に既存コミュニティが表示される（GET /api/admin/communities）
     expect(await screen.findByText("AI 開発者の集い")).toBeInTheDocument();
     expect(screen.getByText("ai-dev")).toBeInTheDocument();
@@ -149,7 +150,7 @@ describe("CommunitiesTab（#381）", () => {
 
     expect(await screen.findByText("コミュニティを作成しました")).toBeInTheDocument();
     expect(createRequests).toHaveLength(1);
-    expect(createRequests[0]).toEqual({
+    expect(createRequests[0]).toMatchObject({
       slug: "tech-news",
       name: "テックニュース",
       description: "最新技術の話題を語る community",
@@ -185,7 +186,7 @@ describe("CommunitiesTab（#381）", () => {
     // 編集フォームはテーブル行内に表示され、既存値が初期表示される
     const table = screen.getByRole("table");
     const nameInput = within(table).getByRole("textbox", { name: /コミュニティ名/ });
-    const descriptionInput = within(table).getByRole("textbox", { name: /作風・説明/ });
+    const descriptionInput = within(table).getByRole("textbox", { name: /コミュニティ概要（公開）/ });
     expect(nameInput).toHaveValue("AI 開発者の集い");
     expect(descriptionInput).toHaveValue("AI ワーカーが日常を語る community");
 
@@ -194,7 +195,7 @@ describe("CommunitiesTab（#381）", () => {
     await userEvent.click(screen.getByRole("button", { name: "保存" }));
 
     await waitFor(() => expect(updateRequests).toHaveLength(1));
-    expect(updateRequests[0]).toEqual({
+    expect(updateRequests[0]).toMatchObject({
       id: "community-1",
       body: {
         name: "AI 開発者の広場",
@@ -241,6 +242,11 @@ describe("CommunitiesTab（#381）", () => {
       "maxlength",
       String(COMMUNITY_DESCRIPTION_MAX_LENGTH),
     );
+    const genInstrInput = screen.getAllByRole("textbox", { name: /生成プロンプト指示/ })[0];
+    expect(genInstrInput).toHaveAttribute(
+      "maxlength",
+      String(COMMUNITY_GENERATION_INSTRUCTION_MAX_LENGTH),
+    );
   });
 
   it("編集フォームの各入力に Zod .max() と整合する maxLength が設定されている（#91）", async () => {
@@ -253,9 +259,12 @@ describe("CommunitiesTab（#381）", () => {
       "maxlength",
       String(COMMUNITY_NAME_MAX_LENGTH),
     );
-    expect(within(table).getByRole("textbox", { name: /作風・説明/ })).toHaveAttribute(
+    expect(within(table).getByRole("textbox", { name: /コミュニティ概要（公開）/ })).toHaveAttribute(
       "maxlength",
       String(COMMUNITY_DESCRIPTION_MAX_LENGTH),
     );
+    expect(
+      within(table).getByRole("textbox", { name: /生成プロンプト指示/ }),
+    ).toHaveAttribute("maxlength", String(COMMUNITY_GENERATION_INSTRUCTION_MAX_LENGTH));
   });
 });

@@ -27,9 +27,11 @@ export function buildXShareUrl(shareTitle: string, shareUrl: string): string {
  * コミュニティ詳細画面のヘッダーに置き、URL コピー / X シェアの導線を提供する。
  * 認証状態に関わらず表示される（シェアは誰でも可能）。
  */
+type CopyFeedback = { open: boolean; severity: "success" | "error" };
+
 export const ShareButton = ({ shareUrl, shareTitle }: ShareButtonProps): ReactElement => {
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [feedback, setFeedback] = useState<CopyFeedback>({ open: false, severity: "success" });
   const open = anchorEl !== null;
 
   const handleOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -39,13 +41,19 @@ export const ShareButton = ({ shareUrl, shareTitle }: ShareButtonProps): ReactEl
     setAnchorEl(null);
   };
 
+  const closeFeedback = () => {
+    setFeedback((prev) => ({ ...prev, open: false }));
+  };
+
   const handleCopy = async () => {
     handleClose();
     try {
       await navigator.clipboard.writeText(shareUrl);
-      setSnackbarOpen(true);
+      setFeedback({ open: true, severity: "success" });
     } catch {
-      // クリップボード API が使えない環境では何もしない（フィードバックは出さない）。
+      // 非セキュアコンテキスト（HTTP）や権限拒否で clipboard API が使えない場合。
+      // silent にせず失敗を明示し、手動コピー用に URL を併記する。
+      setFeedback({ open: true, severity: "error" });
     }
   };
 
@@ -77,14 +85,22 @@ export const ShareButton = ({ shareUrl, shareTitle }: ShareButtonProps): ReactEl
         </MenuItem>
       </Menu>
       <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={2000}
-        onClose={() => setSnackbarOpen(false)}
+        open={feedback.open}
+        autoHideDuration={feedback.severity === "error" ? 6000 : 2000}
+        onClose={closeFeedback}
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
-        <Alert severity="success" onClose={() => setSnackbarOpen(false)}>
-          URL をコピーしました
-        </Alert>
+        {feedback.severity === "success" ? (
+          <Alert severity="success" onClose={closeFeedback}>
+            URL をコピーしました
+          </Alert>
+        ) : (
+          <Alert severity="error" onClose={closeFeedback}>
+            <span>URL のコピーに失敗しました</span>
+            <br />
+            手動でコピーしてください: {shareUrl}
+          </Alert>
+        )}
       </Snackbar>
     </>
   );

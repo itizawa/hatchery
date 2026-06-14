@@ -46,6 +46,33 @@ describe("ShareButton", () => {
     expect(await screen.findByText("URL をコピーしました")).toBeInTheDocument();
   });
 
+  it("コピー失敗（writeText が reject）時にエラーフィードバックが表示される", async () => {
+    const writeTextMock = vi.fn().mockRejectedValue(new Error("denied"));
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText: writeTextMock },
+      writable: true,
+      configurable: true,
+    });
+    render(<ShareButton shareUrl={SHARE_URL} shareTitle={SHARE_TITLE} />);
+    await userEvent.click(screen.getByRole("button", { name: "共有" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "URL をコピー" }));
+    expect(await screen.findByText("URL のコピーに失敗しました")).toBeInTheDocument();
+  });
+
+  it("コピー失敗時は成功 Snackbar（コピーしました）が表示されない", async () => {
+    const writeTextMock = vi.fn().mockRejectedValue(new Error("denied"));
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText: writeTextMock },
+      writable: true,
+      configurable: true,
+    });
+    render(<ShareButton shareUrl={SHARE_URL} shareTitle={SHARE_TITLE} />);
+    await userEvent.click(screen.getByRole("button", { name: "共有" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "URL をコピー" }));
+    expect(await screen.findByText("URL のコピーに失敗しました")).toBeInTheDocument();
+    expect(screen.queryByText("URL をコピーしました")).not.toBeInTheDocument();
+  });
+
   it("「X でシェア」が intent URL を href に持ち、text(title 含む)・url(shareUrl) を含み target=_blank / rel=noopener noreferrer を持つ", async () => {
     render(<ShareButton shareUrl={SHARE_URL} shareTitle={SHARE_TITLE} />);
     await userEvent.click(screen.getByRole("button", { name: "共有" }));

@@ -46,10 +46,10 @@ export function generateCountHints(
 ### 2. env.ts への追加
 
 ```
-BATCH_POST_MIN: 1〜10, default 1
-BATCH_POST_MAX: 1〜10, default 3 (min <= max の制約)
+BATCH_POST_MIN: 0〜10, default 1
+BATCH_POST_MAX: 0〜10, default 3
 BATCH_COMMENT_MIN: 0〜10, default 1
-BATCH_COMMENT_MAX: 0〜10, default 3 (min <= max の制約)
+BATCH_COMMENT_MAX: 0〜10, default 3
 ```
 
 ServerEnv インターフェースに `batchPostMin`, `batchPostMax`, `batchCommentMin`, `batchCommentMax` を追加。

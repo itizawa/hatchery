@@ -38,9 +38,9 @@ export interface ServerEnv {
   batchModel: BatchModel;
   /** プロンプトに載せる直近 post/comment 件数（#389 AC2）。1〜50。既定 30。 */
   batchRecentLimit: number;
-  /** 1 定時の post 最小件数（#557）。1〜10。既定 1。 */
+  /** 1 定時の post 最小件数（#557）。0〜10。既定 1。 */
   batchPostMin: number;
-  /** 1 定時の post 最大件数（#557）。1〜10。既定 3。 */
+  /** 1 定時の post 最大件数（#557）。0〜10。既定 3。 */
   batchPostMax: number;
   /** 各 post のコメント最小件数（#557）。0〜10。既定 1。 */
   batchCommentMin: number;

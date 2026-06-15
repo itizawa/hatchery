@@ -2,6 +2,19 @@ import { z } from "zod";
 
 import { CACHE_DEFAULTS } from "./security.js";
 
+/**
+ * ドリップ窓のデフォルト値（ms）（#556）。
+ * DEFAULT_BATCH_HOURS = [9,12,15,18] のスロット間隔 3h に合わせた既定値。
+ * この窓の中にコメントの createdAt を散らし、時間経過で解禁する。
+ */
+export const DEFAULT_BATCH_DRIP_WINDOW_MS = 3 * 60 * 60 * 1000; // 3 時間
+
+/** ドリップ窓の最小値（1ms）。Zod 検証用。 */
+export const BATCH_DRIP_WINDOW_MS_MIN = 1;
+
+/** ドリップ窓の最大値（24h）。Zod 検証用。 */
+export const BATCH_DRIP_WINDOW_MS_MAX = 24 * 60 * 60 * 1000; // 24 時間
+
 /** server プロセスの実行設定。環境変数から読み出す（テスト容易性のため source を注入可能にする）。 */
 export interface ServerEnv {
   /** Express API プロセスの待受ポート。未指定なら 3000。 */
@@ -50,6 +63,12 @@ export interface ServerEnv {
   cacheSMaxageSeconds: number;
   /** 公開 GET の Cache-Control stale-while-revalidate（秒・#559）。未指定なら CACHE_DEFAULTS.staleWhileRevalidateSeconds。 */
   cacheStaleWhileRevalidateSeconds: number;
+  /**
+   * バッチのドリップ窓（ms）（#556）。
+   * 各コメントの createdAt をこの窓の中に散らして「じわじわ」公開する。
+   * 1ms 〜 24h。未指定なら DEFAULT_BATCH_DRIP_WINDOW_MS（3h）。
+   */
+  batchDripWindowMs: number;
 }
 
 /**
@@ -177,6 +196,13 @@ const EnvSchema = z.object({
     .int()
     .nonnegative()
     .default(CACHE_DEFAULTS.staleWhileRevalidateSeconds),
+  // バッチのドリップ窓（ms）（#556）。1ms〜24h。既定 3h。範囲外・非数値は parse 時に throw。
+  BATCH_DRIP_WINDOW_MS: z.coerce
+    .number()
+    .int()
+    .min(BATCH_DRIP_WINDOW_MS_MIN)
+    .max(BATCH_DRIP_WINDOW_MS_MAX)
+    .default(DEFAULT_BATCH_DRIP_WINDOW_MS),
 });
 
 /** 環境変数から ServerEnv を構築する。不正な値は ZodError を投げて起動時に気付けるようにする。 */
@@ -205,6 +231,7 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): ServerEnv {
     BATCH_COMMENT_MAX: source.BATCH_COMMENT_MAX,
     CACHE_S_MAXAGE_SECONDS: source.CACHE_S_MAXAGE_SECONDS,
     CACHE_STALE_WHILE_REVALIDATE_SECONDS: source.CACHE_STALE_WHILE_REVALIDATE_SECONDS,
+    BATCH_DRIP_WINDOW_MS: source.BATCH_DRIP_WINDOW_MS,
   });
   return {
     port: parsed.PORT,
@@ -230,5 +257,6 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): ServerEnv {
     batchCommentMax: parsed.BATCH_COMMENT_MAX,
     cacheSMaxageSeconds: parsed.CACHE_S_MAXAGE_SECONDS,
     cacheStaleWhileRevalidateSeconds: parsed.CACHE_STALE_WHILE_REVALIDATE_SECONDS,
+    batchDripWindowMs: parsed.BATCH_DRIP_WINDOW_MS,
   };
 }

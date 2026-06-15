@@ -58,6 +58,10 @@ export const CommunitySchema = z.object({
   iconUrl: z.string().url().max(COMMUNITY_IMAGE_URL_MAX_LENGTH).nullable().optional(),
   coverUrl: z.string().url().max(COMMUNITY_IMAGE_URL_MAX_LENGTH).nullable().optional(),
   created_at: z.date(),
+  /** 投稿数（活気指標・#527）。0 件は「投稿なし」を示す。 */
+  post_count: z.number().int().min(0),
+  /** 最終投稿時刻（活気指標・#527）。投稿が 0 件の場合は null。 */
+  last_post_at: z.string().datetime().nullable(),
 });
 
 export type Community = z.infer<typeof CommunitySchema>;

@@ -97,6 +97,8 @@ async function main(): Promise<void> {
       // post/comment 件数の揺らぎ設定（#557）: env の範囲を postRange/commentRange に反映する。
       postRange: { min: env.batchPostMin, max: env.batchPostMax },
       commentRange: { min: env.batchCommentMin, max: env.batchCommentMax },
+      // ドリップ窓の設定化（#556）: env.batchDripWindowMs を dripWindowMs に反映する。
+      dripWindowMs: env.batchDripWindowMs,
     },
     disconnect: () => prisma.$disconnect(),
   });

@@ -126,4 +126,65 @@ describe("createInMemoryCommentRepository", () => {
       expect(result).toBeNull();
     });
   });
+
+  describe("reveal フィルタ（#556）", () => {
+    it("createMany に createdAt を渡すと指定した時刻で永続化される", async () => {
+      const repo = createInMemoryCommentRepository();
+      const future = new Date(Date.now() + 60_000);
+      const [created] = await repo.createMany("community-1", [
+        { postId: "post-1", slotKey: "s", seq: 0, author: "w", text: "c", createdAt: future },
+      ]);
+      expect(created.createdAt.getTime()).toBe(future.getTime());
+    });
+
+    it("listByPost に now を渡すと createdAt > now のコメントは除外される", async () => {
+      const repo = createInMemoryCommentRepository();
+      const past = new Date(Date.now() - 10_000);
+      const future = new Date(Date.now() + 60_000);
+      await repo.createMany("community-1", [
+        { postId: "post-1", slotKey: "s", seq: 0, author: "w", text: "past", createdAt: past },
+        { postId: "post-1", slotKey: "s", seq: 1, author: "w", text: "future", createdAt: future },
+      ]);
+      const now = new Date();
+      const result = await repo.listByPost("post-1", { now });
+      expect(result).toHaveLength(1);
+      expect(result[0].text).toBe("past");
+    });
+
+    it("listByPost に now を渡さないと全件返す（後方互換）", async () => {
+      const repo = createInMemoryCommentRepository();
+      const future = new Date(Date.now() + 60_000);
+      await repo.createMany("community-1", [
+        { postId: "post-1", slotKey: "s", seq: 0, author: "w", text: "past" },
+        { postId: "post-1", slotKey: "s", seq: 1, author: "w", text: "future", createdAt: future },
+      ]);
+      const result = await repo.listByPost("post-1");
+      expect(result).toHaveLength(2);
+    });
+
+    it("listByCommunity に now を渡すと createdAt > now のコメントは除外される", async () => {
+      const repo = createInMemoryCommentRepository();
+      const past = new Date(Date.now() - 10_000);
+      const future = new Date(Date.now() + 60_000);
+      await repo.createMany("community-1", [
+        { postId: "post-1", slotKey: "s", seq: 0, author: "w", text: "past", createdAt: past },
+        { postId: "post-1", slotKey: "s", seq: 1, author: "w", text: "future", createdAt: future },
+      ]);
+      const now = new Date();
+      const result = await repo.listByCommunity("community-1", 50, { now });
+      expect(result).toHaveLength(1);
+      expect(result[0].text).toBe("past");
+    });
+
+    it("listByCommunity に now を渡さないと全件返す（後方互換）", async () => {
+      const repo = createInMemoryCommentRepository();
+      const future = new Date(Date.now() + 60_000);
+      await repo.createMany("community-1", [
+        { postId: "post-1", slotKey: "s", seq: 0, author: "w", text: "past" },
+        { postId: "post-1", slotKey: "s", seq: 1, author: "w", text: "future", createdAt: future },
+      ]);
+      const result = await repo.listByCommunity("community-1");
+      expect(result).toHaveLength(2);
+    });
+  });
 });

@@ -229,6 +229,37 @@ describe("PostThreadScene サイドバー (#390)", () => {
   });
 });
 
+// #528: ブラウザタブタイトル。
+describe("PostThreadScene タブタイトル (#528)", () => {
+  it("post タイトルが document.title に反映される", async () => {
+    const qc = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    });
+    qc.setQueryData(postThreadQueryKey("post-1"), {
+      post: mockPosts[0],
+      comments: [],
+    });
+    qc.setQueryData(["communities"], []);
+    qc.setQueryData(AUTH_ME_QUERY_KEY, null);
+
+    function SeededWrapper({ children }: { children: React.ReactNode }) {
+      return (
+        <QueryClientProvider client={qc}>
+          <Suspense fallback={null}>{children}</Suspense>
+        </QueryClientProvider>
+      );
+    }
+
+    render(<BoundedScene />, { wrapper: SeededWrapper });
+
+    // post タイトルが表示されるまで待つ
+    expect(await screen.findByText("今日も元気に始めましょう")).toBeInTheDocument();
+
+    // document.title が「<post.title> - Hatchery」に設定されている
+    expect(document.title).toBe("今日も元気に始めましょう - Hatchery");
+  });
+});
+
 // #409: レイアウトシフト解消（スケルトン）。
 describe("PostThreadScene レイアウトシフト解消 (#409)", () => {
   function createPostOnlyWrapper() {

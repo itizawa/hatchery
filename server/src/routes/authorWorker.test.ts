@@ -64,6 +64,7 @@ describe("attachAuthorWorker", () => {
     const posts = [{ id: "post-1", author: "unknown-worker" }];
     const result = await attachAuthorWorker(posts, repo);
     expect(result[0]).not.toHaveProperty("author_worker");
+    expect(result[0].id).toBe("post-1");
   });
 
   it("imageUrl=null のワーカーは image_url=null になる", async () => {
@@ -71,6 +72,18 @@ describe("attachAuthorWorker", () => {
     const posts = [{ id: "post-1", author: "worker-uuid-2" }];
     const result = await attachAuthorWorker(posts, repo);
     expect(result[0].author_worker?.image_url).toBeNull();
+  });
+
+  it("解決できる author と解決できない author が混在する配列を正しく処理する", async () => {
+    const repo = makeRepo([workerA]);
+    const posts = [
+      { id: "post-1", author: "worker-uuid-1" },
+      { id: "post-2", author: "unknown-worker" },
+    ];
+    const result = await attachAuthorWorker(posts, repo);
+    expect(result[0].author_worker?.id).toBe("worker-uuid-1");
+    expect(result[1]).not.toHaveProperty("author_worker");
+    expect(result[1].id).toBe("post-2");
   });
 });
 
@@ -80,8 +93,10 @@ describe("buildAuthorWorkerEnricher", () => {
     const enrich = await buildAuthorWorkerEnricher(repo);
     const posts = [{ id: "post-1", author: "worker-uuid-1" }];
     const comments = [{ id: "comment-1", author: "worker-uuid-2" }];
-    enrich(posts);
-    enrich(comments);
+    const enrichedPosts = enrich(posts);
+    const enrichedComments = enrich(comments);
+    expect(enrichedPosts[0].author_worker?.id).toBe("worker-uuid-1");
+    expect(enrichedComments[0].author_worker?.id).toBe("worker-uuid-2");
     expect(repo.listBotWorkers).toHaveBeenCalledTimes(1);
   });
 });

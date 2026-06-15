@@ -15,6 +15,8 @@ export interface CommentRecord {
   text: string;
   score: number;
   createdAt: Date;
+  /** 返信先コメント id（nullable）。#520 ネスト対応。トップレベルは null。 */
+  parentCommentId: string | null;
 }
 
 /** Comment 作成時の入力（バルク用）。 */
@@ -24,22 +26,8 @@ export interface CommentCreateInput {
   seq: number;
   author: string;
   text: string;
-  /**
-   * 永続化時の createdAt（#556）。
-   * 省略時は DB の `@default(now())`（Prisma）または `new Date()`（インメモリ）を使う。
-   * バッチのドリップ割当で未来の時刻を渡し、reveal フィルタと組み合わせて
-   * 「じわじわ」公開を実現する。
-   */
-  createdAt?: Date;
-}
-
-/** reveal フィルタのオプション（#556）。 */
-export interface RevealFilterOptions {
-  /**
-   * この時刻以降の `createdAt` を持つレコードを除外する。
-   * 省略時はフィルタなし（全件返す）。
-   */
-  now?: Date;
+  /** 返信先コメント id（nullable）。#520 ネスト対応。トップレベルは null。 */
+  parentCommentId?: string | null;
 }
 
 export interface CommentRepository {
@@ -48,18 +36,10 @@ export interface CommentRepository {
    * (communityId, slotKey, seq) はユニーク制約があるため、Cron 二重発火時は upsert で skip する。
    */
   createMany(communityId: string, inputs: CommentCreateInput[]): Promise<CommentRecord[]>;
-  /**
-   * post 別に createdAt 昇順でコメントを取得する（#556）。
-   * options.now を渡すと `createdAt <= now` の reveal フィルタが有効になる。
-   * 省略時はフィルタなし（後方互換）。
-   */
-  listByPost(postId: string, options?: RevealFilterOptions): Promise<CommentRecord[]>;
-  /**
-   * community 別に createdAt 昇順でコメントを取得する。バッチのコンテキスト構築用。limit 省略時は 50 件（#556）。
-   * options.now を渡すと `createdAt <= now` の reveal フィルタが有効になる。
-   * 省略時はフィルタなし（後方互換）。
-   */
-  listByCommunity(communityId: string, limit?: number, options?: RevealFilterOptions): Promise<CommentRecord[]>;
+  /** post 別に createdAt 昇順でコメントを取得する。 */
+  listByPost(postId: string): Promise<CommentRecord[]>;
+  /** community 別に createdAt 昇順でコメントを取得する。バッチのコンテキスト構築用。limit 省略時は 50 件。 */
+  listByCommunity(communityId: string, limit?: number): Promise<CommentRecord[]>;
   /** ID で comment を取得する。存在しない場合は null を返す。 */
   findById(id: string): Promise<CommentRecord | null>;
   /**
@@ -73,6 +53,11 @@ export interface CommentRepository {
    * 存在しない場合は null を返す。
    */
   addScore(id: string, delta: number): Promise<CommentRecord | null>;
+  /**
+   * comment の parentCommentId を更新する（#520 reply_to 解決用）。
+   * 存在しない場合は null を返す。このメソッドはオプショナル。
+   */
+  updateParentCommentId?: (id: string, parentCommentId: string | null) => Promise<CommentRecord | null>;
 }
 
 function cloneRecord(r: CommentRecord): CommentRecord {
@@ -97,7 +82,6 @@ export function createInMemoryCommentRepository(): CommentRepository {
           continue;
         }
         // 本番（Prisma）は uuid(7) を採番するため、in-memory も UUID を採番して整合させる（#433）。
-        // createdAt は input から注入可能（#556 ドリップ割当）。省略時は now。
         const record: CommentRecord = {
           id: randomUUID(),
           communityId,
@@ -107,7 +91,8 @@ export function createInMemoryCommentRepository(): CommentRepository {
           author: input.author,
           text: input.text,
           score: 0,
-          createdAt: input.createdAt ?? new Date(),
+          createdAt: new Date(),
+          parentCommentId: input.parentCommentId ?? null,
         };
         records.push(record);
         created.push(cloneRecord(record));
@@ -115,22 +100,16 @@ export function createInMemoryCommentRepository(): CommentRepository {
       return Promise.resolve(created);
     },
 
-    listByPost(postId: string, options?: RevealFilterOptions): Promise<CommentRecord[]> {
-      const now = options?.now;
+    listByPost(postId: string): Promise<CommentRecord[]> {
       const filtered = records
         .filter((r) => r.postId === postId)
-        // reveal フィルタ（#556）: now が渡された場合、createdAt > now のコメントを除外する。
-        .filter((r) => now === undefined || r.createdAt.getTime() <= now.getTime())
         .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
       return Promise.resolve(filtered.map(cloneRecord));
     },
 
-    listByCommunity(communityId: string, limit = 50, options?: RevealFilterOptions): Promise<CommentRecord[]> {
-      const now = options?.now;
+    listByCommunity(communityId: string, limit = 50): Promise<CommentRecord[]> {
       const filtered = records
         .filter((r) => r.communityId === communityId)
-        // reveal フィルタ（#556）: now が渡された場合、createdAt > now のコメントを除外する。
-        .filter((r) => now === undefined || r.createdAt.getTime() <= now.getTime())
         .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
         .slice(0, limit);
       return Promise.resolve(filtered.map(cloneRecord));
@@ -157,6 +136,13 @@ export function createInMemoryCommentRepository(): CommentRepository {
       const record = records.find((r) => r.id === id);
       if (!record) return Promise.resolve(null);
       record.score += delta;
+      return Promise.resolve(cloneRecord(record));
+    },
+
+    updateParentCommentId(id: string, parentCommentId: string | null): Promise<CommentRecord | null> {
+      const record = records.find((r) => r.id === id);
+      if (!record) return Promise.resolve(null);
+      record.parentCommentId = parentCommentId;
       return Promise.resolve(cloneRecord(record));
     },
   };

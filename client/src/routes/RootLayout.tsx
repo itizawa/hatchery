@@ -214,11 +214,12 @@ export const RootLayout = (): ReactElement => {
             <Box
               component="nav"
               aria-label="サイドバー"
+              data-testid="mobile-sidebar-nav"
               sx={{
                 display: "flex",
                 flexDirection: "column",
                 height: "100%",
-                width: SIDEBAR_WIDTH,
+                width: "100%",
               }}
             >
               {/* SidebarContent は useAuth（useSuspenseQuery）を使うため Suspense 祖先が必要（#461）。 */}

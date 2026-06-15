@@ -57,6 +57,7 @@ jobs:
         run: pnpm --filter @hatchery/server db:migrate
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_DIRECT_URL: ${{ secrets.DATABASE_DIRECT_URL }}
 
       - name: Configure Docker for Artifact Registry
         run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
@@ -77,6 +78,7 @@ jobs:
             --max-instances=3 \
             --port=8080 \
             --set-env-vars="DATABASE_URL=${{ secrets.DATABASE_URL }}" \
+            --set-env-vars="DATABASE_DIRECT_URL=${{ secrets.DATABASE_DIRECT_URL }}" \
             --set-env-vars="SESSION_SECRET=${{ secrets.SESSION_SECRET }}" \
             --set-env-vars="APP_SECRET=${{ secrets.APP_SECRET }}" \
             --set-env-vars="ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}" \

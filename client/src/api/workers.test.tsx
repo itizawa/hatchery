@@ -6,8 +6,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   BOT_WORKERS_QUERY_KEY,
-  uploadWorkerImage,
-  useAllBotWorkers,
   useBotWorkers,
   useUpdateWorker,
   useUploadWorkerImage,
@@ -92,29 +90,6 @@ describe("useBotWorkers (GET /api/workers, useSuspenseQuery)", () => {
   });
 });
 
-describe("useAllBotWorkers (GET /api/workers, useSuspenseQuery)", () => {
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
-
-  it("200 のとき Worker 配列を data として解決する（data は undefined を取らない）", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(200, [mockWorker])));
-    const { wrapper } = createSuspenseWrapper();
-    const { result } = renderHook(() => useAllBotWorkers(), { wrapper });
-
-    await waitFor(() => expect(result.current.data).toEqual([mockWorker]));
-  });
-
-  it("エラー応答のとき throw され ErrorBoundary に捕捉される", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(500, { error: "Server Error" })));
-    const { wrapper, errors } = createSuspenseWrapper();
-    renderHook(() => useAllBotWorkers(), { wrapper });
-
-    await waitFor(() => expect(errors.length).toBeGreaterThan(0));
-    expect(errors[0]).toBeInstanceOf(Error);
-  });
-});
-
 describe("useUpdateWorker (PATCH /api/workers/{id})", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -163,7 +138,7 @@ describe("useUpdateWorker (PATCH /api/workers/{id})", () => {
   });
 });
 
-describe("uploadWorkerImage (POST /api/admin/workers/{id}/image)", () => {
+describe("useUploadWorkerImage (POST /api/admin/workers/{id}/image, useMutation)", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
@@ -173,10 +148,16 @@ describe("uploadWorkerImage (POST /api/admin/workers/{id}/image)", () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, mockResponse));
     vi.stubGlobal("fetch", fetchMock);
 
-    const file = new File(["dummy content"], "avatar.png", { type: "image/png" });
-    const result = await uploadWorkerImage("worker-haru", file);
+    const { wrapper } = createWrapper();
+    const { result } = renderHook(() => useUploadWorkerImage(), { wrapper });
 
-    expect(result).toEqual(mockResponse);
+    const file = new File(["dummy content"], "avatar.png", { type: "image/png" });
+    let mutationResult: { id: string; imageUrl: string } | undefined;
+    await act(async () => {
+      mutationResult = await result.current.mutateAsync({ workerId: "worker-haru", file });
+    });
+
+    expect(mutationResult).toEqual(mockResponse);
     const [url, options] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toContain("/api/admin/workers/worker-haru/image");
     expect(options.method).toBe("POST");
@@ -189,14 +170,15 @@ describe("uploadWorkerImage (POST /api/admin/workers/{id}/image)", () => {
       vi.fn().mockResolvedValue(jsonResponse(413, { error: "File too large" })),
     );
 
-    const file = new File(["dummy content"], "avatar.png", { type: "image/png" });
-    await expect(uploadWorkerImage("worker-haru", file)).rejects.toThrow("File too large");
-  });
-});
+    const { wrapper } = createWrapper();
+    const { result } = renderHook(() => useUploadWorkerImage(), { wrapper });
 
-describe("useUploadWorkerImage (useMutation wrapper)", () => {
-  afterEach(() => {
-    vi.unstubAllGlobals();
+    const file = new File(["dummy content"], "avatar.png", { type: "image/png" });
+    await expect(
+      act(async () => {
+        await result.current.mutateAsync({ workerId: "worker-haru", file });
+      }),
+    ).rejects.toThrow("File too large");
   });
 
   it("成功後に BOT_WORKERS_QUERY_KEY を invalidate する", async () => {

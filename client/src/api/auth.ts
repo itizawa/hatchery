@@ -1,7 +1,7 @@
 import type { AuthUser, UpdateProfile } from "@hatchery/common";
 import { useSuspenseQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { apiBaseUrl, openApiClient } from "./client.js";
+import { apiBaseUrl, ensureOk, openApiClient, unwrap } from "./client.js";
 
 export const AUTH_ME_QUERY_KEY = ["auth", "me"] as const;
 
@@ -20,16 +20,16 @@ export function googleLoginUrl(base: string = apiBaseUrl): string {
  * ADR-0006: openapi.json 由来の型で server → client の型が end-to-end に流れる（#41）。
  */
 export async function fetchMe(): Promise<AuthUser | null> {
-  const { data, response } = await openApiClient.GET("/api/auth/me", { credentials: "include" });
-  if (response.status === 401) return null;
-  if (!response.ok) throw new Error(`GET /api/auth/me failed: ${response.status}`);
-  return data ?? null;
+  const result = await openApiClient.GET("/api/auth/me", { credentials: "include" });
+  // 未ログイン（401）は throw せず null を返す。それ以外の失敗は ensureOk が throw する。
+  if (result.response.status === 401) return null;
+  return ensureOk(result, "GET /api/auth/me") ?? null;
 }
 
 /** POST /auth/logout を呼び出す。openApiClient 経由で baseUrl を解決する。 */
 export async function logout(): Promise<void> {
-  const { response } = await openApiClient.POST("/api/auth/logout", { credentials: "include" });
-  if (!response.ok) throw new Error(`POST /api/auth/logout failed: ${response.status}`);
+  const result = await openApiClient.POST("/api/auth/logout", { credentials: "include" });
+  ensureOk(result, "POST /api/auth/logout");
 }
 
 /**
@@ -59,12 +59,11 @@ export function useLogout() {
 
 /** PATCH /auth/me を呼び出す。成功時は更新後の AuthUser を返す。openApiClient 経由で baseUrl を解決する。 */
 export async function updateProfile(body: UpdateProfile): Promise<AuthUser> {
-  const { data, response } = await openApiClient.PATCH("/api/auth/me", {
+  const result = await openApiClient.PATCH("/api/auth/me", {
     body,
     credentials: "include",
   });
-  if (!response.ok || !data) throw new Error(`PATCH /api/auth/me failed: ${response.status}`);
-  return data;
+  return unwrap(result, "PATCH /api/auth/me");
 }
 
 /** プロフィール更新ミューテーションフック。成功後に auth キャッシュを直接更新する（再フェッチ不要）。 */

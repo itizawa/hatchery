@@ -12,6 +12,7 @@ function toRecord(row: {
   text: string;
   score: number;
   createdAt: Date;
+  parentCommentId: string | null;
 }): CommentRecord {
   return {
     id: row.id,
@@ -23,6 +24,7 @@ function toRecord(row: {
     text: row.text,
     score: row.score,
     createdAt: row.createdAt,
+    parentCommentId: row.parentCommentId,
   };
 }
 
@@ -48,6 +50,7 @@ export function createPrismaCommentRepository(prisma: PrismaClient): CommentRepo
               seq: input.seq,
               author: input.author,
               text: input.text,
+              parentCommentId: input.parentCommentId ?? null,
             },
           }),
         ),
@@ -97,6 +100,18 @@ export function createPrismaCommentRepository(prisma: PrismaClient): CommentRepo
         const row = await prisma.comment.update({
           where: { id },
           data: { score: { increment: delta } },
+        });
+        return toRecord(row);
+      } catch {
+        return null;
+      }
+    },
+
+    async updateParentCommentId(id: string, parentCommentId: string | null): Promise<CommentRecord | null> {
+      try {
+        const row = await prisma.comment.update({
+          where: { id },
+          data: { parentCommentId },
         });
         return toRecord(row);
       } catch {

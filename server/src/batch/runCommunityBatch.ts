@@ -321,6 +321,13 @@ export async function runCommunityBatch(
 
       // comment をバルク作成
       // seq は全コメントを通じてユニークにする（community + slotKey でフラット管理）
+      // reply_to → parentCommentId 解決の方針（#520）:
+      //   各 post のコメントを 2 パスで処理する。
+      //   1st pass: seq なし / parentCommentId なし でバルク作成 → 採番済み id を取得。
+      //   2nd pass: reply_to が有効（同一 post 内の別コメントの 0-index）なら
+      //             対応する createdId を parentCommentId にセット → update。
+      //   ただし Prisma のバルク upsert は update で parentCommentId を上書きしないため、
+      //   1st pass でまず全コメントを null で作り、2nd pass で有効な reply_to のみ update する。
       let commentSeq = 0;
       for (let postIdx = 0; postIdx < output.posts.length; postIdx++) {
         const post = output.posts[postIdx];
@@ -329,15 +336,44 @@ export async function runCommunityBatch(
 
         if (post.comments.length === 0) continue;
 
-        const commentInputs = post.comments.map((comment) => ({
+        // 1st pass: parentCommentId=null で全コメントを作成し id を取得する。
+        const commentInputsFirstPass = post.comments.map((comment) => ({
           postId: createdPost.id,
           slotKey,
           seq: commentSeq++,
           author: comment.author,
           text: comment.text,
+          parentCommentId: null,
         }));
-        const createdComments = await deps.commentRepo.createMany(community.id, commentInputs);
+        const createdComments = await deps.commentRepo.createMany(community.id, commentInputsFirstPass);
         savedComments.push(...createdComments);
+
+        // 2nd pass: reply_to が設定されているコメントの parentCommentId を解決する（#520）。
+        // reply_to は出力内コメントの 0-index を指す。有効範囲外・自己参照は null 扱い。
+        if (deps.commentRepo.updateParentCommentId) {
+          for (let ci = 0; ci < post.comments.length; ci++) {
+            const genComment = post.comments[ci];
+            const createdComment = createdComments[ci];
+            if (!genComment || !createdComment) continue;
+
+            const replyTo = genComment.reply_to ?? null;
+            if (replyTo === null) continue;
+
+            // 有効範囲チェック: 0 以上 & 自分自身でない & 同一 post 内の有効 index
+            if (replyTo < 0 || replyTo >= post.comments.length || replyTo === ci) continue;
+
+            const parentCreated = createdComments[replyTo];
+            if (!parentCreated) continue;
+
+            // 循環参照チェックは buildCommentTree で行うため、ここでは単純に設定する。
+            await deps.commentRepo.updateParentCommentId(createdComment.id, parentCreated.id);
+            // savedComments の対象エントリを更新する（参照更新）。
+            const idx = savedComments.findIndex((c) => c.id === createdComment.id);
+            if (idx !== -1) {
+              savedComments[idx] = { ...savedComments[idx]!, parentCommentId: parentCreated.id };
+            }
+          }
+        }
       }
 
       // 生成・永続化に成功したので、この定時で登場したワーカーを記録する（#464）。

@@ -26,6 +26,7 @@ const baseComment: CommentRecord = {
   text: "Reply",
   score: 1,
   createdAt: new Date("2026-06-10T09:05:00Z"),
+  parentCommentId: null,
 };
 
 describe("toPostResponse", () => {
@@ -91,7 +92,14 @@ describe("toCommentResponse", () => {
       text: "Reply",
       score: 1,
       created_at: baseComment.createdAt,
+      parent_comment_id: null,
     });
+  });
+
+  it("parentCommentId が設定されていると parent_comment_id として出力する（#520）", () => {
+    const withParent = { ...baseComment, parentCommentId: "comment-parent" };
+    const res = toCommentResponse(withParent) as Record<string, unknown>;
+    expect(res.parent_comment_id).toBe("comment-parent");
   });
 
   it("camelCase キー（communityId / postId / slotKey / createdAt）を含まない", () => {

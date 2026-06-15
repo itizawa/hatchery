@@ -68,8 +68,8 @@ export function buildCommentTree(comments: readonly FlatComment[]): CommentTreeN
       visited.add(current);
       // まだ effectiveParent が計算されていない場合は raw の parent_comment_id を参照
       const nextRaw = comments.find((c) => c.id === current)?.parent_comment_id ?? null;
-      const nextEffective = effectiveParent.has(current)
-        ? effectiveParent.get(current) ?? null
+      const nextEffective: string | null = effectiveParent.has(current)
+        ? (effectiveParent.get(current) ?? null)
         : nextRaw;
       current = nextEffective;
     }

@@ -15,6 +15,8 @@ export interface CommentRecord {
   text: string;
   score: number;
   createdAt: Date;
+  /** 返信先コメント id（nullable）。#520 ネスト対応。トップレベルは null。 */
+  parentCommentId: string | null;
 }
 
 /** Comment 作成時の入力（バルク用）。 */
@@ -24,6 +26,8 @@ export interface CommentCreateInput {
   seq: number;
   author: string;
   text: string;
+  /** 返信先コメント id（nullable）。#520 ネスト対応。トップレベルは null。 */
+  parentCommentId?: string | null;
 }
 
 export interface CommentRepository {
@@ -49,6 +53,11 @@ export interface CommentRepository {
    * 存在しない場合は null を返す。
    */
   addScore(id: string, delta: number): Promise<CommentRecord | null>;
+  /**
+   * comment の parentCommentId を更新する（#520 reply_to 解決用）。
+   * 存在しない場合は null を返す。このメソッドはオプショナル。
+   */
+  updateParentCommentId?: (id: string, parentCommentId: string | null) => Promise<CommentRecord | null>;
 }
 
 function cloneRecord(r: CommentRecord): CommentRecord {
@@ -83,6 +92,7 @@ export function createInMemoryCommentRepository(): CommentRepository {
           text: input.text,
           score: 0,
           createdAt: new Date(),
+          parentCommentId: input.parentCommentId ?? null,
         };
         records.push(record);
         created.push(cloneRecord(record));
@@ -126,6 +136,13 @@ export function createInMemoryCommentRepository(): CommentRepository {
       const record = records.find((r) => r.id === id);
       if (!record) return Promise.resolve(null);
       record.score += delta;
+      return Promise.resolve(cloneRecord(record));
+    },
+
+    updateParentCommentId(id: string, parentCommentId: string | null): Promise<CommentRecord | null> {
+      const record = records.find((r) => r.id === id);
+      if (!record) return Promise.resolve(null);
+      record.parentCommentId = parentCommentId;
       return Promise.resolve(cloneRecord(record));
     },
   };

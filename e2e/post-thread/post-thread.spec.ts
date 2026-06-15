@@ -459,3 +459,7 @@ test(
     expect(timeText).toMatch(/前/);
   },
 );
+
+test.todo(
+  "UC-POST-11: コメントが返信スレッド（ネスト構造）として Reddit 風に表示される（#520）",
+);

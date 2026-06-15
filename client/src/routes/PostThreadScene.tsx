@@ -1,6 +1,8 @@
 import { Box, Skeleton, Typography } from "../components/uiParts";
 import { useParams } from "@tanstack/react-router";
 import type { ReactElement } from "react";
+import { useMemo } from "react";
+import { buildCommentTree, type CommentTreeNode } from "@hatchery/common";
 
 import {
   usePostThread,
@@ -10,6 +12,7 @@ import {
   useSubscribe,
   useUnsubscribe,
 } from "../api/communities.js";
+import type { Comment } from "../api/communities.js";
 import { useAuth } from "../api/auth.js";
 import { PostCard } from "../components/PostCard.js";
 import { CommentCard } from "../components/CommentCard.js";
@@ -89,6 +92,36 @@ const PostThreadSidebar = ({ communityId }: { communityId: string }): ReactEleme
 };
 
 /**
+ * コメントのツリーノードを再帰的に CommentCard としてレンダリングする（#520）。
+ * depth に応じてコネクター線 + インデントが付く。
+ */
+function renderCommentTree(
+  nodes: CommentTreeNode[],
+  commentMap: Map<string, Comment>,
+  onVote: (commentId: string, direction: VoteDirection) => void,
+): ReactElement[] {
+  return nodes.map((node) => {
+    const comment = commentMap.get(node.id);
+    if (!comment) return null!;
+
+    const children =
+      node.children.length > 0
+        ? renderCommentTree(node.children, commentMap, onVote)
+        : null;
+
+    return (
+      <CommentCard
+        key={comment.id}
+        comment={comment}
+        onVote={(direction: VoteDirection) => onVote(comment.id, direction)}
+        depth={node.depth}
+        children={children && children.length > 0 ? <>{children}</> : null}
+      />
+    );
+  }).filter(Boolean);
+}
+
+/**
  * 投稿スレッド（/posts/$postId）。
  * Reddit 風 2 カラムレイアウト（左: post 本文 + コメント / 右: コミュニティ詳細 sticky サイドバー）。
  * ADR-0019 / ADR-0025 / Issue #390。
@@ -97,6 +130,7 @@ const PostThreadSidebar = ({ communityId }: { communityId: string }): ReactEleme
  * エラーは ErrorBoundary フォールバック）。所属コミュニティ取得（usePublicCommunities）は右サイドバーの
  * 局所 QueryBoundary に委譲し、post 本文は先に描画する。
  * #481: ゲストの post / comment vote 押下は guardVote で握りつぶさずログイン誘導する。
+ * #520: コメントを buildCommentTree でツリー化し Reddit 風コネクター線表示する。
  */
 export const PostThreadScene = (): ReactElement => {
   const { postId } = useParams({ strict: false });
@@ -109,6 +143,20 @@ export const PostThreadScene = (): ReactElement => {
 
   const { post, comments } = data;
   const postUrl = `${window.location.origin}/posts/${post.id}`;
+
+  // コメントをツリー化する（#520）。API からはフラット + parent_comment_id で受け取り、
+  // common の buildCommentTree で階層ツリーに変換する。
+  const commentTree = useMemo(
+    () =>
+      buildCommentTree(
+        comments.map((c) => ({ id: c.id, parent_comment_id: c.parent_comment_id ?? null })),
+      ),
+    [comments],
+  );
+  const commentMap = useMemo(
+    () => new Map<string, Comment>(comments.map((c) => [c.id, c])),
+    [comments],
+  );
 
   return (
     <Box component="section" sx={{ p: 3, maxWidth: 1200, mx: "auto" }}>
@@ -128,15 +176,9 @@ export const PostThreadScene = (): ReactElement => {
               <Typography variant="subtitle2" sx={{ mb: 1, color: "text.secondary" }}>
                 コメント {comments.length} 件
               </Typography>
-              {comments.map((comment) => (
-                <CommentCard
-                  key={comment.id}
-                  comment={comment}
-                  onVote={(direction: VoteDirection) =>
-                    guardVote(() => voteComment({ commentId: comment.id, direction }))
-                  }
-                />
-              ))}
+              {renderCommentTree(commentTree, commentMap, (commentId, direction) =>
+                guardVote(() => voteComment({ commentId, direction })),
+              )}
             </Box>
           )}
 

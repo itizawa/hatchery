@@ -154,29 +154,27 @@ describe("UpdateWorkerSchema (#38)", () => {
   });
 });
 
-describe("WorkerSchema: avatarUrl フィールド（#204）", () => {
-  it("avatarUrl を省略しても parse 成功する（任意フィールド）", () => {
-    const result = WorkerSchema.safeParse({ id: "haru", displayName: "haru" });
-    expect(result.success).toBe(true);
-    expect(result.data?.avatarUrl).toBeUndefined();
+describe("WorkerSchema: 死蔵フィールド avatarUrl の削除（#541）", () => {
+  it("WorkerSchema の shape に avatarUrl キーを持たない", () => {
+    expect(Object.keys(WorkerSchema.shape)).not.toContain("avatarUrl");
   });
 
-  it("有効な URL なら parse 成功する", () => {
-    expect(WorkerSchema.safeParse({ id: "haru", displayName: "haru", avatarUrl: "https://storage.googleapis.com/bucket/workers/haru/uuid.png" }).success).toBe(true);
+  it("avatarUrl を渡しても parse 結果に残らない（strip される）", () => {
+    const result = WorkerSchema.parse({
+      id: "haru",
+      displayName: "haru",
+      avatarUrl: "https://storage.googleapis.com/bucket/workers/haru/uuid.png",
+    });
+    expect(result).not.toHaveProperty("avatarUrl");
   });
 
-  it("URL でない文字列なら parse に失敗する", () => {
-    expect(WorkerSchema.safeParse({ id: "haru", displayName: "haru", avatarUrl: "not-a-url" }).success).toBe(false);
-  });
-
-  it("2048 文字ちょうどの URL なら parse 成功する（#91）", () => {
-    const longPath = "a".repeat(2048 - "https://x.com/".length);
-    expect(WorkerSchema.safeParse({ id: "haru", displayName: "haru", avatarUrl: `https://x.com/${longPath}` }).success).toBe(true);
-  });
-
-  it("2049 文字以上の URL なら parse に失敗する（#91）", () => {
-    const longPath = "a".repeat(2049 - "https://x.com/".length + 1);
-    expect(WorkerSchema.safeParse({ id: "haru", displayName: "haru", avatarUrl: `https://x.com/${longPath}` }).success).toBe(false);
+  it("画像は imageUrl に一本化されている（imageUrl はそのまま parse される）", () => {
+    const result = WorkerSchema.parse({
+      id: "haru",
+      displayName: "haru",
+      imageUrl: "https://storage.googleapis.com/bucket/workers/haru/uuid.png",
+    });
+    expect(result.imageUrl).toBe("https://storage.googleapis.com/bucket/workers/haru/uuid.png");
   });
 });
 

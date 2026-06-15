@@ -311,4 +311,34 @@ describe("createInMemoryWorkerRepository", () => {
       expect(foundAgain?.displayName).toBe("ワーカー1");
     });
   });
+
+  describe("verbosity フィールド (#625)", () => {
+    it("verbosity を指定して作成すると findById で取得できる（round-trip）", async () => {
+      const repo = createInMemoryWorkerRepository([]);
+      await repo.create({ id: "w-concise", displayName: "簡潔ワーカー", verbosity: "concise" });
+      const found = await repo.findById("w-concise");
+      expect(found?.verbosity).toBe("concise");
+    });
+
+    it("verbosity を省略して作成すると null になる", async () => {
+      const repo = createInMemoryWorkerRepository([]);
+      await repo.create({ id: "w-default", displayName: "デフォルトワーカー" });
+      const found = await repo.findById("w-default");
+      expect(found?.verbosity).toBeNull();
+    });
+
+    it("update で verbosity を変更できる", async () => {
+      const repo = createInMemoryWorkerRepository([makeWorker()]);
+      const updated = await repo.update("worker-1", { verbosity: "detailed" });
+      expect(updated?.verbosity).toBe("detailed");
+      const found = await repo.findById("worker-1");
+      expect(found?.verbosity).toBe("detailed");
+    });
+
+    it("update で verbosity を省略すると変更されない", async () => {
+      const repo = createInMemoryWorkerRepository([makeWorker({ verbosity: "concise" })]);
+      const updated = await repo.update("worker-1", { displayName: "改名のみ" });
+      expect(updated?.verbosity).toBe("concise");
+    });
+  });
 });

@@ -171,6 +171,66 @@ describe("buildCommunityPrompt (#306)", () => {
   });
 });
 
+describe("verbosity（文章量設定）のプロンプト反映 (#625)", () => {
+  const community = {
+    id: "c1", slug: "s", name: "N", description: "テスト",
+    generationInstruction: null, synopsis: null, lastSlotKey: null, iconUrl: null, coverUrl: null, createdAt: new Date(),
+  };
+
+  it("verbosity=concise のワーカーの定義行に簡潔指示が含まれる", () => {
+    const prompt = buildCommunityPrompt({
+      community,
+      workers: [{ id: "w1", displayName: "Alice", verbosity: "concise" }],
+      recentLog: [],
+    });
+    expect(prompt).toContain("1〜2 文程度");
+  });
+
+  it("verbosity=detailed のワーカーの定義行に詳細指示が含まれる", () => {
+    const prompt = buildCommunityPrompt({
+      community,
+      workers: [{ id: "w1", displayName: "Alice", verbosity: "detailed" }],
+      recentLog: [],
+    });
+    expect(prompt).toContain("具体例や背景を交えて");
+  });
+
+  it("verbosity=standard のワーカーの定義行に分量指示が含まれない", () => {
+    const prompt = buildCommunityPrompt({
+      community,
+      workers: [{ id: "w1", displayName: "Alice", verbosity: "standard" }],
+      recentLog: [],
+    });
+    // standard は特別な指示なし
+    expect(prompt).not.toContain("1〜2 文程度");
+    expect(prompt).not.toContain("具体例や背景を交えて");
+  });
+
+  it("verbosity 未指定のワーカーの定義行に分量指示が含まれない", () => {
+    const prompt = buildCommunityPrompt({
+      community,
+      workers: [{ id: "w1", displayName: "Alice" }],
+      recentLog: [],
+    });
+    expect(prompt).not.toContain("1〜2 文程度");
+    expect(prompt).not.toContain("具体例や背景を交えて");
+  });
+
+  it("複数ワーカーで verbosity が混在していても各ワーカーの指示が正しく含まれる", () => {
+    const prompt = buildCommunityPrompt({
+      community,
+      workers: [
+        { id: "w1", displayName: "Alice", verbosity: "concise" },
+        { id: "w2", displayName: "Bob", verbosity: "standard" },
+        { id: "w3", displayName: "Carol", verbosity: "detailed" },
+      ],
+      recentLog: [],
+    });
+    expect(prompt).toContain("1〜2 文程度");
+    expect(prompt).toContain("具体例や背景を交えて");
+  });
+});
+
 describe("generationInstruction フォールバック（#488）", () => {
   const workers = [{ id: "w1", displayName: "Alice" }];
 

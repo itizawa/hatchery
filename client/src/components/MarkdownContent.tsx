@@ -10,6 +10,7 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
+import { useMemo } from "react";
 import type { ReactElement, ReactNode } from "react";
 import { Box, Link, Typography } from "./uiParts";
 import type { Components } from "react-markdown";
@@ -43,8 +44,10 @@ export const MarkdownContent = ({
   variant = "body1",
   paragraphSx,
 }: MarkdownContentProps): ReactElement => {
-  const pSx = paragraphSx ? { mb: 0.5, mt: 0, ...paragraphSx } : { mb: 0.5, mt: 0 };
-  const components: Components = {
+  // components オブジェクトは variant / paragraphSx が変わったときだけ再生成する
+  const components: Components = useMemo(() => {
+    const pSx = paragraphSx ? { mb: 0.5, mt: 0, ...paragraphSx } : { mb: 0.5, mt: 0 };
+    return ({
     // 段落: Typography で描画（variant は呼び出し元から渡す）
     p: ({ children }: { children?: ReactNode }) => (
       <Typography variant={variant} component="p" sx={pSx}>
@@ -84,15 +87,18 @@ export const MarkdownContent = ({
       </Typography>
     ),
 
-    // インラインコード: monospace フォントで軽くハイライト
+    // インラインコード / コードブロック内の code 要素。
+    // react-markdown v10 では `inline` prop が廃止されたため、
+    // className（language-xxx）がない = インラインコードとして判定する。
     code: ({
-      inline,
+      className,
       children,
     }: {
-      inline?: boolean;
+      className?: string;
       children?: ReactNode;
     }) => {
-      if (inline) {
+      const isInline = !className;
+      if (isInline) {
         return (
           <Box
             component="code"
@@ -109,7 +115,7 @@ export const MarkdownContent = ({
           </Box>
         );
       }
-      // ブロックコードは pre 内に入るため inline でない場合はシンプルに
+      // ブロックコードは pre 内に入るためシンプルに
       return (
         <Box
           component="code"
@@ -262,7 +268,8 @@ export const MarkdownContent = ({
       }
       return <span>[{label}]</span>;
     },
-  };
+  });
+  }, [variant, paragraphSx]);
 
   return (
     <ReactMarkdown

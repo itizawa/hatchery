@@ -47,8 +47,8 @@ describe("Issue #329: Worker ディレクトリ構造の確認", () => {
     expect(dirExists("common/src/domain/employee")).toBe(false);
   });
 
-  it("common/src/constants/workerMessages.ts が存在する", () => {
-    expect(dirExists("common/src/constants/workerMessages.ts")).toBe(true);
+  it("common/src/constants/workerMessages.ts が存在しない（#539 で死蔵テンプレートを削除済み）", () => {
+    expect(dirExists("common/src/constants/workerMessages.ts")).toBe(false);
   });
 
   it("common/src/constants/employeeMessages.ts が存在しない（削除済み）", () => {

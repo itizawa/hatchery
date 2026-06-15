@@ -90,11 +90,6 @@
             "maxLength": 500,
             "format": "uri"
           },
-          "avatarUrl": {
-            "type": "string",
-            "maxLength": 2048,
-            "format": "uri"
-          },
           "deletedAt": {
             "type": [
               "string",

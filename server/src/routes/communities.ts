@@ -63,13 +63,15 @@ export function createCommunitiesRouter(
   // community に最近投稿したワーカー一覧（認証不要・#207）
   router.get("/:slug/recent-workers", (req, res, next) => {
     const { slug } = req.params as { slug: string };
+    // reveal フィルタ（#556）: createdAt <= now の post の author のみ対象にする。
+    const recentWorkersNow = new Date();
     communityRepo
       .findBySlug(slug)
       .then((community) => {
         if (!community) {
           throw new NotFoundError("CommunityNotFound");
         }
-        return postRepo.listByCommunity(community.id);
+        return postRepo.listByCommunity(community.id, undefined, { now: recentWorkersNow });
       })
       .then((posts) => {
         // post.author は worker の id（UUID）か displayName（旧データ）のいずれか（#478）。

@@ -4,7 +4,7 @@ import { TokenUsageLogSchema } from "@hatchery/common";
 import type { TokenUsageLog } from "@hatchery/common";
 import { z } from "zod";
 
-import { openApiClient } from "./client.js";
+import { openApiClient, unwrap } from "./client.js";
 
 export const TOKEN_USAGE_QUERY_KEY = ["admin", "token-usage"] as const;
 
@@ -33,10 +33,10 @@ const TokenUsageSummarySchema = z.object({
  * TokenUsageLogSchema でランタイム検証し occurredAt を Date 化する。
  */
 export async function fetchTokenUsage(): Promise<TokenUsageResult> {
-  const { data, error, response } = await openApiClient.GET("/api/admin/token-usage", {
+  const result = await openApiClient.GET("/api/admin/token-usage", {
     credentials: "include",
   });
-  if (error || !response.ok) throw new Error(`GET /api/admin/token-usage failed: ${response.status}`);
+  const data = unwrap(result, "GET /api/admin/token-usage");
   const raw = data as { logs: unknown[]; summary: unknown };
   const logs = TokenUsageLogSchema.array().parse(raw.logs);
   const summary = TokenUsageSummarySchema.parse(raw.summary);

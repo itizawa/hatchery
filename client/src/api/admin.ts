@@ -1,8 +1,7 @@
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import type { AppSettingResponse, Worker } from "@hatchery/common";
 
-import { openApiClient } from "./client.js";
-import { buildApiErrorMessage } from "./errors.js";
+import { ensureOk, openApiClient, unwrap } from "./client.js";
 import { BOT_WORKERS_QUERY_KEY } from "./workers.js";
 
 export const ADMIN_SETTINGS_QUERY_KEY = ["admin", "settings"] as const;
@@ -15,26 +14,21 @@ export type { AppSettingResponse };
  * 生の相対 fetch はクロスオリジン配信（#78）で baseUrl が前置されず壊れるため openApiClient に統一。
  */
 export async function fetchSettings(): Promise<AppSettingResponse[]> {
-  const { data, error, response } = await openApiClient.GET("/api/admin/settings", {
+  // ensureOk は error / !response.ok を throw に変換する。空ボディ（data undefined）は許容し ?? [] でフォールバック。
+  const result = await openApiClient.GET("/api/admin/settings", {
     credentials: "include",
   });
-  // openapi-fetch は非2xx + 空ボディ（Content-Length: 0）で error=undefined を返すため、
-  // error だけでなく response.ok も見て元コード（!res.ok throw）の確実性を保つ。
-  if (error || !response.ok) throw new Error(`GET /api/admin/settings failed: ${response.status}`);
-  return data ?? [];
+  return ensureOk(result, "GET /api/admin/settings") ?? [];
 }
 
 /** PATCH /admin/settings を openApiClient 経由で更新する（#110）。成功時は更新後の設定を返す。 */
 export async function patchSetting(key: string, value: string): Promise<AppSettingResponse> {
-  const { data, error, response } = await openApiClient.PATCH("/api/admin/settings", {
+  // 失敗時はサーバが返す { error } メッセージを Error に乗せ、無ければフォールバック文言を使う（#476）。
+  const result = await openApiClient.PATCH("/api/admin/settings", {
     body: { key, value },
     credentials: "include",
   });
-  // 失敗時はサーバが返す { error } メッセージを Error に乗せ、UI で原因を提示できるようにする（#476）。
-  if (!response.ok || !data) {
-    throw new Error(buildApiErrorMessage(error, response.status, "設定の保存に失敗しました"));
-  }
-  return data;
+  return unwrap(result, "設定の保存に失敗しました");
 }
 
 /**
@@ -58,12 +52,11 @@ export function useSaveAdminSetting() {
 
 /** DELETE /api/admin/workers/:id で Worker を論理削除する（#218 / #329）。 */
 export async function deleteWorker(id: string): Promise<{ id: string; deletedAt: string }> {
-  const { data, response } = await openApiClient.DELETE("/api/admin/workers/{id}", {
+  const result = await openApiClient.DELETE("/api/admin/workers/{id}", {
     params: { path: { id } },
     credentials: "include",
   });
-  if (!response.ok || !data) throw new Error(`DELETE /api/admin/workers/${id} failed: ${response.status}`);
-  return data;
+  return unwrap(result, `DELETE /api/admin/workers/${id}`);
 }
 
 export const BOT_WORKERS_ADMIN_QUERY_KEY = ["admin", "workers"] as const;
@@ -82,11 +75,10 @@ export function useDeleteWorker() {
 
 /** GET /api/workers で Worker 一覧を取得する（管理画面ユーザー一覧用・#217 / #329）。 */
 export async function fetchAdminWorkers(): Promise<Worker[]> {
-  const { data, error, response } = await openApiClient.GET("/api/workers", {
+  const result = await openApiClient.GET("/api/workers", {
     credentials: "include",
   });
-  if (error || !response.ok) throw new Error(`GET /api/workers failed: ${response.status}`);
-  return data ?? [];
+  return ensureOk(result, "GET /api/workers") ?? [];
 }
 
 /** POST /api/admin/workers で新規 Worker を作成する（#217 / #329）。 */
@@ -95,12 +87,11 @@ export async function createAdminWorker(input: {
   role?: string;
   personality?: string;
 }): Promise<Worker> {
-  const { data, response } = await openApiClient.POST("/api/admin/workers", {
+  const result = await openApiClient.POST("/api/admin/workers", {
     body: input,
     credentials: "include",
   });
-  if (!response.ok || !data) throw new Error(`POST /api/admin/workers failed: ${response.status}`);
-  return data;
+  return unwrap(result, "POST /api/admin/workers");
 }
 
 /**

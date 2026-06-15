@@ -25,6 +25,8 @@ const MOCK_COMMUNITY = {
   created_at: "2024-03-15T00:00:00.000Z",
   iconUrl: null,
   coverUrl: null,
+  post_count: 3,
+  last_post_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
 };
 
 const MOCK_COMMUNITY_WITH_IMAGES = {
@@ -452,4 +454,12 @@ test(
     // エラー通知が表示される
     await expect(page.getByText("URL のコピーに失敗しました")).toBeVisible();
   },
+);
+
+test.todo(
+  "UC-COMM-11: コミュニティ詳細の投稿一覧では本文が数行に省略表示される（#501）",
+);
+
+test.todo(
+  "UC-COMM-12: コミュニティ一覧に投稿数・最終投稿の活気指標が表示される（#527）",
 );

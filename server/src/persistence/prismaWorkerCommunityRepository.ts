@@ -8,6 +8,7 @@ function toRecord(row: {
   displayName: string;
   role: string | null;
   personality: string | null;
+  verbosity: string;
   deletedAt: Date | null;
   imageUrl: string | null;
 }): WorkerRecord {
@@ -16,6 +17,7 @@ function toRecord(row: {
     displayName: row.displayName,
     role: row.role,
     personality: row.personality,
+    verbosity: row.verbosity,
     imageUrl: row.imageUrl,
     deletedAt: row.deletedAt,
   };

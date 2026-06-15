@@ -37,7 +37,7 @@ export function useUpdateWorker() {
       body,
     }: {
       id: string;
-      body: { displayName?: string; role?: string; personality?: string };
+      body: { displayName?: string; role?: string; personality?: string; verbosity?: "concise" | "standard" | "detailed" };
     }) => {
       const { data, error, response } = await openApiClient.PATCH("/api/workers/{id}", {
         params: { path: { id } },

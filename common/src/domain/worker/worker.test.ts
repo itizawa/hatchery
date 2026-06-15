@@ -287,6 +287,82 @@ describe("createAvatarUrlResolver (#300)", () => {
   });
 });
 
+describe("WorkerVerbositySchema (#625)", () => {
+  it("concise / standard / detailed を受理する", async () => {
+    const { WorkerVerbositySchema } = await import("./worker.js");
+    expect(WorkerVerbositySchema.safeParse("concise").success).toBe(true);
+    expect(WorkerVerbositySchema.safeParse("standard").success).toBe(true);
+    expect(WorkerVerbositySchema.safeParse("detailed").success).toBe(true);
+  });
+
+  it("未知値は弾く", async () => {
+    const { WorkerVerbositySchema } = await import("./worker.js");
+    expect(WorkerVerbositySchema.safeParse("verbose").success).toBe(false);
+    expect(WorkerVerbositySchema.safeParse("").success).toBe(false);
+    expect(WorkerVerbositySchema.safeParse("CONCISE").success).toBe(false);
+  });
+});
+
+describe("WorkerSchema: verbosity フィールド (#625)", () => {
+  it("verbosity を省略しても parse 成功する（任意フィールド）", () => {
+    expect(WorkerSchema.safeParse({ id: "haru", displayName: "haru" }).success).toBe(true);
+  });
+
+  it("verbosity に concise を指定すると parse 成功する", () => {
+    const result = WorkerSchema.safeParse({ id: "haru", displayName: "haru", verbosity: "concise" });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.verbosity).toBe("concise");
+  });
+
+  it("verbosity に standard を指定すると parse 成功する", () => {
+    const result = WorkerSchema.safeParse({ id: "haru", displayName: "haru", verbosity: "standard" });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.verbosity).toBe("standard");
+  });
+
+  it("verbosity に detailed を指定すると parse 成功する", () => {
+    const result = WorkerSchema.safeParse({ id: "haru", displayName: "haru", verbosity: "detailed" });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.verbosity).toBe("detailed");
+  });
+
+  it("verbosity に未知値を指定すると parse 失敗する", () => {
+    expect(WorkerSchema.safeParse({ id: "haru", displayName: "haru", verbosity: "unknown" }).success).toBe(false);
+  });
+});
+
+describe("UpdateWorkerSchema: verbosity フィールド (#625)", () => {
+  it("verbosity を省略しても valid（任意）", () => {
+    expect(UpdateWorkerSchema.safeParse({}).success).toBe(true);
+  });
+
+  it("verbosity に concise / standard / detailed を指定すると valid", () => {
+    expect(UpdateWorkerSchema.safeParse({ verbosity: "concise" }).success).toBe(true);
+    expect(UpdateWorkerSchema.safeParse({ verbosity: "standard" }).success).toBe(true);
+    expect(UpdateWorkerSchema.safeParse({ verbosity: "detailed" }).success).toBe(true);
+  });
+
+  it("verbosity に未知値を指定すると invalid", () => {
+    expect(UpdateWorkerSchema.safeParse({ verbosity: "unknown" }).success).toBe(false);
+  });
+});
+
+describe("CreateWorkerSchema: verbosity フィールド (#625)", () => {
+  it("verbosity を省略しても parse 成功する（任意）", () => {
+    expect(CreateWorkerSchema.safeParse({ displayName: "ワーカーA" }).success).toBe(true);
+  });
+
+  it("verbosity に concise / standard / detailed を指定すると valid", () => {
+    expect(CreateWorkerSchema.safeParse({ displayName: "ワーカーA", verbosity: "concise" }).success).toBe(true);
+    expect(CreateWorkerSchema.safeParse({ displayName: "ワーカーA", verbosity: "standard" }).success).toBe(true);
+    expect(CreateWorkerSchema.safeParse({ displayName: "ワーカーA", verbosity: "detailed" }).success).toBe(true);
+  });
+
+  it("verbosity に未知値を指定すると invalid", () => {
+    expect(CreateWorkerSchema.safeParse({ displayName: "ワーカーA", verbosity: "unknown" }).success).toBe(false);
+  });
+});
+
 describe("WorkerSchema: deletedAt フィールド（#372 HTTP 境界型整合）", () => {
   it("deletedAt に Date オブジェクトを渡すと parse 失敗する（HTTP 境界では文字列のみ）", () => {
     expect(WorkerSchema.safeParse({ id: "w1", displayName: "Alice", deletedAt: new Date() }).success).toBe(false);

@@ -46,6 +46,8 @@ model Worker {
   role        String?
   /// AI バッチのプロンプト指針となる性格設定（任意・500 文字以内）（#38）。
   personality String?
+  /// 文章量設定（#625）。concise / standard / detailed の 3 段階。既定は standard。
+  verbosity   String    @default("standard")
   /// 論理削除日時（#218）。null=有効、値=削除済み。物理削除は行わない。
   deletedAt   DateTime?
   /// GCS 上のアバター画像 URL（#204）。admin がアップロード後に設定される。最大 500 文字（#91）。

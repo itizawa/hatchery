@@ -1,4 +1,5 @@
 import type { CommunityRecord } from "../persistence/communityRepository.js";
+import type { CountHints } from "./generateCountHints.js";
 
 /** ワーカー定義（プロンプト構築に必要な最小フィールド）。 */
 export interface WorkerDef {
@@ -25,6 +26,13 @@ export interface BuildCommunityPromptParams {
    * 省略または空配列の場合は「特に反応が良かった投稿」セクションを省略する。
    */
   popularPosts?: readonly PopularPostEntry[];
+  /**
+   * post 数・コメント数の目標件数ヒント（#557）。
+   * 指定するとプロンプトに「post を N 件、各 post に M 件前後のコメントを」と誘導指示を追加する。
+   * 省略時は「posts は 1 件以上生成してください」（従来挙動）。
+   * 件数はあくまでプロンプト上の誘導であり、ハード制約ではない。
+   */
+  countHints?: CountHints;
 }
 
 /**
@@ -63,7 +71,7 @@ export const TONE_GUIDELINES = `## トーン規約（このコミュニティの
  * （2048 トークン）に満たないため cache_control は付与しない（理由は docs/design/issue-389.md に記録）。
  */
 export function buildCommunityPrompt(params: BuildCommunityPromptParams): string {
-  const { community, workers, recentLog, popularPosts } = params;
+  const { community, workers, recentLog, popularPosts, countHints } = params;
 
   const workerLines = workers
     .map((w) => {
@@ -127,7 +135,7 @@ ${popularPostsSection}${recentLogSection}
 注意事項:
 - author には必ず上記ワーカー一覧の ID を使用してください
 - score フィールドは生成しないでください
-- posts は 1 件以上生成してください
+- ${countHints ? `post を ${countHints.postCount} 件、各 post に ${countHints.commentCount} 件前後のコメントを生成してください（目安であり厳密な制約ではありません）` : "posts は 1 件以上生成してください"}
 - 会話は自然で読みやすい日本語で書いてください
 
 自己監査（出力前に必ず確認）:

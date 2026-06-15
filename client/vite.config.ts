@@ -50,13 +50,33 @@ export function cfBeaconHtmlPlugin(): Plugin {
 }
 
 /**
+ * index.html の favicon の href をビルド時 env で切り替えるプラグイン（#601）。
+ *
+ * - `VITE_APP_ENV === "stg"` のとき: `/favicon.svg` → `/favicon-stg.svg`（グレースケール版）に差し替える。
+ * - それ以外（`prod` / 未設定 / 空・空白のみ）: `/favicon.svg`（従来）のまま。
+ * - ローカル `pnpm dev`（env 未設定）でも従来どおり通常 favicon が表示される。
+ */
+export function faviconHtmlPlugin(): Plugin {
+  return {
+    name: "hatchery-favicon",
+    transformIndexHtml(html) {
+      const appEnv = process.env.VITE_APP_ENV?.trim();
+      if (appEnv === "stg") {
+        return html.replaceAll("/favicon.svg", "/favicon-stg.svg");
+      }
+      return html;
+    },
+  };
+}
+
+/**
  * Vite（dev / build）と Vitest（test）の単一設定（ADR-0003）。
  * - SPA エントリは index.html → src/main.tsx。
  * - build.outDir を dist/web に分離し、tsc -b の宣言出力（dist/）と衝突させない。
  * - test は jsdom 環境 + RTL セットアップ。
  */
 export default defineConfig({
-  plugins: [react(), ogpUrlHtmlPlugin(), cfBeaconHtmlPlugin()],
+  plugins: [react(), ogpUrlHtmlPlugin(), cfBeaconHtmlPlugin(), faviconHtmlPlugin()],
   server: {
     // dev では SPA(5173) から API(3000) へプロキシする。
     // /api プレフィックスに統一したことでルータ追加時も proxy を触らなくて済む（#168）。
@@ -74,6 +94,15 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
     include: ["src/**/*.test.{ts,tsx}", "functions/**/*.test.ts", "vite.config.test.ts"],
+    // vite.config.test.ts はデフォルト exclude（**/{...vite...}.config.*）にマッチするため、
+    // 明示的に exclude から除外し include の指定が有効になるようにする。
+    exclude: [
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/cypress/**",
+      "**/.{idea,git,cache,output,temp}/**",
+      "**/{karma,rollup,webpack,vitest,jest,ava,babel,nyc,cypress,tsup,build,eslint,prettier}.config.*",
+    ],
     css: false,
     // #461 / #459: Suspense クエリ移行でルート全体描画テストが「fallback → 解決後」の 2 パスになり、
     // CI の低速ランナーでは findBy 解決が既定 5s を超えうる。setup.ts の asyncUtilTimeout(5s) を

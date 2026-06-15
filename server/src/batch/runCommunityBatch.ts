@@ -25,11 +25,20 @@ import {
   generateConversationWithClaude,
   type ConversationGenerator,
 } from "./aiMessageGenerator.js";
+import { assignDripTimestamps } from "./assignDripTimestamps.js";
 import { buildCommunityPrompt, type WorkerDef } from "./buildCommunityPrompt.js";
+import { generateCountHints } from "./generateCountHints.js";
 import { extractErrorMessage, logBatchError, logBatchInfo } from "./logger.js";
 
 /** プロンプトに載せる直近 post/comment の既定件数。 */
 const DEFAULT_RECENT_LIMIT = 30;
+
+/**
+ * バッチのドリップ窓のデフォルト値（ms）（#556）。
+ * DEFAULT_BATCH_HOURS = [9,12,15,18] のスロット間隔 3h に合わせた既定値。
+ * env.batchDripWindowMs から上書き可能（communityBatchIndex.ts で注入）。
+ */
+const DEFAULT_DRIP_WINDOW_MS = 3 * 60 * 60 * 1000; // 3 時間
 
 /**
  * vote 重みの集計対象期間（日数）。直近この日数の vote 純スコアで重みを算出する（#486 / ADR-0030）。
@@ -111,10 +120,28 @@ export interface RunCommunityBatchDeps {
   /**
    * 重み付き 1 コミュニティ選定に使う乱数源（`[0, 1)`）。既定 `Math.random`（#486）。
    * テストでは固定値を注入して選定を決定化する。
+   * countHints の生成にも同じ rng を流用する（#557）。
+   * ドリップ割当（assignDripTimestamps）にも同じ rng を流用する（#556）。
    */
   rng?: () => number;
   /** vote 集計の基準「現在時刻」（省略時は実行時の `new Date()`）。テストで固定するため。 */
   now?: Date;
+  /**
+   * 1 定時の post 数の範囲（#557）。省略時は件数誘導なし（後方互換）。
+   * min/max を指定するとプロンプトに「N 件」の誘導を追加する。
+   */
+  postRange?: { min: number; max: number };
+  /**
+   * 各 post のコメント数の範囲（#557）。省略時は件数誘導なし（後方互換）。
+   * min/max を指定するとプロンプトに「M 件前後」の誘導を追加する。
+   */
+  commentRange?: { min: number; max: number };
+  /**
+   * ドリップ窓（ms）（#556）。
+   * 各コメントの createdAt をこの窓の中に散らして「じわじわ」公開する。
+   * 省略時は DEFAULT_DRIP_WINDOW_MS（3h）。env.batchDripWindowMs から注入する。
+   */
+  dripWindowMs?: number;
 }
 
 /**
@@ -197,6 +224,7 @@ export async function runCommunityBatch(
   const slotKey = deps.slotKey ?? generateSlotKey();
   const rng = deps.rng ?? Math.random;
   const now = deps.now ?? new Date();
+  const dripWindowMs = deps.dripWindowMs ?? DEFAULT_DRIP_WINDOW_MS;
 
   const communities = await deps.communityRepo.list();
 
@@ -260,8 +288,9 @@ export async function runCommunityBatch(
       const workerIds = workers.map((w) => w.id);
 
       // 直近 post/comment をログ形式に変換
-      const recentPosts = await deps.postRepo.listByCommunity(community.id, recentLimit);
-      const recentComments = await deps.commentRepo.listByCommunity(community.id, recentLimit);
+      // reveal フィルタ（#556）: now を渡して未解禁分をコンテキストから除外する（受け入れ条件 6）。
+      const recentPosts = await deps.postRepo.listByCommunity(community.id, recentLimit, { now });
+      const recentComments = await deps.commentRepo.listByCommunity(community.id, recentLimit, { now });
       // post と comment を createdAt で時系列マージし直近 recentLimit 件をプロンプトに載せる
       const allEntries: (RecentEntry & { createdAt: Date })[] = [
         ...recentPosts.map((p) => ({
@@ -295,12 +324,20 @@ export async function runCommunityBatch(
         score: p.score,
       }));
 
+      // post 数・コメント数のヒントを生成する（#557）。
+      // postRange / commentRange が注入されていれば rng で件数を決定し、countHints としてプロンプトに渡す。
+      const countHints =
+        deps.postRange && deps.commentRange
+          ? generateCountHints(deps.postRange, deps.commentRange, rng)
+          : undefined;
+
       // プロンプト構築（お題は含めない・ADR-0020）
       const prompt = buildCommunityPrompt({
         community,
         workers,
         recentLog,
         popularPosts,
+        countHints,
       });
 
       // AI 生成（1 コミュニティ = 1 API コール・ADR-0009）
@@ -343,19 +380,35 @@ export async function runCommunityBatch(
       }
 
       // post をバルク作成（(community_id, slot_key, seq) 複合ユニーク制約でガード）
+      // Post の createdAt は now（スロット時刻）基準でわずかに stagger させる（受け入れ条件 7）。
+      // 複数 Post があるとき、フィード先頭が一度に埋まらないよう均等に散らす。
+      const postCount = output.posts.length;
+      const postStaggerMs = postCount > 1 ? Math.floor(dripWindowMs / (postCount * 10)) : 0;
       const postInputs = output.posts.map((post, postIdx) => ({
         slotKey,
         seq: postIdx,
         author: post.author,
         title: post.title,
         text: post.text,
+        // Post は即時公開: スロット時刻 + 軽いオフセット（stagger）。
+        createdAt: new Date(now.getTime() + postIdx * postStaggerMs),
       }));
       const createdPosts = await deps.postRepo.createMany(community.id, postInputs);
       savedPosts.push(...createdPosts);
 
       // comment をバルク作成
       // seq は全コメントを通じてユニークにする（community + slotKey でフラット管理）
+      // ドリップ割当（#556）: 全コメント数に対してジッタ付きタイムスタンプを割り当てる。
+      const totalCommentCount = output.posts.reduce((sum, p) => sum + p.comments.length, 0);
+      const dripTimestamps = assignDripTimestamps({
+        slotAt: now,
+        windowMs: dripWindowMs,
+        count: totalCommentCount,
+        rng,
+      });
+
       let commentSeq = 0;
+      let dripIdx = 0;
       for (let postIdx = 0; postIdx < output.posts.length; postIdx++) {
         const post = output.posts[postIdx];
         const createdPost = createdPosts[postIdx];
@@ -363,13 +416,18 @@ export async function runCommunityBatch(
 
         if (post.comments.length === 0) continue;
 
-        const commentInputs = post.comments.map((comment) => ({
-          postId: createdPost.id,
-          slotKey,
-          seq: commentSeq++,
-          author: comment.author,
-          text: comment.text,
-        }));
+        const commentInputs = post.comments.map((comment) => {
+          const commentCreatedAt = dripTimestamps[dripIdx++] ?? new Date(now.getTime() + dripIdx * 1000);
+          return {
+            postId: createdPost.id,
+            slotKey,
+            seq: commentSeq++,
+            author: comment.author,
+            text: comment.text,
+            // ドリップ割当（#556）: 未来の createdAt を付与し、reveal フィルタと組み合わせて解禁。
+            createdAt: commentCreatedAt,
+          };
+        });
         const createdComments = await deps.commentRepo.createMany(community.id, commentInputs);
         savedComments.push(...createdComments);
       }

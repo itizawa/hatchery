@@ -35,7 +35,9 @@ export function createPostsRouter(
         if (!post) {
           throw new NotFoundError("PostNotFound");
         }
-        return commentRepo.listByPost(postId).then(async (comments) => {
+        // reveal フィルタ（#556）: createdAt <= now のコメントのみ公開する。
+        const now = new Date();
+        return commentRepo.listByPost(postId, { now }).then(async (comments) => {
           // post と comments を 1 回のワーカー取得で付与する（重複クエリを避ける）。
           const enrich = await buildAuthorWorkerEnricher(workerRepo);
           const [enrichedPost] = enrich([post]);

@@ -32,6 +32,12 @@ import { extractErrorMessage, logBatchError, logBatchInfo } from "./logger.js";
 const DEFAULT_RECENT_LIMIT = 30;
 
 /**
+ * プロンプトに露出する既存Post参照の最大件数（#555）。
+ * 生成品質・コストを考慮して最新 N 件に絞る。
+ */
+const MAX_RECENT_POSTS_FOR_REPLY = 5;
+
+/**
  * vote 重みの集計対象期間（日数）。直近この日数の vote 純スコアで重みを算出する（#486 / ADR-0030）。
  * 後からチューニングしやすいよう名前付き定数として切り出す。
  */
@@ -242,11 +248,11 @@ export async function runCommunityBatch(
       const workerIds = workers.map((w) => w.id);
 
       // 直近 post/comment をログ形式に変換
-      const recentPosts = await deps.postRepo.listByCommunity(community.id, recentLimit);
+      const recentPostRecords = await deps.postRepo.listByCommunity(community.id, recentLimit);
       const recentComments = await deps.commentRepo.listByCommunity(community.id, recentLimit);
       // post と comment を createdAt で時系列マージし直近 recentLimit 件をプロンプトに載せる
       const allEntries: (RecentEntry & { createdAt: Date })[] = [
-        ...recentPosts.map((p) => ({
+        ...recentPostRecords.map((p) => ({
           community_id: community.slug,
           author: p.author,
           text: p.text,
@@ -262,11 +268,21 @@ export async function runCommunityBatch(
       ].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
       const recentLog = formatRecentLog(allEntries, recentLimit);
 
+      // 既存Post参照リストを構築（#555）: 最新 MAX_RECENT_POSTS_FOR_REPLY 件を露出
+      const recentPostsForReply = recentPostRecords
+        .slice(0, MAX_RECENT_POSTS_FOR_REPLY)
+        .map((p, i) => ({
+          ref: `ref-${i + 1}`,
+          id: p.id,
+          title: p.title,
+        }));
+
       // プロンプト構築（お題は含めない・ADR-0020）
-      const prompt = buildCommunityPrompt({
+      const { prompt, postRefMap } = buildCommunityPrompt({
         community,
         workers,
         recentLog,
+        recentPosts: recentPostsForReply,
       });
 
       // AI 生成（1 コミュニティ = 1 API コール・ADR-0009）
@@ -297,9 +313,10 @@ export async function runCommunityBatch(
 
       const output = validated.data;
 
-      // author 検証（既知 workerId のみ許可・ADR-0020）
+      // author 検証（既知 workerId のみ許可・ADR-0020）+ reply の targetPostRef 検証（#555）
+      const knownPostRefs = postRefMap.size > 0 ? new Set(postRefMap.keys()) : undefined;
       try {
-        validateGenerationOutput(output, workerIds);
+        validateGenerationOutput(output, workerIds, knownPostRefs);
       } catch (err) {
         logBatchError("community_batch.author_validation_failed", err, {
           communityId: community.id,
@@ -340,13 +357,42 @@ export async function runCommunityBatch(
         savedComments.push(...createdComments);
       }
 
+      // replies（既存Post宛コメント）をバルク作成（#555）
+      // targetPostRef → 実postId に解決してコメントを永続化する
+      if (output.replies && output.replies.length > 0) {
+        for (const reply of output.replies) {
+          const targetPostId = postRefMap.get(reply.targetPostRef);
+          if (!targetPostId) {
+            // 解決できない参照はスキップ（validateGenerationOutput で弾かれているはずだが念のため）
+            continue;
+          }
+          const replyInputs = [
+            {
+              postId: targetPostId,
+              slotKey,
+              seq: commentSeq++,
+              author: reply.author,
+              text: reply.text,
+            },
+          ];
+          const createdReplyComments = await deps.commentRepo.createMany(
+            community.id,
+            replyInputs,
+          );
+          savedComments.push(...createdReplyComments);
+        }
+      }
+
       // 生成・永続化に成功したので、この定時で登場したワーカーを記録する（#464）。
-      // post / comment の author として実際に発言したワーカーを登場扱いにする（author 検証済みの既知 id）。
+      // post / comment / reply の author として実際に発言したワーカーを登場扱いにする（author 検証済みの既知 id）。
       for (const post of output.posts) {
         appearedWorkerIds.add(post.author);
         for (const comment of post.comments) {
           appearedWorkerIds.add(comment.author);
         }
+      }
+      for (const reply of output.replies ?? []) {
+        appearedWorkerIds.add(reply.author);
       }
     } catch (err) {
       const message = extractErrorMessage(err);

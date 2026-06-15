@@ -1,6 +1,9 @@
+// @vitest-environment node
+// vite.config.ts は Vite/esbuild を import するため jsdom 環境では動作しない。
+// Node 環境でプラグインの transformIndexHtml 関数のみを直接テストする。
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { cfBeaconHtmlPlugin } from "./vite.config";
+import { cfBeaconHtmlPlugin, faviconHtmlPlugin } from "./vite.config";
 
 /**
  * transformIndexHtml フックを直接呼んで HTML 出力を得るヘルパー。
@@ -70,5 +73,66 @@ describe("cfBeaconHtmlPlugin（Cloudflare Web Analytics ビーコンの env→HT
     // data-cf-beacon の属性値は単一引用符で囲み、内部の JSON は二重引用符。
     // JSON.stringify により " は \" に、\ は \\ にエスケープされる。
     expect(out).toContain('{"token":"a\\"b\\\\c"}');
+  });
+});
+
+/**
+ * faviconHtmlPlugin のテスト用 runTransform ヘルパー。
+ */
+function runFaviconTransform(html: string): string {
+  const plugin = faviconHtmlPlugin();
+  const hook = plugin.transformIndexHtml;
+  if (typeof hook === "function") {
+    return hook(html, {} as never) as string;
+  }
+  if (hook && typeof hook === "object" && typeof hook.handler === "function") {
+    return hook.handler(html, {} as never) as string;
+  }
+  throw new Error("transformIndexHtml フックが関数として取得できない");
+}
+
+const FAVICON_TEMPLATE = `<head>\n  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />\n</head>`;
+
+describe("faviconHtmlPlugin（ビルド時 favicon 切り替え）", () => {
+  const original = process.env.VITE_APP_ENV;
+
+  beforeEach(() => {
+    delete process.env.VITE_APP_ENV;
+  });
+  afterEach(() => {
+    if (original === undefined) delete process.env.VITE_APP_ENV;
+    else process.env.VITE_APP_ENV = original;
+  });
+
+  // 受け入れ条件 (a): VITE_APP_ENV=stg のとき favicon-stg.svg に差し替える。
+  it("VITE_APP_ENV が stg のとき href が /favicon-stg.svg になる", () => {
+    process.env.VITE_APP_ENV = "stg";
+    const out = runFaviconTransform(FAVICON_TEMPLATE);
+    expect(out).toContain('href="/favicon-stg.svg"');
+    expect(out).not.toContain('href="/favicon.svg"');
+  });
+
+  // 受け入れ条件 (b): VITE_APP_ENV=prod のとき favicon.svg のまま。
+  it("VITE_APP_ENV が prod のとき href が /favicon.svg のまま", () => {
+    process.env.VITE_APP_ENV = "prod";
+    const out = runFaviconTransform(FAVICON_TEMPLATE);
+    expect(out).toContain('href="/favicon.svg"');
+    expect(out).not.toContain('href="/favicon-stg.svg"');
+  });
+
+  // 受け入れ条件 (c): VITE_APP_ENV 未設定のとき favicon.svg のまま。
+  it("VITE_APP_ENV が未設定のとき href が /favicon.svg のまま", () => {
+    delete process.env.VITE_APP_ENV;
+    const out = runFaviconTransform(FAVICON_TEMPLATE);
+    expect(out).toContain('href="/favicon.svg"');
+    expect(out).not.toContain('href="/favicon-stg.svg"');
+  });
+
+  // 受け入れ条件 (d): VITE_APP_ENV が空白のみのとき favicon.svg のまま。
+  it("VITE_APP_ENV が空白のみのとき href が /favicon.svg のまま", () => {
+    process.env.VITE_APP_ENV = "   ";
+    const out = runFaviconTransform(FAVICON_TEMPLATE);
+    expect(out).toContain('href="/favicon.svg"');
+    expect(out).not.toContain('href="/favicon-stg.svg"');
   });
 });

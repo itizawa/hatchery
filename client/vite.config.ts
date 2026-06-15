@@ -74,6 +74,15 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
     include: ["src/**/*.test.{ts,tsx}", "functions/**/*.test.ts", "vite.config.test.ts"],
+    // vite.config.test.ts はデフォルト exclude（**/{...vite...}.config.*）にマッチするため、
+    // 明示的に exclude から除外し include の指定が有効になるようにする。
+    exclude: [
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/cypress/**",
+      "**/.{idea,git,cache,output,temp}/**",
+      "**/{karma,rollup,webpack,vitest,jest,ava,babel,nyc,cypress,tsup,build,eslint,prettier}.config.*",
+    ],
     css: false,
     // #461 / #459: Suspense クエリ移行でルート全体描画テストが「fallback → 解決後」の 2 パスになり、
     // CI の低速ランナーでは findBy 解決が既定 5s を超えうる。setup.ts の asyncUtilTimeout(5s) を

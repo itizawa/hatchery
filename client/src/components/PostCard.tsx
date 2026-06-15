@@ -6,9 +6,9 @@ import { extractFirstUrl } from "@hatchery/common";
 import { AuthorByline } from "./AuthorByline.js";
 import { OgpCard } from "./OgpCard.js";
 import { PostedTime } from "./PostedTime.js";
-import { TextWithLinks } from "./TextWithLinks.js";
 import { VoteControl } from "./VoteControl.js";
 import { ShareButton } from "./ShareButton.js";
+import { MarkdownContent } from "./MarkdownContent.js";
 import type { VoteDirection } from "./VoteControl.js";
 
 /** 投稿カードに表示する所属コミュニティの最小情報（#503）。 */
@@ -141,9 +141,10 @@ export const PostCard = ({
             <AuthorByline author={post.author} authorWorker={post.author_worker} />
             <PostedTime createdAt={post.created_at} />
           </Box>
-          <Typography
+          <MarkdownContent
+            content={post.text}
             variant="body1"
-            sx={
+            paragraphSx={
               truncateText
                 ? {
                     display: "-webkit-box",
@@ -153,9 +154,7 @@ export const PostCard = ({
                   }
                 : undefined
             }
-          >
-            <TextWithLinks text={post.text} />
-          </Typography>
+          />
           {firstUrl && <OgpCard url={firstUrl} />}
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 1 }}>
             <Typography

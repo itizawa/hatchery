@@ -1,12 +1,12 @@
-import { Box, Typography } from "./uiParts";
+import { Box } from "./uiParts";
 import type { ReactElement } from "react";
 import type { Comment } from "../api/communities.js";
 import { extractFirstUrl } from "@hatchery/common";
 import { AuthorByline } from "./AuthorByline.js";
 import { OgpCard } from "./OgpCard.js";
 import { PostedTime } from "./PostedTime.js";
-import { TextWithLinks } from "./TextWithLinks.js";
 import { VoteControl } from "./VoteControl.js";
+import { MarkdownContent } from "./MarkdownContent.js";
 import type { VoteDirection } from "./VoteControl.js";
 
 interface CommentCardProps {
@@ -55,9 +55,7 @@ export const CommentCard = ({
             <AuthorByline author={comment.author} authorWorker={comment.author_worker} />
             <PostedTime createdAt={comment.created_at} />
           </Box>
-          <Typography variant="body2">
-            <TextWithLinks text={comment.text} />
-          </Typography>
+          <MarkdownContent content={comment.text} variant="body2" />
           {firstUrl && <OgpCard url={firstUrl} />}
         </Box>
       </Box>

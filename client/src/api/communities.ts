@@ -1,36 +1,63 @@
 /**
- * コミュニティ API クライアント。
+ * コミュニティ API クライアント（#533 でドメイン別に分割）。
  * - 管理者向け CRUD（/api/admin/communities）: #310
- * - 公開ブラウズ・フィード・投票・購読（/api/communities, /api/feed 等）: #307
+ * - 公開コミュニティ一覧・最近のワーカー・画像アップロード（/api/communities 等）: #307 / #207 / #457
+ *
+ * post / vote / feed / subscription のクライアントは各ドメインモジュールに分割済み
+ * （`posts.ts` / `votes.ts` / `feed.ts` / `subscriptions.ts`）。後方互換のため本ファイルから
+ * 引き続き re-export する（既存 import 参照を壊さない・受け入れ条件 2）。
  */
 import {
   useMutation,
   useQueryClient,
   useSuspenseQuery,
-  useSuspenseInfiniteQuery,
 } from "@tanstack/react-query";
 import { AdminCommunitySchema } from "@hatchery/common";
 import type {
   AdminCommunity,
   CreateCommunityInput,
-  HomeFeedSort,
   UpdateCommunityInput,
-  VoteDirection,
 } from "@hatchery/common";
-
-export type { VoteDirection };
 
 import { clientEnv } from "../config/env.js";
 import { openApiClient } from "./client.js";
 import type { components } from "./openapi.gen.js";
+
+// ─── 分割先ドメインモジュールの後方互換 re-export（#533）──────────────────────────────
+// post / vote / feed / subscription のシンボルは各モジュールへ移設したが、外部からの
+// import 参照を壊さないよう本ファイルから引き続き公開する。
+export { fetchPostThread, usePostThread, postThreadQueryKey } from "./posts.js";
+export type { Post, Comment } from "./posts.js";
+export {
+  fetchCommunityFeed,
+  fetchHomeFeedPage,
+  useCommunityFeed,
+  useInfiniteHomeFeed,
+  communityFeedQueryKey,
+  homeFeedQueryKeyPrefix,
+  homeFeedQueryKey,
+} from "./feed.js";
+export {
+  votePost,
+  voteComment,
+  useVotePost,
+  useVoteComment,
+  type VoteDirection,
+} from "./votes.js";
+export {
+  subscribeCommunity,
+  unsubscribeCommunity,
+  fetchSubscriptionStatus,
+  useSubscribe,
+  useUnsubscribe,
+  communitySubscriptionQueryKey,
+} from "./subscriptions.js";
 
 /** community 画像の種別（#457）。 */
 export type CommunityImageKind = "icon" | "cover";
 
 // ─── 公開 API 向け型定義（openapi.gen.ts より）────────────────────────────────────
 export type Community = components["schemas"]["Community"];
-export type Post = components["schemas"]["Post"];
-export type Comment = components["schemas"]["Comment"];
 
 /** 最近投稿したワーカーの表示用最小型（#207）。`GET /api/communities/{slug}/recent-workers` の戻り値。 */
 export type RecentWorker = {
@@ -49,16 +76,8 @@ export const ADMIN_COMMUNITIES_QUERY_KEY = ["admin", "communities"] as const;
 /** 後方互換のエイリアス（CommunitiesTab.tsx など既存コードが参照）。 */
 export const COMMUNITIES_QUERY_KEY = ADMIN_COMMUNITIES_QUERY_KEY;
 
-export const communityFeedQueryKey = (slug: string) => ["communities", slug, "feed"] as const;
 export const communityRecentWorkersQueryKey = (slug: string) =>
   ["communities", slug, "recent-workers"] as const;
-/** ホームフィードのキャッシュキープレフィックス。全 sort をまとめて無効化する際に使う。 */
-export const homeFeedQueryKeyPrefix = () => ["feed"] as const;
-export const homeFeedQueryKey = (sort: HomeFeedSort = "latest") =>
-  [...homeFeedQueryKeyPrefix(), sort] as const;
-export const postThreadQueryKey = (postId: string) => ["posts", postId] as const;
-export const communitySubscriptionQueryKey = (slug: string) =>
-  ["communities", slug, "subscription"] as const;
 
 // ─── 管理者向け API 関数（/api/admin/communities）───────────────────────────────────
 
@@ -194,7 +213,7 @@ export function useUploadCommunityImage() {
   });
 }
 
-// ─── 公開ブラウズ向け API 関数（/api/communities, /api/feed 等）──────────────────────
+// ─── 公開ブラウズ向け API 関数（/api/communities 等）────────────────────────────────
 
 /** GET /api/communities — 公開コミュニティ一覧を取得する（認証不要）。 */
 export async function fetchPublicCommunities(): Promise<Community[]> {
@@ -202,108 +221,6 @@ export async function fetchPublicCommunities(): Promise<Community[]> {
     credentials: "include",
   });
   if (!response.ok || !data) throw new Error(`GET /api/communities failed: ${response.status}`);
-  return data;
-}
-
-/**
- * GET /api/communities/{slug}/feed — コミュニティフィードを取得する。
- */
-export async function fetchCommunityFeed(slug: string): Promise<Post[]> {
-  const { data, response } = await openApiClient.GET("/api/communities/{slug}/feed", {
-    params: { path: { slug } },
-    credentials: "include",
-  });
-  if (!response.ok || !data)
-    throw new Error(`GET /api/communities/${slug}/feed failed: ${response.status}`);
-  return data;
-}
-
-/**
- * GET /api/feed — ホームフィードを 1 ページ分取得する（カーソルページネーション #367 / 並び順 #435）。
- * sort=latest（既定）は後方互換のため query に sort を含めない。
- */
-export async function fetchHomeFeedPage(
-  cursor?: string,
-  sort: HomeFeedSort = "latest",
-): Promise<{ posts: Post[]; nextCursor: string | null }> {
-  const query: { cursor?: string; limit: number; sort?: HomeFeedSort } = { limit: 20 };
-  if (cursor) query.cursor = cursor;
-  if (sort === "popular") query.sort = sort;
-  const { data, response } = await openApiClient.GET("/api/feed", {
-    params: { query },
-    credentials: "include",
-  });
-  if (!response.ok || !data) throw new Error(`GET /api/feed failed: ${response.status}`);
-  return data as { posts: Post[]; nextCursor: string | null };
-}
-
-/**
- * GET /api/posts/{postId} — スレッド（post + comments）を取得する。
- */
-export async function fetchPostThread(
-  postId: string,
-): Promise<{ post: Post; comments: Comment[] }> {
-  const { data, response } = await openApiClient.GET("/api/posts/{postId}", {
-    params: { path: { postId } },
-    credentials: "include",
-  });
-  if (!response.ok || !data)
-    throw new Error(`GET /api/posts/${postId} failed: ${response.status}`);
-  return data;
-}
-
-/**
- * POST /api/communities/{slug}/subscribe — コミュニティを購読する。
- */
-export async function subscribeCommunity(
-  slug: string,
-): Promise<{ userId: string; communityId: string }> {
-  const { data, response } = await openApiClient.POST("/api/communities/{slug}/subscribe", {
-    params: { path: { slug } },
-    credentials: "include",
-  });
-  if (!response.ok || !data)
-    throw new Error(`POST /api/communities/${slug}/subscribe failed: ${response.status}`);
-  return data;
-}
-
-/**
- * DELETE /api/communities/{slug}/subscribe — コミュニティの購読を解除する。
- */
-export async function unsubscribeCommunity(slug: string): Promise<void> {
-  const { response } = await openApiClient.DELETE("/api/communities/{slug}/subscribe", {
-    params: { path: { slug } },
-    credentials: "include",
-  });
-  if (!response.ok && response.status !== 204)
-    throw new Error(`DELETE /api/communities/${slug}/subscribe failed: ${response.status}`);
-}
-
-/**
- * POST /api/posts/{postId}/vote — post に up/down vote する（ADR-0025）。
- */
-export async function votePost(postId: string, direction: VoteDirection): Promise<Post> {
-  const { data, response } = await openApiClient.POST("/api/posts/{postId}/vote", {
-    params: { path: { postId } },
-    body: { direction },
-    credentials: "include",
-  });
-  if (!response.ok || !data)
-    throw new Error(`POST /api/posts/${postId}/vote failed: ${response.status}`);
-  return data;
-}
-
-/**
- * POST /api/comments/{commentId}/vote — comment に up/down vote する（ADR-0025）。
- */
-export async function voteComment(commentId: string, direction: VoteDirection): Promise<Comment> {
-  const { data, response } = await openApiClient.POST("/api/comments/{commentId}/vote", {
-    params: { path: { commentId } },
-    body: { direction },
-    credentials: "include",
-  });
-  if (!response.ok || !data)
-    throw new Error(`POST /api/comments/${commentId}/vote failed: ${response.status}`);
   return data;
 }
 
@@ -341,163 +258,5 @@ export function usePublicCommunities() {
     queryKey: ["communities"],
     queryFn: fetchPublicCommunities,
     staleTime: 60_000,
-  });
-}
-
-/**
- * コミュニティフィードを TanStack Query（Suspense）で取得するフック（#462）。
- * data は non-undefined。ローディング/エラーは QueryBoundary に委譲する。
- */
-export function useCommunityFeed(slug: string) {
-  return useSuspenseQuery({
-    queryKey: communityFeedQueryKey(slug),
-    queryFn: () => fetchCommunityFeed(slug),
-    staleTime: 30_000,
-  });
-}
-
-/**
- * ホームフィードを TanStack Query（Suspense）の無限スクロールで取得するフック（#367 / 並び順 #435 / #462）。
- * data は non-undefined。ローディング/エラーは QueryBoundary に委譲する。
- */
-export function useInfiniteHomeFeed(sort: HomeFeedSort = "latest") {
-  return useSuspenseInfiniteQuery({
-    queryKey: homeFeedQueryKey(sort),
-    queryFn: ({ pageParam }) => fetchHomeFeedPage(pageParam as string | undefined, sort),
-    initialPageParam: undefined as string | undefined,
-    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
-    staleTime: 30_000,
-    retry: false,
-  });
-}
-
-/**
- * スレッド（post + comments）を TanStack Query（Suspense）で取得するフック（#462）。
- * data は non-undefined。ローディング/エラーは QueryBoundary に委譲する。
- */
-export function usePostThread(postId: string) {
-  return useSuspenseQuery({
-    queryKey: postThreadQueryKey(postId),
-    queryFn: () => fetchPostThread(postId),
-    staleTime: 30_000,
-  });
-}
-
-/**
- * GET /api/communities/{slug}/subscription — 購読状態を取得する（#421）。
- * 未認証の場合は { subscribed: false } が返る。
- */
-export async function fetchSubscriptionStatus(slug: string): Promise<{ subscribed: boolean }> {
-  const res = await fetch(`/api/communities/${encodeURIComponent(slug)}/subscription`, {
-    credentials: "include",
-  });
-  if (!res.ok)
-    throw new Error(`GET /api/communities/${slug}/subscription failed: ${res.status}`);
-  return res.json() as Promise<{ subscribed: boolean }>;
-}
-
-/** コミュニティ購読ミューテーションフック。成功後に購読状態クエリを invalidate する（#421）。 */
-export function useSubscribe(slug: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: () => subscribeCommunity(slug),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: communitySubscriptionQueryKey(slug) });
-      void queryClient.invalidateQueries({ queryKey: homeFeedQueryKeyPrefix() });
-    },
-  });
-}
-
-/** コミュニティ購読解除ミューテーションフック。成功後に購読状態クエリを invalidate する（#421）。 */
-export function useUnsubscribe(slug: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: () => unsubscribeCommunity(slug),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: communitySubscriptionQueryKey(slug) });
-      void queryClient.invalidateQueries({ queryKey: homeFeedQueryKeyPrefix() });
-    },
-  });
-}
-
-/** post への vote ミューテーションフック。楽観更新 + キャッシュ無効化（ADR-0025）。 */
-export function useVotePost(communitySlug?: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ postId, direction }: { postId: string; direction: VoteDirection }) =>
-      votePost(postId, direction),
-    onMutate: async ({ postId, direction }: { postId: string; direction: VoteDirection }) => {
-      // 楽観更新: スレッドキャッシュの score を direction に応じて +1 / -1
-      const threadKey = postThreadQueryKey(postId);
-      await queryClient.cancelQueries({ queryKey: threadKey });
-      const previous = queryClient.getQueryData<{ post: Post; comments: Comment[] }>(threadKey);
-      if (previous) {
-        queryClient.setQueryData(threadKey, {
-          ...previous,
-          post: {
-            ...previous.post,
-            score: previous.post.score + (direction === "up" ? 1 : -1),
-          },
-        });
-      }
-      return { previous, postId };
-    },
-    onError: (_err, { postId }, context) => {
-      if (context?.previous) {
-        queryClient.setQueryData(postThreadQueryKey(postId), context.previous);
-      }
-    },
-    onSettled: (_data, _err, { postId }) => {
-      void queryClient.invalidateQueries({ queryKey: postThreadQueryKey(postId) });
-      if (communitySlug) {
-        void queryClient.invalidateQueries({ queryKey: communityFeedQueryKey(communitySlug) });
-      }
-      void queryClient.invalidateQueries({ queryKey: homeFeedQueryKeyPrefix() });
-    },
-  });
-}
-
-/** comment への vote ミューテーションフック。楽観更新 + キャッシュ無効化（ADR-0025）。 */
-export function useVoteComment(postId: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({
-      commentId,
-      direction,
-    }: {
-      commentId: string;
-      direction: VoteDirection;
-    }) => voteComment(commentId, direction),
-    onMutate: async ({
-      commentId,
-      direction,
-    }: {
-      commentId: string;
-      direction: VoteDirection;
-    }) => {
-      // 楽観更新: スレッドキャッシュのコメント score を direction に応じて +1 / -1
-      const threadKey = postThreadQueryKey(postId);
-      await queryClient.cancelQueries({ queryKey: threadKey });
-      const previous = queryClient.getQueryData<{ post: Post; comments: Comment[] }>(threadKey);
-      if (previous) {
-        queryClient.setQueryData(threadKey, {
-          ...previous,
-          comments: previous.comments.map((c) =>
-            c.id === commentId
-              ? { ...c, score: c.score + (direction === "up" ? 1 : -1) }
-              : c,
-          ),
-        });
-      }
-      return { previous, commentId };
-    },
-    onError: (_err, _vars, context) => {
-      if (context?.previous) {
-        queryClient.setQueryData(postThreadQueryKey(postId), context.previous);
-      }
-    },
-    onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: postThreadQueryKey(postId) });
-    },
   });
 }

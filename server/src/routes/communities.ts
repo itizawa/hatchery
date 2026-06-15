@@ -44,13 +44,15 @@ export function createCommunitiesRouter(
   // community フィード（新着順・認証不要・#479 で author_worker を付与）
   router.get("/:slug/feed", (req, res, next) => {
     const { slug } = req.params as { slug: string };
+    // reveal フィルタ（#556）: createdAt <= now のもののみ公開する。
+    const now = new Date();
     communityRepo
       .findBySlug(slug)
       .then((community) => {
         if (!community) {
           throw new NotFoundError("CommunityNotFound");
         }
-        return postRepo.listByCommunity(community.id);
+        return postRepo.listByCommunity(community.id, undefined, { now });
       })
       .then((posts) => attachAuthorWorker(posts, workerRepo))
       // 各 post にコメント件数を付与する（N+1 回避・#500）。
@@ -63,13 +65,15 @@ export function createCommunitiesRouter(
   // community に最近投稿したワーカー一覧（認証不要・#207）
   router.get("/:slug/recent-workers", (req, res, next) => {
     const { slug } = req.params as { slug: string };
+    // reveal フィルタ（#556）: createdAt <= now の post の author のみ対象にする。
+    const recentWorkersNow = new Date();
     communityRepo
       .findBySlug(slug)
       .then((community) => {
         if (!community) {
           throw new NotFoundError("CommunityNotFound");
         }
-        return postRepo.listByCommunity(community.id);
+        return postRepo.listByCommunity(community.id, undefined, { now: recentWorkersNow });
       })
       .then((posts) => {
         // post.author は worker の id（UUID）か displayName（旧データ）のいずれか（#478）。

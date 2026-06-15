@@ -24,6 +24,21 @@ export interface PostCreateInput {
   author: string;
   title: string;
   text: string;
+  /**
+   * 永続化時の createdAt（#556）。
+   * 省略時は DB の `@default(now())`（Prisma）または `new Date()`（インメモリ）を使う。
+   * 複数 Post 生成時に軽く stagger させてフィード先頭が一度に埋まらないようにする場合に注入する。
+   */
+  createdAt?: Date;
+}
+
+/** reveal フィルタのオプション（#556）。 */
+export interface RevealFilterOptions {
+  /**
+   * この時刻以降の `createdAt` を持つレコードを除外する。
+   * 省略時はフィルタなし（全件返す）。
+   */
+  now?: Date;
 }
 
 /** コミュニティ別の post 統計（#527）。 */
@@ -38,8 +53,11 @@ export interface PostRepository {
    * (communityId, slotKey, seq) はユニーク制約があるため、Cron 二重発火時は upsert で skip する。
    */
   createMany(communityId: string, inputs: PostCreateInput[]): Promise<PostRecord[]>;
-  /** community 別に新着順（createdAt 降順）で post を取得する。limit 省略時は 50 件。 */
-  listByCommunity(communityId: string, limit?: number): Promise<PostRecord[]>;
+  /**
+   * community 別に新着順（createdAt 降順）で post を取得する。limit 省略時は 50 件（#556）。
+   * options.now を渡すと `createdAt <= now` の reveal フィルタが有効になる。
+   */
+  listByCommunity(communityId: string, limit?: number, options?: RevealFilterOptions): Promise<PostRecord[]>;
   /** ID で post を取得する。存在しない場合は null を返す。 */
   findById(id: string): Promise<PostRecord | null>;
   /**
@@ -47,8 +65,11 @@ export interface PostRepository {
    * 存在しない場合は null を返す。
    */
   addScore(id: string, delta: number): Promise<PostRecord | null>;
-  /** 全 community の post を新着順（createdAt 降順）で取得する。公開ホームフィード用。limit 省略時は 50 件。 */
-  listLatest(limit?: number): Promise<PostRecord[]>;
+  /**
+   * 全 community の post を新着順（createdAt 降順）で取得する。公開ホームフィード用。limit 省略時は 50 件（#556）。
+   * options.now を渡すと `createdAt <= now` の reveal フィルタが有効になる。
+   */
+  listLatest(limit?: number, options?: RevealFilterOptions): Promise<PostRecord[]>;
   /**
    * コミュニティ ID をキー、post 統計（投稿数・最終投稿時刻）をバリューとした Map を返す（#527）。
    * N+1 を避けるため全コミュニティ分を一発集計する。
@@ -56,23 +77,27 @@ export interface PostRepository {
    */
   getStatsByCommunity(): Promise<Map<string, CommunityPostStats>>;
   /**
-   * 全 community の post をカーソルベースのページネーションで取得する（#367）。
+   * 全 community の post をカーソルベースのページネーションで取得する（#367 / #556）。
    * cursor は base64(JSON{ createdAt: ISO文字列, id: string })。
    * nextCursor が null の場合は末尾（追加ページなし）。
+   * options.now を渡すと `createdAt <= now` の reveal フィルタが有効になる。
    */
   listLatestPaged(
     cursor?: string,
     limit?: number,
+    options?: RevealFilterOptions,
   ): Promise<{ posts: PostRecord[]; nextCursor: string | null }>;
   /**
    * 全 community の post を人気順（score 降順 → 同点は createdAt 降順 → id 降順）で
-   * カーソルベースのページネーション取得する（#435）。
+   * カーソルベースのページネーション取得する（#435 / #556）。
    * cursor は base64(JSON{ score, createdAt: ISO文字列, id: string })。
    * nextCursor が null の場合は末尾（追加ページなし）。
+   * options.now を渡すと `createdAt <= now` の reveal フィルタが有効になる。
    */
   listPopularPaged(
     cursor?: string,
     limit?: number,
+    options?: RevealFilterOptions,
   ): Promise<{ posts: PostRecord[]; nextCursor: string | null }>;
 }
 
@@ -174,6 +199,7 @@ export function createInMemoryPostRepository(): PostRepository {
           continue;
         }
         // 本番（Prisma）は uuid(7) を採番するため、in-memory も UUID を採番して整合させる（#433）。
+        // createdAt は input から注入可能（#556 ドリップ割当）。省略時は now。
         const record: PostRecord = {
           id: randomUUID(),
           communityId,
@@ -183,7 +209,7 @@ export function createInMemoryPostRepository(): PostRepository {
           title: input.title,
           text: input.text,
           score: 0,
-          createdAt: new Date(),
+          createdAt: input.createdAt ?? new Date(),
         };
         records.push(record);
         created.push(cloneRecord(record));
@@ -191,9 +217,12 @@ export function createInMemoryPostRepository(): PostRepository {
       return Promise.resolve(created);
     },
 
-    listByCommunity(communityId: string, limit = 50): Promise<PostRecord[]> {
+    listByCommunity(communityId: string, limit = 50, options?: RevealFilterOptions): Promise<PostRecord[]> {
+      const now = options?.now;
       const filtered = records
         .filter((r) => r.communityId === communityId)
+        // reveal フィルタ（#556）: now が渡された場合、createdAt > now の post を除外する。
+        .filter((r) => now === undefined || r.createdAt.getTime() <= now.getTime())
         .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
         .slice(0, limit);
       return Promise.resolve(filtered.map(cloneRecord));
@@ -211,8 +240,11 @@ export function createInMemoryPostRepository(): PostRepository {
       return Promise.resolve(cloneRecord(record));
     },
 
-    listLatest(limit = 50): Promise<PostRecord[]> {
+    listLatest(limit = 50, options?: RevealFilterOptions): Promise<PostRecord[]> {
+      const now = options?.now;
       const sorted = [...records]
+        // reveal フィルタ（#556）: now が渡された場合、createdAt > now の post を除外する。
+        .filter((r) => now === undefined || r.createdAt.getTime() <= now.getTime())
         .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
         .slice(0, limit);
       return Promise.resolve(sorted.map(cloneRecord));
@@ -221,6 +253,7 @@ export function createInMemoryPostRepository(): PostRepository {
     listLatestPaged(
       cursor?: string,
       limit = 20,
+      options?: RevealFilterOptions,
     ): Promise<{ posts: PostRecord[]; nextCursor: string | null }> {
       let cursorPayload: CursorPayload | null = null;
       if (cursor !== undefined) {
@@ -230,11 +263,15 @@ export function createInMemoryPostRepository(): PostRepository {
         }
       }
 
-      const sorted = [...records].sort((a, b) => {
-        const timeDiff = b.createdAt.getTime() - a.createdAt.getTime();
-        if (timeDiff !== 0) return timeDiff;
-        return b.id < a.id ? -1 : b.id > a.id ? 1 : 0;
-      });
+      const now = options?.now;
+      const sorted = [...records]
+        // reveal フィルタ（#556）: now が渡された場合、createdAt > now の post を除外する。
+        .filter((r) => now === undefined || r.createdAt.getTime() <= now.getTime())
+        .sort((a, b) => {
+          const timeDiff = b.createdAt.getTime() - a.createdAt.getTime();
+          if (timeDiff !== 0) return timeDiff;
+          return b.id < a.id ? -1 : b.id > a.id ? 1 : 0;
+        });
 
       let filtered = sorted;
       if (cursorPayload) {
@@ -260,6 +297,7 @@ export function createInMemoryPostRepository(): PostRepository {
     listPopularPaged(
       cursor?: string,
       limit = 20,
+      options?: RevealFilterOptions,
     ): Promise<{ posts: PostRecord[]; nextCursor: string | null }> {
       let cursorPayload: PopularCursorPayload | null = null;
       if (cursor !== undefined) {
@@ -269,7 +307,11 @@ export function createInMemoryPostRepository(): PostRepository {
         }
       }
 
-      const sorted = [...records].sort(comparePopular);
+      const now = options?.now;
+      const sorted = [...records]
+        // reveal フィルタ（#556）: now が渡された場合、createdAt > now の post を除外する。
+        .filter((r) => now === undefined || r.createdAt.getTime() <= now.getTime())
+        .sort(comparePopular);
 
       let filtered = sorted;
       if (cursorPayload) {

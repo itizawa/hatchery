@@ -11,6 +11,7 @@ import type {
   PostCreateInput,
   PostRecord,
   PostRepository,
+  RevealFilterOptions,
 } from "./postRepository.js";
 
 function toRecord(row: {
@@ -59,6 +60,8 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
               author: input.author,
               title: input.title,
               text: input.text,
+              // createdAt は input から注入可能（#556 ドリップ割当）。省略時は DB @default(now())。
+              ...(input.createdAt !== undefined ? { createdAt: input.createdAt } : {}),
             },
           }),
         ),
@@ -66,9 +69,14 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
       return rows.map(toRecord);
     },
 
-    async listByCommunity(communityId: string, limit = 50): Promise<PostRecord[]> {
+    async listByCommunity(communityId: string, limit = 50, options?: RevealFilterOptions): Promise<PostRecord[]> {
+      const now = options?.now;
       const rows = await prisma.post.findMany({
-        where: { communityId },
+        where: {
+          communityId,
+          // reveal フィルタ（#556）: now が渡された場合、createdAt > now の post を除外する。
+          ...(now !== undefined ? { createdAt: { lte: now } } : {}),
+        },
         orderBy: { createdAt: "desc" },
         take: limit,
       });
@@ -92,8 +100,13 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
       }
     },
 
-    async listLatest(limit = 50): Promise<PostRecord[]> {
+    async listLatest(limit = 50, options?: RevealFilterOptions): Promise<PostRecord[]> {
+      const now = options?.now;
       const rows = await prisma.post.findMany({
+        where: {
+          // reveal フィルタ（#556）: now が渡された場合、createdAt > now の post を除外する。
+          ...(now !== undefined ? { createdAt: { lte: now } } : {}),
+        },
         orderBy: [{ createdAt: "desc" }, { id: "desc" }],
         take: limit,
       });
@@ -103,17 +116,27 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
     async listLatestPaged(
       cursor?: string,
       limit = 20,
+      options?: RevealFilterOptions,
     ): Promise<{ posts: PostRecord[]; nextCursor: string | null }> {
-      let where: Prisma.PostWhereInput | undefined = undefined;
+      const now = options?.now;
+      let where: Prisma.PostWhereInput = {
+        // reveal フィルタ（#556）: now が渡された場合、createdAt > now の post を除外する。
+        ...(now !== undefined ? { createdAt: { lte: now } } : {}),
+      };
 
       if (cursor !== undefined) {
         const payload = decodeCursor(cursor);
         if (!payload) throw new Error("INVALID_CURSOR");
         const cursorDate = new Date(payload.createdAt);
         where = {
-          OR: [
-            { createdAt: { lt: cursorDate } },
-            { createdAt: { equals: cursorDate }, id: { lt: payload.id } },
+          ...where,
+          AND: [
+            {
+              OR: [
+                { createdAt: { lt: cursorDate } },
+                { createdAt: { equals: cursorDate }, id: { lt: payload.id } },
+              ],
+            },
           ],
         };
       }
@@ -134,8 +157,13 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
     async listPopularPaged(
       cursor?: string,
       limit = 20,
+      options?: RevealFilterOptions,
     ): Promise<{ posts: PostRecord[]; nextCursor: string | null }> {
-      let where: Prisma.PostWhereInput | undefined = undefined;
+      const now = options?.now;
+      let where: Prisma.PostWhereInput = {
+        // reveal フィルタ（#556）: now が渡された場合、createdAt > now の post を除外する。
+        ...(now !== undefined ? { createdAt: { lte: now } } : {}),
+      };
 
       if (cursor !== undefined) {
         const payload = decodePopularCursor(cursor);
@@ -143,13 +171,18 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
         const cursorDate = new Date(payload.createdAt);
         // keyset: score 降順 → createdAt 降順 → id 降順
         where = {
-          OR: [
-            { score: { lt: payload.score } },
-            { score: { equals: payload.score }, createdAt: { lt: cursorDate } },
+          ...where,
+          AND: [
             {
-              score: { equals: payload.score },
-              createdAt: { equals: cursorDate },
-              id: { lt: payload.id },
+              OR: [
+                { score: { lt: payload.score } },
+                { score: { equals: payload.score }, createdAt: { lt: cursorDate } },
+                {
+                  score: { equals: payload.score },
+                  createdAt: { equals: cursorDate },
+                  id: { lt: payload.id },
+                },
+              ],
             },
           ],
         };

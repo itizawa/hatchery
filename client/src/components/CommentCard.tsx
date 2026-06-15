@@ -26,6 +26,9 @@ export const CommentCard = ({
   currentVote = null,
   voteDisabled = false,
 }: CommentCardProps): ReactElement => {
+  // 本文の先頭 URL（OGP カード展開に使用・#515）。
+  const firstUrl = extractFirstUrl(comment.text);
+
   return (
     <Box
       sx={{
@@ -55,10 +58,7 @@ export const CommentCard = ({
           <Typography variant="body2">
             <TextWithLinks text={comment.text} />
           </Typography>
-          {(() => {
-            const firstUrl = extractFirstUrl(comment.text);
-            return firstUrl ? <OgpCard url={firstUrl} /> : null;
-          })()}
+          {firstUrl && <OgpCard url={firstUrl} />}
         </Box>
       </Box>
     </Box>

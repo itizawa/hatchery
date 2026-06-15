@@ -96,6 +96,8 @@ export const PostCard = ({
 }: PostCardProps): ReactElement => {
   // comment_count はサーバ集計値（#500）。未指定（後方互換）は 0 として扱う。
   const commentCount = post.comment_count ?? 0;
+  // 本文の先頭 URL（スレッド全文表示時のみ OGP カード展開に使用）（#515）。
+  const firstUrl = truncateText ? null : extractFirstUrl(post.text);
   const handleVoteClick = voteStopPropagation
     ? (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -154,10 +156,7 @@ export const PostCard = ({
           >
             <TextWithLinks text={post.text} />
           </Typography>
-          {!truncateText && (() => {
-            const firstUrl = extractFirstUrl(post.text);
-            return firstUrl ? <OgpCard url={firstUrl} /> : null;
-          })()}
+          {firstUrl && <OgpCard url={firstUrl} />}
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 1 }}>
             <Typography
               variant="body2"

@@ -128,21 +128,3 @@ export function useCreateAdminWorker() {
     },
   });
 }
-
-// ── 後方互換エクスポート（Employee → Worker リネーム #329） ────────────────────────
-/** @deprecated Use ADMIN_WORKERS_QUERY_KEY */
-export const ADMIN_EMPLOYEES_QUERY_KEY = ADMIN_WORKERS_QUERY_KEY;
-/** @deprecated Use BOT_WORKERS_ADMIN_QUERY_KEY */
-export const BOT_EMPLOYEES_ADMIN_QUERY_KEY = BOT_WORKERS_ADMIN_QUERY_KEY;
-/** @deprecated Use deleteWorker */
-export const deleteEmployee = deleteWorker;
-/** @deprecated Use useDeleteWorker */
-export const useDeleteEmployee = useDeleteWorker;
-/** @deprecated Use fetchAdminWorkers */
-export const fetchAdminEmployees = fetchAdminWorkers;
-/** @deprecated Use useAdminWorkers */
-export const useAdminEmployees = useAdminWorkers;
-/** @deprecated Use createAdminWorker */
-export const createAdminEmployee = createAdminWorker;
-/** @deprecated Use useCreateAdminWorker */
-export const useCreateAdminEmployee = useCreateAdminWorker;

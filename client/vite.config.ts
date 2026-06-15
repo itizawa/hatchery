@@ -50,13 +50,33 @@ export function cfBeaconHtmlPlugin(): Plugin {
 }
 
 /**
+ * index.html の favicon の href をビルド時 env で切り替えるプラグイン（#601）。
+ *
+ * - `VITE_APP_ENV === "stg"` のとき: `/favicon.svg` → `/favicon-stg.svg`（グレースケール版）に差し替える。
+ * - それ以外（`prod` / 未設定 / 空・空白のみ）: `/favicon.svg`（従来）のまま。
+ * - ローカル `pnpm dev`（env 未設定）でも従来どおり通常 favicon が表示される。
+ */
+export function faviconHtmlPlugin(): Plugin {
+  return {
+    name: "hatchery-favicon",
+    transformIndexHtml(html) {
+      const appEnv = process.env.VITE_APP_ENV?.trim();
+      if (appEnv === "stg") {
+        return html.replaceAll("/favicon.svg", "/favicon-stg.svg");
+      }
+      return html;
+    },
+  };
+}
+
+/**
  * Vite（dev / build）と Vitest（test）の単一設定（ADR-0003）。
  * - SPA エントリは index.html → src/main.tsx。
  * - build.outDir を dist/web に分離し、tsc -b の宣言出力（dist/）と衝突させない。
  * - test は jsdom 環境 + RTL セットアップ。
  */
 export default defineConfig({
-  plugins: [react(), ogpUrlHtmlPlugin(), cfBeaconHtmlPlugin()],
+  plugins: [react(), ogpUrlHtmlPlugin(), cfBeaconHtmlPlugin(), faviconHtmlPlugin()],
   server: {
     // dev では SPA(5173) から API(3000) へプロキシする。
     // /api プレフィックスに統一したことでルータ追加時も proxy を触らなくて済む（#168）。

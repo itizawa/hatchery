@@ -409,26 +409,8 @@ describe("グローバルナビゲーションメニュー (#435)", () => {
     expect(homeLink).not.toHaveAttribute("aria-current", "page");
   });
 
-  it("admin ユーザーには「コミュニティを作る」が表示され /admin へ導線する", async () => {
+  it("admin ユーザーにも「コミュニティを作る」リンクが表示されない (#560)", async () => {
     stubFetch(true, "admin");
-    renderWithRouter("/");
-
-    const createLink = await screen.findByRole("link", { name: /コミュニティを作る/ });
-    expect(createLink.getAttribute("href")).toContain("/admin");
-  });
-
-  it("member ユーザーには「コミュニティを作る」が表示されない", async () => {
-    stubFetch(true, "member");
-    renderWithRouter("/");
-
-    await screen.findByRole("navigation", { name: "サイドバー" });
-    // #461: サイドバー内容は useAuth 解決後に描画される。ナビ項目（ホーム）が出てから不在を判定する。
-    await screen.findByRole("link", { name: /ホーム/ });
-    expect(screen.queryByRole("link", { name: /コミュニティを作る/ })).not.toBeInTheDocument();
-  });
-
-  it("未ログインユーザーには「コミュニティを作る」が表示されない", async () => {
-    stubFetch(false);
     renderWithRouter("/");
 
     await screen.findByRole("navigation", { name: "サイドバー" });

@@ -394,6 +394,98 @@ describe("runCommunityBatch (#306)", () => {
     expect(result.posts.length).toBe(0);
     expect(result.comments.length).toBe(0);
   });
+
+  // #555: 既存Post へのコメント追加（reply）
+  it("replies を含む出力が渡された場合、既存Post に対して commentRepo.createMany が呼ばれる（#555）", async () => {
+    const deps = buildDeps([community1]);
+    // まず既存 Post を作っておく（先のスロットで生成済み）
+    const existingPosts = await deps.postRepo.createMany("community-1", [
+      { slotKey: "2026-06-10T09:00", seq: 0, author: "haru", title: "過去の投稿", text: "過去のテキスト" },
+    ]);
+    const existingPostId = existingPosts[0]!.id;
+
+    const outputWithReplies = JSON.stringify({
+      topic: "今日のテクノロジーニュース",
+      posts: [
+        {
+          id: "p1",
+          author: "haru",
+          title: "新規投稿",
+          text: "新しいテキスト",
+          comments: [],
+        },
+      ],
+      replies: [
+        { targetPostRef: "ref-1", author: "ken", text: "過去投稿への返信コメント" },
+      ],
+    });
+
+    // generate の呼び出し前に postRefMap が構築されるよう、事前に既存Postを配置済み
+    // runCommunityBatch 内でrecentPostsとして取得され、ref-1 -> existingPostId にマップされるはず
+    const generate = vi.fn().mockResolvedValue(outputWithReplies);
+
+    const result = await runCommunityBatch({
+      ...deps,
+      generate,
+      slotKey: "2026-06-15T09:00",
+    });
+
+    // 新規Postが1件作成される
+    expect(result.posts.length).toBe(1);
+    // 既存PostへのReplyコメントが作成される
+    const allComments = await deps.commentRepo.listByPost(existingPostId);
+    expect(allComments.length).toBe(1);
+    expect(allComments[0]?.author).toBe("ken");
+    expect(allComments[0]?.text).toBe("過去投稿への返信コメント");
+    expect(allComments[0]?.postId).toBe(existingPostId);
+    // result.comments にも含まれる
+    expect(result.comments.some((c) => c.postId === existingPostId)).toBe(true);
+  });
+
+  it("replies の targetPostRef が未知の場合、その reply はスキップされる（#555）", async () => {
+    const deps = buildDeps([community1]);
+
+    const outputWithUnknownRef = JSON.stringify({
+      topic: "テスト",
+      posts: [
+        {
+          id: "p1",
+          author: "haru",
+          title: "新規投稿",
+          text: "テスト",
+          comments: [],
+        },
+      ],
+      replies: [
+        { targetPostRef: "ref-unknown", author: "ken", text: "存在しない参照への返信" },
+      ],
+    });
+
+    const generate = vi.fn().mockResolvedValue(outputWithUnknownRef);
+
+    const result = await runCommunityBatch({
+      ...deps,
+      generate,
+      slotKey: "2026-06-15T12:00",
+    });
+
+    // 新規Postは作成される
+    expect(result.posts.length).toBe(1);
+    // 未知参照のReplyはスキップ
+    expect(result.comments.length).toBe(0);
+  });
+
+  it("直近Postがない（新規コミュニティ等）場合でも正常動作し新規Postのみ生成する（#555 AC5）", async () => {
+    const deps = buildDeps([community1]);
+    // postRepo に何も入っていない状態
+    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+
+    const result = await runCommunityBatch({ ...deps, generate });
+
+    expect(result.posts.length).toBe(2);
+    // replies は空なのでコメントは2件（新規Post内のコメントのみ）
+    expect(result.comments.length).toBe(2);
+  });
 });
 
 describe("runCommunityBatch worldState 登場ローテーション (#464)", () => {

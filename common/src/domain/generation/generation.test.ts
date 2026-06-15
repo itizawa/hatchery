@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { GenerationOutputSchema, validateGenerationOutput } from "./generation.js";
+import {
+  GenerationOutputReplySchema,
+  GenerationOutputSchema,
+  validateGenerationOutput,
+} from "./generation.js";
 
 describe("GenerationOutputSchema", () => {
   const validOutput = {
@@ -94,6 +98,77 @@ describe("GenerationOutputSchema", () => {
     };
     expect(GenerationOutputSchema.safeParse(data).success).toBe(false);
   });
+
+  it("replies フィールドが省略された場合は空配列をデフォルトとする（#555）", () => {
+    const result = GenerationOutputSchema.parse(validOutput);
+    expect(result.replies).toEqual([]);
+  });
+
+  it("有効な replies を含む出力をパースできる（#555）", () => {
+    const data = {
+      ...validOutput,
+      replies: [
+        {
+          targetPostRef: "ref-1",
+          author: "worker-ken",
+          text: "続きが気になる！",
+        },
+      ],
+    };
+    const result = GenerationOutputSchema.safeParse(data);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.replies).toHaveLength(1);
+      expect(result.data.replies[0]?.targetPostRef).toBe("ref-1");
+      expect(result.data.replies[0]?.author).toBe("worker-ken");
+      expect(result.data.replies[0]?.text).toBe("続きが気になる！");
+    }
+  });
+
+  it("reply の targetPostRef が 50 文字を超えると reject する（#555）", () => {
+    const data = {
+      ...validOutput,
+      replies: [{ targetPostRef: "r".repeat(51), author: "worker-ken", text: "こんにちは" }],
+    };
+    expect(GenerationOutputSchema.safeParse(data).success).toBe(false);
+  });
+
+  it("reply の text が 1000 文字を超えると reject する（#555）", () => {
+    const data = {
+      ...validOutput,
+      replies: [{ targetPostRef: "ref-1", author: "worker-ken", text: "あ".repeat(1001) }],
+    };
+    expect(GenerationOutputSchema.safeParse(data).success).toBe(false);
+  });
+});
+
+describe("GenerationOutputReplySchema (#555)", () => {
+  it("有効な reply をパースできる", () => {
+    const result = GenerationOutputReplySchema.safeParse({
+      targetPostRef: "ref-1",
+      author: "worker-haru",
+      text: "面白いね！",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("targetPostRef が空文字を reject する", () => {
+    expect(
+      GenerationOutputReplySchema.safeParse({ targetPostRef: "", author: "worker-haru", text: "テキスト" }).success,
+    ).toBe(false);
+  });
+
+  it("author が空文字を reject する", () => {
+    expect(
+      GenerationOutputReplySchema.safeParse({ targetPostRef: "ref-1", author: "", text: "テキスト" }).success,
+    ).toBe(false);
+  });
+
+  it("text が空文字を reject する", () => {
+    expect(
+      GenerationOutputReplySchema.safeParse({ targetPostRef: "ref-1", author: "worker-haru", text: "" }).success,
+    ).toBe(false);
+  });
 });
 
 describe("validateGenerationOutput", () => {
@@ -172,5 +247,58 @@ describe("validateGenerationOutput", () => {
       ],
     };
     expect(() => validateGenerationOutput(outputWithHuman, knownWorkerIds)).toThrow();
+  });
+
+  // replies 検証（#555）
+  it("replies の author が既知 workerId の場合は検証を通る（#555）", () => {
+    const outputWithReplies = {
+      ...validOutput,
+      replies: [{ targetPostRef: "ref-1", author: "worker-mei", text: "続きが気になる！" }],
+    };
+    const knownPostRefs = new Set(["ref-1"]);
+    expect(() =>
+      validateGenerationOutput(outputWithReplies, knownWorkerIds, knownPostRefs),
+    ).not.toThrow();
+  });
+
+  it("replies の author が未知 workerId の場合はエラーを投げる（#555）", () => {
+    const outputWithReplies = {
+      ...validOutput,
+      replies: [{ targetPostRef: "ref-1", author: "unknown-worker", text: "こんにちは" }],
+    };
+    const knownPostRefs = new Set(["ref-1"]);
+    expect(() =>
+      validateGenerationOutput(outputWithReplies, knownWorkerIds, knownPostRefs),
+    ).toThrow();
+  });
+
+  it("replies の targetPostRef が未知の場合はエラーを投げる（#555）", () => {
+    const outputWithReplies = {
+      ...validOutput,
+      replies: [{ targetPostRef: "ref-unknown", author: "worker-haru", text: "こんにちは" }],
+    };
+    const knownPostRefs = new Set(["ref-1", "ref-2"]);
+    expect(() =>
+      validateGenerationOutput(outputWithReplies, knownWorkerIds, knownPostRefs),
+    ).toThrow();
+  });
+
+  it("knownPostRefs を渡さなくても replies が空なら通る（#555・後方互換）", () => {
+    // replies フィールドがない・または空の場合は knownPostRefs なしでも通る
+    expect(() => validateGenerationOutput(validOutput, knownWorkerIds)).not.toThrow();
+  });
+
+  it("replies が空配列なら knownPostRefs なしでも通る（#555）", () => {
+    const outputWithEmptyReplies = { ...validOutput, replies: [] };
+    expect(() => validateGenerationOutput(outputWithEmptyReplies, knownWorkerIds)).not.toThrow();
+  });
+
+  it("replies に targetPostRef が含まれるとき knownPostRefs なしでも通る（#555・knownPostRefs省略時は検証スキップ）", () => {
+    // knownPostRefs が渡されない場合は targetPostRef の検証はスキップされる
+    const outputWithReplies = {
+      ...validOutput,
+      replies: [{ targetPostRef: "ref-anything", author: "worker-haru", text: "こんにちは" }],
+    };
+    expect(() => validateGenerationOutput(outputWithReplies, knownWorkerIds)).not.toThrow();
   });
 });

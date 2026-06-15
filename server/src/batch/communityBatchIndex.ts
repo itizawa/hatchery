@@ -94,6 +94,8 @@ async function main(): Promise<void> {
       generate: createClaudeConversationGenerator(env.batchModel),
       // 直近ログ件数の設定化（#389 AC2）: env.batchRecentLimit を recentLimit に反映する。
       recentLimit: env.batchRecentLimit,
+      // ドリップ窓の設定化（#556）: env.batchDripWindowMs を dripWindowMs に反映する。
+      dripWindowMs: env.batchDripWindowMs,
     },
     disconnect: () => prisma.$disconnect(),
   });

@@ -42,13 +42,15 @@ export function createCommunitiesRouter(
   // community フィード（新着順・認証不要・#479 で author_worker を付与）
   router.get("/:slug/feed", (req, res, next) => {
     const { slug } = req.params as { slug: string };
+    // reveal フィルタ（#556）: createdAt <= now のもののみ公開する。
+    const now = new Date();
     communityRepo
       .findBySlug(slug)
       .then((community) => {
         if (!community) {
           throw new NotFoundError("CommunityNotFound");
         }
-        return postRepo.listByCommunity(community.id);
+        return postRepo.listByCommunity(community.id, undefined, { now });
       })
       .then((posts) => attachAuthorWorker(posts, workerRepo))
       // 各 post にコメント件数を付与する（N+1 回避・#500）。

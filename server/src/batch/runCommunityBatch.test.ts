@@ -356,8 +356,9 @@ describe("runCommunityBatch (#306)", () => {
 
     await runCommunityBatch({ ...deps, generate, recentLimit: 7 });
 
-    expect(postSpy).toHaveBeenCalledWith("community-1", 7);
-    expect(commentSpy).toHaveBeenCalledWith("community-1", 7);
+    // #556: 第3引数に { now } が渡される（reveal フィルタ）
+    expect(postSpy).toHaveBeenCalledWith("community-1", 7, expect.objectContaining({ now: expect.any(Date) }));
+    expect(commentSpy).toHaveBeenCalledWith("community-1", 7, expect.objectContaining({ now: expect.any(Date) }));
   });
 
   it("recentLimit 未指定なら既定の 30 件で取得する（#389 AC2）", async () => {
@@ -367,7 +368,8 @@ describe("runCommunityBatch (#306)", () => {
 
     await runCommunityBatch({ ...deps, generate });
 
-    expect(postSpy).toHaveBeenCalledWith("community-1", 30);
+    // #556: 第3引数に { now } が渡される（reveal フィルタ）
+    expect(postSpy).toHaveBeenCalledWith("community-1", 30, expect.objectContaining({ now: expect.any(Date) }));
   });
 
   it("紐づくワーカーが 0 件の community は全 Bot ワーカーへフォールバックする（#489 AC3）", async () => {

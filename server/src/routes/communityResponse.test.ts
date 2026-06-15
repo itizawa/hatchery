@@ -80,7 +80,7 @@ describe("toCommunityResponse", () => {
     expect(res.last_post_at).toBeNull();
   });
 
-  it("camelCase キー（createdAt / lastSlotKey / iconUrl / coverUrl）を含まない", () => {
+  it("変換された camelCase キー（createdAt / lastSlotKey）はレスポンスに含まれない", () => {
     const res = toCommunityResponse(baseRecord) as Record<string, unknown>;
     expect(res).not.toHaveProperty("createdAt");
     expect(res).not.toHaveProperty("lastSlotKey");

@@ -846,6 +846,36 @@
           "direction"
         ],
         "description": "vote リクエストボディ（direction: up | down）"
+      },
+      "OgpMeta": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "image": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "site_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "description": "OGP メタデータ（#515）"
       }
     },
     "parameters": {}
@@ -2496,6 +2526,54 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ogp": {
+      "get": {
+        "summary": "任意 URL の OGP メタデータを取得する（#515）",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2048,
+              "description": "OGP を取得する URL（http/https のみ）"
+            },
+            "required": true,
+            "name": "url",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OGP メタデータ（取得失敗・OGP 無し時は各フィールドが null）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OgpMeta"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "URL が不正・SSRF リスクあり",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
                 }
               }
             }

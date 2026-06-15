@@ -482,3 +482,7 @@ test(
     await expect(page).toHaveTitle(`${MOCK_POST.title} - Hatchery`);
   },
 );
+
+test.todo(
+  "UC-POST-13: post / コメント本文の先頭 URL が OGP カードとして展開表示される（#515）",
+);

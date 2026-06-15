@@ -1,7 +1,9 @@
 import { Box } from "./uiParts";
 import type { ReactElement } from "react";
 import type { Comment } from "../api/communities.js";
+import { extractFirstUrl } from "@hatchery/common";
 import { AuthorByline } from "./AuthorByline.js";
+import { OgpCard } from "./OgpCard.js";
 import { PostedTime } from "./PostedTime.js";
 import { VoteControl } from "./VoteControl.js";
 import { MarkdownContent } from "./MarkdownContent.js";
@@ -24,6 +26,9 @@ export const CommentCard = ({
   currentVote = null,
   voteDisabled = false,
 }: CommentCardProps): ReactElement => {
+  // 本文の先頭 URL（OGP カード展開に使用・#515）。
+  const firstUrl = extractFirstUrl(comment.text);
+
   return (
     <Box
       sx={{
@@ -51,6 +56,7 @@ export const CommentCard = ({
             <PostedTime createdAt={comment.created_at} />
           </Box>
           <MarkdownContent content={comment.text} variant="body2" />
+          {firstUrl && <OgpCard url={firstUrl} />}
         </Box>
       </Box>
     </Box>

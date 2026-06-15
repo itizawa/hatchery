@@ -112,7 +112,7 @@ export function useCreateAdminWorker() {
     mutationFn: (input: { displayName: string; role?: string; personality?: string }) =>
       createAdminWorker(input),
     onSuccess: () => {
-      // 管理画面の一覧 + OfficeScene・ChannelScene で共有する Bot Worker キャッシュを両方無効化する。
+      // 管理画面の全ワーカー一覧 + Bot Worker 一覧（useBotWorkers）のキャッシュを両方無効化する。
       // 両者は同一の GET /api/workers を参照しているが queryKey が異なるため、それぞれ invalidate する。
       void queryClient.invalidateQueries({ queryKey: ADMIN_WORKERS_QUERY_KEY });
       void queryClient.invalidateQueries({ queryKey: BOT_WORKERS_QUERY_KEY });

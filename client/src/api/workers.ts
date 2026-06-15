@@ -2,8 +2,7 @@ import type { Worker } from "@hatchery/common";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 
 import { clientEnv } from "../config/env.js";
-import { openApiClient } from "./client.js";
-import { buildApiErrorMessage } from "./errors.js";
+import { ensureOk, openApiClient, unwrap } from "./client.js";
 
 export const BOT_WORKERS_QUERY_KEY = ["workers", "bots"] as const;
 export const BOT_WORKERS_ALL_QUERY_KEY = ["workers", "bots", "all"] as const;
@@ -18,9 +17,8 @@ export function useBotWorkers() {
   return useSuspenseQuery({
     queryKey: BOT_WORKERS_QUERY_KEY,
     queryFn: async (): Promise<Worker[]> => {
-      const { data, error } = await openApiClient.GET("/api/workers");
-      if (error) throw new Error(JSON.stringify(error));
-      return data ?? [];
+      const result = await openApiClient.GET("/api/workers");
+      return ensureOk(result, "GET /api/workers") ?? [];
     },
   });
 }
@@ -40,16 +38,13 @@ export function useUpdateWorker() {
       id: string;
       body: { displayName?: string; role?: string; personality?: string };
     }) => {
-      const { data, error, response } = await openApiClient.PATCH("/api/workers/{id}", {
+      // 失敗時はサーバが返す { error } メッセージを Error に乗せ、無ければフォールバック文言を使う（#476）。
+      const result = await openApiClient.PATCH("/api/workers/{id}", {
         params: { path: { id } },
         body,
         credentials: "include",
       });
-      // 失敗時はサーバが返す { error } メッセージを Error に乗せ、UI で原因を提示できるようにする（#476）。
-      if (!response.ok || !data) {
-        throw new Error(buildApiErrorMessage(error, response.status, "ワーカーの更新に失敗しました"));
-      }
-      return data;
+      return unwrap(result, "ワーカーの更新に失敗しました");
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: BOT_WORKERS_QUERY_KEY }),
   });
@@ -67,9 +62,8 @@ export function useAllBotWorkers() {
     queryKey: BOT_WORKERS_ALL_QUERY_KEY,
     queryFn: async (): Promise<Worker[]> => {
       // openapi-fetch が includeDeleted クエリを型として認識しないため直接 fetch する
-      const { data, error } = await openApiClient.GET("/api/workers");
-      if (error) throw new Error(JSON.stringify(error));
-      return data ?? [];
+      const result = await openApiClient.GET("/api/workers");
+      return ensureOk(result, "GET /api/workers") ?? [];
     },
   });
 }

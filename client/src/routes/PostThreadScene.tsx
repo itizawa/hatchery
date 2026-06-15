@@ -100,25 +100,25 @@ function renderCommentTree(
   commentMap: Map<string, Comment>,
   onVote: (commentId: string, direction: VoteDirection) => void,
 ): ReactElement[] {
-  return nodes.map((node) => {
+  return nodes.flatMap((node) => {
     const comment = commentMap.get(node.id);
-    if (!comment) return null!;
+    if (!comment) return [];
 
-    const children =
+    const childElements =
       node.children.length > 0
         ? renderCommentTree(node.children, commentMap, onVote)
         : null;
 
-    return (
+    return [
       <CommentCard
         key={comment.id}
         comment={comment}
         onVote={(direction: VoteDirection) => onVote(comment.id, direction)}
         depth={node.depth}
-        children={children && children.length > 0 ? <>{children}</> : null}
-      />
-    );
-  }).filter(Boolean);
+        children={childElements && childElements.length > 0 ? <>{childElements}</> : null}
+      />,
+    ];
+  });
 }
 
 /**

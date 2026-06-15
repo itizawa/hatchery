@@ -38,6 +38,8 @@ jobs:
       - name: Build client
         env:
           VITE_API_BASE_URL: ""
+          # stg（develop ブランチ）はグレースケール favicon を表示して本番と一目で区別できるようにする（#601）。
+          VITE_APP_ENV: "stg"
         run: pnpm turbo run build --filter=@hatchery/client
 
       # 公式の wrangler GitHub Action は wrangler 未検出時に `pnpm add` で動的インストールを試み、

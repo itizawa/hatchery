@@ -56,6 +56,61 @@ describe("GET /api/communities", () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual([]);
   });
+
+  it("投稿が 0 件の community は post_count: 0 と last_post_at: null を返す（#527）", async () => {
+    const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
+    const deps = await createTestDeps({ communityRepository: communityRepo });
+    const app = createApp(deps);
+    const res = await request(app).get("/api/communities");
+    expect(res.status).toBe(200);
+    expect(res.body[0]).toHaveProperty("post_count", 0);
+    expect(res.body[0]).toHaveProperty("last_post_at", null);
+  });
+
+  it("投稿がある community は正しい post_count と last_post_at を返す（#527）", async () => {
+    const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
+    const postRepo = createInMemoryPostRepository();
+    await postRepo.createMany("community-1", [
+      { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "Title1", text: "Text1" },
+      { slotKey: "2026-06-10T12:00", seq: 0, author: "worker-1", title: "Title2", text: "Text2" },
+    ]);
+    const deps = await createTestDeps({
+      communityRepository: communityRepo,
+      postRepository: postRepo,
+    });
+    const app = createApp(deps);
+    const res = await request(app).get("/api/communities");
+    expect(res.status).toBe(200);
+    expect(res.body[0]).toHaveProperty("post_count", 2);
+    expect(res.body[0].last_post_at).not.toBeNull();
+  });
+
+  it("複数 community がある場合、それぞれ独立した post_count を返す（N+1 回避・#527）", async () => {
+    const communityRepo = createInMemoryCommunityRepository([
+      makeCommunity({ id: "community-1", slug: "technology" }),
+      makeCommunity({ id: "community-2", slug: "science", name: "Science" }),
+    ]);
+    const postRepo = createInMemoryPostRepository();
+    await postRepo.createMany("community-1", [
+      { slotKey: "slot-1", seq: 0, author: "worker-1", title: "T1", text: "X" },
+      { slotKey: "slot-1", seq: 1, author: "worker-1", title: "T2", text: "X" },
+      { slotKey: "slot-1", seq: 2, author: "worker-1", title: "T3", text: "X" },
+    ]);
+    await postRepo.createMany("community-2", [
+      { slotKey: "slot-1", seq: 0, author: "worker-1", title: "T4", text: "X" },
+    ]);
+    const deps = await createTestDeps({
+      communityRepository: communityRepo,
+      postRepository: postRepo,
+    });
+    const app = createApp(deps);
+    const res = await request(app).get("/api/communities");
+    expect(res.status).toBe(200);
+    const comm1 = (res.body as { id: string; post_count: number }[]).find((c) => c.id === "community-1");
+    const comm2 = (res.body as { id: string; post_count: number }[]).find((c) => c.id === "community-2");
+    expect(comm1).toHaveProperty("post_count", 3);
+    expect(comm2).toHaveProperty("post_count", 1);
+  });
 });
 
 describe("GET /api/communities/:slug/feed", () => {

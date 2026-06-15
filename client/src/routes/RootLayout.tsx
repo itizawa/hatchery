@@ -9,8 +9,7 @@ import {
   ListItemText,
 } from "../components/uiParts";
 
-import { isAdmin, type AuthUser } from "@hatchery/common";
-import AddIcon from "@mui/icons-material/Add";
+import { isAdmin } from "@hatchery/common";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import DescriptionIcon from "@mui/icons-material/Description";
 import HomeIcon from "@mui/icons-material/Home";
@@ -40,11 +39,10 @@ const navItemSx = {
 
 /**
  * サイドバー最上部の Reddit 風グローバルナビゲーション（#435）。
- * ホーム（/）・人気（/popular）・（admin のみ）コミュニティを作る（/admin?tab=communities）。
+ * ホーム（/）・人気（/popular）。
  * 現在ルートに一致する項目をグレー背景でハイライトする。
- * #461: 認証状態は親（SidebarContent）が解決して `user` で渡す（重複 useAuth を避ける）。
  */
-const SidebarGlobalNav = ({ user }: { user: AuthUser | null }): ReactElement => {
+const SidebarGlobalNav = (): ReactElement => {
   const { pathname } = useLocation();
   const isHomeActive = pathname === "/";
   const isPopularActive = pathname === "/popular";
@@ -79,23 +77,6 @@ const SidebarGlobalNav = ({ user }: { user: AuthUser | null }): ReactElement => 
           <ListItemText primary="人気" />
         </ListItemButton>
       </ListItem>
-      {user && isAdmin(user) && (
-        <ListItem disablePadding>
-          <ListItemButton
-            component={RouterLink}
-            to="/admin"
-            // MUI の component 経由だと TanStack の typed search 推論が AnyRouter に退化するため
-            // reducer 戻り値を never にキャストする（実体は /admin の tab=communities へ遷移）。
-            search={((prev: Record<string, unknown>) => ({ ...prev, tab: "communities" })) as never}
-            sx={navItemSx}
-          >
-            <ListItemIcon sx={SIDEBAR_ICON_SX}>
-              <AddIcon fontSize="small" />
-            </ListItemIcon>
-            <ListItemText primary="コミュニティを作る" />
-          </ListItemButton>
-        </ListItem>
-      )}
     </List>
   );
 };
@@ -108,7 +89,7 @@ const SidebarContent = (): ReactElement => {
 
   return (
     <>
-      <SidebarGlobalNav user={user} />
+      <SidebarGlobalNav />
       <Divider sx={{ my: 1 }} />
       <SidebarCommunitySection />
       <Divider sx={{ my: 1 }} />

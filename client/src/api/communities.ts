@@ -21,7 +21,7 @@ import type {
 export type { VoteDirection };
 
 import { clientEnv } from "../config/env.js";
-import { openApiClient } from "./client.js";
+import { ensureOk, openApiClient, unwrap } from "./client.js";
 import type { components } from "./openapi.gen.js";
 
 /** community 画像の種別（#457）。 */
@@ -64,11 +64,10 @@ export const communitySubscriptionQueryKey = (slug: string) =>
 
 /** GET /api/admin/communities — コミュニティ一覧を取得する（admin のみ）。 */
 export async function fetchAdminCommunities(): Promise<AdminCommunity[]> {
-  const { data, error, response } = await openApiClient.GET("/api/admin/communities", {
+  const result = await openApiClient.GET("/api/admin/communities", {
     credentials: "include",
   });
-  if (error || !response.ok || !data)
-    throw new Error(`GET /api/admin/communities failed: ${response.status}`);
+  const data = unwrap(result, "GET /api/admin/communities");
   return AdminCommunitySchema.array().parse(
     data.map((c) => ({
       ...c,
@@ -82,12 +81,11 @@ export const fetchCommunities = fetchAdminCommunities;
 
 /** POST /api/admin/communities — コミュニティを作成する（admin のみ）。 */
 export async function createCommunity(input: CreateCommunityInput): Promise<AdminCommunity> {
-  const { data, error, response } = await openApiClient.POST("/api/admin/communities", {
+  const result = await openApiClient.POST("/api/admin/communities", {
     body: input,
     credentials: "include",
   });
-  if (error || !response.ok || !data)
-    throw new Error(`POST /api/admin/communities failed: ${response.status}`);
+  const data = unwrap(result, "POST /api/admin/communities");
   return AdminCommunitySchema.parse({
     ...data,
     created_at: new Date(data.created_at),
@@ -99,13 +97,12 @@ export async function updateCommunity(
   id: string,
   input: UpdateCommunityInput,
 ): Promise<AdminCommunity> {
-  const { data, error, response } = await openApiClient.PATCH("/api/admin/communities/{id}", {
+  const result = await openApiClient.PATCH("/api/admin/communities/{id}", {
     params: { path: { id } },
     body: input,
     credentials: "include",
   });
-  if (error || !response.ok || !data)
-    throw new Error(`PATCH /api/admin/communities/${id} failed: ${response.status}`);
+  const data = unwrap(result, `PATCH /api/admin/communities/${id}`);
   return AdminCommunitySchema.parse({
     ...data,
     created_at: new Date(data.created_at),
@@ -198,24 +195,21 @@ export function useUploadCommunityImage() {
 
 /** GET /api/communities — 公開コミュニティ一覧を取得する（認証不要）。 */
 export async function fetchPublicCommunities(): Promise<Community[]> {
-  const { data, response } = await openApiClient.GET("/api/communities", {
+  const result = await openApiClient.GET("/api/communities", {
     credentials: "include",
   });
-  if (!response.ok || !data) throw new Error(`GET /api/communities failed: ${response.status}`);
-  return data;
+  return unwrap(result, "GET /api/communities");
 }
 
 /**
  * GET /api/communities/{slug}/feed — コミュニティフィードを取得する。
  */
 export async function fetchCommunityFeed(slug: string): Promise<Post[]> {
-  const { data, response } = await openApiClient.GET("/api/communities/{slug}/feed", {
+  const result = await openApiClient.GET("/api/communities/{slug}/feed", {
     params: { path: { slug } },
     credentials: "include",
   });
-  if (!response.ok || !data)
-    throw new Error(`GET /api/communities/${slug}/feed failed: ${response.status}`);
-  return data;
+  return unwrap(result, `GET /api/communities/${slug}/feed`);
 }
 
 /**
@@ -229,11 +223,11 @@ export async function fetchHomeFeedPage(
   const query: { cursor?: string; limit: number; sort?: HomeFeedSort } = { limit: 20 };
   if (cursor) query.cursor = cursor;
   if (sort === "popular") query.sort = sort;
-  const { data, response } = await openApiClient.GET("/api/feed", {
+  const result = await openApiClient.GET("/api/feed", {
     params: { query },
     credentials: "include",
   });
-  if (!response.ok || !data) throw new Error(`GET /api/feed failed: ${response.status}`);
+  const data = unwrap(result, "GET /api/feed");
   return data as { posts: Post[]; nextCursor: string | null };
 }
 
@@ -243,13 +237,11 @@ export async function fetchHomeFeedPage(
 export async function fetchPostThread(
   postId: string,
 ): Promise<{ post: Post; comments: Comment[] }> {
-  const { data, response } = await openApiClient.GET("/api/posts/{postId}", {
+  const result = await openApiClient.GET("/api/posts/{postId}", {
     params: { path: { postId } },
     credentials: "include",
   });
-  if (!response.ok || !data)
-    throw new Error(`GET /api/posts/${postId} failed: ${response.status}`);
-  return data;
+  return unwrap(result, `GET /api/posts/${postId}`);
 }
 
 /**
@@ -258,53 +250,47 @@ export async function fetchPostThread(
 export async function subscribeCommunity(
   slug: string,
 ): Promise<{ userId: string; communityId: string }> {
-  const { data, response } = await openApiClient.POST("/api/communities/{slug}/subscribe", {
+  const result = await openApiClient.POST("/api/communities/{slug}/subscribe", {
     params: { path: { slug } },
     credentials: "include",
   });
-  if (!response.ok || !data)
-    throw new Error(`POST /api/communities/${slug}/subscribe failed: ${response.status}`);
-  return data;
+  return unwrap(result, `POST /api/communities/${slug}/subscribe`);
 }
 
 /**
  * DELETE /api/communities/{slug}/subscribe — コミュニティの購読を解除する。
  */
 export async function unsubscribeCommunity(slug: string): Promise<void> {
-  const { response } = await openApiClient.DELETE("/api/communities/{slug}/subscribe", {
+  // 204 No Content も response.ok（200〜299）に含まれるため ensureOk が成功扱いする。
+  const result = await openApiClient.DELETE("/api/communities/{slug}/subscribe", {
     params: { path: { slug } },
     credentials: "include",
   });
-  if (!response.ok && response.status !== 204)
-    throw new Error(`DELETE /api/communities/${slug}/subscribe failed: ${response.status}`);
+  ensureOk(result, `DELETE /api/communities/${slug}/subscribe`);
 }
 
 /**
  * POST /api/posts/{postId}/vote — post に up/down vote する（ADR-0025）。
  */
 export async function votePost(postId: string, direction: VoteDirection): Promise<Post> {
-  const { data, response } = await openApiClient.POST("/api/posts/{postId}/vote", {
+  const result = await openApiClient.POST("/api/posts/{postId}/vote", {
     params: { path: { postId } },
     body: { direction },
     credentials: "include",
   });
-  if (!response.ok || !data)
-    throw new Error(`POST /api/posts/${postId}/vote failed: ${response.status}`);
-  return data;
+  return unwrap(result, `POST /api/posts/${postId}/vote`);
 }
 
 /**
  * POST /api/comments/{commentId}/vote — comment に up/down vote する（ADR-0025）。
  */
 export async function voteComment(commentId: string, direction: VoteDirection): Promise<Comment> {
-  const { data, response } = await openApiClient.POST("/api/comments/{commentId}/vote", {
+  const result = await openApiClient.POST("/api/comments/{commentId}/vote", {
     params: { path: { commentId } },
     body: { direction },
     credentials: "include",
   });
-  if (!response.ok || !data)
-    throw new Error(`POST /api/comments/${commentId}/vote failed: ${response.status}`);
-  return data;
+  return unwrap(result, `POST /api/comments/${commentId}/vote`);
 }
 
 /**

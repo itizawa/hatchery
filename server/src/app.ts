@@ -36,6 +36,7 @@ import { createCommunitiesRouter } from "./routes/communities.js";
 import { createWorkersRouter } from "./routes/workers.js";
 import { createFeedRouter } from "./routes/feed.js";
 import { healthRouter } from "./routes/health.js";
+import { createOgpRouter } from "./routes/ogp.js";
 import { createPostsRouter } from "./routes/posts.js";
 import { createSitemapRouter } from "./routes/sitemap.js";
 
@@ -229,6 +230,7 @@ export function createApp(deps: AppDeps): Express {
     ),
   );
   app.use("/api/feed", publicCache, createFeedRouter(postRepo, deps.workerRepository, commentRepo));
+  app.use("/api/ogp", publicCache, createOgpRouter());
   app.use(
     "/api",
     publicCache,

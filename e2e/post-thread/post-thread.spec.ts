@@ -459,3 +459,30 @@ test(
     expect(timeText).toMatch(/前/);
   },
 );
+
+test(
+  "UC-POST-11: 投稿スレッドを開いたときブラウザタブのタイトルに post タイトルが表示される（#528）",
+  async ({ page }) => {
+    await mockUnauthenticated(page);
+    await mockCommunitiesApi(page);
+    await mockSubscriptionApi(page, MOCK_COMMUNITY.slug, false);
+    await mockPostThreadApi(page, MOCK_POST.id, {
+      post: MOCK_POST,
+      comments: [],
+    });
+
+    await page.goto(`/posts/${MOCK_POST.id}`);
+
+    // post が表示されるまで待つ
+    await expect(
+      page.getByRole("heading", { name: MOCK_POST.title, level: 3 }),
+    ).toBeVisible();
+
+    // ブラウザタブのタイトルが「<post.title> - Hatchery」になっている
+    await expect(page).toHaveTitle(`${MOCK_POST.title} - Hatchery`);
+  },
+);
+
+test.todo(
+  "UC-POST-13: post / コメント本文の先頭 URL が OGP カードとして展開表示される（#515）",
+);

@@ -6,7 +6,13 @@ import {
   encodeCursor,
   encodePopularCursor,
 } from "./postRepository.js";
-import type { PostCreateInput, PostRecord, PostRepository, RevealFilterOptions } from "./postRepository.js";
+import type {
+  CommunityPostStats,
+  PostCreateInput,
+  PostRecord,
+  PostRepository,
+  RevealFilterOptions,
+} from "./postRepository.js";
 
 function toRecord(row: {
   id: string;
@@ -193,6 +199,24 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
       const nextCursor = hasMore ? encodePopularCursor(toRecord(posts[posts.length - 1]!)) : null;
 
       return { posts: posts.map(toRecord), nextCursor };
+    },
+
+    async getStatsByCommunity(): Promise<Map<string, CommunityPostStats>> {
+      // Prisma の groupBy で communityId ごとの count + max(createdAt) を一発集計（N+1 回避・#527）。
+      const grouped = await prisma.post.groupBy({
+        by: ["communityId"],
+        _count: { id: true },
+        _max: { createdAt: true },
+      });
+
+      const statsMap = new Map<string, CommunityPostStats>();
+      for (const row of grouped) {
+        statsMap.set(row.communityId, {
+          postCount: row._count.id,
+          lastPostAt: row._max.createdAt ?? null,
+        });
+      }
+      return statsMap;
     },
   };
 }

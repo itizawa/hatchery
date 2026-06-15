@@ -1,3 +1,4 @@
+import type { CommunityPostStats } from "../persistence/postRepository.js";
 import type { CommunityRecord } from "../persistence/communityRepository.js";
 
 /**
@@ -6,8 +7,9 @@ import type { CommunityRecord } from "../persistence/communityRepository.js";
  * - createdAt → created_at
  * - synopsis / lastSlotKey の null は undefined（任意フィールド）に正規化する
  * - iconUrl / coverUrl は null をそのまま返す（未設定を契約上の null として表現する・#457）
+ * - post_count / last_post_at は stats から付与する（#527）
  */
-export function toCommunityResponse(r: CommunityRecord) {
+export function toCommunityResponse(r: CommunityRecord, stats?: CommunityPostStats) {
   return {
     id: r.id,
     slug: r.slug,
@@ -18,6 +20,8 @@ export function toCommunityResponse(r: CommunityRecord) {
     iconUrl: r.iconUrl ?? null,
     coverUrl: r.coverUrl ?? null,
     created_at: r.createdAt,
+    post_count: stats?.postCount ?? 0,
+    last_post_at: stats?.lastPostAt?.toISOString() ?? null,
   };
 }
 

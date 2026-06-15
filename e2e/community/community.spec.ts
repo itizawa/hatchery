@@ -453,3 +453,6 @@ test(
     await expect(page.getByText("URL のコピーに失敗しました")).toBeVisible();
   },
 );
+
+// UC-COMM-12: モバイルドロワーを開いたとき全ナビ項目が見切れず表示される（#514）
+test.todo("UC-COMM-12: モバイルドロワーを開いたとき全ナビ項目が見切れず表示される");

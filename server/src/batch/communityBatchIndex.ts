@@ -94,6 +94,9 @@ async function main(): Promise<void> {
       generate: createClaudeConversationGenerator(env.batchModel),
       // 直近ログ件数の設定化（#389 AC2）: env.batchRecentLimit を recentLimit に反映する。
       recentLimit: env.batchRecentLimit,
+      // post/comment 件数の揺らぎ設定（#557）: env の範囲を postRange/commentRange に反映する。
+      postRange: { min: env.batchPostMin, max: env.batchPostMax },
+      commentRange: { min: env.batchCommentMin, max: env.batchCommentMax },
     },
     disconnect: () => prisma.$disconnect(),
   });

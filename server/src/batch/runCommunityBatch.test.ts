@@ -598,7 +598,6 @@ describe("runCommunityBatch 人気トピック還元 (#558)", () => {
 
   it("スコアの高い post がある場合、プロンプトに人気トピックセクションが含まれる", async () => {
     const deps = buildDeps([community1]);
-    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
 
     // 直前にスコア付きの post を作成
     const [p1] = await deps.postRepo.createMany("community-1", [

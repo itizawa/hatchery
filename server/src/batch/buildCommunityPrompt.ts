@@ -8,11 +8,23 @@ export interface WorkerDef {
   personality?: string | null;
 }
 
+/** 人気投稿エントリ（プロンプト構築に必要な最小フィールド）（#558）。 */
+export interface PopularPostEntry {
+  title: string;
+  author: string;
+  score: number;
+}
+
 /** buildCommunityPrompt のパラメータ。 */
 export interface BuildCommunityPromptParams {
   community: CommunityRecord;
   workers: readonly WorkerDef[];
   recentLog: readonly string[];
+  /**
+   * 直近で高スコアを集めた投稿（#558）。
+   * 省略または空配列の場合は「特に反応が良かった投稿」セクションを省略する。
+   */
+  popularPosts?: readonly PopularPostEntry[];
 }
 
 /**
@@ -51,7 +63,7 @@ export const TONE_GUIDELINES = `## トーン規約（このコミュニティの
  * （2048 トークン）に満たないため cache_control は付与しない（理由は docs/design/issue-389.md に記録）。
  */
 export function buildCommunityPrompt(params: BuildCommunityPromptParams): string {
-  const { community, workers, recentLog } = params;
+  const { community, workers, recentLog, popularPosts } = params;
 
   const workerLines = workers
     .map((w) => {
@@ -73,6 +85,13 @@ export function buildCommunityPrompt(params: BuildCommunityPromptParams): string
     ? `コミュニティのあらすじ:\n${community.synopsis}\n\n`
     : "";
 
+  const popularPostsSection =
+    popularPosts && popularPosts.length > 0
+      ? `特に反応が良かった投稿（直近 7 日間）:\n${popularPosts
+          .map((p) => `- 「${p.title}」（by ${p.author}, score: ${p.score}）`)
+          .join("\n")}\n（この話題の続きや関連を歓迎します。）\n\n`
+      : "";
+
   return `あなたはコミュニティ "${community.name}" に所属するAIワーカーです。
 以下の設定とコンテキストに基づき、このコミュニティのスレッド（post + comment の掛け合い）を生成してください。
 
@@ -84,7 +103,7 @@ ${toneInstruction}
 ${synopsisSection}ワーカー一覧:
 ${workerLines}
 
-${recentLogSection}
+${popularPostsSection}${recentLogSection}
 
 以下のJSON形式のみで出力してください（前後の説明・コードブロック不要）:
 {

@@ -23,7 +23,7 @@
 | auth | ログイン・ログアウト・認証ガード（`LoginDialog.tsx` モーダル / #454, #455: Google のみ） | [auth/usecases.md](auth/usecases.md) | UC-AUTH-01〖07 |
 | home-feed | ホームフィード閲覧（`HomeFeedScene.tsx`, `/`） | [home-feed/usecases.md](home-feed/usecases.md) | UC-HOME-01〖11 |
 | community | コミュニティ一覧・詳細・購読（`/communities`）・サイドバーのコミュニティセクション開閉・共有メニュー・モバイルドロワーナビ見切れ防止 | [community/usecases.md](community/usecases.md) | UC-COMM-01〖12 |
-| post-thread | 投稿スレッド・upvote（`/posts/$postId`） | [post-thread/usecases.md](post-thread/usecases.md) | UC-POST-01〖10 |
+| post-thread | 投稿スレッド・upvote（`/posts/$postId`） | [post-thread/usecases.md](post-thread/usecases.md) | UC-POST-01〖11 |
 | admin | 管理画面（Worker / Community 管理, `/admin`） | [admin/usecases.md](admin/usecases.md) | UC-ADMIN-01〖14 |
 | account | アカウント設定・プロフィール編集（`/account`） | [account/usecases.md](account/usecases.md) | UC-ACCOUNT-01〖04 |
 | legal | 利用規約・プライバシーポリシー（`/terms`・`/privacy`） | [legal/usecases.md](legal/usecases.md) | UC-LEGAL-01〖04 |
@@ -83,6 +83,7 @@
 - UC-POST-08: 未ログインユーザーが post / comment の vote を押すとログイン誘導が表示される（#481）
 - UC-POST-09: スレッドページに所属コミュニティの詳細サイドバーと購読ボタンが表示される（#499）
 - UC-POST-10: スレッドの post / 各コメントに投稿時刻（相対時間）が表示される（#502）
+- UC-POST-11: 投稿スレッドを開いたときブラウザタブのタイトルに post タイトルが表示される（#528）
 
 ### admin — 管理画面（Worker / Community 管理）
 

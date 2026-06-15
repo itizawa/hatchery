@@ -560,3 +560,118 @@ describe("generateSlotKey (#469)", () => {
     expect(generateSlotKey(date)).toBe("2026-06-09T23:30");
   });
 });
+
+describe("runCommunityBatch post/comment 件数揺らぎ（#557）", () => {
+  beforeEach(() => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const buildDeps = (
+    communities: CommunityRecord[],
+    workerCommunityData: InMemoryWorkerCommunityData = { workers: [], links: [] },
+  ) => {
+    const communityRepo = createInMemoryCommunityRepository(communities);
+    const postRepo = createInMemoryPostRepository();
+    const commentRepo = createInMemoryCommentRepository();
+    const appSettingRepo = createInMemoryAppSettingRepository();
+    const batchRunLogRepository = createInMemoryBatchRunLogRepository();
+    const workerCommunityRepo = createInMemoryWorkerCommunityRepository(workerCommunityData);
+    const voteRepo = createInMemoryVoteRepository();
+    const botWorkerProvider = (): Promise<readonly WorkerRecord[]> => Promise.resolve(botWorkers);
+    return {
+      communityRepo,
+      postRepo,
+      commentRepo,
+      appSettingRepo,
+      batchRunLogRepository,
+      workerCommunityRepo,
+      voteRepo,
+      botWorkerProvider,
+      anthropicApiKey: "test-key",
+      rng: () => 0,
+    };
+  };
+
+  it("postRange / commentRange を指定すると、プロンプトに件数指示が含まれる（rng 固定で決定的）", async () => {
+    const deps = buildDeps([community1]);
+    let receivedPrompt = "";
+    const generate = vi.fn().mockImplementation((prompt: string) => {
+      receivedPrompt = prompt;
+      return Promise.resolve(validGenerationOutput);
+    });
+
+    await runCommunityBatch({
+      ...deps,
+      generate,
+      // rng = 0 のとき postCount = postRange.min = 2, commentCount = commentRange.min = 1
+      rng: () => 0,
+      postRange: { min: 2, max: 4 },
+      commentRange: { min: 1, max: 3 },
+    });
+
+    // プロンプトに post 数 (2) とコメント数 (1) の指示が含まれる
+    expect(receivedPrompt).toContain("2");
+    expect(receivedPrompt).toContain("1");
+    expect(generate).toHaveBeenCalledTimes(1);
+  });
+
+  it("postRange / commentRange 未指定でも従来どおり生成・永続化される（後方互換）", async () => {
+    const deps = buildDeps([community1]);
+    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+
+    const result = await runCommunityBatch({ ...deps, generate });
+
+    expect(result.posts.length).toBe(2);
+    expect(result.comments.length).toBe(2);
+    expect(generate).toHaveBeenCalledTimes(1);
+  });
+
+  it("rng を変えると countHints が変わる（rng=0 と rng=0.9999 でプロンプト内容が異なる）", async () => {
+    const depsA = buildDeps([community1]);
+    let promptA = "";
+    await runCommunityBatch({
+      ...depsA,
+      generate: vi.fn().mockImplementation((p: string) => { promptA = p; return Promise.resolve(validGenerationOutput); }),
+      rng: () => 0,
+      postRange: { min: 1, max: 5 },
+      commentRange: { min: 1, max: 5 },
+    });
+
+    const depsB = buildDeps([community1]);
+    let promptB = "";
+    await runCommunityBatch({
+      ...depsB,
+      generate: vi.fn().mockImplementation((p: string) => { promptB = p; return Promise.resolve(validGenerationOutput); }),
+      rng: () => 0.9999,
+      postRange: { min: 1, max: 5 },
+      commentRange: { min: 1, max: 5 },
+    });
+
+    // rng=0 → postCount=1, rng=0.9999 → postCount=5、プロンプトが異なる
+    expect(promptA).not.toBe(promptB);
+  });
+
+  it("既存の generateCountHints の結果がハード制約にならず、生成件数が異なっても永続化される", async () => {
+    const deps = buildDeps([community1]);
+    // postRange.min=3, max=3 のとき、プロンプトでは「3件」を指示するが、
+    // AI が 2 件しか返しても（validGenerationOutput は 2 件）永続化される
+    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+
+    const result = await runCommunityBatch({
+      ...deps,
+      generate,
+      postRange: { min: 3, max: 3 },
+      commentRange: { min: 3, max: 3 },
+    });
+
+    // AI が 2 件返しても永続化される（ハード制約にしない）
+    expect(result.posts.length).toBe(2);
+    expect(result.comments.length).toBe(2);
+  });
+});

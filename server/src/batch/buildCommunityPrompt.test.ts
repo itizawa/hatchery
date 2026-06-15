@@ -116,6 +116,28 @@ describe("buildCommunityPrompt (#306)", () => {
       // 自己監査セクションで さん付け をチェックさせる
       expect(prompt).toContain("さん付け");
     });
+
+    // #608: 名指しの直接呼びかけを抑制する
+    it("名指しの直接呼びかけを避ける指示が TONE_GUIDELINES に含まれる（受け入れ条件 1）", () => {
+      // 「○○、」「○○さ、」等の冒頭呼称を避ける旨が共通エンジン部に含まれる
+      expect(TONE_GUIDELINES).toContain("名指し");
+      expect(TONE_GUIDELINES).toContain("呼びかけ");
+    });
+
+    it("名指し呼びかけ回避ルールがプロンプトに必ず注入される（受け入れ条件 1）", () => {
+      const prompt = buildCommunityPrompt(baseParams);
+      expect(prompt).toContain("名指し");
+      expect(prompt).toContain("呼びかけ");
+    });
+
+    it("自己監査にコメントが直接呼びかけで始まっていないかの確認が含まれる（受け入れ条件 2）", () => {
+      const prompt = buildCommunityPrompt(baseParams);
+      const auditIdx = prompt.indexOf("自己監査（出力前に必ず確認）");
+      expect(auditIdx).toBeGreaterThanOrEqual(0);
+      const auditSection = prompt.slice(auditIdx);
+      // 自己監査セクション内に「呼びかけで始まっていないか」相当のチェックが含まれる
+      expect(auditSection).toContain("呼びかけ");
+    });
   });
 
   // #389 AC4: 安定 prefix（テンプレート + ワーカー + 作風）→ 可変 suffix（直近ログ）の順に構造化

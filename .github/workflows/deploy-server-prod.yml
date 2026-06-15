@@ -90,3 +90,9 @@ jobs:
             --set-env-vars="GOOGLE_CALLBACK_URL=${{ secrets.GOOGLE_CALLBACK_URL_PROD }}" \
             --set-env-vars="GCS_BUCKET_NAME=${{ secrets.GCS_BUCKET_NAME_PROD }}" \
             --set-env-vars="NODE_ENV=production"
+
+      - name: Update batch job image (prod)
+        run: |
+          gcloud run jobs update hatchery-batch-prod \
+            --image=${{ env.IMAGE }} \
+            --region=${{ env.REGION }}

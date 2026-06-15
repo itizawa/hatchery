@@ -1,6 +1,7 @@
 import { NotFoundError, VoteRequestSchema } from "@hatchery/common";
 import { Router } from "express";
 
+import { getAuthUser } from "../middleware/getAuthUser.js";
 import { requireAuth } from "../middleware/requireAuth.js";
 import { validateBody } from "../middleware/validateBody.js";
 import type { CommentRepository } from "../persistence/commentRepository.js";
@@ -57,7 +58,7 @@ export function createPostsRouter(
     validateBody(VoteRequestSchema),
     (req, res, next) => {
       const { postId } = req.params as { postId: string };
-      const userId = req.user!.id;
+      const userId = getAuthUser(req).id;
       const { direction } = req.body as { direction: "up" | "down" };
 
       postRepo
@@ -87,7 +88,7 @@ export function createPostsRouter(
     validateBody(VoteRequestSchema),
     (req, res, next) => {
       const { commentId } = req.params as { commentId: string };
-      const userId = req.user!.id;
+      const userId = getAuthUser(req).id;
       const { direction } = req.body as { direction: "up" | "down" };
 
       commentRepo

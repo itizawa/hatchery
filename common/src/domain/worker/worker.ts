@@ -11,7 +11,6 @@ export const WorkerSchema = z.object({
   role: z.string().min(1).max(WORKER_ROLE_MAX_LENGTH).optional(),
   personality: z.string().max(500).optional(),
   imageUrl: z.string().url().max(WORKER_IMAGE_URL_MAX_LENGTH).optional(),
-  avatarUrl: z.string().url().max(2048).optional(),
   deletedAt: z.string().datetime().nullable().optional(),
 });
 
@@ -68,8 +67,6 @@ export const createAvatarUrlResolver = (
 // ── 後方互換エクスポート（Employee → Worker リネーム #329） ────────────────────────
 /** @deprecated Use WorkerSchema */
 export const EmployeeSchema = WorkerSchema;
-/** @deprecated Use Worker */
-export type Employee = Worker;
 /** @deprecated Use UpdateWorkerSchema */
 export const UpdateEmployeeSchema = UpdateWorkerSchema;
 /** @deprecated Use UpdateWorkerInput */

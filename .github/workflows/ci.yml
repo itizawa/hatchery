@@ -49,6 +49,8 @@ jobs:
       TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
       TURBO_TEAM: ${{ vars.TURBO_TEAM }}
       DATABASE_URL: postgresql://hatchery:hatchery@localhost:5432/hatchery_test?schema=public
+      # Prisma schema が directUrl = env("DATABASE_DIRECT_URL") を要求するため追加（接続プーラー未使用の CI では URL と同値）。
+      DATABASE_DIRECT_URL: postgresql://hatchery:hatchery@localhost:5432/hatchery_test?schema=public
     steps:
       - name: Checkout
         uses: actions/checkout@v5

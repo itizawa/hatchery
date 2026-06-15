@@ -47,8 +47,8 @@ describe("Issue #329: Worker ディレクトリ構造の確認", () => {
     expect(dirExists("common/src/domain/employee")).toBe(false);
   });
 
-  it("common/src/constants/workerMessages.ts が存在する", () => {
-    expect(dirExists("common/src/constants/workerMessages.ts")).toBe(true);
+  it("common/src/constants/workerMessages.ts が存在しない（#539 で死蔵テンプレートを削除済み）", () => {
+    expect(dirExists("common/src/constants/workerMessages.ts")).toBe(false);
   });
 
   it("common/src/constants/employeeMessages.ts が存在しない（削除済み）", () => {
@@ -165,6 +165,27 @@ describe("Issue #329: Prisma スキーマの Worker 命名確認", () => {
   it("schema.prisma に model Employee が残っていない", () => {
     const schema = readFile("server/prisma/schema.prisma");
     expect(schema).not.toMatch(/^model Employee \{/m);
+  });
+});
+
+describe("Issue #537: 未使用の Employee 後方互換エクスポートが削除されている", () => {
+  it("common/src/domain/worker/worker.ts に Employee 型 alias が存在しない", () => {
+    const code = stripComments(readFile("common/src/domain/worker/worker.ts"));
+    expect(code).not.toMatch(/export\s+type\s+Employee\b/);
+  });
+
+  it.each([
+    "ADMIN_EMPLOYEES_QUERY_KEY",
+    "BOT_EMPLOYEES_ADMIN_QUERY_KEY",
+    "deleteEmployee",
+    "useDeleteEmployee",
+    "fetchAdminEmployees",
+    "useAdminEmployees",
+    "createAdminEmployee",
+    "useCreateAdminEmployee",
+  ])("client/src/api/admin.ts に %s の export が存在しない", (name) => {
+    const code = stripComments(readFile("client/src/api/admin.ts"));
+    expect(code).not.toMatch(new RegExp(`export\\s+(?:const|function|type)\\s+${name}\\b`));
   });
 });
 

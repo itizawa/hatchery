@@ -7,8 +7,7 @@
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { openApiClient } from "./client.js";
-import { buildApiErrorMessage } from "./errors.js";
+import { openApiClient, unwrap } from "./client.js";
 import { BOT_WORKERS_QUERY_KEY } from "./workers.js";
 import { ADMIN_WORKERS_QUERY_KEY } from "./admin.js";
 
@@ -18,15 +17,11 @@ export const workerCommunitiesQueryKey = (workerId: string) =>
 
 /** GET /api/admin/workers/:id/communities — 参加コミュニティ id 一覧を取得する。 */
 export async function fetchWorkerCommunities(workerId: string): Promise<string[]> {
-  const { data, error, response } = await openApiClient.GET(
-    "/api/admin/workers/{id}/communities",
-    {
-      params: { path: { id: workerId } },
-      credentials: "include",
-    },
-  );
-  if (error || !response.ok || !data)
-    throw new Error(`GET /api/admin/workers/${workerId}/communities failed: ${response.status}`);
+  const result = await openApiClient.GET("/api/admin/workers/{id}/communities", {
+    params: { path: { id: workerId } },
+    credentials: "include",
+  });
+  const data = unwrap(result, `GET /api/admin/workers/${workerId}/communities`);
   return data.communityIds;
 }
 
@@ -35,19 +30,13 @@ export async function setWorkerCommunities(
   workerId: string,
   communityIds: string[],
 ): Promise<string[]> {
-  const { data, error, response } = await openApiClient.PUT(
-    "/api/admin/workers/{id}/communities",
-    {
-      params: { path: { id: workerId } },
-      body: { communityIds },
-      credentials: "include",
-    },
-  );
-  // 失敗時はサーバが返す { error } メッセージを Error に乗せ、UI で原因を提示できるようにする（#476）。
-  if (error || !response.ok || !data)
-    throw new Error(
-      buildApiErrorMessage(error, response.status, "参加コミュニティの更新に失敗しました"),
-    );
+  // 失敗時はサーバが返す { error } メッセージを Error に乗せ、無ければフォールバック文言を使う（#476）。
+  const result = await openApiClient.PUT("/api/admin/workers/{id}/communities", {
+    params: { path: { id: workerId } },
+    body: { communityIds },
+    credentials: "include",
+  });
+  const data = unwrap(result, "参加コミュニティの更新に失敗しました");
   return data.communityIds;
 }
 

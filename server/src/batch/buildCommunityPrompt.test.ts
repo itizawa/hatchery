@@ -156,7 +156,7 @@ describe("verbosity（文章量設定）のプロンプト反映 (#625)", () => 
   };
 
   it("verbosity=concise のワーカーの定義行に簡潔指示が含まれる", () => {
-    const prompt = buildCommunityPrompt({
+    const { prompt } = buildCommunityPrompt({
       community,
       workers: [{ id: "w1", displayName: "Alice", verbosity: "concise" }],
       recentLog: [],
@@ -165,7 +165,7 @@ describe("verbosity（文章量設定）のプロンプト反映 (#625)", () => 
   });
 
   it("verbosity=detailed のワーカーの定義行に詳細指示が含まれる", () => {
-    const prompt = buildCommunityPrompt({
+    const { prompt } = buildCommunityPrompt({
       community,
       workers: [{ id: "w1", displayName: "Alice", verbosity: "detailed" }],
       recentLog: [],
@@ -174,7 +174,7 @@ describe("verbosity（文章量設定）のプロンプト反映 (#625)", () => 
   });
 
   it("verbosity=standard のワーカーの定義行に分量指示が含まれない", () => {
-    const prompt = buildCommunityPrompt({
+    const { prompt } = buildCommunityPrompt({
       community,
       workers: [{ id: "w1", displayName: "Alice", verbosity: "standard" }],
       recentLog: [],
@@ -185,7 +185,7 @@ describe("verbosity（文章量設定）のプロンプト反映 (#625)", () => 
   });
 
   it("verbosity 未指定のワーカーの定義行に分量指示が含まれない", () => {
-    const prompt = buildCommunityPrompt({
+    const { prompt } = buildCommunityPrompt({
       community,
       workers: [{ id: "w1", displayName: "Alice" }],
       recentLog: [],
@@ -195,7 +195,7 @@ describe("verbosity（文章量設定）のプロンプト反映 (#625)", () => 
   });
 
   it("複数ワーカーで verbosity が混在していても各ワーカーの指示が正しく含まれる", () => {
-    const prompt = buildCommunityPrompt({
+    const { prompt } = buildCommunityPrompt({
       community,
       workers: [
         { id: "w1", displayName: "Alice", verbosity: "concise" },

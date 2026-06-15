@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { decrypt, encrypt, resolveAppSecret } from "./crypto.js";
+import { decrypt, encrypt, maskApiKey, resolveAppSecret } from "./crypto.js";
 
 describe("crypto", () => {
   it("暗号化した値を復号すると元のテキストが返る", () => {
@@ -53,5 +53,31 @@ describe("resolveAppSecret", () => {
 
   it("NODE_ENV 未設定 + APP_SECRET 未設定 → フォールバック値を返す", () => {
     expect(resolveAppSecret({})).toBe("hatchery-dev-secret");
+  });
+});
+
+describe("maskApiKey", () => {
+  it("空文字列 → null を返す", () => {
+    expect(maskApiKey("")).toBeNull();
+  });
+
+  it("11 文字超 → 先頭 11 文字 + **** を返す", () => {
+    // "sk-ant-xxxxxxxx" は 15 文字（> 11）
+    expect(maskApiKey("sk-ant-xxxxxxxx")).toBe("sk-ant-xxxx****");
+  });
+
+  it("12 文字ちょうど（境界の直上）→ 先頭 11 文字 + **** を返す", () => {
+    // "sk-ant-12345" は 12 文字（> 11 が真の最小ケース）
+    expect(maskApiKey("sk-ant-12345")).toBe("sk-ant-1234****");
+  });
+
+  it("11 文字ちょうど → 先頭 3 文字 + ****（else 分岐）を返す", () => {
+    // "sk-ant-1234" は 11 文字（> 11 が偽 → else）
+    expect(maskApiKey("sk-ant-1234")).toBe("sk-****");
+  });
+
+  it("3 文字以下の短い値 → slice(0,3) 相当 + **** を返す", () => {
+    // 2 文字。slice(0,3) は範囲超過でも例外なく "ab" を返す
+    expect(maskApiKey("ab")).toBe("ab****");
   });
 });

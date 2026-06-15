@@ -145,8 +145,8 @@ export const PostThreadScene = (): ReactElement => {
   const { post, comments } = data;
   const postUrl = `${window.location.origin}/posts/${post.id}`;
 
-  // コメントをツリー化する（#520）。API からはフラット + parent_comment_id で受け取り、
-  // common の buildCommentTree で階層ツリーに変換する。
+  useDocumentTitle(`${post.title} - Hatchery`);
+
   const commentTree = useMemo(
     () =>
       buildCommentTree(
@@ -158,8 +158,6 @@ export const PostThreadScene = (): ReactElement => {
     () => new Map<string, Comment>(comments.map((c) => [c.id, c])),
     [comments],
   );
-
-  useDocumentTitle(`${post.title} - Hatchery`);
 
   return (
     <Box component="section" sx={{ p: 3, maxWidth: 1200, mx: "auto" }}>

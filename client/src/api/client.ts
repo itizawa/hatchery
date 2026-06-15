@@ -1,6 +1,7 @@
 import createClient from "openapi-fetch";
 
 import { clientEnv } from "../config/env.js";
+import { buildApiErrorMessage } from "./errors.js";
 // openapi.gen.ts は `pnpm gen-types` で生成される（*.gen.ts はgitignore済み）。
 // Turborepo のタスク依存（server#openapi → gen-types → build）でビルド前に自動生成される。
 import type { paths } from "./openapi.gen.js";
@@ -21,3 +22,48 @@ export const openApiClient = createClient<paths>({
   // （テストでの差し替えを可能にし、束縛タイミング由来の不具合を避ける）。
   fetch: (...args) => globalThis.fetch(...args),
 });
+
+// ─── レスポンス検証ヘルパー（#532）──────────────────────────────────────────────
+// 各 fetcher が反復していた `if (error || !response.ok || !data) throw new Error(...)` を集約する。
+// throw する際はサーバのエラーボディ（`{ error: string }`）があれば buildApiErrorMessage で
+// 抽出して Error message に含め、呼び出し側で具体的な失敗理由を提示できるようにする（#476）。
+
+/** openapi-fetch の戻り値（`{ data, error, response }`）を模した最小の結果型。 */
+type FetchResult<T, E> = {
+  data?: T;
+  error?: E;
+  response: Response;
+};
+
+/**
+ * openapi-fetch の戻りを検証して **data 必須**で返す（#532）。
+ * `error` あり / `!response.ok` / `data` が null・undefined のいずれかなら throw する。
+ * 成功時の戻り型は `data` を non-null に絞った型。
+ *
+ * @param result openapi-fetch の `{ data, error, response }`
+ * @param label フォールバック文言（例: `"GET /api/admin/settings"`）。サーバボディが無いとき
+ *   `"<label> (<status>)"` 形式で Error message に使う。
+ */
+export function unwrap<T, E>(result: FetchResult<T, E>, label: string): NonNullable<T> {
+  const { data, error, response } = result;
+  if (error || !response.ok || data == null) {
+    throw new Error(buildApiErrorMessage(error, response.status, label));
+  }
+  return data as NonNullable<T>;
+}
+
+/**
+ * openapi-fetch の戻りを検証して **レスポンスの成否のみ**を保証し `data` を返す（#532）。
+ * 空ボディ（`data` undefined）を許容するフェッチャ（`data ?? []` する一覧取得や void 破棄）向け。
+ * `error` あり / `!response.ok` なら throw する。`data` の有無は問わない。
+ *
+ * @param result openapi-fetch の `{ data, error, response }`
+ * @param label フォールバック文言（`unwrap` と同様）
+ */
+export function ensureOk<T, E>(result: FetchResult<T, E>, label: string): T | undefined {
+  const { data, error, response } = result;
+  if (error || !response.ok) {
+    throw new Error(buildApiErrorMessage(error, response.status, label));
+  }
+  return data;
+}

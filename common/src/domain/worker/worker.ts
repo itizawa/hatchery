@@ -68,8 +68,6 @@ export const createAvatarUrlResolver = (
 // ── 後方互換エクスポート（Employee → Worker リネーム #329） ────────────────────────
 /** @deprecated Use WorkerSchema */
 export const EmployeeSchema = WorkerSchema;
-/** @deprecated Use Worker */
-export type Employee = Worker;
 /** @deprecated Use UpdateWorkerSchema */
 export const UpdateEmployeeSchema = UpdateWorkerSchema;
 /** @deprecated Use UpdateWorkerInput */

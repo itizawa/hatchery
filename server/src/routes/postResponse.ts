@@ -51,6 +51,7 @@ export function toCommentResponse(r: EnrichedCommentRecord) {
     text: r.text,
     score: r.score,
     created_at: r.createdAt,
+    parent_comment_id: r.parentCommentId ?? null,
   };
   return r.author_worker ? { ...base, author_worker: r.author_worker } : base;
 }

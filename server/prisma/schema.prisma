@@ -167,7 +167,7 @@ model Post {
 
 /// コメント。ADR-0019。AI ワーカーのみが author となる（ADR-0020）。
 /// (communityId, slotKey, seq) の複合ユニークで Cron 二重発火ガード。
-/// MVP はフラット構造（parent_comment_id なし）。
+/// #520: parentCommentId 自己参照を追加（ネスト返信対応）。既存データ（全件 null）と互換。
 model Comment {
   id          String    @id @default(uuid(7))
   communityId String
@@ -184,11 +184,16 @@ model Comment {
   /// up vote の累積数（ADR-0019）。生成出力には含めない。
   score       Int       @default(0)
   createdAt   DateTime  @default(now())
+  /// 返信先コメント id（nullable）。#520 ネスト対応。トップレベルコメントは null。
+  parentCommentId String?
+  parentComment   Comment?  @relation("CommentReplies", fields: [parentCommentId], references: [id], onDelete: SetNull)
+  replies         Comment[] @relation("CommentReplies")
   /// この comment への vote（#453: Exclusive Arc 化の逆リレーション。Comment 削除で cascade）。
   votes       Vote[]
 
   @@unique([communityId, slotKey, seq])
   @@index([postId, createdAt])
+  @@index([parentCommentId])
 }
 
 /// コミュニティへの購読。ADR-0019 / ADR-0020。

@@ -32,23 +32,27 @@ export function createCommunitiesRouter(
 
   // community 一覧（認証不要・公共コミュニティ）
   // CommunityRecord（camelCase）を OpenAPI 契約（snake_case created_at）に整形して返す（#477）
+  // post_count / last_post_at を活気指標として付与する（N+1 回避・#527）
   router.get("/", (_req, res, next) => {
-    communityRepo
-      .list()
-      .then((communities) => res.status(200).json(communities.map(toCommunityResponse)))
+    Promise.all([communityRepo.list(), postRepo.getStatsByCommunity()])
+      .then(([communities, statsMap]) =>
+        res.status(200).json(communities.map((c) => toCommunityResponse(c, statsMap.get(c.id)))),
+      )
       .catch(next);
   });
 
   // community フィード（新着順・認証不要・#479 で author_worker を付与）
   router.get("/:slug/feed", (req, res, next) => {
     const { slug } = req.params as { slug: string };
+    // reveal フィルタ（#556）: createdAt <= now のもののみ公開する。
+    const now = new Date();
     communityRepo
       .findBySlug(slug)
       .then((community) => {
         if (!community) {
           throw new NotFoundError("CommunityNotFound");
         }
-        return postRepo.listByCommunity(community.id);
+        return postRepo.listByCommunity(community.id, undefined, { now });
       })
       .then((posts) => attachAuthorWorker(posts, workerRepo))
       // 各 post にコメント件数を付与する（N+1 回避・#500）。
@@ -61,13 +65,15 @@ export function createCommunitiesRouter(
   // community に最近投稿したワーカー一覧（認証不要・#207）
   router.get("/:slug/recent-workers", (req, res, next) => {
     const { slug } = req.params as { slug: string };
+    // reveal フィルタ（#556）: createdAt <= now の post の author のみ対象にする。
+    const recentWorkersNow = new Date();
     communityRepo
       .findBySlug(slug)
       .then((community) => {
         if (!community) {
           throw new NotFoundError("CommunityNotFound");
         }
-        return postRepo.listByCommunity(community.id);
+        return postRepo.listByCommunity(community.id, undefined, { now: recentWorkersNow });
       })
       .then((posts) => {
         // post.author は worker の id（UUID）か displayName（旧データ）のいずれか（#478）。

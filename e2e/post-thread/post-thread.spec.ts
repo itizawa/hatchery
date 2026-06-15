@@ -486,3 +486,7 @@ test(
 test.todo(
   "UC-POST-13: post / コメント本文の先頭 URL が OGP カードとして展開表示される（#515）",
 );
+
+test.todo(
+  "UC-POST-14: コメントが返信スレッド（ネスト構造）として Reddit 風に表示される（#520）",
+);

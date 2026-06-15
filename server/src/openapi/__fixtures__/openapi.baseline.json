@@ -675,6 +675,13 @@
           "created_at": {
             "type": "string"
           },
+          "parent_comment_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "default": null
+          },
           "author_worker": {
             "type": "object",
             "properties": {

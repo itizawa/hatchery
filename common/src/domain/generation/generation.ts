@@ -7,10 +7,15 @@ import { POST_TEXT_MAX_LENGTH, POST_TITLE_MAX_LENGTH } from "../post/post.js";
  * 生成出力のコメント部分スキーマ。ADR-0019。
  * - author は既知 workerId のみ（人間は出力に現れない・ADR-0020）
  * - score は含めない（事後更新フィールド・ADR-0019）
+ * - reply_to: 出力内の別コメントへの返信インデックス（0始まり・nullable）。#520。
+ *   出力全体のコメントを順番に並べた際の 0 始まりインデックスで返信先を指定する。
+ *   永続化時に実際のコメント id へ解決する。解決できない場合はトップレベル扱い（null）。
  */
 export const GenerationOutputCommentSchema = z.object({
   author: z.string().min(1).max(100),
   text: z.string().min(1).max(COMMENT_TEXT_MAX_LENGTH),
+  /** 出力内コメントの 0 始まりインデックス（返信先）。null / 省略 = トップレベル。 */
+  reply_to: z.number().int().nonnegative().nullable().optional(),
 });
 
 export type GenerationOutputComment = z.infer<typeof GenerationOutputCommentSchema>;

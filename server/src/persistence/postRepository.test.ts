@@ -163,6 +163,116 @@ describe("createInMemoryPostRepository", () => {
     });
   });
 
+  describe("listTopByCommunity (#558)", () => {
+    it("score >= minScore かつ createdAt >= since の post を score 降順で返す", async () => {
+      const repo = createInMemoryPostRepository();
+      const now = new Date("2026-06-15T00:00:00Z");
+      const since = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000); // 7日前
+
+      // 期間内・スコア高い
+      const [p1] = await repo.createMany("community-1", [
+        { slotKey: "s", seq: 0, author: "w1", title: "Top Post", text: "t" },
+      ]);
+      await repo.addScore(p1.id, 5);
+
+      // 期間内・スコア低い（minScore 未満）
+      const [p2] = await repo.createMany("community-1", [
+        { slotKey: "s", seq: 1, author: "w2", title: "Low Score Post", text: "t" },
+      ]);
+      await repo.addScore(p2.id, 0); // score = 0, minScore=1 では対象外
+
+      // 期間内・スコア中
+      const [p3] = await repo.createMany("community-1", [
+        { slotKey: "s", seq: 2, author: "w3", title: "Mid Score Post", text: "t" },
+      ]);
+      await repo.addScore(p3.id, 3);
+
+      const result = await repo.listTopByCommunity("community-1", {
+        since,
+        minScore: 1,
+        limit: 10,
+      });
+
+      expect(result).toHaveLength(2);
+      expect(result[0].title).toBe("Top Post"); // score 5
+      expect(result[1].title).toBe("Mid Score Post"); // score 3
+    });
+
+    it("since より古い post は除外する", async () => {
+      const repo = createInMemoryPostRepository();
+      const [p1] = await repo.createMany("community-1", [
+        { slotKey: "s", seq: 0, author: "w1", title: "Old Post", text: "t" },
+      ]);
+      await repo.addScore(p1.id, 10);
+
+      // createdAt を古い日付に偽装するためにテスト用固有手段が必要。
+      // in-memory では createMany が new Date() を使うので、since を過去の時点で制御する。
+      // 直近の post のみを対象にするため since を「今の瞬間」に設定
+      const strictSince = new Date(Date.now() + 1000); // 未来
+
+      const result = await repo.listTopByCommunity("community-1", {
+        since: strictSince,
+        minScore: 1,
+        limit: 10,
+      });
+
+      expect(result).toHaveLength(0);
+    });
+
+    it("limit 件数で打ち切る", async () => {
+      const repo = createInMemoryPostRepository();
+      for (let i = 0; i < 5; i++) {
+        const [p] = await repo.createMany("community-1", [
+          { slotKey: "s", seq: i, author: "w", title: `Post ${i}`, text: "t" },
+        ]);
+        await repo.addScore(p.id, i + 1); // score: 1..5
+      }
+      const since = new Date(0); // 全件対象
+
+      const result = await repo.listTopByCommunity("community-1", {
+        since,
+        minScore: 1,
+        limit: 3,
+      });
+
+      expect(result).toHaveLength(3);
+      // score 降順: Post 4 (score5) > Post 3 (score4) > Post 2 (score3)
+      expect(result[0].score).toBe(5);
+      expect(result[1].score).toBe(4);
+      expect(result[2].score).toBe(3);
+    });
+
+    it("対象が 0 件のときは空配列を返す", async () => {
+      const repo = createInMemoryPostRepository();
+      const since = new Date(0);
+
+      const result = await repo.listTopByCommunity("community-1", {
+        since,
+        minScore: 1,
+        limit: 10,
+      });
+
+      expect(result).toHaveLength(0);
+    });
+
+    it("別 community の post は除外する", async () => {
+      const repo = createInMemoryPostRepository();
+      const [p1] = await repo.createMany("community-2", [
+        { slotKey: "s", seq: 0, author: "w1", title: "Other Community Post", text: "t" },
+      ]);
+      await repo.addScore(p1.id, 10);
+      const since = new Date(0);
+
+      const result = await repo.listTopByCommunity("community-1", {
+        since,
+        minScore: 1,
+        limit: 10,
+      });
+
+      expect(result).toHaveLength(0);
+    });
+  });
+
   describe("listPopularPaged", () => {
     it("score 降順で返す（同点は createdAt 降順）", async () => {
       const repo = createInMemoryPostRepository();
@@ -221,6 +331,118 @@ describe("createInMemoryPostRepository", () => {
       const repo = createInMemoryPostRepository();
       const invalid = Buffer.from("not-json").toString("base64");
       await expect(repo.listPopularPaged(invalid, 20)).rejects.toThrow("INVALID_CURSOR");
+    });
+  });
+
+  describe("reveal フィルタ（#556）", () => {
+    it("createMany に createdAt を渡すと指定した時刻で永続化される", async () => {
+      const repo = createInMemoryPostRepository();
+      const future = new Date(Date.now() + 60_000);
+      const [created] = await repo.createMany("community-1", [
+        { slotKey: "s", seq: 0, author: "w", title: "T", text: "t", createdAt: future },
+      ]);
+      expect(created.createdAt.getTime()).toBe(future.getTime());
+    });
+
+    it("listByCommunity に now を渡すと createdAt > now の post は除外される", async () => {
+      const repo = createInMemoryPostRepository();
+      const past = new Date(Date.now() - 10_000);
+      const future = new Date(Date.now() + 60_000);
+      await repo.createMany("community-1", [
+        { slotKey: "s", seq: 0, author: "w", title: "past", text: "t", createdAt: past },
+        { slotKey: "s", seq: 1, author: "w", title: "future", text: "t", createdAt: future },
+      ]);
+      const now = new Date();
+      const result = await repo.listByCommunity("community-1", 50, { now });
+      expect(result).toHaveLength(1);
+      expect(result[0].title).toBe("past");
+    });
+
+    it("listByCommunity に now を渡さないと全件返す（後方互換）", async () => {
+      const repo = createInMemoryPostRepository();
+      const future = new Date(Date.now() + 60_000);
+      await repo.createMany("community-1", [
+        { slotKey: "s", seq: 0, author: "w", title: "past", text: "t" },
+        { slotKey: "s", seq: 1, author: "w", title: "future", text: "t", createdAt: future },
+      ]);
+      const result = await repo.listByCommunity("community-1");
+      expect(result).toHaveLength(2);
+    });
+
+    it("listLatest に now を渡すと createdAt > now の post は除外される", async () => {
+      const repo = createInMemoryPostRepository();
+      const past = new Date(Date.now() - 10_000);
+      const future = new Date(Date.now() + 60_000);
+      await repo.createMany("community-1", [
+        { slotKey: "s", seq: 0, author: "w", title: "past", text: "t", createdAt: past },
+        { slotKey: "s", seq: 1, author: "w", title: "future", text: "t", createdAt: future },
+      ]);
+      const now = new Date();
+      const result = await repo.listLatest(50, { now });
+      expect(result).toHaveLength(1);
+      expect(result[0].title).toBe("past");
+    });
+
+    it("listLatest に now を渡さないと全件返す（後方互換）", async () => {
+      const repo = createInMemoryPostRepository();
+      const future = new Date(Date.now() + 60_000);
+      await repo.createMany("community-1", [
+        { slotKey: "s", seq: 0, author: "w", title: "past", text: "t" },
+        { slotKey: "s", seq: 1, author: "w", title: "future", text: "t", createdAt: future },
+      ]);
+      const result = await repo.listLatest();
+      expect(result).toHaveLength(2);
+    });
+
+    it("listLatestPaged に now を渡すと createdAt > now の post は除外される", async () => {
+      const repo = createInMemoryPostRepository();
+      const past = new Date(Date.now() - 10_000);
+      const future = new Date(Date.now() + 60_000);
+      await repo.createMany("community-1", [
+        { slotKey: "s", seq: 0, author: "w", title: "past", text: "t", createdAt: past },
+        { slotKey: "s", seq: 1, author: "w", title: "future", text: "t", createdAt: future },
+      ]);
+      const now = new Date();
+      const { posts, nextCursor } = await repo.listLatestPaged(undefined, 20, { now });
+      expect(posts).toHaveLength(1);
+      expect(posts[0].title).toBe("past");
+      expect(nextCursor).toBeNull();
+    });
+
+    it("listLatestPaged に now を渡さないと全件返す（後方互換）", async () => {
+      const repo = createInMemoryPostRepository();
+      const future = new Date(Date.now() + 60_000);
+      await repo.createMany("community-1", [
+        { slotKey: "s", seq: 0, author: "w", title: "past", text: "t" },
+        { slotKey: "s", seq: 1, author: "w", title: "future", text: "t", createdAt: future },
+      ]);
+      const { posts } = await repo.listLatestPaged(undefined, 20);
+      expect(posts).toHaveLength(2);
+    });
+
+    it("listPopularPaged に now を渡すと createdAt > now の post は除外される", async () => {
+      const repo = createInMemoryPostRepository();
+      const past = new Date(Date.now() - 10_000);
+      const future = new Date(Date.now() + 60_000);
+      await repo.createMany("community-1", [
+        { slotKey: "s", seq: 0, author: "w", title: "past", text: "t", createdAt: past },
+        { slotKey: "s", seq: 1, author: "w", title: "future", text: "t", createdAt: future },
+      ]);
+      const now = new Date();
+      const { posts } = await repo.listPopularPaged(undefined, 20, { now });
+      expect(posts).toHaveLength(1);
+      expect(posts[0].title).toBe("past");
+    });
+
+    it("listPopularPaged に now を渡さないと全件返す（後方互換）", async () => {
+      const repo = createInMemoryPostRepository();
+      const future = new Date(Date.now() + 60_000);
+      await repo.createMany("community-1", [
+        { slotKey: "s", seq: 0, author: "w", title: "past", text: "t" },
+        { slotKey: "s", seq: 1, author: "w", title: "future", text: "t", createdAt: future },
+      ]);
+      const { posts } = await repo.listPopularPaged(undefined, 20);
+      expect(posts).toHaveLength(2);
     });
   });
 });

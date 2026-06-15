@@ -356,8 +356,9 @@ describe("runCommunityBatch (#306)", () => {
 
     await runCommunityBatch({ ...deps, generate, recentLimit: 7 });
 
-    expect(postSpy).toHaveBeenCalledWith("community-1", 7);
-    expect(commentSpy).toHaveBeenCalledWith("community-1", 7);
+    // #556: 第3引数に { now } が渡される（reveal フィルタ）
+    expect(postSpy).toHaveBeenCalledWith("community-1", 7, expect.objectContaining({ now: expect.any(Date) }));
+    expect(commentSpy).toHaveBeenCalledWith("community-1", 7, expect.objectContaining({ now: expect.any(Date) }));
   });
 
   it("recentLimit 未指定なら既定の 30 件で取得する（#389 AC2）", async () => {
@@ -367,7 +368,8 @@ describe("runCommunityBatch (#306)", () => {
 
     await runCommunityBatch({ ...deps, generate });
 
-    expect(postSpy).toHaveBeenCalledWith("community-1", 30);
+    // #556: 第3引数に { now } が渡される（reveal フィルタ）
+    expect(postSpy).toHaveBeenCalledWith("community-1", 30, expect.objectContaining({ now: expect.any(Date) }));
   });
 
   it("紐づくワーカーが 0 件の community は全 Bot ワーカーへフォールバックする（#489 AC3）", async () => {
@@ -393,6 +395,98 @@ describe("runCommunityBatch (#306)", () => {
     expect(generate).not.toHaveBeenCalled();
     expect(result.posts.length).toBe(0);
     expect(result.comments.length).toBe(0);
+  });
+
+  // #555: 既存Post へのコメント追加（reply）
+  it("replies を含む出力が渡された場合、既存Post に対して commentRepo.createMany が呼ばれる（#555）", async () => {
+    const deps = buildDeps([community1]);
+    // まず既存 Post を作っておく（先のスロットで生成済み）
+    const existingPosts = await deps.postRepo.createMany("community-1", [
+      { slotKey: "2026-06-10T09:00", seq: 0, author: "haru", title: "過去の投稿", text: "過去のテキスト" },
+    ]);
+    const existingPostId = existingPosts[0]!.id;
+
+    const outputWithReplies = JSON.stringify({
+      topic: "今日のテクノロジーニュース",
+      posts: [
+        {
+          id: "p1",
+          author: "haru",
+          title: "新規投稿",
+          text: "新しいテキスト",
+          comments: [],
+        },
+      ],
+      replies: [
+        { targetPostRef: "ref-1", author: "ken", text: "過去投稿への返信コメント" },
+      ],
+    });
+
+    // generate の呼び出し前に postRefMap が構築されるよう、事前に既存Postを配置済み
+    // runCommunityBatch 内でrecentPostsとして取得され、ref-1 -> existingPostId にマップされるはず
+    const generate = vi.fn().mockResolvedValue(outputWithReplies);
+
+    const result = await runCommunityBatch({
+      ...deps,
+      generate,
+      slotKey: "2026-06-15T09:00",
+    });
+
+    // 新規Postが1件作成される
+    expect(result.posts.length).toBe(1);
+    // 既存PostへのReplyコメントが作成される
+    const allComments = await deps.commentRepo.listByPost(existingPostId);
+    expect(allComments.length).toBe(1);
+    expect(allComments[0]?.author).toBe("ken");
+    expect(allComments[0]?.text).toBe("過去投稿への返信コメント");
+    expect(allComments[0]?.postId).toBe(existingPostId);
+    // result.comments にも含まれる
+    expect(result.comments.some((c) => c.postId === existingPostId)).toBe(true);
+  });
+
+  it("replies の targetPostRef が未知の場合、その reply はスキップされる（#555）", async () => {
+    const deps = buildDeps([community1]);
+
+    const outputWithUnknownRef = JSON.stringify({
+      topic: "テスト",
+      posts: [
+        {
+          id: "p1",
+          author: "haru",
+          title: "新規投稿",
+          text: "テスト",
+          comments: [],
+        },
+      ],
+      replies: [
+        { targetPostRef: "ref-unknown", author: "ken", text: "存在しない参照への返信" },
+      ],
+    });
+
+    const generate = vi.fn().mockResolvedValue(outputWithUnknownRef);
+
+    const result = await runCommunityBatch({
+      ...deps,
+      generate,
+      slotKey: "2026-06-15T12:00",
+    });
+
+    // 新規Postは作成される
+    expect(result.posts.length).toBe(1);
+    // 未知参照のReplyはスキップ
+    expect(result.comments.length).toBe(0);
+  });
+
+  it("直近Postがない（新規コミュニティ等）場合でも正常動作し新規Postのみ生成する（#555 AC5）", async () => {
+    const deps = buildDeps([community1]);
+    // postRepo に何も入っていない状態
+    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+
+    const result = await runCommunityBatch({ ...deps, generate });
+
+    expect(result.posts.length).toBe(2);
+    // replies は空なのでコメントは2件（新規Post内のコメントのみ）
+    expect(result.comments.length).toBe(2);
   });
 });
 
@@ -544,6 +638,224 @@ describe("runCommunityBatch worldState 登場ローテーション (#464)", () =
   });
 });
 
+describe("runCommunityBatch ドリップ割当（#556）", () => {
+  beforeEach(() => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const buildDeps = (
+    communities: CommunityRecord[],
+    workerCommunityData: InMemoryWorkerCommunityData = { workers: [], links: [] },
+  ) => {
+    const communityRepo = createInMemoryCommunityRepository(communities);
+    const postRepo = createInMemoryPostRepository();
+    const commentRepo = createInMemoryCommentRepository();
+    const appSettingRepo = createInMemoryAppSettingRepository();
+    const batchRunLogRepository = createInMemoryBatchRunLogRepository();
+    const workerCommunityRepo = createInMemoryWorkerCommunityRepository(workerCommunityData);
+    const voteRepo = createInMemoryVoteRepository();
+    const botWorkerProvider = (): Promise<readonly WorkerRecord[]> => Promise.resolve(botWorkers);
+    return {
+      communityRepo,
+      postRepo,
+      commentRepo,
+      appSettingRepo,
+      batchRunLogRepository,
+      workerCommunityRepo,
+      voteRepo,
+      botWorkerProvider,
+      anthropicApiKey: "test-key",
+      rng: () => 0.5,
+    };
+  };
+
+  it("コメントの createdAt がスロット時刻以降・now + dripWindowMs 未満に割り当てられる", async () => {
+    const deps = buildDeps([community1]);
+    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+    const slotNow = new Date("2026-06-15T09:00:00Z");
+    const dripWindowMs = 3 * 60 * 60 * 1000; // 3h
+
+    const result = await runCommunityBatch({
+      ...deps,
+      generate,
+      now: slotNow,
+      dripWindowMs,
+      slotKey: "2026-06-15T09:00",
+    });
+
+    expect(result.comments.length).toBeGreaterThan(0);
+    for (const comment of result.comments) {
+      expect(comment.createdAt.getTime()).toBeGreaterThanOrEqual(slotNow.getTime());
+      expect(comment.createdAt.getTime()).toBeLessThan(slotNow.getTime() + dripWindowMs);
+    }
+  });
+
+  it("Post の createdAt はスロット時刻（即時公開）に設定される", async () => {
+    const deps = buildDeps([community1]);
+    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+    const slotNow = new Date("2026-06-15T09:00:00Z");
+    const dripWindowMs = 3 * 60 * 60 * 1000;
+
+    const result = await runCommunityBatch({
+      ...deps,
+      generate,
+      now: slotNow,
+      dripWindowMs,
+      slotKey: "2026-06-15T09:00",
+    });
+
+    expect(result.posts.length).toBeGreaterThan(0);
+    for (const post of result.posts) {
+      // Post は slotNow 以降に設定される（ステージング後に付与）
+      expect(post.createdAt.getTime()).toBeGreaterThanOrEqual(slotNow.getTime());
+    }
+  });
+
+  it("コメントの createdAt は単調増加する（post内）", async () => {
+    const deps = buildDeps([community1]);
+    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+    const slotNow = new Date("2026-06-15T09:00:00Z");
+
+    const result = await runCommunityBatch({
+      ...deps,
+      generate,
+      now: slotNow,
+      slotKey: "2026-06-15T09:00",
+    });
+
+    // 同一 postId のコメントが単調増加しているか検証
+    const commentsByPost = new Map<string, typeof result.comments>();
+    for (const c of result.comments) {
+      if (!commentsByPost.has(c.postId)) commentsByPost.set(c.postId, []);
+      commentsByPost.get(c.postId)!.push(c);
+    }
+    for (const comments of commentsByPost.values()) {
+      for (let i = 1; i < comments.length; i++) {
+        expect(comments[i]!.createdAt.getTime()).toBeGreaterThanOrEqual(
+          comments[i - 1]!.createdAt.getTime(),
+        );
+      }
+    }
+  });
+
+  it("バッチのコンテキスト構築（listByCommunity）が now フィルタで未解禁コメントを除外する", async () => {
+    const deps = buildDeps([community1]);
+    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+    const slotNow = new Date("2026-06-15T09:00:00Z");
+
+    // listByCommunity のスパイを仕掛けて now が渡されているか確認
+    const commentListSpy = vi.spyOn(deps.commentRepo, "listByCommunity");
+
+    await runCommunityBatch({
+      ...deps,
+      generate,
+      now: slotNow,
+      slotKey: "2026-06-15T09:00",
+    });
+
+    // now が渡されていること（reveal フィルタが有効）を確認
+    expect(commentListSpy).toHaveBeenCalledWith(
+      "community-1",
+      expect.any(Number),
+      expect.objectContaining({ now: slotNow }),
+    );
+  });
+});
+
+describe("runCommunityBatch 人気トピック還元 (#558)", () => {
+  beforeEach(() => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const buildDeps = (
+    communities: CommunityRecord[],
+    workerCommunityData: InMemoryWorkerCommunityData = { workers: [], links: [] },
+  ) => {
+    const communityRepo = createInMemoryCommunityRepository(communities);
+    const postRepo = createInMemoryPostRepository();
+    const commentRepo = createInMemoryCommentRepository();
+    const appSettingRepo = createInMemoryAppSettingRepository();
+    const batchRunLogRepository = createInMemoryBatchRunLogRepository();
+    const workerCommunityRepo = createInMemoryWorkerCommunityRepository(workerCommunityData);
+    const voteRepo = createInMemoryVoteRepository();
+    const botWorkerProvider = (): Promise<readonly WorkerRecord[]> => Promise.resolve(botWorkers);
+    return {
+      communityRepo,
+      postRepo,
+      commentRepo,
+      appSettingRepo,
+      batchRunLogRepository,
+      workerCommunityRepo,
+      voteRepo,
+      botWorkerProvider,
+      anthropicApiKey: "test-key",
+      rng: () => 0,
+    };
+  };
+
+  it("postRepo.listTopByCommunity が呼ばれる（人気トピック取得）", async () => {
+    const deps = buildDeps([community1]);
+    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+    const listTopSpy = vi.spyOn(deps.postRepo, "listTopByCommunity");
+
+    await runCommunityBatch({ ...deps, generate });
+
+    expect(listTopSpy).toHaveBeenCalledTimes(1);
+    expect(listTopSpy).toHaveBeenCalledWith("community-1", expect.objectContaining({
+      minScore: expect.any(Number),
+      limit: expect.any(Number),
+      since: expect.any(Date),
+    }));
+  });
+
+  it("スコアの高い post がある場合、プロンプトに人気トピックセクションが含まれる", async () => {
+    const deps = buildDeps([community1]);
+
+    // 直前にスコア付きの post を作成
+    const [p1] = await deps.postRepo.createMany("community-1", [
+      { slotKey: "prev-slot", seq: 0, author: "haru", title: "注目の人気投稿", text: "本文" },
+    ]);
+    await deps.postRepo.addScore(p1.id, 5);
+
+    let capturedPrompt = "";
+    const captureGenerate = vi.fn().mockImplementation((prompt: string) => {
+      capturedPrompt = prompt;
+      return Promise.resolve(validGenerationOutput);
+    });
+
+    await runCommunityBatch({ ...deps, generate: captureGenerate });
+
+    expect(capturedPrompt).toContain("特に反応が良かった投稿");
+    expect(capturedPrompt).toContain("注目の人気投稿");
+  });
+
+  it("スコアの高い post がない場合、プロンプトに人気トピックセクションが含まれない", async () => {
+    const deps = buildDeps([community1]);
+
+    let capturedPrompt = "";
+    const captureGenerate = vi.fn().mockImplementation((prompt: string) => {
+      capturedPrompt = prompt;
+      return Promise.resolve(validGenerationOutput);
+    });
+
+    await runCommunityBatch({ ...deps, generate: captureGenerate });
+
+    expect(capturedPrompt).not.toContain("特に反応が良かった投稿");
+  });
+});
+
 describe("generateSlotKey (#469)", () => {
   it("UTC 固定日時から UTC 基準の slot_key を生成する", () => {
     const utcDate = new Date("2026-06-10T09:30:00Z");
@@ -558,5 +870,120 @@ describe("generateSlotKey (#469)", () => {
   it("UTC とローカル時刻で日付が異なる場合も UTC 日付で返す", () => {
     const date = new Date("2026-06-09T23:30:00Z");
     expect(generateSlotKey(date)).toBe("2026-06-09T23:30");
+  });
+});
+
+describe("runCommunityBatch post/comment 件数揺らぎ（#557）", () => {
+  beforeEach(() => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const buildDeps = (
+    communities: CommunityRecord[],
+    workerCommunityData: InMemoryWorkerCommunityData = { workers: [], links: [] },
+  ) => {
+    const communityRepo = createInMemoryCommunityRepository(communities);
+    const postRepo = createInMemoryPostRepository();
+    const commentRepo = createInMemoryCommentRepository();
+    const appSettingRepo = createInMemoryAppSettingRepository();
+    const batchRunLogRepository = createInMemoryBatchRunLogRepository();
+    const workerCommunityRepo = createInMemoryWorkerCommunityRepository(workerCommunityData);
+    const voteRepo = createInMemoryVoteRepository();
+    const botWorkerProvider = (): Promise<readonly WorkerRecord[]> => Promise.resolve(botWorkers);
+    return {
+      communityRepo,
+      postRepo,
+      commentRepo,
+      appSettingRepo,
+      batchRunLogRepository,
+      workerCommunityRepo,
+      voteRepo,
+      botWorkerProvider,
+      anthropicApiKey: "test-key",
+      rng: () => 0,
+    };
+  };
+
+  it("postRange / commentRange を指定すると、プロンプトに件数指示が含まれる（rng 固定で決定的）", async () => {
+    const deps = buildDeps([community1]);
+    let receivedPrompt = "";
+    const generate = vi.fn().mockImplementation((prompt: string) => {
+      receivedPrompt = prompt;
+      return Promise.resolve(validGenerationOutput);
+    });
+
+    await runCommunityBatch({
+      ...deps,
+      generate,
+      // rng = 0 のとき postCount = postRange.min = 2, commentCount = commentRange.min = 1
+      rng: () => 0,
+      postRange: { min: 2, max: 4 },
+      commentRange: { min: 1, max: 3 },
+    });
+
+    // プロンプトに post 数 (2) とコメント数 (1) の指示が含まれる
+    expect(receivedPrompt).toContain("2");
+    expect(receivedPrompt).toContain("1");
+    expect(generate).toHaveBeenCalledTimes(1);
+  });
+
+  it("postRange / commentRange 未指定でも従来どおり生成・永続化される（後方互換）", async () => {
+    const deps = buildDeps([community1]);
+    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+
+    const result = await runCommunityBatch({ ...deps, generate });
+
+    expect(result.posts.length).toBe(2);
+    expect(result.comments.length).toBe(2);
+    expect(generate).toHaveBeenCalledTimes(1);
+  });
+
+  it("rng を変えると countHints が変わる（rng=0 と rng=0.9999 でプロンプト内容が異なる）", async () => {
+    const depsA = buildDeps([community1]);
+    let promptA = "";
+    await runCommunityBatch({
+      ...depsA,
+      generate: vi.fn().mockImplementation((p: string) => { promptA = p; return Promise.resolve(validGenerationOutput); }),
+      rng: () => 0,
+      postRange: { min: 1, max: 5 },
+      commentRange: { min: 1, max: 5 },
+    });
+
+    const depsB = buildDeps([community1]);
+    let promptB = "";
+    await runCommunityBatch({
+      ...depsB,
+      generate: vi.fn().mockImplementation((p: string) => { promptB = p; return Promise.resolve(validGenerationOutput); }),
+      rng: () => 0.9999,
+      postRange: { min: 1, max: 5 },
+      commentRange: { min: 1, max: 5 },
+    });
+
+    // rng=0 → postCount=1, rng=0.9999 → postCount=5、プロンプトが異なる
+    expect(promptA).not.toBe(promptB);
+  });
+
+  it("既存の generateCountHints の結果がハード制約にならず、生成件数が異なっても永続化される", async () => {
+    const deps = buildDeps([community1]);
+    // postRange.min=3, max=3 のとき、プロンプトでは「3件」を指示するが、
+    // AI が 2 件しか返しても（validGenerationOutput は 2 件）永続化される
+    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+
+    const result = await runCommunityBatch({
+      ...deps,
+      generate,
+      postRange: { min: 3, max: 3 },
+      commentRange: { min: 3, max: 3 },
+    });
+
+    // AI が 2 件返しても永続化される（ハード制約にしない）
+    expect(result.posts.length).toBe(2);
+    expect(result.comments.length).toBe(2);
   });
 });

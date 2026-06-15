@@ -12,6 +12,7 @@ import { registerAuth } from "./registrations/registerAuth.js";
 import { registerCommunities } from "./registrations/registerCommunities.js";
 import { registerFeed } from "./registrations/registerFeed.js";
 import { registerHealth } from "./registrations/registerHealth.js";
+import { registerOgp } from "./registrations/registerOgp.js";
 import { registerPosts } from "./registrations/registerPosts.js";
 import { registerWorkers } from "./registrations/registerWorkers.js";
 import type { RegistryContext } from "./registrations/shared.js";
@@ -64,6 +65,7 @@ function buildRegistry(): OpenAPIRegistry {
   registerCommunities(registry, ctx);
   registerFeed(registry, ctx);
   registerPosts(registry, ctx);
+  registerOgp(registry);
 
   return registry;
 }

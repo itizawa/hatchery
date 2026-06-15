@@ -3,11 +3,13 @@ import { Link as RouterLink } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 
 import { usePublicCommunities } from "../api/communities.js";
+import { PostedTime } from "../components/PostedTime.js";
 
 /**
  * コミュニティブラウズ（/communities）。全コミュニティ一覧を表示する（ADR-0018 / ADR-0019）。
  * 認証不要の公開ページ。
  * #462: usePublicCommunities は Suspense 化。ローディング/エラーは router の QueryBoundary に委譲する。
+ * #527: コミュニティカードに post_count・last_post_at の活気指標を表示する。
  */
 export const CommunityBrowseScene = (): ReactElement => {
   const { data: communities } = usePublicCommunities();
@@ -53,6 +55,18 @@ export const CommunityBrowseScene = (): ReactElement => {
                     {community.description}
                   </Typography>
                 )}
+                <Box sx={{ display: "flex", gap: 2, mt: 0.5, alignItems: "center" }}>
+                  <Typography variant="caption" color="text.secondary">
+                    {community.post_count === 0 ? "投稿なし" : `${community.post_count}件の投稿`}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                    {community.last_post_at == null ? (
+                      "未投稿"
+                    ) : (
+                      <>最終投稿: <PostedTime createdAt={community.last_post_at} /></>
+                    )}
+                  </Typography>
+                </Box>
               </Box>
             </RouterLink>
           ))}

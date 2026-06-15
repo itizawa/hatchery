@@ -22,6 +22,7 @@ import { QueryBoundary } from "../components/QueryBoundary.js";
 import { SubscriptionStatus } from "../components/SubscriptionStatus.js";
 import type { VoteDirection } from "../components/VoteControl.js";
 import { useGuestVoteGuard } from "../hooks/useGuestVoteGuard.js";
+import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
 
 /** 右サイドバーの sticky ラッパー（md 未満で非表示）。 */
 const SidebarColumn = ({ children }: { children: ReactElement }): ReactElement => (
@@ -157,6 +158,8 @@ export const PostThreadScene = (): ReactElement => {
     () => new Map<string, Comment>(comments.map((c) => [c.id, c])),
     [comments],
   );
+
+  useDocumentTitle(`${post.title} - Hatchery`);
 
   return (
     <Box component="section" sx={{ p: 3, maxWidth: 1200, mx: "auto" }}>

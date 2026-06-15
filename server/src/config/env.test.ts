@@ -158,4 +158,56 @@ describe("loadEnv", () => {
   it("数値でない BATCH_RECENT_LIMIT は ZodError で弾く", () => {
     expect(() => loadEnv({ BATCH_RECENT_LIMIT: "abc" })).toThrow();
   });
+
+  // --- BATCH_POST_MIN/MAX / BATCH_COMMENT_MIN/MAX（#557: post/comment 件数揺らぎ） ---
+
+  it("BATCH_POST_MIN/MAX 未設定なら既定値（1/3）を使う", () => {
+    const env = loadEnv({});
+    expect(env.batchPostMin).toBe(1);
+    expect(env.batchPostMax).toBe(3);
+  });
+
+  it("BATCH_COMMENT_MIN/MAX 未設定なら既定値（1/3）を使う", () => {
+    const env = loadEnv({});
+    expect(env.batchCommentMin).toBe(1);
+    expect(env.batchCommentMax).toBe(3);
+  });
+
+  it("BATCH_POST_MIN/MAX を数値として読み取り反映する", () => {
+    const env = loadEnv({ BATCH_POST_MIN: "2", BATCH_POST_MAX: "5" });
+    expect(env.batchPostMin).toBe(2);
+    expect(env.batchPostMax).toBe(5);
+  });
+
+  it("BATCH_COMMENT_MIN/MAX を数値として読み取り反映する", () => {
+    const env = loadEnv({ BATCH_COMMENT_MIN: "0", BATCH_COMMENT_MAX: "4" });
+    expect(env.batchCommentMin).toBe(0);
+    expect(env.batchCommentMax).toBe(4);
+  });
+
+  it("BATCH_POST_MIN の下限 0・上限 10 は許容する", () => {
+    expect(loadEnv({ BATCH_POST_MIN: "0" }).batchPostMin).toBe(0);
+    expect(loadEnv({ BATCH_POST_MIN: "10" }).batchPostMin).toBe(10);
+  });
+
+  it("BATCH_POST_MAX の下限 0・上限 10 は許容する", () => {
+    expect(loadEnv({ BATCH_POST_MAX: "0" }).batchPostMax).toBe(0);
+    expect(loadEnv({ BATCH_POST_MAX: "10" }).batchPostMax).toBe(10);
+  });
+
+  it("BATCH_POST_MIN が上限超過（11）のとき ZodError で弾く", () => {
+    expect(() => loadEnv({ BATCH_POST_MIN: "11" })).toThrow();
+  });
+
+  it("BATCH_POST_MAX が上限超過（11）のとき ZodError で弾く", () => {
+    expect(() => loadEnv({ BATCH_POST_MAX: "11" })).toThrow();
+  });
+
+  it("BATCH_COMMENT_MIN が負数（-1）のとき ZodError で弾く", () => {
+    expect(() => loadEnv({ BATCH_COMMENT_MIN: "-1" })).toThrow();
+  });
+
+  it("数値でない BATCH_POST_MIN は ZodError で弾く", () => {
+    expect(() => loadEnv({ BATCH_POST_MIN: "abc" })).toThrow();
+  });
 });

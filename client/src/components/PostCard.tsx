@@ -2,10 +2,13 @@ import { Box, Link, Typography } from "./uiParts";
 import type { ReactElement } from "react";
 import type React from "react";
 import type { Post } from "../api/communities.js";
+import { extractFirstUrl } from "@hatchery/common";
 import { AuthorByline } from "./AuthorByline.js";
+import { OgpCard } from "./OgpCard.js";
 import { PostedTime } from "./PostedTime.js";
 import { VoteControl } from "./VoteControl.js";
 import { ShareButton } from "./ShareButton.js";
+import { MarkdownContent } from "./MarkdownContent.js";
 import type { VoteDirection } from "./VoteControl.js";
 
 /** 投稿カードに表示する所属コミュニティの最小情報（#503）。 */
@@ -93,6 +96,8 @@ export const PostCard = ({
 }: PostCardProps): ReactElement => {
   // comment_count はサーバ集計値（#500）。未指定（後方互換）は 0 として扱う。
   const commentCount = post.comment_count ?? 0;
+  // 本文の先頭 URL（スレッド全文表示時のみ OGP カード展開に使用）（#515）。
+  const firstUrl = truncateText ? null : extractFirstUrl(post.text);
   const handleVoteClick = voteStopPropagation
     ? (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -136,9 +141,10 @@ export const PostCard = ({
             <AuthorByline author={post.author} authorWorker={post.author_worker} />
             <PostedTime createdAt={post.created_at} />
           </Box>
-          <Typography
+          <MarkdownContent
+            content={post.text}
             variant="body1"
-            sx={
+            paragraphSx={
               truncateText
                 ? {
                     display: "-webkit-box",
@@ -148,9 +154,8 @@ export const PostCard = ({
                   }
                 : undefined
             }
-          >
-            {post.text}
-          </Typography>
+          />
+          {firstUrl && <OgpCard url={firstUrl} />}
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 1 }}>
             <Typography
               variant="body2"

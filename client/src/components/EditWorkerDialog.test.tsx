@@ -209,6 +209,40 @@ describe("EditWorkerDialog（#181 / #329 / #490）", () => {
     expect(screen.queryByText(/失敗/)).not.toBeInTheDocument();
   });
 
+  it("文章量（verbosity）の選択 UI が表示される（#625）", () => {
+    renderWithClient(<EditWorkerDialog worker={mockWorker} open onClose={vi.fn()} />);
+    expect(screen.getByLabelText(/文章量/)).toBeInTheDocument();
+  });
+
+  it("worker.verbosity が未設定のとき文章量の初期値は standard（#625）", () => {
+    renderWithClient(<EditWorkerDialog worker={{ ...mockWorker, verbosity: undefined }} open onClose={vi.fn()} />);
+    // 初期値が standard であること（Select の value 表示）
+    expect(screen.getByLabelText(/文章量/)).toBeInTheDocument();
+  });
+
+  it("worker.verbosity=concise のとき文章量の初期値は concise（#625）", () => {
+    renderWithClient(<EditWorkerDialog worker={{ ...mockWorker, verbosity: "concise" }} open onClose={vi.fn()} />);
+    // 「簡潔」という表示文字が含まれていること
+    expect(screen.getByText("簡潔")).toBeInTheDocument();
+  });
+
+  it("保存ボタンを押すと verbosity が body に含まれる（#625）", async () => {
+    const updateMutateAsync = vi.fn().mockResolvedValue(undefined);
+    const setMutateAsync = vi.fn().mockResolvedValue([]);
+    stubAll({ updateMutateAsync, setMutateAsync, current: [] });
+
+    renderWithClient(<EditWorkerDialog worker={{ ...mockWorker, verbosity: "detailed" }} open onClose={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /保存/ }));
+
+    await waitFor(() => {
+      expect(updateMutateAsync).toHaveBeenCalledWith({
+        id: "haru",
+        body: expect.objectContaining({ verbosity: "detailed" }),
+      });
+    });
+  });
+
   it("参加コミュニティ取得が失敗しても名前・役割は編集・保存でき、置換 API は呼ばれない（#490）", async () => {
     const updateMutateAsync = vi.fn().mockResolvedValue(undefined);
     const setMutateAsync = vi.fn().mockResolvedValue([]);

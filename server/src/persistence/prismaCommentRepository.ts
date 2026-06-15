@@ -1,6 +1,11 @@
 import type { PrismaClient } from "@prisma/client";
 
-import type { CommentCreateInput, CommentRecord, CommentRepository } from "./commentRepository.js";
+import type {
+  CommentCreateInput,
+  CommentRecord,
+  CommentRepository,
+  RevealFilterOptions,
+} from "./commentRepository.js";
 
 function toRecord(row: {
   id: string;
@@ -48,6 +53,8 @@ export function createPrismaCommentRepository(prisma: PrismaClient): CommentRepo
               seq: input.seq,
               author: input.author,
               text: input.text,
+              // createdAt は input から注入可能（#556 ドリップ割当）。省略時は DB @default(now())。
+              ...(input.createdAt !== undefined ? { createdAt: input.createdAt } : {}),
             },
           }),
         ),
@@ -55,17 +62,27 @@ export function createPrismaCommentRepository(prisma: PrismaClient): CommentRepo
       return rows.map(toRecord);
     },
 
-    async listByPost(postId: string): Promise<CommentRecord[]> {
+    async listByPost(postId: string, options?: RevealFilterOptions): Promise<CommentRecord[]> {
+      const now = options?.now;
       const rows = await prisma.comment.findMany({
-        where: { postId },
+        where: {
+          postId,
+          // reveal フィルタ（#556）: now が渡された場合、createdAt > now のコメントを除外する。
+          ...(now !== undefined ? { createdAt: { lte: now } } : {}),
+        },
         orderBy: { createdAt: "asc" },
       });
       return rows.map(toRecord);
     },
 
-    async listByCommunity(communityId: string, limit = 50): Promise<CommentRecord[]> {
+    async listByCommunity(communityId: string, limit = 50, options?: RevealFilterOptions): Promise<CommentRecord[]> {
+      const now = options?.now;
       const rows = await prisma.comment.findMany({
-        where: { communityId },
+        where: {
+          communityId,
+          // reveal フィルタ（#556）: now が渡された場合、createdAt > now のコメントを除外する。
+          ...(now !== undefined ? { createdAt: { lte: now } } : {}),
+        },
         orderBy: { createdAt: "asc" },
         take: limit,
       });

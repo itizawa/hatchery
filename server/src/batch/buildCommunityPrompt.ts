@@ -1,4 +1,5 @@
 import type { CommunityRecord } from "../persistence/communityRepository.js";
+import type { CountHints } from "./generateCountHints.js";
 
 /** ワーカー定義（プロンプト構築に必要な最小フィールド）。 */
 export interface WorkerDef {
@@ -18,6 +19,13 @@ export interface RecentPostRef {
   title: string;
 }
 
+/** 人気投稿エントリ（プロンプト構築に必要な最小フィールド）（#558）。 */
+export interface PopularPostEntry {
+  title: string;
+  author: string;
+  score: number;
+}
+
 /** buildCommunityPrompt のパラメータ。 */
 export interface BuildCommunityPromptParams {
   community: CommunityRecord;
@@ -28,6 +36,18 @@ export interface BuildCommunityPromptParams {
    * 省略時・空時は既存Postへの返信指示を含めない。
    */
   recentPosts?: readonly RecentPostRef[];
+  /**
+   * 直近で高スコアを集めた投稿（#558）。
+   * 省略または空配列の場合は「特に反応が良かった投稿」セクションを省略する。
+   */
+  popularPosts?: readonly PopularPostEntry[];
+  /**
+   * post 数・コメント数の目標件数ヒント（#557）。
+   * 指定するとプロンプトに「post を N 件、各 post に M 件前後のコメントを」と誘導指示を追加する。
+   * 省略時は「posts は 1 件以上生成してください」（従来挙動）。
+   * 件数はあくまでプロンプト上の誘導であり、ハード制約ではない。
+   */
+  countHints?: CountHints;
 }
 
 /** buildCommunityPrompt の戻り値。#555 */
@@ -61,6 +81,8 @@ export const TONE_GUIDELINES = `## トーン規約（このコミュニティの
  * - worker 定義（id / displayName / role / personality）を含める
  * - 直近ログ（formatRecentLog の出力）を含める
  * - recentPosts が指定された場合、既存Postへの参照IDとタイトルを含め返信指示を追加する（#555）
+ * - popularPosts が指定された場合、人気投稿セクションを追加する（#558）
+ * - countHints が指定された場合、post/comment件数の誘導を追加する（#557）
  * - お題（open_prompts）は含めない（ADR-0020）
  * - score は生成しない（ADR-0019）
  * - 出力形式: { topic, posts: [...], replies: [...] }（#555）
@@ -80,7 +102,7 @@ export const TONE_GUIDELINES = `## トーン規約（このコミュニティの
 export function buildCommunityPrompt(
   params: BuildCommunityPromptParams,
 ): BuildCommunityPromptResult {
-  const { community, workers, recentLog, recentPosts } = params;
+  const { community, workers, recentLog, recentPosts, popularPosts, countHints } = params;
 
   const workerLines = workers
     .map((w) => {
@@ -117,6 +139,14 @@ export function buildCommunityPrompt(
     ? `\n既存スレッド一覧（過去の投稿・これらにコメントを追加することもできます）:\n${recentPosts.map((p) => `  - 参照ID: ${p.ref}  タイトル: ${p.title}`).join("\n")}\n`
     : "";
 
+  // 人気投稿セクション（#558）
+  const popularPostsSection =
+    popularPosts && popularPosts.length > 0
+      ? `特に反応が良かった投稿（直近 7 日間）:\n${popularPosts
+          .map((p) => `- 「${p.title}」（by ${p.author}, score: ${p.score}）`)
+          .join("\n")}\n（この話題の続きや関連を歓迎します。）\n\n`
+      : "";
+
   // replies フィールドの JSON 例（既存Postがある場合のみ）
   const repliesJsonExample = hasRecentPosts
     ? `,
@@ -149,7 +179,7 @@ ${toneInstruction}
 ${synopsisSection}ワーカー一覧:
 ${workerLines}
 ${recentPostsSection}
-${recentLogSection}
+${popularPostsSection}${recentLogSection}
 
 以下のJSON形式のみで出力してください（前後の説明・コードブロック不要）:
 {
@@ -173,7 +203,7 @@ ${recentLogSection}
 注意事項:
 - author には必ず上記ワーカー一覧の ID を使用してください
 - score フィールドは生成しないでください
-- posts は 1 件以上生成してください
+- ${countHints ? `post を ${countHints.postCount} 件、各 post に ${countHints.commentCount} 件前後のコメントを生成してください（目安であり厳密な制約ではありません）` : "posts は 1 件以上生成してください"}
 ${repliesInstruction}
 - 会話は自然で読みやすい日本語で書いてください
 

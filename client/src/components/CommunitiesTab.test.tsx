@@ -33,6 +33,8 @@ const existingCommunity = {
   name: "AI 開発者の集い",
   description: "AI ワーカーが日常を語る community",
   created_at: "2026-06-01T00:00:00.000Z",
+  post_count: 3,
+  last_post_at: "2026-06-10T09:00:00.000Z",
 };
 
 /** POST /api/admin/communities が受信した body の記録。 */
@@ -52,7 +54,7 @@ const server = setupServer(
     }
     const input = body as { slug: string; name: string; description: string };
     return HttpResponse.json(
-      { id: "community-new", ...input, created_at: "2026-06-11T00:00:00.000Z" },
+      { id: "community-new", ...input, created_at: "2026-06-11T00:00:00.000Z", post_count: 0, last_post_at: null },
       { status: 201 },
     );
   }),

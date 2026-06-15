@@ -149,6 +149,152 @@ describe("buildCommunityPrompt (#306)", () => {
   });
 });
 
+describe("人気トピックセクション（#558）", () => {
+  const baseParams = {
+    community: {
+      id: "community-1",
+      slug: "technology",
+      name: "テクノロジー",
+      description: "テクノロジーとプログラミングの話題を楽しむコミュニティ。",
+      generationInstruction: null,
+      synopsis: null,
+      lastSlotKey: null,
+      iconUrl: null,
+      coverUrl: null,
+      createdAt: new Date("2026-01-01"),
+    },
+    workers: [
+      { id: "haru", displayName: "haru", role: "ムードメーカー", personality: "明るく前向き" },
+    ],
+    recentLog: ["[technology] haru: 最近の話題"],
+  };
+
+  it("popularPosts がある場合、人気投稿セクションがプロンプトに含まれる", () => {
+    const { prompt } = buildCommunityPrompt({
+      ...baseParams,
+      popularPosts: [
+        { title: "注目の AI 記事", author: "haru", score: 5 },
+        { title: "TypeScript 入門", author: "ken", score: 3 },
+      ],
+    });
+    expect(prompt).toContain("特に反応が良かった投稿");
+    expect(prompt).toContain("注目の AI 記事");
+    expect(prompt).toContain("TypeScript 入門");
+    expect(prompt).toContain("score: 5");
+    expect(prompt).toContain("score: 3");
+  });
+
+  it("popularPosts が空配列の場合、人気投稿セクションを省略する", () => {
+    const { prompt } = buildCommunityPrompt({
+      ...baseParams,
+      popularPosts: [],
+    });
+    expect(prompt).not.toContain("特に反応が良かった投稿");
+  });
+
+  it("popularPosts が undefined の場合、人気投稿セクションを省略する（後方互換）", () => {
+    const { prompt } = buildCommunityPrompt({
+      ...baseParams,
+    });
+    expect(prompt).not.toContain("特に反応が良かった投稿");
+  });
+
+  it("人気投稿セクションはワーカー一覧より後・直近ログより前に置かれる（安定 prefix 内）", () => {
+    const { prompt } = buildCommunityPrompt({
+      ...baseParams,
+      popularPosts: [{ title: "Popular Post", author: "haru", score: 10 }],
+    });
+    const workerIdx = prompt.indexOf("ワーカー一覧");
+    const popularIdx = prompt.indexOf("特に反応が良かった投稿");
+    const recentLogIdx = prompt.indexOf("[technology] haru: 最近の話題");
+
+    expect(workerIdx).toBeGreaterThanOrEqual(0);
+    expect(popularIdx).toBeGreaterThanOrEqual(0);
+    expect(recentLogIdx).toBeGreaterThanOrEqual(0);
+    expect(workerIdx).toBeLessThan(popularIdx);
+    expect(popularIdx).toBeLessThan(recentLogIdx);
+  });
+
+  it("人気投稿が 1 件でもプロンプトが壊れない", () => {
+    const { prompt } = buildCommunityPrompt({
+      ...baseParams,
+      popularPosts: [{ title: "Single Popular Post", author: "haru", score: 1 }],
+    });
+    expect(prompt).toBeTruthy();
+    expect(prompt).toContain("Single Popular Post");
+    expect(prompt).toContain("topic");
+    expect(prompt).toContain("posts");
+  });
+});
+
+describe("countHints によるpost/comment件数指示（#557）", () => {
+  const baseCommunity = {
+    id: "community-1",
+    slug: "technology",
+    name: "テクノロジー",
+    description: "テクノロジーとプログラミングの話題を楽しむコミュニティ。",
+    generationInstruction: null,
+    synopsis: null,
+    lastSlotKey: null,
+    iconUrl: null,
+    coverUrl: null,
+    createdAt: new Date("2026-01-01"),
+  };
+  const workers = [{ id: "w1", displayName: "Alice" }];
+
+  it("countHints を渡すとプロンプトに post 件数指示が含まれる", () => {
+    const { prompt } = buildCommunityPrompt({
+      community: baseCommunity,
+      workers,
+      recentLog: [],
+      countHints: { postCount: 2, commentCount: 3 },
+    });
+    expect(prompt).toContain("2");
+    expect(prompt).toContain("3");
+    // post件数とコメント数の指示が含まれること（例: "post を 2 件" or "2件" など）
+    expect(prompt).toMatch(/post.*2|2.*post/i);
+  });
+
+  it("countHints を渡すとプロンプトにコメント件数指示が含まれる", () => {
+    const { prompt } = buildCommunityPrompt({
+      community: baseCommunity,
+      workers,
+      recentLog: [],
+      countHints: { postCount: 1, commentCount: 2 },
+    });
+    // コメント数の指示が含まれること
+    expect(prompt).toMatch(/comment.*2|2.*comment|コメント.*2|2.*コメント/i);
+  });
+
+  it("countHints を渡さない場合は「1 件以上」の指示が含まれる（後方互換）", () => {
+    const { prompt } = buildCommunityPrompt({
+      community: baseCommunity,
+      workers,
+      recentLog: [],
+    });
+    expect(prompt).toContain("1 件以上");
+  });
+
+  it("countHints あり・なしでプロンプト構造は変わらず、トーン規約・ワーカー情報は常に含まれる", () => {
+    const { prompt: withHints } = buildCommunityPrompt({
+      community: baseCommunity,
+      workers,
+      recentLog: [],
+      countHints: { postCount: 3, commentCount: 2 },
+    });
+    const { prompt: withoutHints } = buildCommunityPrompt({
+      community: baseCommunity,
+      workers,
+      recentLog: [],
+    });
+    // 両方ともワーカー情報とトーン規約を含む
+    expect(withHints).toContain("Alice");
+    expect(withoutHints).toContain("Alice");
+    expect(withHints).toContain("さん付け");
+    expect(withoutHints).toContain("さん付け");
+  });
+});
+
 describe("generationInstruction フォールバック（#488）", () => {
   const workers = [{ id: "w1", displayName: "Alice" }];
 

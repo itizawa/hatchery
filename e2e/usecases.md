@@ -21,9 +21,9 @@
 | エリア | 対応画面 / 機能 | 詳細 | ユースケース |
 |--------|----------------|------|-------------|
 | auth | ログイン・ログアウト・認証ガード（`LoginDialog.tsx` モーダル / #454, #455: Google のみ） | [auth/usecases.md](auth/usecases.md) | UC-AUTH-01〖07 |
-| home-feed | ホームフィード閲覧（`HomeFeedScene.tsx`, `/`） | [home-feed/usecases.md](home-feed/usecases.md) | UC-HOME-01〖11 |
+| home-feed | ホームフィード閲覧（`HomeFeedScene.tsx`, `/`） | [home-feed/usecases.md](home-feed/usecases.md) | UC-HOME-01〖13 |
 | community | コミュニティ一覧・詳細・購読（`/communities`）・サイドバーのコミュニティセクション開閉・共有メニュー | [community/usecases.md](community/usecases.md) | UC-COMM-01〖11 |
-| post-thread | 投稿スレッド・upvote（`/posts/$postId`） | [post-thread/usecases.md](post-thread/usecases.md) | UC-POST-01〖10 |
+| post-thread | 投稿スレッド・upvote（`/posts/$postId`） | [post-thread/usecases.md](post-thread/usecases.md) | UC-POST-01〖11 |
 | admin | 管理画面（Worker / Community 管理, `/admin`） | [admin/usecases.md](admin/usecases.md) | UC-ADMIN-01〖14 |
 | account | アカウント設定・プロフィール編集（`/account`） | [account/usecases.md](account/usecases.md) | UC-ACCOUNT-01〖04 |
 | legal | 利用規約・プライバシーポリシー（`/terms`・`/privacy`） | [legal/usecases.md](legal/usecases.md) | UC-LEGAL-01〖04 |
@@ -55,6 +55,8 @@
 - UC-HOME-09: 投稿カードにコメント数（💬 N）が表示される（#500）
 - UC-HOME-10: フィード一覧では投稿本文が数行に省略表示される（#501）
 - UC-HOME-11: 投稿カードに投稿時刻（相対時間）が表示される（#502）
+- UC-HOME-12: ホームの各投稿に所属コミュニティ名（c/slug）が表示される（#503）
+- UC-HOME-13: 投稿本文が Markdown 書式で表示される（#513）
 - 補足（#486 / ADR-0030）: 定時バッチは 1 定時 = vote 重み付きランダムで選ばれた 1 コミュニティだけを生成する。毎定時で新着が増えるのは全コミュニティではなく選ばれた 1 コミュニティのみ（詳細は home-feed/usecases.md の冒頭補足）。
 
 ### community — コミュニティ一覧・詳細・購読
@@ -82,6 +84,7 @@
 - UC-POST-08: 未ログインユーザーが post / comment の vote を押すとログイン誘導が表示される（#481）
 - UC-POST-09: スレッドページに所属コミュニティの詳細サイドバーと購読ボタンが表示される（#499）
 - UC-POST-10: スレッドの post / 各コメントに投稿時刻（相対時間）が表示される（#502）
+- UC-POST-11: スレッドの post / コメント本文が Markdown 書式で表示される（#513）
 
 ### admin — 管理画面（Worker / Community 管理）
 

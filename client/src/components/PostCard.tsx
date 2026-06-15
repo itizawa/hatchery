@@ -2,8 +2,11 @@ import { Box, Link, Typography } from "./uiParts";
 import type { ReactElement } from "react";
 import type React from "react";
 import type { Post } from "../api/communities.js";
+import { extractFirstUrl } from "@hatchery/common";
 import { AuthorByline } from "./AuthorByline.js";
+import { OgpCard } from "./OgpCard.js";
 import { PostedTime } from "./PostedTime.js";
+import { TextWithLinks } from "./TextWithLinks.js";
 import { VoteControl } from "./VoteControl.js";
 import { ShareButton } from "./ShareButton.js";
 import type { VoteDirection } from "./VoteControl.js";
@@ -149,8 +152,12 @@ export const PostCard = ({
                 : undefined
             }
           >
-            {post.text}
+            <TextWithLinks text={post.text} />
           </Typography>
+          {!truncateText && (() => {
+            const firstUrl = extractFirstUrl(post.text);
+            return firstUrl ? <OgpCard url={firstUrl} /> : null;
+          })()}
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 1 }}>
             <Typography
               variant="body2"

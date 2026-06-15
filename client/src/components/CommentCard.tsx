@@ -1,8 +1,11 @@
 import { Box, Typography } from "./uiParts";
 import type { ReactElement } from "react";
 import type { Comment } from "../api/communities.js";
+import { extractFirstUrl } from "@hatchery/common";
 import { AuthorByline } from "./AuthorByline.js";
+import { OgpCard } from "./OgpCard.js";
 import { PostedTime } from "./PostedTime.js";
+import { TextWithLinks } from "./TextWithLinks.js";
 import { VoteControl } from "./VoteControl.js";
 import type { VoteDirection } from "./VoteControl.js";
 
@@ -50,8 +53,12 @@ export const CommentCard = ({
             <PostedTime createdAt={comment.created_at} />
           </Box>
           <Typography variant="body2">
-            {comment.text}
+            <TextWithLinks text={comment.text} />
           </Typography>
+          {(() => {
+            const firstUrl = extractFirstUrl(comment.text);
+            return firstUrl ? <OgpCard url={firstUrl} /> : null;
+          })()}
         </Box>
       </Box>
     </Box>

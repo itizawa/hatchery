@@ -9,6 +9,16 @@ export interface WorkerDef {
   personality?: string | null;
 }
 
+/** 既存Post参照定義（プロンプトに露出する安定参照ID + 実postId マッピング用）。#555 */
+export interface RecentPostRef {
+  /** プロンプトに露出する安定参照ID（"ref-1" 等）。 */
+  ref: string;
+  /** 実際の postId（UUID）。永続化時の解決に使う。 */
+  id: string;
+  /** 投稿タイトル。AIモデルが内容を把握するためにプロンプトに含める。 */
+  title: string;
+}
+
 /** 人気投稿エントリ（プロンプト構築に必要な最小フィールド）（#558）。 */
 export interface PopularPostEntry {
   title: string;
@@ -22,6 +32,11 @@ export interface BuildCommunityPromptParams {
   workers: readonly WorkerDef[];
   recentLog: readonly string[];
   /**
+   * プロンプトに露出する直近Post参照リスト（#555）。
+   * 省略時・空時は既存Postへの返信指示を含めない。
+   */
+  recentPosts?: readonly RecentPostRef[];
+  /**
    * 直近で高スコアを集めた投稿（#558）。
    * 省略または空配列の場合は「特に反応が良かった投稿」セクションを省略する。
    */
@@ -33,6 +48,14 @@ export interface BuildCommunityPromptParams {
    * 件数はあくまでプロンプト上の誘導であり、ハード制約ではない。
    */
   countHints?: CountHints;
+}
+
+/** buildCommunityPrompt の戻り値。#555 */
+export interface BuildCommunityPromptResult {
+  /** 生成プロンプト文字列。 */
+  prompt: string;
+  /** 参照ID（"ref-1" 等）→ 実postId のマッピング。recentPosts が空のときは空 Map。 */
+  postRefMap: Map<string, string>;
 }
 
 /**
@@ -53,13 +76,19 @@ export const TONE_GUIDELINES = `## トーン規約（このコミュニティの
 - 失敗やハプニング・意見の食い違いは、最後は温かく着地させ深刻化させない。全員が常に気の利いたことを言う必要はなく、生返事・雑談も歓迎。`;
 
 /**
- * community 単位の生成プロンプトを構築する（#306 / ADR-0019 / ADR-0020 / #389 AC4）。
+ * community 単位の生成プロンプトを構築する（#306 / ADR-0019 / ADR-0020 / #389 AC4 / #555）。
  * - community の description（作風）を含める
  * - worker 定義（id / displayName / role / personality）を含める
  * - 直近ログ（formatRecentLog の出力）を含める
+ * - recentPosts が指定された場合、既存Postへの参照IDとタイトルを含め返信指示を追加する（#555）
+ * - popularPosts が指定された場合、人気投稿セクションを追加する（#558）
+ * - countHints が指定された場合、post/comment件数の誘導を追加する（#557）
  * - お題（open_prompts）は含めない（ADR-0020）
  * - score は生成しない（ADR-0019）
- * - 出力形式: { topic, posts: [{ id, author, title, text, comments: [{ author, text }] }] }
+ * - 出力形式: { topic, posts: [...], replies: [...] }（#555）
+ *
+ * 戻り値: { prompt: string, postRefMap: Map<string, string> }（#555）
+ * - postRefMap は 参照ID（"ref-1" 等）→ 実postId のマッピング
  *
  * 構造（#389 AC4・プロンプトキャッシュ向け）:
  *   安定 prefix（指示文 + トーン規約 + 作風 description/synopsis + ワーカー定義）
@@ -70,8 +99,10 @@ export const TONE_GUIDELINES = `## トーン規約（このコミュニティの
  * により同一実行内で prefix を共有する相手がおらず、かつ安定部が sonnet-4-6 のキャッシュ最小 prefix
  * （2048 トークン）に満たないため cache_control は付与しない（理由は docs/design/issue-389.md に記録）。
  */
-export function buildCommunityPrompt(params: BuildCommunityPromptParams): string {
-  const { community, workers, recentLog, popularPosts, countHints } = params;
+export function buildCommunityPrompt(
+  params: BuildCommunityPromptParams,
+): BuildCommunityPromptResult {
+  const { community, workers, recentLog, recentPosts, popularPosts, countHints } = params;
 
   const workerLines = workers
     .map((w) => {
@@ -93,6 +124,22 @@ export function buildCommunityPrompt(params: BuildCommunityPromptParams): string
     ? `コミュニティのあらすじ:\n${community.synopsis}\n\n`
     : "";
 
+  // 既存Post参照マップを構築（#555）
+  const postRefMap = new Map<string, string>();
+  const hasRecentPosts = recentPosts && recentPosts.length > 0;
+
+  if (hasRecentPosts) {
+    for (const p of recentPosts) {
+      postRefMap.set(p.ref, p.id);
+    }
+  }
+
+  // 既存Post参照セクション（#555）
+  const recentPostsSection = hasRecentPosts
+    ? `\n既存スレッド一覧（過去の投稿・これらにコメントを追加することもできます）:\n${recentPosts.map((p) => `  - 参照ID: ${p.ref}  タイトル: ${p.title}`).join("\n")}\n`
+    : "";
+
+  // 人気投稿セクション（#558）
   const popularPostsSection =
     popularPosts && popularPosts.length > 0
       ? `特に反応が良かった投稿（直近 7 日間）:\n${popularPosts
@@ -100,7 +147,28 @@ export function buildCommunityPrompt(params: BuildCommunityPromptParams): string
           .join("\n")}\n（この話題の続きや関連を歓迎します。）\n\n`
       : "";
 
-  return `あなたはコミュニティ "${community.name}" に所属するAIワーカーです。
+  // replies フィールドの JSON 例（既存Postがある場合のみ）
+  const repliesJsonExample = hasRecentPosts
+    ? `,
+  "replies": [
+    {
+      "targetPostRef": "参照ID（上記の既存スレッド一覧の参照IDから選択）",
+      "author": "workerId（上記ワーカー一覧のIDから選択）",
+      "text": "コメント本文"
+    }
+  ]`
+    : `,
+  "replies": []`;
+
+  // replies の注意事項（既存Postがある場合のみ）
+  const repliesInstruction = hasRecentPosts
+    ? `- replies には既存スレッドへのコメントを含めることができます（省略可・既存スレッドがあれば積極的に活用してください）
+- replies の targetPostRef には必ず上記「既存スレッド一覧」の参照IDを使用してください
+`
+    : `- replies は空配列のままにしてください（既存スレッドがありません）
+`;
+
+  const prompt = `あなたはコミュニティ "${community.name}" に所属するAIワーカーです。
 以下の設定とコンテキストに基づき、このコミュニティのスレッド（post + comment の掛け合い）を生成してください。
 
 ${TONE_GUIDELINES}
@@ -110,7 +178,7 @@ ${toneInstruction}
 
 ${synopsisSection}ワーカー一覧:
 ${workerLines}
-
+${recentPostsSection}
 ${popularPostsSection}${recentLogSection}
 
 以下のJSON形式のみで出力してください（前後の説明・コードブロック不要）:
@@ -129,13 +197,14 @@ ${popularPostsSection}${recentLogSection}
         }
       ]
     }
-  ]
+  ]${repliesJsonExample}
 }
 
 注意事項:
 - author には必ず上記ワーカー一覧の ID を使用してください
 - score フィールドは生成しないでください
 - ${countHints ? `post を ${countHints.postCount} 件、各 post に ${countHints.commentCount} 件前後のコメントを生成してください（目安であり厳密な制約ではありません）` : "posts は 1 件以上生成してください"}
+${repliesInstruction}
 - 会話は自然で読みやすい日本語で書いてください
 
 自己監査（出力前に必ず確認）:
@@ -143,4 +212,6 @@ ${popularPostsSection}${recentLogSection}
 - コメント本文が特定ユーザーへの名指しの直接呼びかけ（「○○、」「○○さ、」等の冒頭呼称）で始まっていないか。
 - 馴れ合い（中身のない同意・褒め合い）に終始せず、率直な意見・異論が含まれているか。
 - 深刻な対立・人格否定・攻撃に踏み込んでいないか（温かく着地しているか）。`;
+
+  return { prompt, postRefMap };
 }

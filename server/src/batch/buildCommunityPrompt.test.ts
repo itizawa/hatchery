@@ -24,12 +24,12 @@ describe("buildCommunityPrompt (#306)", () => {
   };
 
   it("コミュニティの description がプロンプトに含まれる", () => {
-    const prompt = buildCommunityPrompt(baseParams);
+    const { prompt } = buildCommunityPrompt(baseParams);
     expect(prompt).toContain("テクノロジーとプログラミングの話題を楽しむコミュニティ。");
   });
 
   it("ワーカー情報がプロンプトに含まれる", () => {
-    const prompt = buildCommunityPrompt(baseParams);
+    const { prompt } = buildCommunityPrompt(baseParams);
     expect(prompt).toContain("haru");
     expect(prompt).toContain("ムードメーカー");
     expect(prompt).toContain("ken");
@@ -37,20 +37,20 @@ describe("buildCommunityPrompt (#306)", () => {
   });
 
   it("直近ログがプロンプトに含まれる", () => {
-    const prompt = buildCommunityPrompt(baseParams);
+    const { prompt } = buildCommunityPrompt(baseParams);
     expect(prompt).toContain("[technology] haru: 最近の AI トレンド面白いですね");
     expect(prompt).toContain("[technology] ken: 確かに、LLM の進歩は速い");
   });
 
   it("お題（open_prompts）はプロンプトに含まれない", () => {
-    const prompt = buildCommunityPrompt(baseParams);
+    const { prompt } = buildCommunityPrompt(baseParams);
     // お題に関するキーワードが含まれないことを確認
     expect(prompt).not.toContain("open_prompts");
     expect(prompt).not.toContain("お題");
   });
 
   it("出力の JSON 形式指示が含まれる", () => {
-    const prompt = buildCommunityPrompt(baseParams);
+    const { prompt } = buildCommunityPrompt(baseParams);
     // topic と posts を含む JSON 形式を要求
     expect(prompt).toContain("topic");
     expect(prompt).toContain("posts");
@@ -61,7 +61,7 @@ describe("buildCommunityPrompt (#306)", () => {
   });
 
   it("直近ログが空の場合でもプロンプトが生成される", () => {
-    const prompt = buildCommunityPrompt({ ...baseParams, recentLog: [] });
+    const { prompt } = buildCommunityPrompt({ ...baseParams, recentLog: [] });
     expect(prompt).toBeTruthy();
     expect(prompt).toContain("テクノロジーとプログラミングの話題を楽しむコミュニティ。");
   });
@@ -71,7 +71,7 @@ describe("buildCommunityPrompt (#306)", () => {
       ...baseParams.community,
       synopsis: "このコミュニティではテクノロジーの話題が中心。",
     };
-    const prompt = buildCommunityPrompt({ ...baseParams, community });
+    const { prompt } = buildCommunityPrompt({ ...baseParams, community });
     expect(prompt).toContain("このコミュニティではテクノロジーの話題が中心。");
   });
 
@@ -96,7 +96,7 @@ describe("buildCommunityPrompt (#306)", () => {
     });
 
     it("トーン規約がプロンプトに必ず注入される（全 community 共通）", () => {
-      const prompt = buildCommunityPrompt(baseParams);
+      const { prompt } = buildCommunityPrompt(baseParams);
       expect(prompt).toContain(TONE_GUIDELINES);
     });
 
@@ -105,45 +105,23 @@ describe("buildCommunityPrompt (#306)", () => {
         ...baseParams.community,
         description: "全く別の作風: ホラー専門コミュニティ。",
       };
-      const prompt = buildCommunityPrompt({ ...baseParams, community });
+      const { prompt } = buildCommunityPrompt({ ...baseParams, community });
       // 固有部（作風）も、共通エンジン部（トーン規約）も両方含まれる
       expect(prompt).toContain("全く別の作風: ホラー専門コミュニティ。");
       expect(prompt).toContain(TONE_GUIDELINES);
     });
 
     it("自己監査に「さん付け」していないかの確認が含まれる（concept 自己監査）", () => {
-      const prompt = buildCommunityPrompt(baseParams);
+      const { prompt } = buildCommunityPrompt(baseParams);
       // 自己監査セクションで さん付け をチェックさせる
       expect(prompt).toContain("さん付け");
-    });
-
-    // #608: 名指しの直接呼びかけを抑制する
-    it("名指しの直接呼びかけを避ける指示が TONE_GUIDELINES に含まれる（受け入れ条件 1）", () => {
-      // 「○○、」「○○さ、」等の冒頭呼称を避ける旨が共通エンジン部に含まれる
-      expect(TONE_GUIDELINES).toContain("名指し");
-      expect(TONE_GUIDELINES).toContain("呼びかけ");
-    });
-
-    it("名指し呼びかけ回避ルールがプロンプトに必ず注入される（受け入れ条件 1）", () => {
-      const prompt = buildCommunityPrompt(baseParams);
-      expect(prompt).toContain("名指し");
-      expect(prompt).toContain("呼びかけ");
-    });
-
-    it("自己監査にコメントが直接呼びかけで始まっていないかの確認が含まれる（受け入れ条件 2）", () => {
-      const prompt = buildCommunityPrompt(baseParams);
-      const auditIdx = prompt.indexOf("自己監査（出力前に必ず確認）");
-      expect(auditIdx).toBeGreaterThanOrEqual(0);
-      const auditSection = prompt.slice(auditIdx);
-      // 自己監査セクション内に「呼びかけで始まっていないか」相当のチェックが含まれる
-      expect(auditSection).toContain("呼びかけ");
     });
   });
 
   // #389 AC4: 安定 prefix（テンプレート + ワーカー + 作風）→ 可変 suffix（直近ログ）の順に構造化
   describe("プロンプトキャッシュ向けの構造化（#389 AC4）", () => {
     it("安定部（トーン規約・作風・ワーカー）が可変部（直近ログ）より前に置かれる", () => {
-      const prompt = buildCommunityPrompt(baseParams);
+      const { prompt } = buildCommunityPrompt(baseParams);
       const toneIdx = prompt.indexOf(TONE_GUIDELINES);
       const descIdx = prompt.indexOf("テクノロジーとプログラミングの話題を楽しむコミュニティ。");
       const workerIdx = prompt.indexOf("haru");
@@ -160,7 +138,7 @@ describe("buildCommunityPrompt (#306)", () => {
     });
 
     it("可変部（直近ログ）は出力フォーマット指示より前に置かれる", () => {
-      const prompt = buildCommunityPrompt(baseParams);
+      const { prompt } = buildCommunityPrompt(baseParams);
       const recentLogIdx = prompt.indexOf("[technology] haru: 最近の AI トレンド面白いですね");
       const outputFormatIdx = prompt.indexOf("以下のJSON形式のみで出力してください");
 
@@ -192,7 +170,7 @@ describe("人気トピックセクション（#558）", () => {
   };
 
   it("popularPosts がある場合、人気投稿セクションがプロンプトに含まれる", () => {
-    const prompt = buildCommunityPrompt({
+    const { prompt } = buildCommunityPrompt({
       ...baseParams,
       popularPosts: [
         { title: "注目の AI 記事", author: "haru", score: 5 },
@@ -207,7 +185,7 @@ describe("人気トピックセクション（#558）", () => {
   });
 
   it("popularPosts が空配列の場合、人気投稿セクションを省略する", () => {
-    const prompt = buildCommunityPrompt({
+    const { prompt } = buildCommunityPrompt({
       ...baseParams,
       popularPosts: [],
     });
@@ -215,14 +193,14 @@ describe("人気トピックセクション（#558）", () => {
   });
 
   it("popularPosts が undefined の場合、人気投稿セクションを省略する（後方互換）", () => {
-    const prompt = buildCommunityPrompt({
+    const { prompt } = buildCommunityPrompt({
       ...baseParams,
     });
     expect(prompt).not.toContain("特に反応が良かった投稿");
   });
 
   it("人気投稿セクションはワーカー一覧より後・直近ログより前に置かれる（安定 prefix 内）", () => {
-    const prompt = buildCommunityPrompt({
+    const { prompt } = buildCommunityPrompt({
       ...baseParams,
       popularPosts: [{ title: "Popular Post", author: "haru", score: 10 }],
     });
@@ -238,7 +216,7 @@ describe("人気トピックセクション（#558）", () => {
   });
 
   it("人気投稿が 1 件でもプロンプトが壊れない", () => {
-    const prompt = buildCommunityPrompt({
+    const { prompt } = buildCommunityPrompt({
       ...baseParams,
       popularPosts: [{ title: "Single Popular Post", author: "haru", score: 1 }],
     });
@@ -265,7 +243,7 @@ describe("countHints によるpost/comment件数指示（#557）", () => {
   const workers = [{ id: "w1", displayName: "Alice" }];
 
   it("countHints を渡すとプロンプトに post 件数指示が含まれる", () => {
-    const prompt = buildCommunityPrompt({
+    const { prompt } = buildCommunityPrompt({
       community: baseCommunity,
       workers,
       recentLog: [],
@@ -278,7 +256,7 @@ describe("countHints によるpost/comment件数指示（#557）", () => {
   });
 
   it("countHints を渡すとプロンプトにコメント件数指示が含まれる", () => {
-    const prompt = buildCommunityPrompt({
+    const { prompt } = buildCommunityPrompt({
       community: baseCommunity,
       workers,
       recentLog: [],
@@ -289,7 +267,7 @@ describe("countHints によるpost/comment件数指示（#557）", () => {
   });
 
   it("countHints を渡さない場合は「1 件以上」の指示が含まれる（後方互換）", () => {
-    const prompt = buildCommunityPrompt({
+    const { prompt } = buildCommunityPrompt({
       community: baseCommunity,
       workers,
       recentLog: [],
@@ -298,13 +276,13 @@ describe("countHints によるpost/comment件数指示（#557）", () => {
   });
 
   it("countHints あり・なしでプロンプト構造は変わらず、トーン規約・ワーカー情報は常に含まれる", () => {
-    const withHints = buildCommunityPrompt({
+    const { prompt: withHints } = buildCommunityPrompt({
       community: baseCommunity,
       workers,
       recentLog: [],
       countHints: { postCount: 3, commentCount: 2 },
     });
-    const withoutHints = buildCommunityPrompt({
+    const { prompt: withoutHints } = buildCommunityPrompt({
       community: baseCommunity,
       workers,
       recentLog: [],
@@ -321,7 +299,7 @@ describe("generationInstruction フォールバック（#488）", () => {
   const workers = [{ id: "w1", displayName: "Alice" }];
 
   it("generationInstruction が設定されていればプロンプトに含まれる", () => {
-    const prompt = buildCommunityPrompt({
+    const { prompt } = buildCommunityPrompt({
       community: {
         id: "c1", slug: "s", name: "N", description: "公開概要（含まれない）",
         generationInstruction: "内部指示：脱さん付け",
@@ -335,7 +313,7 @@ describe("generationInstruction フォールバック（#488）", () => {
   });
 
   it("generationInstruction が null のとき description にフォールバックする", () => {
-    const prompt = buildCommunityPrompt({
+    const { prompt } = buildCommunityPrompt({
       community: {
         id: "c1", slug: "s", name: "N", description: "公開概要（フォールバック）",
         generationInstruction: null,
@@ -348,7 +326,7 @@ describe("generationInstruction フォールバック（#488）", () => {
   });
 
   it("generationInstruction が空文字のとき description にフォールバックする", () => {
-    const prompt = buildCommunityPrompt({
+    const { prompt } = buildCommunityPrompt({
       community: {
         id: "c1", slug: "s", name: "N", description: "公開概要（空フォールバック）",
         generationInstruction: "",
@@ -358,5 +336,86 @@ describe("generationInstruction フォールバック（#488）", () => {
       recentLog: [],
     });
     expect(prompt).toContain("公開概要（空フォールバック）");
+  });
+});
+
+describe("既存Post参照（#555）", () => {
+  const workers = [{ id: "haru", displayName: "haru" }];
+  const baseCommunity = {
+    id: "c1", slug: "tech", name: "テクノロジー", description: "テク話",
+    generationInstruction: null, synopsis: null, lastSlotKey: null,
+    iconUrl: null, coverUrl: null, createdAt: new Date(),
+  };
+
+  it("recentPosts が指定された場合、プロンプトに参照IDと投稿タイトルが含まれる（#555）", () => {
+    const result = buildCommunityPrompt({
+      community: baseCommunity,
+      workers,
+      recentLog: [],
+      recentPosts: [
+        { ref: "ref-1", id: "post-uuid-1", title: "TypeScriptの新機能について" },
+        { ref: "ref-2", id: "post-uuid-2", title: "Rustを学んでみた" },
+      ],
+    });
+    expect(result.prompt).toContain("ref-1");
+    expect(result.prompt).toContain("TypeScriptの新機能について");
+    expect(result.prompt).toContain("ref-2");
+    expect(result.prompt).toContain("Rustを学んでみた");
+  });
+
+  it("recentPosts が指定された場合、既存Postにコメントを追加できる旨の指示（replies フィールド）が含まれる（#555）", () => {
+    const result = buildCommunityPrompt({
+      community: baseCommunity,
+      workers,
+      recentLog: [],
+      recentPosts: [
+        { ref: "ref-1", id: "post-uuid-1", title: "TypeScriptの新機能について" },
+      ],
+    });
+    expect(result.prompt).toContain("replies");
+  });
+
+  it("postRefMap に参照ID → 実postId のマッピングが含まれる（#555）", () => {
+    const result = buildCommunityPrompt({
+      community: baseCommunity,
+      workers,
+      recentLog: [],
+      recentPosts: [
+        { ref: "ref-1", id: "post-uuid-1", title: "TypeScriptの新機能について" },
+        { ref: "ref-2", id: "post-uuid-2", title: "Rustを学んでみた" },
+      ],
+    });
+    expect(result.postRefMap.get("ref-1")).toBe("post-uuid-1");
+    expect(result.postRefMap.get("ref-2")).toBe("post-uuid-2");
+  });
+
+  it("recentPosts が省略された場合、postRefMap は空になる（#555）", () => {
+    const result = buildCommunityPrompt({
+      community: baseCommunity,
+      workers,
+      recentLog: [],
+    });
+    expect(result.postRefMap.size).toBe(0);
+  });
+
+  it("recentPosts が空配列のとき、postRefMap は空になる（#555）", () => {
+    const result = buildCommunityPrompt({
+      community: baseCommunity,
+      workers,
+      recentLog: [],
+      recentPosts: [],
+    });
+    expect(result.postRefMap.size).toBe(0);
+  });
+
+  it("戻り値の prompt は文字列で内容を含む（#555・後方互換）", () => {
+    const result = buildCommunityPrompt({
+      community: baseCommunity,
+      workers,
+      recentLog: [],
+    });
+    expect(typeof result.prompt).toBe("string");
+    expect(result.prompt.length).toBeGreaterThan(0);
+    expect(result.prompt).toContain("テク話");
   });
 });

@@ -22,7 +22,7 @@
 |--------|----------------|------|-------------|
 | auth | ログイン・ログアウト・認証ガード（`LoginDialog.tsx` モーダル / #454, #455: Google のみ） | [auth/usecases.md](auth/usecases.md) | UC-AUTH-01〖07 |
 | home-feed | ホームフィード閲覧（`HomeFeedScene.tsx`, `/`） | [home-feed/usecases.md](home-feed/usecases.md) | UC-HOME-01〖13 |
-| community | コミュニティ一覧・詳細・購読（`/communities`）・サイドバーのコミュニティセクション開閉・共有メニュー・モバイルドロワーナビ見切れ防止・活気指標（#527） | [community/usecases.md](community/usecases.md) | UC-COMM-01〖13 |
+| community | コミュニティ一覧・詳細・購読（`/communities`）・サイドバーのコミュニティセクション開閉・共有メニュー・モバイルドロワーナビ見切れ防止 | [community/usecases.md](community/usecases.md) | UC-COMM-01〖12 |
 | post-thread | 投稿スレッド・upvote（`/posts/$postId`） | [post-thread/usecases.md](post-thread/usecases.md) | UC-POST-01〖13 |
 | admin | 管理画面（Worker / Community 管理, `/admin`） | [admin/usecases.md](admin/usecases.md) | UC-ADMIN-01〖14 |
 | account | アカウント設定・プロフィール編集（`/account`） | [account/usecases.md](account/usecases.md) | UC-ACCOUNT-01〖04 |
@@ -71,9 +71,7 @@
 - UC-COMM-08: コミュニティ詳細の最近の登場ワーカー取得に失敗してもページ本体は表示される
 - UC-COMM-09: サイドバーの「コミュニティ」セクションを見出しクリックで開閉できる
 - UC-COMM-10: コミュニティ詳細の共有メニューから URL をコピーでき、失敗時はエラーが表示される
-- UC-COMM-11: コミュニティ詳細の投稿一覧では本文が数行に省略表示される（#501）
 - UC-COMM-12: モバイルドロワーを開いたとき全ナビ項目が見切れず表示される（#514）
-- UC-COMM-13: コミュニティ一覧に投稿数・最終投稿の活気指標が表示される（#527）
 
 ### post-thread — 投稿スレッド・upvote
 
@@ -89,7 +87,7 @@
 - UC-POST-10: スレッドの post / 各コメントに投稿時刻（相対時間）が表示される（#502）
 - UC-POST-11: スレッドの post / コメント本文が Markdown 書式で表示される（#513）
 - UC-POST-12: 投稿スレッドを開いたときブラウザタブのタイトルに post タイトルが表示される（#528）
-- UC-POST-13: post / コメント本文の先頭 URL が OGP カードとして展開表示される（#515）
+- UC-POST-13: コメントが返信スレッド（ネスト構造）として Reddit 風に表示される（#520）
 
 ### admin — 管理画面（Worker / Community 管理）
 

@@ -218,5 +218,22 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
       }
       return statsMap;
     },
+
+    async listTopByCommunity(
+      communityId: string,
+      params: { since: Date; minScore: number; limit: number },
+    ): Promise<PostRecord[]> {
+      const { since, minScore, limit } = params;
+      const rows = await prisma.post.findMany({
+        where: {
+          communityId,
+          score: { gte: minScore },
+          createdAt: { gte: since },
+        },
+        orderBy: [{ score: "desc" }, { createdAt: "desc" }],
+        take: limit,
+      });
+      return rows.map(toRecord);
+    },
   };
 }

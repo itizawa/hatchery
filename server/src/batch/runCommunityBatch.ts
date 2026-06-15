@@ -46,6 +46,24 @@ const DEFAULT_DRIP_WINDOW_MS = 3 * 60 * 60 * 1000; // 3 時間
  */
 export const VOTE_WEIGHT_WINDOW_DAYS = 7;
 
+/**
+ * 人気トピック還元の集計対象期間（日数）（#558）。
+ * 直近この日数の post のうちスコアが高いものを生成プロンプトに渡す。
+ */
+export const POPULAR_POSTS_WINDOW_DAYS = 7;
+
+/**
+ * 人気トピック還元の最小スコア閾値（#558）。
+ * この値以上のスコアを持つ post のみをプロンプトに渡す（0 以下は除外）。
+ */
+export const POPULAR_POSTS_MIN_SCORE = 1;
+
+/**
+ * 人気トピック還元のプロンプトに載せる件数上限（#558）。
+ * スコア降順でこの件数まで載せる。
+ */
+export const POPULAR_POSTS_LIMIT = 3;
+
 /** community バッチの実行結果。 */
 export interface RunCommunityBatchResult {
   posts: PostRecord[];
@@ -291,6 +309,21 @@ export async function runCommunityBatch(
       ].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
       const recentLog = formatRecentLog(allEntries, recentLimit);
 
+      // 人気トピック還元: 直近の高スコア post を取得してプロンプトに渡す（#558 / ADR-0030）
+      const popularPostsSince = new Date(
+        now.getTime() - POPULAR_POSTS_WINDOW_DAYS * 24 * 60 * 60 * 1000,
+      );
+      const topPosts = await deps.postRepo.listTopByCommunity(community.id, {
+        since: popularPostsSince,
+        minScore: POPULAR_POSTS_MIN_SCORE,
+        limit: POPULAR_POSTS_LIMIT,
+      });
+      const popularPosts = topPosts.map((p) => ({
+        title: p.title,
+        author: p.author,
+        score: p.score,
+      }));
+
       // post 数・コメント数のヒントを生成する（#557）。
       // postRange / commentRange が注入されていれば rng で件数を決定し、countHints としてプロンプトに渡す。
       const countHints =
@@ -303,6 +336,7 @@ export async function runCommunityBatch(
         community,
         workers,
         recentLog,
+        popularPosts,
         countHints,
       });
 

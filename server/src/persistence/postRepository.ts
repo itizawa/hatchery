@@ -99,6 +99,15 @@ export interface PostRepository {
     limit?: number,
     options?: RevealFilterOptions,
   ): Promise<{ posts: PostRecord[]; nextCursor: string | null }>;
+  /**
+   * community 内で直近 since 以降かつ score >= minScore の post を
+   * score 降順で最大 limit 件返す（#558）。
+   * 定時バッチの「人気トピック還元」プロンプト構築に使う。
+   */
+  listTopByCommunity(
+    communityId: string,
+    params: { since: Date; minScore: number; limit: number },
+  ): Promise<PostRecord[]>;
 }
 
 function cloneRecord(r: PostRecord): PostRecord {
@@ -354,6 +363,27 @@ export function createInMemoryPostRepository(): PostRepository {
         }
       }
       return Promise.resolve(statsMap);
+    },
+
+    listTopByCommunity(
+      communityId: string,
+      params: { since: Date; minScore: number; limit: number },
+    ): Promise<PostRecord[]> {
+      const { since, minScore, limit } = params;
+      const result = records
+        .filter(
+          (r) =>
+            r.communityId === communityId &&
+            r.score >= minScore &&
+            r.createdAt.getTime() >= since.getTime(),
+        )
+        .sort((a, b) => {
+          if (a.score !== b.score) return b.score - a.score;
+          return b.createdAt.getTime() - a.createdAt.getTime();
+        })
+        .slice(0, limit)
+        .map(cloneRecord);
+      return Promise.resolve(result);
     },
   };
 }

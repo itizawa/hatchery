@@ -676,6 +676,94 @@ describe("runCommunityBatch ドリップ割当（#556）", () => {
   });
 });
 
+describe("runCommunityBatch 人気トピック還元 (#558)", () => {
+  beforeEach(() => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const buildDeps = (
+    communities: CommunityRecord[],
+    workerCommunityData: InMemoryWorkerCommunityData = { workers: [], links: [] },
+  ) => {
+    const communityRepo = createInMemoryCommunityRepository(communities);
+    const postRepo = createInMemoryPostRepository();
+    const commentRepo = createInMemoryCommentRepository();
+    const appSettingRepo = createInMemoryAppSettingRepository();
+    const batchRunLogRepository = createInMemoryBatchRunLogRepository();
+    const workerCommunityRepo = createInMemoryWorkerCommunityRepository(workerCommunityData);
+    const voteRepo = createInMemoryVoteRepository();
+    const botWorkerProvider = (): Promise<readonly WorkerRecord[]> => Promise.resolve(botWorkers);
+    return {
+      communityRepo,
+      postRepo,
+      commentRepo,
+      appSettingRepo,
+      batchRunLogRepository,
+      workerCommunityRepo,
+      voteRepo,
+      botWorkerProvider,
+      anthropicApiKey: "test-key",
+      rng: () => 0,
+    };
+  };
+
+  it("postRepo.listTopByCommunity が呼ばれる（人気トピック取得）", async () => {
+    const deps = buildDeps([community1]);
+    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+    const listTopSpy = vi.spyOn(deps.postRepo, "listTopByCommunity");
+
+    await runCommunityBatch({ ...deps, generate });
+
+    expect(listTopSpy).toHaveBeenCalledTimes(1);
+    expect(listTopSpy).toHaveBeenCalledWith("community-1", expect.objectContaining({
+      minScore: expect.any(Number),
+      limit: expect.any(Number),
+      since: expect.any(Date),
+    }));
+  });
+
+  it("スコアの高い post がある場合、プロンプトに人気トピックセクションが含まれる", async () => {
+    const deps = buildDeps([community1]);
+
+    // 直前にスコア付きの post を作成
+    const [p1] = await deps.postRepo.createMany("community-1", [
+      { slotKey: "prev-slot", seq: 0, author: "haru", title: "注目の人気投稿", text: "本文" },
+    ]);
+    await deps.postRepo.addScore(p1.id, 5);
+
+    let capturedPrompt = "";
+    const captureGenerate = vi.fn().mockImplementation((prompt: string) => {
+      capturedPrompt = prompt;
+      return Promise.resolve(validGenerationOutput);
+    });
+
+    await runCommunityBatch({ ...deps, generate: captureGenerate });
+
+    expect(capturedPrompt).toContain("特に反応が良かった投稿");
+    expect(capturedPrompt).toContain("注目の人気投稿");
+  });
+
+  it("スコアの高い post がない場合、プロンプトに人気トピックセクションが含まれない", async () => {
+    const deps = buildDeps([community1]);
+
+    let capturedPrompt = "";
+    const captureGenerate = vi.fn().mockImplementation((prompt: string) => {
+      capturedPrompt = prompt;
+      return Promise.resolve(validGenerationOutput);
+    });
+
+    await runCommunityBatch({ ...deps, generate: captureGenerate });
+
+    expect(capturedPrompt).not.toContain("特に反応が良かった投稿");
+  });
+});
+
 describe("generateSlotKey (#469)", () => {
   it("UTC 固定日時から UTC 基準の slot_key を生成する", () => {
     const utcDate = new Date("2026-06-10T09:30:00Z");

@@ -108,7 +108,7 @@ describe.skipIf(!DATABASE_URL)("createPrismaUserRepository (integration)", () =>
   });
 
   describe("updateProfile", () => {
-    it("displayName が反映される", async () => {
+    it("displayName が反映され avatarUrl は null のまま保持される", async () => {
       const repo = createPrismaUserRepository(prisma);
       const created = await repo.create({
         email: "update@example.com",
@@ -119,6 +119,7 @@ describe.skipIf(!DATABASE_URL)("createPrismaUserRepository (integration)", () =>
       const updated = await repo.updateProfile(created.id, { displayName: "新名前" });
 
       expect(updated.displayName).toBe("新名前");
+      expect(updated.avatarUrl).toBeNull();
     });
 
     it("avatarUrl が反映される", async () => {
@@ -147,7 +148,7 @@ describe.skipIf(!DATABASE_URL)("createPrismaUserRepository (integration)", () =>
   });
 
   describe("role マッピング", () => {
-    it("DB の role 文字列が UserRole 型に正しく変換される", async () => {
+    it("DB の role 文字列 'member' が UserRole 型に正しく変換される", async () => {
       const repo = createPrismaUserRepository(prisma);
       const created = await repo.create({
         email: "role@example.com",
@@ -158,6 +159,20 @@ describe.skipIf(!DATABASE_URL)("createPrismaUserRepository (integration)", () =>
       const found = await repo.findById(created.id);
 
       expect(found?.role).toBe("member");
+    });
+
+    it("DB の role 文字列 'admin' が UserRole 型に正しく変換される", async () => {
+      const repo = createPrismaUserRepository(prisma);
+      const created = await repo.create({
+        email: "admin@example.com",
+        googleId: "google-admin",
+        displayName: "管理者",
+      });
+      await prisma.user.update({ where: { id: created.id }, data: { role: "admin" } });
+
+      const found = await repo.findById(created.id);
+
+      expect(found?.role).toBe("admin");
     });
   });
 });

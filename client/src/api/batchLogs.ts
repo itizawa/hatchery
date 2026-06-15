@@ -3,7 +3,7 @@ import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { BatchRunLogSchema } from "@hatchery/common";
 import type { BatchRunLog } from "@hatchery/common";
 
-import { openApiClient } from "./client.js";
+import { ensureOk, openApiClient } from "./client.js";
 
 export const BATCH_LOGS_QUERY_KEY = ["admin", "batch-logs"] as const;
 
@@ -13,13 +13,12 @@ export const BATCH_LOGS_QUERY_KEY = ["admin", "batch-logs"] as const;
  * 現行どおり BatchRunLogSchema でランタイム検証し executedAt を Date 化する（挙動維持）。
  */
 export async function fetchBatchLogs(): Promise<BatchRunLog[]> {
-  const { data, error, response } = await openApiClient.GET("/api/admin/batch-logs", {
+  // ensureOk は error / !response.ok（非2xx + 空ボディの error=undefined ケース含む）を throw に変換する。
+  // 空ボディ（data undefined）は ?? [] でフォールバックし、現行どおり Schema で検証して executedAt を Date 化する。
+  const result = await openApiClient.GET("/api/admin/batch-logs", {
     credentials: "include",
   });
-  // openapi-fetch は非2xx + 空ボディ（Content-Length: 0）で error=undefined を返すため、
-  // error だけでなく response.ok も見て元コード（!res.ok throw）の確実性を保つ。
-  if (error || !response.ok) throw new Error(`GET /api/admin/batch-logs failed: ${response.status}`);
-  return BatchRunLogSchema.array().parse(data);
+  return BatchRunLogSchema.array().parse(ensureOk(result, "GET /api/admin/batch-logs") ?? []);
 }
 
 /**

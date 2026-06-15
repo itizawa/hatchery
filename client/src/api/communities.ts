@@ -20,7 +20,7 @@ import type {
 } from "@hatchery/common";
 
 import { clientEnv } from "../config/env.js";
-import { openApiClient } from "./client.js";
+import { openApiClient, unwrap } from "./client.js";
 import type { components } from "./openapi.gen.js";
 
 // ─── 分割先ドメインモジュールの後方互換 re-export（#533）──────────────────────────────
@@ -83,11 +83,10 @@ export const communityRecentWorkersQueryKey = (slug: string) =>
 
 /** GET /api/admin/communities — コミュニティ一覧を取得する（admin のみ）。 */
 export async function fetchAdminCommunities(): Promise<AdminCommunity[]> {
-  const { data, error, response } = await openApiClient.GET("/api/admin/communities", {
+  const result = await openApiClient.GET("/api/admin/communities", {
     credentials: "include",
   });
-  if (error || !response.ok || !data)
-    throw new Error(`GET /api/admin/communities failed: ${response.status}`);
+  const data = unwrap(result, "GET /api/admin/communities");
   return AdminCommunitySchema.array().parse(
     data.map((c) => ({
       ...c,
@@ -101,12 +100,11 @@ export const fetchCommunities = fetchAdminCommunities;
 
 /** POST /api/admin/communities — コミュニティを作成する（admin のみ）。 */
 export async function createCommunity(input: CreateCommunityInput): Promise<AdminCommunity> {
-  const { data, error, response } = await openApiClient.POST("/api/admin/communities", {
+  const result = await openApiClient.POST("/api/admin/communities", {
     body: input,
     credentials: "include",
   });
-  if (error || !response.ok || !data)
-    throw new Error(`POST /api/admin/communities failed: ${response.status}`);
+  const data = unwrap(result, "POST /api/admin/communities");
   return AdminCommunitySchema.parse({
     ...data,
     created_at: new Date(data.created_at),
@@ -118,13 +116,12 @@ export async function updateCommunity(
   id: string,
   input: UpdateCommunityInput,
 ): Promise<AdminCommunity> {
-  const { data, error, response } = await openApiClient.PATCH("/api/admin/communities/{id}", {
+  const result = await openApiClient.PATCH("/api/admin/communities/{id}", {
     params: { path: { id } },
     body: input,
     credentials: "include",
   });
-  if (error || !response.ok || !data)
-    throw new Error(`PATCH /api/admin/communities/${id} failed: ${response.status}`);
+  const data = unwrap(result, `PATCH /api/admin/communities/${id}`);
   return AdminCommunitySchema.parse({
     ...data,
     created_at: new Date(data.created_at),
@@ -217,11 +214,10 @@ export function useUploadCommunityImage() {
 
 /** GET /api/communities — 公開コミュニティ一覧を取得する（認証不要）。 */
 export async function fetchPublicCommunities(): Promise<Community[]> {
-  const { data, response } = await openApiClient.GET("/api/communities", {
+  const result = await openApiClient.GET("/api/communities", {
     credentials: "include",
   });
-  if (!response.ok || !data) throw new Error(`GET /api/communities failed: ${response.status}`);
-  return data;
+  return unwrap(result, "GET /api/communities");
 }
 
 /**

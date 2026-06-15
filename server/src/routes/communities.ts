@@ -2,6 +2,7 @@ import { NotFoundError } from "@hatchery/common";
 import { Router } from "express";
 
 import { buildPrivateCacheControl } from "../config/security.js";
+import { getAuthUser } from "../middleware/getAuthUser.js";
 import { requireAuth } from "../middleware/requireAuth.js";
 import { toCommunityResponse } from "./communityResponse.js";
 import type { CommentRepository } from "../persistence/commentRepository.js";
@@ -111,7 +112,7 @@ export function createCommunitiesRouter(
   // community 購読（認証必須・ADR-0020）
   router.post("/:slug/subscribe", requireAuth, (req, res, next) => {
     const { slug } = req.params as { slug: string };
-    const userId = req.user!.id;
+    const userId = getAuthUser(req).id;
 
     communityRepo
       .findBySlug(slug)
@@ -129,7 +130,7 @@ export function createCommunitiesRouter(
   // community 購読解除（認証必須・ADR-0020）
   router.delete("/:slug/subscribe", requireAuth, (req, res, next) => {
     const { slug } = req.params as { slug: string };
-    const userId = req.user!.id;
+    const userId = getAuthUser(req).id;
 
     communityRepo
       .findBySlug(slug)

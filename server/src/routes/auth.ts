@@ -5,6 +5,7 @@ import { Router } from "express";
 import type { GoogleAuthConfig, PassportInstance } from "../auth/passport.js";
 import { toAuthUser } from "../auth/passport.js";
 import { DEFAULT_PUBLIC_BASE_URL } from "../config/env.js";
+import { getAuthUser } from "../middleware/getAuthUser.js";
 import { requireAuth } from "../middleware/requireAuth.js";
 import { validateBody } from "../middleware/validateBody.js";
 import type { UserRepository } from "../persistence/userRepository.js";
@@ -35,7 +36,7 @@ export function createAuthRouter(
 
   router.patch("/me", requireAuth, validateBody(UpdateProfileSchema), async (req, res, next) => {
     try {
-      const userId = req.user!.id;
+      const userId = getAuthUser(req).id;
       const updated = await userRepository.updateProfile(userId, req.body);
       res.status(200).json(toAuthUser(updated));
     } catch (err) {

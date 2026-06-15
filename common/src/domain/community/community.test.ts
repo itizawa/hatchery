@@ -20,6 +20,8 @@ describe("CommunitySchema", () => {
     synopsis: "これまでのあらすじ",
     last_slot_key: "2026-06-10T09:00:00.000Z",
     created_at: new Date("2026-06-01T00:00:00.000Z"),
+    post_count: 5,
+    last_post_at: "2026-06-10T09:00:00.000Z",
   };
 
   it("有効なコミュニティをパースできる", () => {
@@ -266,6 +268,8 @@ describe("CommunitySchema / AdminCommunitySchema のフィールド分離（#488
     name: "Tech",
     description: "公開概要",
     created_at: new Date("2026-01-01"),
+    post_count: 0,
+    last_post_at: null,
   };
 
   it("公開 CommunitySchema は generationInstruction を含まない", () => {

@@ -28,10 +28,12 @@ export function createFeedRouter(
     }
     const { cursor, limit, sort } = parsed.data;
 
+    // reveal フィルタ（#556）: createdAt <= now のもののみ公開する。
+    const now = new Date();
     const fetchPage =
       sort === "popular"
-        ? postRepo.listPopularPaged(cursor, limit)
-        : postRepo.listLatestPaged(cursor, limit);
+        ? postRepo.listPopularPaged(cursor, limit, { now })
+        : postRepo.listLatestPaged(cursor, limit, { now });
 
     fetchPage
       .then(async (result) => {

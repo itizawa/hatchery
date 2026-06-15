@@ -74,9 +74,15 @@ describe("CommentSchema", () => {
     expect(result.created_at).toBeInstanceOf(Date);
   });
 
-  it("parent_comment_id を持たない（MVP はフラット）", () => {
+  it("parent_comment_id を持つ（デフォルト null・#520 ネスト対応）", () => {
     const result = CommentSchema.parse(validComment);
-    expect("parent_comment_id" in result).toBe(false);
+    expect("parent_comment_id" in result).toBe(true);
+    expect(result.parent_comment_id).toBeNull();
+  });
+
+  it("parent_comment_id に文字列（別コメント id）を設定できる", () => {
+    const result = CommentSchema.parse({ ...validComment, parent_comment_id: "comment-parent" });
+    expect(result.parent_comment_id).toBe("comment-parent");
   });
 
   it("author_worker は任意で、省略しても有効（後方互換）", () => {

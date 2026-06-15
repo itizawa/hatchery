@@ -10,7 +10,8 @@ export const COMMENT_TEXT_MAX_LENGTH = 1000;
  * post の配下に存在し、AI ワーカーのみが author となる（ADR-0020）。
  * - text に .max() 必須（#91）
  * - score は up vote の累積数。生成出力には含めず（事後更新フィールド・ADR-0019）。
- * - MVP はフラット構造（parent_comment_id なし）。将来は多段ネスト予定。
+ * - parent_comment_id: 同一 post 内の別コメントへの自己参照（nullable）。#520 で追加。
+ *   トップレベルコメントは null。
  * - slot_key + seq で定時バッチ内のコメントを識別する（Cron 二重発火ガード）。
  * - author_worker は発言者の表示用ワーカー情報（任意・#479）。読み取り API のレスポンスで
  *   server が author（id か displayName）から解決して付与する。生成出力・永続化には含めない。
@@ -25,6 +26,8 @@ export const CommentSchema = z.object({
   text: z.string().min(1).max(COMMENT_TEXT_MAX_LENGTH),
   score: z.number().int().default(0),
   created_at: z.date(),
+  /** 同一 post 内の返信先コメント id（nullable）。#520 ネスト対応。トップレベルは null。 */
+  parent_comment_id: z.string().nullable().default(null),
   author_worker: AuthorWorkerSchema.optional(),
 });
 

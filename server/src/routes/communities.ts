@@ -32,10 +32,12 @@ export function createCommunitiesRouter(
 
   // community 一覧（認証不要・公共コミュニティ）
   // CommunityRecord（camelCase）を OpenAPI 契約（snake_case created_at）に整形して返す（#477）
+  // post_count / last_post_at を活気指標として付与する（N+1 回避・#527）
   router.get("/", (_req, res, next) => {
-    communityRepo
-      .list()
-      .then((communities) => res.status(200).json(communities.map(toCommunityResponse)))
+    Promise.all([communityRepo.list(), postRepo.getStatsByCommunity()])
+      .then(([communities, statsMap]) =>
+        res.status(200).json(communities.map((c) => toCommunityResponse(c, statsMap.get(c.id)))),
+      )
       .catch(next);
   });
 

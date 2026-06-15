@@ -418,6 +418,17 @@
           },
           "created_at": {
             "type": "string"
+          },
+          "post_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "last_post_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
           }
         },
         "required": [
@@ -425,7 +436,9 @@
           "slug",
           "name",
           "description",
-          "created_at"
+          "created_at",
+          "post_count",
+          "last_post_at"
         ],
         "description": "コミュニティ（サブレディット相当）。ADR-0019"
       },
@@ -478,6 +491,17 @@
           "created_at": {
             "type": "string"
           },
+          "post_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "last_post_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
           "generationInstruction": {
             "type": [
               "string",
@@ -491,7 +515,9 @@
           "slug",
           "name",
           "description",
-          "created_at"
+          "created_at",
+          "post_count",
+          "last_post_at"
         ],
         "description": "admin 向けコミュニティ（generationInstruction を含む。公開 API には含めない・#488）"
       },

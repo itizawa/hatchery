@@ -30,6 +30,8 @@ export const mockCommunities: Community[] = [
     synopsis: undefined,
     last_slot_key: undefined,
     created_at: "2026-06-01T00:00:00Z",
+    post_count: 5,
+    last_post_at: "2026-06-01T09:00:00Z",
   },
   {
     id: "community-2",
@@ -39,6 +41,8 @@ export const mockCommunities: Community[] = [
     synopsis: undefined,
     last_slot_key: undefined,
     created_at: "2026-06-02T00:00:00Z",
+    post_count: 0,
+    last_post_at: null,
   },
 ];
 

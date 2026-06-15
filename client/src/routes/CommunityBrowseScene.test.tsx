@@ -18,6 +18,8 @@ const mockCommunities: Community[] = [
     synopsis: undefined,
     last_slot_key: undefined,
     created_at: "2026-06-01T00:00:00Z",
+    post_count: 5,
+    last_post_at: "2026-06-10T09:00:00Z",
   },
   {
     id: "community-2",
@@ -27,6 +29,8 @@ const mockCommunities: Community[] = [
     synopsis: undefined,
     last_slot_key: undefined,
     created_at: "2026-06-02T00:00:00Z",
+    post_count: 0,
+    last_post_at: null,
   },
 ];
 
@@ -101,5 +105,30 @@ describe("CommunityBrowseScene", () => {
     );
     renderInBoundary();
     expect(await screen.findByRole("button", { name: "再試行" })).toBeInTheDocument();
+  });
+
+  it("投稿数が表示される（#527）", async () => {
+    renderInBoundary(mockCommunities);
+    await screen.findByText("AI 開発者の集い");
+    expect(screen.getByText("5件の投稿")).toBeInTheDocument();
+  });
+
+  it("投稿が 0 件のコミュニティには「投稿なし」が表示される（#527）", async () => {
+    renderInBoundary(mockCommunities);
+    await screen.findByText("AI 開発者の集い");
+    expect(screen.getByText("投稿なし")).toBeInTheDocument();
+  });
+
+  it("最終投稿時刻が表示される（#527）", async () => {
+    renderInBoundary(mockCommunities);
+    await screen.findByText("AI 開発者の集い");
+    // last_post_at がある場合は「最終投稿:」ラベルが表示される
+    expect(screen.getByText(/最終投稿:/)).toBeInTheDocument();
+  });
+
+  it("未投稿のコミュニティには「未投稿」が表示される（#527）", async () => {
+    renderInBoundary(mockCommunities);
+    await screen.findByText("AI 開発者の集い");
+    expect(screen.getByText("未投稿")).toBeInTheDocument();
   });
 });

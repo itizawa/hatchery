@@ -26,6 +26,12 @@ export interface PostCreateInput {
   text: string;
 }
 
+/** コミュニティ別の post 統計（#527）。 */
+export interface CommunityPostStats {
+  postCount: number;
+  lastPostAt: Date | null;
+}
+
 export interface PostRepository {
   /**
    * community 配下に複数の post をバルク作成する。
@@ -43,6 +49,12 @@ export interface PostRepository {
   addScore(id: string, delta: number): Promise<PostRecord | null>;
   /** 全 community の post を新着順（createdAt 降順）で取得する。公開ホームフィード用。limit 省略時は 50 件。 */
   listLatest(limit?: number): Promise<PostRecord[]>;
+  /**
+   * コミュニティ ID をキー、post 統計（投稿数・最終投稿時刻）をバリューとした Map を返す（#527）。
+   * N+1 を避けるため全コミュニティ分を一発集計する。
+   * 投稿がないコミュニティはマップに含まれないため、呼び出し元で 0 件扱いにすること。
+   */
+  getStatsByCommunity(): Promise<Map<string, CommunityPostStats>>;
   /**
    * 全 community の post をカーソルベースのページネーションで取得する（#367）。
    * cursor は base64(JSON{ createdAt: ISO文字列, id: string })。
@@ -281,6 +293,25 @@ export function createInMemoryPostRepository(): PostRepository {
       const nextCursor = hasMore && last ? encodePopularCursor(last) : null;
 
       return Promise.resolve({ posts: posts.map(cloneRecord), nextCursor });
+    },
+
+    getStatsByCommunity(): Promise<Map<string, CommunityPostStats>> {
+      const statsMap = new Map<string, CommunityPostStats>();
+      for (const record of records) {
+        const existing = statsMap.get(record.communityId);
+        if (!existing) {
+          statsMap.set(record.communityId, {
+            postCount: 1,
+            lastPostAt: record.createdAt,
+          });
+        } else {
+          existing.postCount += 1;
+          if (record.createdAt > existing.lastPostAt!) {
+            existing.lastPostAt = record.createdAt;
+          }
+        }
+      }
+      return Promise.resolve(statsMap);
     },
   };
 }

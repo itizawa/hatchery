@@ -51,6 +51,14 @@ export interface ServerEnv {
   batchModel: BatchModel;
   /** プロンプトに載せる直近 post/comment 件数（#389 AC2）。1〜50。既定 30。 */
   batchRecentLimit: number;
+  /** 1 定時の post 最小件数（#557）。0〜10。既定 1。 */
+  batchPostMin: number;
+  /** 1 定時の post 最大件数（#557）。0〜10。既定 3。 */
+  batchPostMax: number;
+  /** 各 post のコメント最小件数（#557）。0〜10。既定 1。 */
+  batchCommentMin: number;
+  /** 各 post のコメント最大件数（#557）。0〜10。既定 3。 */
+  batchCommentMax: number;
   /** 公開 GET の Cache-Control s-maxage（秒・#559）。未指定なら CACHE_DEFAULTS.sMaxageSeconds。 */
   cacheSMaxageSeconds: number;
   /** 公開 GET の Cache-Control stale-while-revalidate（秒・#559）。未指定なら CACHE_DEFAULTS.staleWhileRevalidateSeconds。 */
@@ -83,6 +91,18 @@ export const DEFAULT_BATCH_RECENT_LIMIT = 30;
 /** 直近ログ件数の許容範囲（#389 AC2）。表示・トークン・DB 負荷を踏まえた上下限。 */
 export const BATCH_RECENT_LIMIT_MIN = 1;
 export const BATCH_RECENT_LIMIT_MAX = 50;
+
+/** 1 定時の post 件数の既定値（#557）。現状の体感を大きく変えない値。 */
+export const DEFAULT_BATCH_POST_MIN = 1;
+export const DEFAULT_BATCH_POST_MAX = 3;
+
+/** 各 post のコメント件数の既定値（#557）。現状の体感を大きく変えない値。 */
+export const DEFAULT_BATCH_COMMENT_MIN = 1;
+export const DEFAULT_BATCH_COMMENT_MAX = 3;
+
+/** post 件数・コメント件数の設定可能範囲の上限（#557）。 */
+export const BATCH_COUNT_MIN_FLOOR = 0;
+export const BATCH_COUNT_MAX_CEILING = 10;
 
 /** 公開ページのベース URL の既定値（#259）。client の DEFAULT_OGP_URL と同じドメイン。 */
 export const DEFAULT_PUBLIC_BASE_URL = "https://hatchery.pages.dev";
@@ -139,6 +159,32 @@ const EnvSchema = z.object({
     .min(BATCH_RECENT_LIMIT_MIN)
     .max(BATCH_RECENT_LIMIT_MAX)
     .default(DEFAULT_BATCH_RECENT_LIMIT),
+  // post 件数の範囲（#557）。0〜10 の整数。既定 min=1, max=3。範囲外・非数値は parse 時に throw。
+  BATCH_POST_MIN: z.coerce
+    .number()
+    .int()
+    .min(BATCH_COUNT_MIN_FLOOR)
+    .max(BATCH_COUNT_MAX_CEILING)
+    .default(DEFAULT_BATCH_POST_MIN),
+  BATCH_POST_MAX: z.coerce
+    .number()
+    .int()
+    .min(BATCH_COUNT_MIN_FLOOR)
+    .max(BATCH_COUNT_MAX_CEILING)
+    .default(DEFAULT_BATCH_POST_MAX),
+  // コメント件数の範囲（#557）。0〜10 の整数。既定 min=1, max=3。範囲外・非数値は parse 時に throw。
+  BATCH_COMMENT_MIN: z.coerce
+    .number()
+    .int()
+    .min(BATCH_COUNT_MIN_FLOOR)
+    .max(BATCH_COUNT_MAX_CEILING)
+    .default(DEFAULT_BATCH_COMMENT_MIN),
+  BATCH_COMMENT_MAX: z.coerce
+    .number()
+    .int()
+    .min(BATCH_COUNT_MIN_FLOOR)
+    .max(BATCH_COUNT_MAX_CEILING)
+    .default(DEFAULT_BATCH_COMMENT_MAX),
   // 公開 GET の Cache-Control 秒数（#559）。未設定は CACHE_DEFAULTS。非正・非数値は parse 時に throw。
   CACHE_S_MAXAGE_SECONDS: z.coerce
     .number()
@@ -179,6 +225,10 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): ServerEnv {
     GCS_BUCKET_NAME: source.GCS_BUCKET_NAME,
     BATCH_MODEL: source.BATCH_MODEL,
     BATCH_RECENT_LIMIT: source.BATCH_RECENT_LIMIT,
+    BATCH_POST_MIN: source.BATCH_POST_MIN,
+    BATCH_POST_MAX: source.BATCH_POST_MAX,
+    BATCH_COMMENT_MIN: source.BATCH_COMMENT_MIN,
+    BATCH_COMMENT_MAX: source.BATCH_COMMENT_MAX,
     CACHE_S_MAXAGE_SECONDS: source.CACHE_S_MAXAGE_SECONDS,
     CACHE_STALE_WHILE_REVALIDATE_SECONDS: source.CACHE_STALE_WHILE_REVALIDATE_SECONDS,
     BATCH_DRIP_WINDOW_MS: source.BATCH_DRIP_WINDOW_MS,
@@ -201,6 +251,10 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): ServerEnv {
     gcsBucketName: parsed.GCS_BUCKET_NAME,
     batchModel: parsed.BATCH_MODEL,
     batchRecentLimit: parsed.BATCH_RECENT_LIMIT,
+    batchPostMin: parsed.BATCH_POST_MIN,
+    batchPostMax: parsed.BATCH_POST_MAX,
+    batchCommentMin: parsed.BATCH_COMMENT_MIN,
+    batchCommentMax: parsed.BATCH_COMMENT_MAX,
     cacheSMaxageSeconds: parsed.CACHE_S_MAXAGE_SECONDS,
     cacheStaleWhileRevalidateSeconds: parsed.CACHE_STALE_WHILE_REVALIDATE_SECONDS,
     batchDripWindowMs: parsed.BATCH_DRIP_WINDOW_MS,

@@ -27,6 +27,7 @@ import {
 } from "./aiMessageGenerator.js";
 import { assignDripTimestamps } from "./assignDripTimestamps.js";
 import { buildCommunityPrompt, type WorkerDef } from "./buildCommunityPrompt.js";
+import { generateCountHints } from "./generateCountHints.js";
 import { extractErrorMessage, logBatchError, logBatchInfo } from "./logger.js";
 
 /** プロンプトに載せる直近 post/comment の既定件数。 */
@@ -101,11 +102,22 @@ export interface RunCommunityBatchDeps {
   /**
    * 重み付き 1 コミュニティ選定に使う乱数源（`[0, 1)`）。既定 `Math.random`（#486）。
    * テストでは固定値を注入して選定を決定化する。
+   * countHints の生成にも同じ rng を流用する（#557）。
    * ドリップ割当（assignDripTimestamps）にも同じ rng を流用する（#556）。
    */
   rng?: () => number;
   /** vote 集計の基準「現在時刻」（省略時は実行時の `new Date()`）。テストで固定するため。 */
   now?: Date;
+  /**
+   * 1 定時の post 数の範囲（#557）。省略時は件数誘導なし（後方互換）。
+   * min/max を指定するとプロンプトに「N 件」の誘導を追加する。
+   */
+  postRange?: { min: number; max: number };
+  /**
+   * 各 post のコメント数の範囲（#557）。省略時は件数誘導なし（後方互換）。
+   * min/max を指定するとプロンプトに「M 件前後」の誘導を追加する。
+   */
+  commentRange?: { min: number; max: number };
   /**
    * ドリップ窓（ms）（#556）。
    * 各コメントの createdAt をこの窓の中に散らして「じわじわ」公開する。
@@ -279,11 +291,19 @@ export async function runCommunityBatch(
       ].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
       const recentLog = formatRecentLog(allEntries, recentLimit);
 
+      // post 数・コメント数のヒントを生成する（#557）。
+      // postRange / commentRange が注入されていれば rng で件数を決定し、countHints としてプロンプトに渡す。
+      const countHints =
+        deps.postRange && deps.commentRange
+          ? generateCountHints(deps.postRange, deps.commentRange, rng)
+          : undefined;
+
       // プロンプト構築（お題は含めない・ADR-0020）
       const prompt = buildCommunityPrompt({
         community,
         workers,
         recentLog,
+        countHints,
       });
 
       // AI 生成（1 コミュニティ = 1 API コール・ADR-0009）

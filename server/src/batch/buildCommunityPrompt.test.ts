@@ -171,6 +171,74 @@ describe("buildCommunityPrompt (#306)", () => {
   });
 });
 
+describe("countHints によるpost/comment件数指示（#557）", () => {
+  const baseCommunity = {
+    id: "community-1",
+    slug: "technology",
+    name: "テクノロジー",
+    description: "テクノロジーとプログラミングの話題を楽しむコミュニティ。",
+    generationInstruction: null,
+    synopsis: null,
+    lastSlotKey: null,
+    iconUrl: null,
+    coverUrl: null,
+    createdAt: new Date("2026-01-01"),
+  };
+  const workers = [{ id: "w1", displayName: "Alice" }];
+
+  it("countHints を渡すとプロンプトに post 件数指示が含まれる", () => {
+    const prompt = buildCommunityPrompt({
+      community: baseCommunity,
+      workers,
+      recentLog: [],
+      countHints: { postCount: 2, commentCount: 3 },
+    });
+    expect(prompt).toContain("2");
+    expect(prompt).toContain("3");
+    // post件数とコメント数の指示が含まれること（例: "post を 2 件" or "2件" など）
+    expect(prompt).toMatch(/post.*2|2.*post/i);
+  });
+
+  it("countHints を渡すとプロンプトにコメント件数指示が含まれる", () => {
+    const prompt = buildCommunityPrompt({
+      community: baseCommunity,
+      workers,
+      recentLog: [],
+      countHints: { postCount: 1, commentCount: 2 },
+    });
+    // コメント数の指示が含まれること
+    expect(prompt).toMatch(/comment.*2|2.*comment|コメント.*2|2.*コメント/i);
+  });
+
+  it("countHints を渡さない場合は「1 件以上」の指示が含まれる（後方互換）", () => {
+    const prompt = buildCommunityPrompt({
+      community: baseCommunity,
+      workers,
+      recentLog: [],
+    });
+    expect(prompt).toContain("1 件以上");
+  });
+
+  it("countHints あり・なしでプロンプト構造は変わらず、トーン規約・ワーカー情報は常に含まれる", () => {
+    const withHints = buildCommunityPrompt({
+      community: baseCommunity,
+      workers,
+      recentLog: [],
+      countHints: { postCount: 3, commentCount: 2 },
+    });
+    const withoutHints = buildCommunityPrompt({
+      community: baseCommunity,
+      workers,
+      recentLog: [],
+    });
+    // 両方ともワーカー情報とトーン規約を含む
+    expect(withHints).toContain("Alice");
+    expect(withoutHints).toContain("Alice");
+    expect(withHints).toContain("さん付け");
+    expect(withoutHints).toContain("さん付け");
+  });
+});
+
 describe("generationInstruction フォールバック（#488）", () => {
   const workers = [{ id: "w1", displayName: "Alice" }];
 

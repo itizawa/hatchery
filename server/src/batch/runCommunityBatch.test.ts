@@ -544,6 +544,136 @@ describe("runCommunityBatch worldState 登場ローテーション (#464)", () =
   });
 });
 
+describe("runCommunityBatch ドリップ割当（#556）", () => {
+  beforeEach(() => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const buildDeps = (
+    communities: CommunityRecord[],
+    workerCommunityData: InMemoryWorkerCommunityData = { workers: [], links: [] },
+  ) => {
+    const communityRepo = createInMemoryCommunityRepository(communities);
+    const postRepo = createInMemoryPostRepository();
+    const commentRepo = createInMemoryCommentRepository();
+    const appSettingRepo = createInMemoryAppSettingRepository();
+    const batchRunLogRepository = createInMemoryBatchRunLogRepository();
+    const workerCommunityRepo = createInMemoryWorkerCommunityRepository(workerCommunityData);
+    const voteRepo = createInMemoryVoteRepository();
+    const botWorkerProvider = (): Promise<readonly WorkerRecord[]> => Promise.resolve(botWorkers);
+    return {
+      communityRepo,
+      postRepo,
+      commentRepo,
+      appSettingRepo,
+      batchRunLogRepository,
+      workerCommunityRepo,
+      voteRepo,
+      botWorkerProvider,
+      anthropicApiKey: "test-key",
+      rng: () => 0.5,
+    };
+  };
+
+  it("コメントの createdAt がスロット時刻以降・now + dripWindowMs 未満に割り当てられる", async () => {
+    const deps = buildDeps([community1]);
+    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+    const slotNow = new Date("2026-06-15T09:00:00Z");
+    const dripWindowMs = 3 * 60 * 60 * 1000; // 3h
+
+    const result = await runCommunityBatch({
+      ...deps,
+      generate,
+      now: slotNow,
+      dripWindowMs,
+      slotKey: "2026-06-15T09:00",
+    });
+
+    expect(result.comments.length).toBeGreaterThan(0);
+    for (const comment of result.comments) {
+      expect(comment.createdAt.getTime()).toBeGreaterThanOrEqual(slotNow.getTime());
+      expect(comment.createdAt.getTime()).toBeLessThan(slotNow.getTime() + dripWindowMs);
+    }
+  });
+
+  it("Post の createdAt はスロット時刻（即時公開）に設定される", async () => {
+    const deps = buildDeps([community1]);
+    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+    const slotNow = new Date("2026-06-15T09:00:00Z");
+    const dripWindowMs = 3 * 60 * 60 * 1000;
+
+    const result = await runCommunityBatch({
+      ...deps,
+      generate,
+      now: slotNow,
+      dripWindowMs,
+      slotKey: "2026-06-15T09:00",
+    });
+
+    expect(result.posts.length).toBeGreaterThan(0);
+    for (const post of result.posts) {
+      // Post は slotNow 以降に設定される（ステージング後に付与）
+      expect(post.createdAt.getTime()).toBeGreaterThanOrEqual(slotNow.getTime());
+    }
+  });
+
+  it("コメントの createdAt は単調増加する（post内）", async () => {
+    const deps = buildDeps([community1]);
+    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+    const slotNow = new Date("2026-06-15T09:00:00Z");
+
+    const result = await runCommunityBatch({
+      ...deps,
+      generate,
+      now: slotNow,
+      slotKey: "2026-06-15T09:00",
+    });
+
+    // 同一 postId のコメントが単調増加しているか検証
+    const commentsByPost = new Map<string, typeof result.comments>();
+    for (const c of result.comments) {
+      if (!commentsByPost.has(c.postId)) commentsByPost.set(c.postId, []);
+      commentsByPost.get(c.postId)!.push(c);
+    }
+    for (const comments of commentsByPost.values()) {
+      for (let i = 1; i < comments.length; i++) {
+        expect(comments[i]!.createdAt.getTime()).toBeGreaterThanOrEqual(
+          comments[i - 1]!.createdAt.getTime(),
+        );
+      }
+    }
+  });
+
+  it("バッチのコンテキスト構築（listByCommunity）が now フィルタで未解禁コメントを除外する", async () => {
+    const deps = buildDeps([community1]);
+    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+    const slotNow = new Date("2026-06-15T09:00:00Z");
+
+    // listByCommunity のスパイを仕掛けて now が渡されているか確認
+    const commentListSpy = vi.spyOn(deps.commentRepo, "listByCommunity");
+
+    await runCommunityBatch({
+      ...deps,
+      generate,
+      now: slotNow,
+      slotKey: "2026-06-15T09:00",
+    });
+
+    // now が渡されていること（reveal フィルタが有効）を確認
+    expect(commentListSpy).toHaveBeenCalledWith(
+      "community-1",
+      expect.any(Number),
+      expect.objectContaining({ now: slotNow }),
+    );
+  });
+});
+
 describe("generateSlotKey (#469)", () => {
   it("UTC 固定日時から UTC 基準の slot_key を生成する", () => {
     const utcDate = new Date("2026-06-10T09:30:00Z");

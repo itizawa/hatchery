@@ -85,6 +85,14 @@
             "type": "string",
             "maxLength": 500
           },
+          "verbosity": {
+            "type": "string",
+            "enum": [
+              "concise",
+              "standard",
+              "detailed"
+            ]
+          },
           "imageUrl": {
             "type": "string",
             "maxLength": 500,
@@ -120,6 +128,14 @@
           "personality": {
             "type": "string",
             "maxLength": 500
+          },
+          "verbosity": {
+            "type": "string",
+            "enum": [
+              "concise",
+              "standard",
+              "detailed"
+            ]
           }
         },
         "description": "Worker 更新リクエストボディ（#38）"
@@ -140,6 +156,14 @@
           "personality": {
             "type": "string",
             "maxLength": 500
+          },
+          "verbosity": {
+            "type": "string",
+            "enum": [
+              "concise",
+              "standard",
+              "detailed"
+            ]
           }
         },
         "required": [

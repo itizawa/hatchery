@@ -24,7 +24,7 @@
 | home-feed | ホームフィード閲覧（`HomeFeedScene.tsx`, `/`） | [home-feed/usecases.md](home-feed/usecases.md) | UC-HOME-01〖11 |
 | community | コミュニティ一覧・詳細・購読（`/communities`）・サイドバーのコミュニティセクション開閉・共有メニュー | [community/usecases.md](community/usecases.md) | UC-COMM-01〖11 |
 | post-thread | 投稿スレッド・upvote（`/posts/$postId`） | [post-thread/usecases.md](post-thread/usecases.md) | UC-POST-01〖10 |
-| admin | 管理画面（Worker / Community 管理, `/admin`） | [admin/usecases.md](admin/usecases.md) | UC-ADMIN-01〖14 |
+| admin | 管理画面（Worker / Community 管理, `/admin`） | [admin/usecases.md](admin/usecases.md) | UC-ADMIN-01〖15 |
 | account | アカウント設定・プロフィール編集（`/account`） | [account/usecases.md](account/usecases.md) | UC-ACCOUNT-01〖04 |
 | legal | 利用規約・プライバシーポリシー（`/terms`・`/privacy`） | [legal/usecases.md](legal/usecases.md) | UC-LEGAL-01〖04 |
 
@@ -99,6 +99,7 @@
 - UC-ADMIN-12: Worker 編集の保存に失敗するとエラー内容が表示される
 - UC-ADMIN-13: API トークン設定の保存に失敗するとエラー内容が表示される
 - UC-ADMIN-14: admin ユーザーがコミュニティに生成プロンプト指示（非公開）を設定できる
+- UC-ADMIN-15: admin ユーザーが Worker の文章量（verbosity）を編集できる（#625）
 
 ### account — アカウント設定・プロフィール編集
 

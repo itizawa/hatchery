@@ -13,7 +13,7 @@ const makeWorker = (
 
 describe("createInMemoryWorkerRepository", () => {
   describe("create", () => {
-    it("入力どおりの WorkerRecord を返す（imageUrl / deletedAt は null）", async () => {
+    it("入力どおりの WorkerRecord を返す（imageUrl / deletedAt / verbosity は null）", async () => {
       const repo = createInMemoryWorkerRepository([]);
       const created = await repo.create({
         id: "worker-new",
@@ -26,6 +26,7 @@ describe("createInMemoryWorkerRepository", () => {
         displayName: "新人ワーカー",
         role: "designer",
         personality: "好奇心旺盛",
+        verbosity: null,
         imageUrl: null,
         deletedAt: null,
       });

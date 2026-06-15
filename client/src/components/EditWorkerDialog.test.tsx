@@ -136,6 +136,7 @@ describe("EditWorkerDialog（#181 / #329 / #490）", () => {
           displayName: "ハル",
           role: "ムードメーカー",
           personality: "明るく元気",
+          verbosity: "standard",
         },
       });
     });

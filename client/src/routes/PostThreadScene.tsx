@@ -1,5 +1,5 @@
 import { Box, Skeleton, Typography } from "../components/uiParts";
-import { useParams } from "@tanstack/react-router";
+import { useParams, Link as RouterLink } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useMemo } from "react";
 import { buildCommentTree, type CommentTreeNode } from "@hatchery/common";
@@ -50,6 +50,26 @@ const SidebarSkeletonColumn = (): ReactElement => (
     />
   </SidebarColumn>
 );
+
+/**
+ * 投稿スレッド左カラム上部のコミュニティパンくずリンク（#525）。
+ * usePublicCommunities は Suspense クエリのため QueryBoundary で包んで使う。
+ * コミュニティが特定できない場合は null を返す。
+ */
+const CommunityBreadcrumb = ({ communityId }: { communityId: string }): ReactElement | null => {
+  const { data: communities } = usePublicCommunities();
+  const community = communities.find((c) => c.id === communityId);
+  if (!community) return null;
+  return (
+    <Box sx={{ mb: 1 }}>
+      <RouterLink to="/communities/$slug" params={{ slug: community.slug }}>
+        <Typography variant="body2" component="span" sx={{ color: "text.secondary", fontWeight: 600 }}>
+          c/{community.slug}
+        </Typography>
+      </RouterLink>
+    </Box>
+  );
+};
 
 /**
  * 右サイドバー（post の所属コミュニティ詳細）。
@@ -164,6 +184,20 @@ export const PostThreadScene = (): ReactElement => {
       <Box sx={{ display: "flex", gap: 3, alignItems: "flex-start" }}>
         {/* 左カラム: post 本文 + コメント一覧 */}
         <Box sx={{ flex: 1, minWidth: 0 }}>
+          {/* コミュニティへのパンくず（#525）: xs を含む全ブレークポイントで表示 */}
+          <QueryBoundary
+            fallback={
+              <Skeleton
+                data-testid="community-breadcrumb-skeleton"
+                variant="text"
+                width={80}
+                sx={{ mb: 1 }}
+              />
+            }
+            errorFallback={() => null}
+          >
+            <CommunityBreadcrumb communityId={post.community_id} />
+          </QueryBoundary>
           <PostCard
             post={post}
             onVote={(direction: VoteDirection) =>

@@ -2,6 +2,7 @@
  * 管理画面コミュニティタブ（#310）。
  * admin が community の作成・編集・一覧表示を行う。
  * フォームは @tanstack/react-form を使用（CLAUDE.md フォーム規約）。
+ * #595: name/description/generationInstruction の共通フィールドを CommunityFormFields に抽出。
  */
 import {
   Alert,
@@ -22,14 +23,12 @@ import { useForm } from "@tanstack/react-form";
 import { type ReactElement, useState } from "react";
 
 import {
-  COMMUNITY_DESCRIPTION_MAX_LENGTH,
-  COMMUNITY_GENERATION_INSTRUCTION_MAX_LENGTH,
-  COMMUNITY_NAME_MAX_LENGTH,
   COMMUNITY_SLUG_MAX_LENGTH,
   COMMUNITY_SLUG_REGEX,
 } from "@hatchery/common";
 import type { AdminCommunity, CreateCommunityInput, UpdateCommunityInput } from "@hatchery/common";
 import { useCommunities, useCreateCommunity, useUpdateCommunity } from "../api/communities.js";
+import { CommunityFormFields } from "./CommunityFormFields.js";
 import { CommunityImageUpload } from "./CommunityImageUpload.js";
 import { QueryBoundary } from "./QueryBoundary.js";
 
@@ -96,63 +95,7 @@ function CreateCommunityForm(): ReactElement {
           />
         )}
       </form.Field>
-      <form.Field
-        name="name"
-        validators={{
-          onSubmit: ({ value }) => (!value ? "コミュニティ名は必須です" : undefined),
-        }}
-      >
-        {(field) => (
-          <TextField
-            label="コミュニティ名"
-            size="small"
-            required
-            value={field.state.value}
-            onChange={(e) => field.handleChange(e.target.value)}
-            onBlur={field.handleBlur}
-            inputProps={{ maxLength: COMMUNITY_NAME_MAX_LENGTH }}
-            error={field.state.meta.errors.length > 0}
-            helperText={field.state.meta.errors[0] ?? ""}
-          />
-        )}
-      </form.Field>
-      <form.Field
-        name="description"
-        validators={{
-          onSubmit: ({ value }) => (!value ? "作風の説明は必須です" : undefined),
-        }}
-      >
-        {(field) => (
-          <TextField
-            label="コミュニティ概要（公開）"
-            size="small"
-            required
-            multiline
-            rows={3}
-            value={field.state.value}
-            onChange={(e) => field.handleChange(e.target.value)}
-            onBlur={field.handleBlur}
-            inputProps={{ maxLength: COMMUNITY_DESCRIPTION_MAX_LENGTH }}
-            error={field.state.meta.errors.length > 0}
-            helperText={field.state.meta.errors[0] ?? `最大 ${COMMUNITY_DESCRIPTION_MAX_LENGTH} 文字`}
-          />
-        )}
-      </form.Field>
-      <form.Field name="generationInstruction">
-        {(field) => (
-          <TextField
-            label="生成プロンプト指示（管理者のみ・非公開）定時バッチの生成プロンプトに使用"
-            size="small"
-            multiline
-            rows={4}
-            value={field.state.value ?? ""}
-            onChange={(e) => field.handleChange(e.target.value)}
-            onBlur={field.handleBlur}
-            inputProps={{ maxLength: COMMUNITY_GENERATION_INSTRUCTION_MAX_LENGTH }}
-            helperText={`最大 ${COMMUNITY_GENERATION_INSTRUCTION_MAX_LENGTH} 文字（省略時は概要を使用）`}
-          />
-        )}
-      </form.Field>
+      <CommunityFormFields form={form} />
       <Button
         type="submit"
         variant="contained"
@@ -238,63 +181,7 @@ function EditCommunityForm({ community, onCancel }: EditCommunityFormProps): Rea
           </Typography>
         </Box>
       </Box>
-      <form.Field
-        name="name"
-        validators={{
-          onSubmit: ({ value }) => (!value ? "コミュニティ名は必須です" : undefined),
-        }}
-      >
-        {(field) => (
-          <TextField
-            label="コミュニティ名"
-            size="small"
-            required
-            value={field.state.value ?? ""}
-            onChange={(e) => field.handleChange(e.target.value)}
-            onBlur={field.handleBlur}
-            inputProps={{ maxLength: COMMUNITY_NAME_MAX_LENGTH }}
-            error={field.state.meta.errors.length > 0}
-            helperText={field.state.meta.errors[0] ?? ""}
-          />
-        )}
-      </form.Field>
-      <form.Field
-        name="description"
-        validators={{
-          onSubmit: ({ value }) => (!value ? "作風の説明は必須です" : undefined),
-        }}
-      >
-        {(field) => (
-          <TextField
-            label="コミュニティ概要（公開）"
-            size="small"
-            required
-            multiline
-            rows={3}
-            value={field.state.value ?? ""}
-            onChange={(e) => field.handleChange(e.target.value)}
-            onBlur={field.handleBlur}
-            inputProps={{ maxLength: COMMUNITY_DESCRIPTION_MAX_LENGTH }}
-            error={field.state.meta.errors.length > 0}
-            helperText={field.state.meta.errors[0] ?? `最大 ${COMMUNITY_DESCRIPTION_MAX_LENGTH} 文字`}
-          />
-        )}
-      </form.Field>
-      <form.Field name="generationInstruction">
-        {(field) => (
-          <TextField
-            label="生成プロンプト指示（管理者のみ・非公開）定時バッチの生成プロンプトに使用"
-            size="small"
-            multiline
-            rows={4}
-            value={field.state.value ?? ""}
-            onChange={(e) => field.handleChange(e.target.value)}
-            onBlur={field.handleBlur}
-            inputProps={{ maxLength: COMMUNITY_GENERATION_INSTRUCTION_MAX_LENGTH }}
-            helperText={`最大 ${COMMUNITY_GENERATION_INSTRUCTION_MAX_LENGTH} 文字（省略時は概要を使用）`}
-          />
-        )}
-      </form.Field>
+      <CommunityFormFields form={form} />
       <Box sx={{ display: "flex", gap: 1 }}>
         <Button type="submit" variant="contained" size="small" disabled={updateMutation.isPending}>
           保存

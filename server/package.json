@@ -16,6 +16,7 @@
     "dev": "tsx watch src/server.ts",
     "start": "node dist/server.js",
     "batch": "tsx src/batch/communityBatchIndex.ts",
+    "release-notes": "tsx src/scripts/generateReleaseNotes.ts",
     "openapi": "tsx src/openapi/generate.ts",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",

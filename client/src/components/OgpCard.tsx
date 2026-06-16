@@ -1,6 +1,7 @@
-import type { ReactElement } from "react";
+import type { KeyboardEvent, ReactElement } from "react";
 
 import { useOgp } from "../api/ogp.js";
+import { useExternalLink } from "../hooks/useExternalLink.js";
 import { Box, Typography } from "./uiParts";
 
 interface OgpCardProps {
@@ -16,6 +17,7 @@ interface OgpCardProps {
  */
 export const OgpCard = ({ url }: OgpCardProps): ReactElement | null => {
   const { data: ogp } = useOgp(url);
+  const { openExternalLink } = useExternalLink();
 
   // データ未取得・title なしはカードを表示しない
   if (!ogp || !ogp.title) {
@@ -24,10 +26,16 @@ export const OgpCard = ({ url }: OgpCardProps): ReactElement | null => {
 
   return (
     <Box
-      component="a"
-      href={url}
-      target="_blank"
-      rel="noopener noreferrer"
+      component="div"
+      role="link"
+      tabIndex={0}
+      onClick={() => openExternalLink(url)}
+      onKeyDown={(e: KeyboardEvent) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          openExternalLink(url);
+        }
+      }}
       sx={{
         display: "block",
         border: "1px solid",
@@ -36,6 +44,7 @@ export const OgpCard = ({ url }: OgpCardProps): ReactElement | null => {
         overflow: "hidden",
         textDecoration: "none",
         color: "inherit",
+        cursor: "pointer",
         mt: 1,
         "&:hover": {
           borderColor: "text.secondary",

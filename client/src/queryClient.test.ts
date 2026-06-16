@@ -14,6 +14,16 @@ describe("createQueryClient", () => {
     expect(client.getDefaultOptions().queries?.retry).toBe(1);
   });
 
+  it("refetchOnWindowFocus が true に設定される", () => {
+    const client = createQueryClient();
+    expect(client.getDefaultOptions().queries?.refetchOnWindowFocus).toBe(true);
+  });
+
+  it("staleTime が 30_000 に設定される", () => {
+    const client = createQueryClient();
+    expect(client.getDefaultOptions().queries?.staleTime).toBe(30_000);
+  });
+
   it("呼び出すたびに独立したインスタンスを返す", () => {
     expect(createQueryClient()).not.toBe(createQueryClient());
   });

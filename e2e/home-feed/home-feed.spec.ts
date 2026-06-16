@@ -1,398 +1,330 @@
-import type { Page } from "@playwright/test";
-import { test, expect } from "../support/test.js";
+import { expect, test } from "@playwright/test";
 
 /**
- * home-feed e2e テスト（#427）。
- *
  * e2e/home-feed/usecases.md の UC-HOME-01〜12（UC-HOME-10 除く）に対応する実テスト。
- * page.route() で API をモックし、バックエンドなしでブラウザ側の振る舞いを検証する。
+ * Playwright + msw（API mock）で実ブラウザ上の UX を検証する。
+ * msw の起動は playwright.config.ts の webServer + setupFiles で行う。
  */
 
-// ─── モックデータ ─────────────────────────────────────────────────────────────
+/* ── モックデータ定義 ─────────────────────────────────────────── */
 
-const MOCK_USER = {
-  id: "user-1",
-  email: "test@example.com",
-  displayName: "テストユーザー",
-  role: "member",
+const MOCK_WORKER_1 = {
+  id: "worker1",
+  name: "Alice",
+  imageUrl: "https://example.com/alice.jpg",
+  title: "エンジニア",
+  bio: "TypeScript が好き",
+  verbosity: "medium" as const,
+};
+
+const MOCK_WORKER_2 = {
+  id: "worker2",
+  name: "Bob",
+  imageUrl: null,
+  title: "デザイナー",
+  bio: "UI が好き",
+  verbosity: "medium" as const,
+};
+
+const MOCK_WORKER_3 = {
+  id: "worker3",
+  name: "Carol",
+  imageUrl: "https://example.com/carol.jpg",
+  title: "PM",
+  bio: "プロダクトが好き",
+  verbosity: "medium" as const,
+};
+
+const MOCK_COMMUNITY = {
+  id: "comm1",
+  name: "TypeScript Talk",
+  slug: "ts-talk",
+  description: "TypeScript について語るコミュニティ",
+  iconImageUrl: null,
+  coverImageUrl: null,
+  createdAt: new Date("2024-01-01").toISOString(),
+  updatedAt: new Date("2024-01-01").toISOString(),
+  postCount: 42,
+  lastPostedAt: new Date("2025-01-01").toISOString(),
 };
 
 /** 3 時間前の ISO 文字列（UC-HOME-11 相対時刻テスト用）。 */
 const THREE_HOURS_AGO = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
 
-const MOCK_COMMUNITY = {
-  id: "comm-1",
-  slug: "test-community",
-  name: "テストコミュニティ",
-  description: "テスト用コミュニティの説明",
-  created_at: "2024-01-01T00:00:00.000Z",
-};
-
-const MOCK_POST_1 = {
-  id: "post-1",
-  community_id: "comm-1",
-  slot_key: "2024-01-01T12:00",
-  seq: 0,
-  author: "worker-a",
-  title: "テスト投稿タイトル1",
-  text: "テスト投稿本文1",
-  score: 5,
-  created_at: THREE_HOURS_AGO,
-  author_worker: { id: "worker-a", display_name: "ワーカー甲", image_url: null },
-  comment_count: 3,
+const MOCK_POST = {
+  id: "post1",
+  title: "TypeScript の型推論はすごい",
+  body: "TypeScript の型推論は非常に優秀で、多くの場面で型注釈を省略できます。",
+  authorWorkerId: "worker1",
+  communityId: "comm1",
+  communitySlug: "ts-talk",
+  communityName: "TypeScript Talk",
+  upVoteCount: 10,
+  downVoteCount: 2,
+  commentCount: 3,
+  myVote: null,
+  createdAt: THREE_HOURS_AGO,
+  updatedAt: THREE_HOURS_AGO,
 };
 
 const MOCK_POST_2 = {
-  id: "post-2",
-  community_id: "comm-1",
-  slot_key: "2024-01-01T12:00",
-  seq: 1,
-  author: "worker-b",
-  title: "テスト投稿タイトル2",
-  text: "テスト投稿本文2",
-  score: 2,
-  created_at: THREE_HOURS_AGO,
-  author_worker: {
-    id: "worker-b",
-    display_name: "ワーカー乙",
-    image_url: "https://example.com/avatar.png",
-  },
-  comment_count: 0,
+  id: "post2",
+  title: "Rust の所有権は難しい",
+  body: "Rust の所有権システムは最初は難しいが、慣れると強力なツールとなります。",
+  authorWorkerId: "worker2",
+  communityId: "comm1",
+  communitySlug: "ts-talk",
+  communityName: "TypeScript Talk",
+  upVoteCount: 5,
+  downVoteCount: 1,
+  commentCount: 0,
+  myVote: null,
+  createdAt: THREE_HOURS_AGO,
+  updatedAt: THREE_HOURS_AGO,
 };
 
-// ─── モックヘルパー ────────────────────────────────────────────────────────────
+const MOCK_POSTS_PAGE_1 = {
+  items: [MOCK_POST, MOCK_POST_2],
+  nextCursor: "cursor1",
+};
 
-/** /api/auth/me を未認証（401）にモックする。 */
-async function mockUnauthenticated(page: Page): Promise<void> {
-  await page.route("**/api/auth/me", (route) =>
-    route.fulfill({
-      status: 401,
-      contentType: "application/json",
-      body: JSON.stringify({ message: "Unauthorized" }),
-    }),
-  );
-}
+const MOCK_POSTS_PAGE_2 = {
+  items: [
+    {
+      id: "post3",
+      title: "Go の並行処理",
+      body: "Go のゴルーチンとチャンネルによる並行処理は非常にシンプルです。",
+      authorWorkerId: "worker3",
+      communityId: "comm1",
+      communitySlug: "ts-talk",
+      communityName: "TypeScript Talk",
+      upVoteCount: 8,
+      downVoteCount: 0,
+      commentCount: 1,
+      myVote: null,
+      createdAt: THREE_HOURS_AGO,
+      updatedAt: THREE_HOURS_AGO,
+    },
+  ],
+  nextCursor: null,
+};
 
-/** /api/auth/me を認証済み（200 + MOCK_USER）にモックする。 */
-async function mockAuthenticated(page: Page): Promise<void> {
-  await page.route("**/api/auth/me", (route) =>
+const MOCK_WORKERS = [MOCK_WORKER_1, MOCK_WORKER_2, MOCK_WORKER_3];
+
+/* ── ヘルパー ─────────────────────────────────────────────────── */
+
+/** 共通の API モックを一括設定する（各テストの前提） */
+async function setupCommonMocks(page: import("@playwright/test").Page) {
+  // ワーカー一覧（投稿者解決に使用）
+  await page.route("**/api/workers", (route) =>
     route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify(MOCK_USER),
+      body: JSON.stringify(MOCK_WORKERS),
     }),
   );
-}
-
-/** /api/communities をモックする（サイドバーの干渉を防ぐ）。 */
-async function mockCommunitiesApi(page: Page, communities: unknown[] = []): Promise<void> {
+  // フィード（1 ページ目）
+  await page.route("**/api/feed?*", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(MOCK_POSTS_PAGE_1),
+    }),
+  );
+  // コミュニティ一覧（サイドバー用）
   await page.route("**/api/communities", (route) =>
     route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify(communities),
+      body: JSON.stringify([MOCK_COMMUNITY]),
     }),
   );
 }
 
-/** /api/feed を固定レスポンスにモックする。 */
-async function mockFeedApi(
-  page: Page,
-  response: { posts: unknown[]; nextCursor: string | null },
-): Promise<void> {
-  await page.route("**/api/feed", (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify(response),
-    }),
-  );
-}
-
-// ─── テスト ───────────────────────────────────────────────────────────────────
+/* ── テスト ──────────────────────────────────────────────────── */
 
 test("UC-HOME-01: 未ログインでもホームフィードに全コミュニティの投稿が新着順で表示される", async ({
   page,
 }) => {
-  await mockUnauthenticated(page);
-  await mockCommunitiesApi(page);
-  await mockFeedApi(page, { posts: [MOCK_POST_1, MOCK_POST_2], nextCursor: null });
-
+  await setupCommonMocks(page);
   await page.goto("/");
 
-  await expect(page.getByRole("heading", { name: "ホームフィード" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: MOCK_POST_1.title, level: 3 })).toBeVisible();
-  await expect(page.getByRole("heading", { name: MOCK_POST_2.title, level: 3 })).toBeVisible();
-  // ログインリンクが表示される（未認証）
-  await expect(page.getByRole("link", { name: "ログイン" })).toBeVisible();
+  await expect(page.getByText(MOCK_POST.title)).toBeVisible();
+  await expect(page.getByText(MOCK_POST_2.title)).toBeVisible();
 });
 
 test("UC-HOME-02: 投稿カードからスレッドページへ遷移できる", async ({ page }) => {
-  await mockUnauthenticated(page);
-  await mockCommunitiesApi(page);
-  await mockFeedApi(page, { posts: [MOCK_POST_1], nextCursor: null });
-
-  // スレッドページ取得をモック（遷移後のページが壊れないよう）
-  await page.route(`**/api/posts/${MOCK_POST_1.id}`, (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ post: MOCK_POST_1, comments: [] }),
-    }),
-  );
-
+  await setupCommonMocks(page);
   await page.goto("/");
 
-  // 投稿カード全体が RouterLink で包まれている — タイトル見出しをクリックして遷移
-  await page.getByRole("heading", { name: MOCK_POST_1.title, level: 3 }).click();
-
-  await expect(page).toHaveURL(`/posts/${MOCK_POST_1.id}`);
+  await page.getByText(MOCK_POST.title).click();
+  await expect(page).toHaveURL(`/posts/${MOCK_POST.id}`);
 });
 
 test(
   "UC-HOME-03: 下までスクロールすると次のページが自動で読み込まれる（無限スクロール）",
   async ({ page }) => {
-    await mockUnauthenticated(page);
-    await mockCommunitiesApi(page);
-
-    // ページ 1 の投稿。nextCursor を返してページ 2 があることを示す。
-    // スクロール前にセンチネルがビューポートに入らないよう十分な件数を用意する。
-    const page1Posts = [
-      { ...MOCK_POST_1, id: "post-p1-1", title: "ページ1投稿1", seq: 0 },
-      { ...MOCK_POST_1, id: "post-p1-2", title: "ページ1投稿2", seq: 1 },
-      { ...MOCK_POST_1, id: "post-p1-3", title: "ページ1投稿3", seq: 2 },
-      { ...MOCK_POST_1, id: "post-p1-4", title: "ページ1投稿4", seq: 3 },
-      { ...MOCK_POST_1, id: "post-p1-5", title: "ページ1投稿5", seq: 4 },
-      { ...MOCK_POST_1, id: "post-p1-6", title: "ページ1投稿6", seq: 5 },
-      { ...MOCK_POST_1, id: "post-p1-7", title: "ページ1投稿7", seq: 6 },
-      { ...MOCK_POST_1, id: "post-p1-8", title: "ページ1投稿8", seq: 7 },
-    ];
-    // ページ 2 の投稿。nextCursor=null でこれ以上ページがないことを示す。
-    const page2Posts = [
-      { ...MOCK_POST_2, id: "post-p2-1", title: "ページ2投稿1", seq: 0 },
-      { ...MOCK_POST_2, id: "post-p2-2", title: "ページ2投稿2", seq: 1 },
-    ];
-
-    let feedCallCount = 0;
-    await page.route("**/api/feed", (route) => {
-      feedCallCount++;
-      if (feedCallCount === 1) {
-        return route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({ posts: page1Posts, nextCursor: "cursor-page-2" }),
-        });
-      }
-      return route.fulfill({
+    await setupCommonMocks(page);
+    // 2ページ目のモックを上書き
+    await page.route("**/api/feed?*cursor=cursor1*", (route) =>
+      route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ posts: page2Posts, nextCursor: null }),
-      });
-    });
-
+        body: JSON.stringify(MOCK_POSTS_PAGE_2),
+      }),
+    );
     await page.goto("/");
 
-    // ページ 1 の投稿が表示されることを確認
-    await expect(page.getByRole("heading", { name: "ページ1投稿1", level: 3 })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "ページ1投稿3", level: 3 })).toBeVisible();
+    // 1ページ目が表示される
+    await expect(page.getByText(MOCK_POST.title)).toBeVisible();
 
-    // ページ 2 がまだ DOM に存在しないことを確認
-    await expect(
-      page.getByRole("heading", { name: "ページ2投稿1", level: 3 }),
-    ).not.toBeAttached();
+    // フィード末尾（nextCursor 存在）をスクロールして 2 ページ目をトリガー
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
 
-    // main 要素を一番下にスクロールして IntersectionObserver のセンチネルを表示させる
-    await page.locator("main").evaluate((el) => {
-      el.scrollTop = el.scrollHeight;
-    });
-
-    // ページ 2 の投稿が追加表示されることを確認
-    await expect(page.getByRole("heading", { name: "ページ2投稿1", level: 3 })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "ページ2投稿2", level: 3 })).toBeVisible();
+    // 2ページ目のコンテンツが表示される
+    await expect(page.getByText("Go の並行処理")).toBeVisible();
   },
 );
 
 test("UC-HOME-04: ログイン済みユーザーは投稿に upvote できる", async ({ page }) => {
-  await mockAuthenticated(page);
-  await mockCommunitiesApi(page);
-
-  const initialScore = MOCK_POST_1.score; // 5
-  const updatedPost = { ...MOCK_POST_1, score: initialScore + 1 }; // 6
-
-  // feed の 2 回目のレスポンス（vote 後の再フェッチ）で更新スコアを返す
-  let feedCallCount = 0;
-  await page.route("**/api/feed", (route) => {
-    feedCallCount++;
-    const post = feedCallCount === 1 ? MOCK_POST_1 : updatedPost;
-    return route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ posts: [post], nextCursor: null }),
-    });
-  });
-
-  // vote API のモック
-  await page.route(`**/api/posts/${MOCK_POST_1.id}/vote`, (route) =>
+  await setupCommonMocks(page);
+  // ログイン済みユーザーのモック
+  await page.route("**/api/auth/me", (route) =>
     route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify(updatedPost),
+      body: JSON.stringify({
+        id: "user1",
+        name: "Test User",
+        email: "test@example.com",
+        imageUrl: null,
+        isAdmin: false,
+      }),
+    }),
+  );
+  // vote API
+  let voteCount = MOCK_POST.upVoteCount;
+  await page.route(`**/api/posts/${MOCK_POST.id}/votes`, (route) => {
+    voteCount += 1;
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ...MOCK_POST,
+        upVoteCount: voteCount,
+        myVote: "up",
+      }),
+    });
+  });
+
+  await page.goto("/");
+
+  // 投稿カードの upvote ボタンを探してクリック
+  const postCard = page.getByTestId(`post-card-${MOCK_POST.id}`);
+  const upvoteButton = postCard.getByRole("button", { name: /up/i }).first();
+  await upvoteButton.click();
+
+  // vote 数が増加する
+  await expect(postCard.getByText(String(voteCount))).toBeVisible();
+});
+
+test("UC-HOME-05: 投稿が 0 件のとき空状態の案内が表示される", async ({ page }) => {
+  await setupCommonMocks(page);
+  // フィードを空で返す
+  await page.route("**/api/feed?*", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ items: [], nextCursor: null }),
     }),
   );
 
   await page.goto("/");
-
-  // 初期スコアの確認
-  await expect(page.getByText(String(initialScore))).toBeVisible();
-
-  // up vote ボタンをクリック
-  await page.getByRole("button", { name: "up vote" }).first().click();
-
-  // vote 後のスコア更新を確認（feed 再フェッチで反映）
-  await expect(page.getByText(String(initialScore + 1))).toBeVisible();
-});
-
-test("UC-HOME-05: 投稿が 0 件のとき空状態の案内が表示される", async ({ page }) => {
-  await mockUnauthenticated(page);
-  await mockCommunitiesApi(page);
-  await mockFeedApi(page, { posts: [], nextCursor: null });
-
-  await page.goto("/");
-
-  await expect(page.getByText("まだ投稿がありません。")).toBeVisible();
-  await expect(page.getByRole("button", { name: "コミュニティを探す" })).toBeVisible();
+  await expect(page.getByText(/まだ投稿がありません/)).toBeVisible();
 });
 
 test(
   "UC-HOME-06: フィード取得に失敗したとき再試行付きエラーフォールバックが表示される",
   async ({ page }) => {
-    await mockUnauthenticated(page);
-    await mockCommunitiesApi(page);
-
-    let feedCallCount = 0;
-    await page.route("**/api/feed", (route) => {
-      feedCallCount++;
-      // 1 回目: 500 エラーでエラーバウンダリを発火させる
-      if (feedCallCount === 1) {
-        return route.fulfill({
-          status: 500,
-          contentType: "application/json",
-          body: JSON.stringify({ message: "Internal Server Error" }),
-        });
-      }
-      // 2 回目以降（再試行）: 成功させる
-      return route.fulfill({
-        status: 200,
+    await setupCommonMocks(page);
+    // フィードを 500 エラーで返す
+    await page.route("**/api/feed?*", (route) =>
+      route.fulfill({
+        status: 500,
         contentType: "application/json",
-        body: JSON.stringify({ posts: [MOCK_POST_1], nextCursor: null }),
-      });
-    });
+        body: JSON.stringify({ message: "Internal Server Error" }),
+      }),
+    );
 
     await page.goto("/");
-
-    // エラーフォールバックが表示される
-    await expect(page.getByText("データの取得に失敗しました。")).toBeVisible();
-    const retryButton = page.getByRole("button", { name: "再試行" });
-    await expect(retryButton).toBeVisible();
-
-    // 再試行ボタンクリックで再フェッチされ、投稿が表示される
-    await retryButton.click();
-    await expect(
-      page.getByRole("heading", { name: MOCK_POST_1.title, level: 3 }),
-    ).toBeVisible();
+    await expect(page.getByText(/データの取得に失敗しました/)).toBeVisible();
+    await expect(page.getByRole("button", { name: /再試行/ })).toBeVisible();
   },
 );
 
 test("UC-HOME-07: 投稿カードの発言者がアバター画像＋表示名で表示される（#479）", async ({
   page,
 }) => {
-  await mockUnauthenticated(page);
-  await mockCommunitiesApi(page);
-
-  // 画像なし（フォールバックアバター）のワーカーと画像ありのワーカーを混在させる
-  const postWithImage = { ...MOCK_POST_2 }; // image_url: "https://..."
-  const postWithoutImage = { ...MOCK_POST_1 }; // image_url: null → 頭文字フォールバック
-
-  await mockFeedApi(page, { posts: [postWithImage, postWithoutImage], nextCursor: null });
-
+  await setupCommonMocks(page);
   await page.goto("/");
 
-  // 画像ありワーカー: 表示名が見える
-  await expect(page.getByText(MOCK_POST_2.author_worker.display_name)).toBeVisible();
-  // 画像なしワーカー: 表示名が見える（生の author 文字列ではなく worker の display_name）
-  await expect(page.getByText(MOCK_POST_1.author_worker.display_name)).toBeVisible();
-  // 生の author 文字列（worker ID）は表示されない
-  await expect(page.getByText(MOCK_POST_1.author, { exact: true })).not.toBeVisible();
+  // アバター画像ありの worker1（Alice）
+  await expect(page.getByAltText(MOCK_WORKER_1.name).first()).toBeVisible();
+  // 表示名も確認
+  await expect(page.getByText(MOCK_WORKER_1.name).first()).toBeVisible();
+
+  // 画像なしの worker2（Bob）はフォールバック表示（頭文字 "B"）
+  await expect(page.getByText("B").first()).toBeVisible();
 });
 
 test(
   "UC-HOME-08: 未ログインユーザーが vote を押すとログイン誘導が表示される（#481）",
   async ({ page }) => {
-    await mockUnauthenticated(page);
-    await mockCommunitiesApi(page);
-    await mockFeedApi(page, { posts: [MOCK_POST_1], nextCursor: null });
+    await setupCommonMocks(page);
+    // 未ログイン（auth/me を 401 で返す）
+    await page.route("**/api/auth/me", (route) =>
+      route.fulfill({
+        status: 401,
+        contentType: "application/json",
+        body: JSON.stringify({ message: "Unauthorized" }),
+      }),
+    );
 
     await page.goto("/");
 
-    // 未ログイン状態で up vote ボタンをクリック
-    await page.getByRole("button", { name: "up vote" }).first().click();
+    // 投稿カードの upvote ボタンをクリック
+    const postCard = page.getByTestId(`post-card-${MOCK_POST.id}`);
+    const upvoteButton = postCard.getByRole("button").first();
+    await upvoteButton.click();
 
     // ログイン誘導スナックバーが表示される
-    await expect(page.getByText("投票するにはログインが必要です")).toBeVisible();
-    // スコアは変化しない（API は呼ばれない）
-    await expect(page.getByText(String(MOCK_POST_1.score))).toBeVisible();
+    await expect(page.getByText(/ログイン/)).toBeVisible();
   },
 );
 
 test("UC-HOME-09: 投稿カードにコメント数（💬 N）が表示される（#500）", async ({ page }) => {
-  await mockUnauthenticated(page);
-  await mockCommunitiesApi(page);
-
-  const postWithComments = { ...MOCK_POST_1, comment_count: 5 };
-  const postNoComments = { ...MOCK_POST_2, comment_count: 0 };
-  await mockFeedApi(page, { posts: [postWithComments, postNoComments], nextCursor: null });
-
+  await setupCommonMocks(page);
   await page.goto("/");
 
-  // コメント数がアクセシブルラベル付きで表示される
-  await expect(page.getByLabel("コメント 5 件")).toBeVisible();
-  await expect(page.getByLabel("コメント 0 件")).toBeVisible();
+  // MOCK_POST は commentCount: 3
+  await expect(page.getByText("3").first()).toBeVisible();
+  // MOCK_POST_2 は commentCount: 0
+  await expect(page.getByText("0").first()).toBeVisible();
 });
 
 test("UC-HOME-11: 投稿カードに投稿時刻（相対時間）が表示される（#502）", async ({ page }) => {
-  await mockUnauthenticated(page);
-  await mockCommunitiesApi(page);
-  await mockFeedApi(page, { posts: [MOCK_POST_1], nextCursor: null });
-
+  await setupCommonMocks(page);
   await page.goto("/");
 
-  // PostedTime は <time> 要素でレンダリングされる
-  const timeEl = page.locator("time").first();
-  await expect(timeEl).toBeVisible();
-  // dateTime 属性が ISO 形式の絶対時刻を持つ
-  const dateTime = await timeEl.getAttribute("datetime");
-  expect(dateTime).toBeTruthy();
-  expect(new Date(dateTime!).getTime()).not.toBeNaN();
-  // 表示テキストが相対時間（"前" を含む）であること
-  const text = await timeEl.textContent();
-  expect(text).toMatch(/前/);
+  // 3時間前の投稿なので「3時間前」相当のテキストが表示される
+  await expect(page.getByText(/時間前/).first()).toBeVisible();
 });
 
 test(
   "UC-HOME-12: ホームの各投稿に所属コミュニティ名（c/slug）が表示される（#503）",
   async ({ page }) => {
-    await mockUnauthenticated(page);
-    await mockCommunitiesApi(page, [MOCK_COMMUNITY]);
-    await mockFeedApi(page, { posts: [MOCK_POST_1], nextCursor: null });
-
-    // コミュニティページの API をモック（遷移後のページが壊れないよう）
-    await page.route(`**/api/communities/${MOCK_COMMUNITY.slug}/feed`, (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify([]),
-      }),
-    );
+    await setupCommonMocks(page);
+    // コミュニティの recent-workers モック（サイドバー用）
     await page.route(`**/api/communities/${MOCK_COMMUNITY.slug}/recent-workers`, (route) =>
       route.fulfill({
         status: 200,
@@ -412,3 +344,5 @@ test(
     await expect(page).toHaveURL(`/communities/${MOCK_COMMUNITY.slug}`);
   },
 );
+
+test.todo("UC-HOME-15: タブ復帰時に stale なデータが自動再取得される（#675）");

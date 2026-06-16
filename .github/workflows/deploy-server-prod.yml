@@ -95,4 +95,5 @@ jobs:
         run: |
           gcloud run jobs update hatchery-batch-prod \
             --image=${{ env.IMAGE }} \
+            --args="dist/batch/communityBatchIndex.js" \
             --region=${{ env.REGION }}

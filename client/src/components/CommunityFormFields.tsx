@@ -4,6 +4,12 @@
  * name / description / generationInstruction の 3 フィールドを描画する。
  * form を props として受け取り、内部で form.Field を呼び出す。
  */
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// @tanstack/react-form の FormApi / ReactFormApi のジェネリクスが複雑で
+// CreateCommunityInput / UpdateCommunityInput の両方に対応するために any を使用する。
+// 設計書 docs/design/issue-595.md §7 参照。
+
 import type { ReactElement } from "react";
 
 import {
@@ -14,12 +20,7 @@ import {
 
 import { TextField } from "./uiParts/index.js";
 
-/**
- * @tanstack/react-form の FormApi / ReactFormApi のジェネリクスは複雑なため、
- * form.Field のみを受け取る最小インターフェースとして any を使用する。
- * CreateCommunityInput / UpdateCommunityInput の両方に対応するため。
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+/** @tanstack/react-form の form オブジェクトの最小インターフェース。 */
 type AnyForm = { Field: any };
 
 export interface CommunityFormFieldsProps {
@@ -38,11 +39,9 @@ export function CommunityFormFields({ form }: CommunityFormFieldsProps): ReactEl
       <form.Field
         name="name"
         validators={{
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           onSubmit: ({ value }: any) => (!value ? "コミュニティ名は必須です" : undefined),
         }}
       >
-        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
         {(field: any) => (
           <TextField
             label="コミュニティ名"
@@ -60,11 +59,9 @@ export function CommunityFormFields({ form }: CommunityFormFieldsProps): ReactEl
       <form.Field
         name="description"
         validators={{
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           onSubmit: ({ value }: any) => (!value ? "作風の説明は必須です" : undefined),
         }}
       >
-        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
         {(field: any) => (
           <TextField
             label="コミュニティ概要（公開）"
@@ -82,7 +79,6 @@ export function CommunityFormFields({ form }: CommunityFormFieldsProps): ReactEl
         )}
       </form.Field>
       <form.Field name="generationInstruction">
-        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
         {(field: any) => (
           <TextField
             label="生成プロンプト指示（管理者のみ・非公開）定時バッチの生成プロンプトに使用"

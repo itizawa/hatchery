@@ -313,3 +313,45 @@ describe("PostThreadScene レイアウトシフト解消 (#409)", () => {
     expect(screen.queryByText("AI 開発者の集い")).not.toBeInTheDocument();
   });
 });
+
+// #525: 投稿スレッド左カラム上部のコミュニティパンくずリンク。
+describe("PostThreadScene コミュニティパンくず (#525)", () => {
+  it("コミュニティが解決できるとき c/slug のリンクが表示される", async () => {
+    render(<BoundedScene />, { wrapper: createWrapper({ communities: mockCommunities }) });
+    const link = await screen.findByRole("link", { name: /c\/ai-dev/ });
+    expect(link).toHaveAttribute("href", "/communities/$slug");
+  });
+
+  it("コミュニティが解決できないとき（空配列）パンくずリンクが表示されない", async () => {
+    render(<BoundedScene />, { wrapper: createWrapper({ communities: [] }) });
+    await screen.findByText("今日も元気に始めましょう");
+    expect(screen.queryByText(/c\//)).not.toBeInTheDocument();
+  });
+
+  it("communities ローディング中はパンくずスケルトンが表示される", () => {
+    server.use(
+      http.get("/api/communities", async () => {
+        await delay("infinite");
+        return HttpResponse.json(mockCommunities);
+      }),
+    );
+    function PostOnlyWrapper({ children }: { children: React.ReactNode }) {
+      const qc = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+      qc.setQueryData(postThreadQueryKey("post-1"), { post: mockPosts[0], comments: [] });
+      qc.setQueryData(communitySubscriptionQueryKey("ai-dev"), { subscribed: false });
+      qc.setQueryData(AUTH_ME_QUERY_KEY, null);
+      return (
+        <QueryClientProvider client={qc}>
+          <Suspense fallback={null}>{children}</Suspense>
+        </QueryClientProvider>
+      );
+    }
+    render(<BoundedScene />, { wrapper: PostOnlyWrapper });
+
+    // post はシード済み → 即時表示
+    expect(screen.getByText("今日も元気に始めましょう")).toBeInTheDocument();
+    // communities ロード中 → パンくずスケルトンが表示される
+    expect(screen.getByTestId("community-breadcrumb-skeleton")).toBeInTheDocument();
+    expect(screen.queryByText(/c\/ai-dev/)).not.toBeInTheDocument();
+  });
+});

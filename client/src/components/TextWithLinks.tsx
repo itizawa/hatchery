@@ -1,5 +1,6 @@
 import type { ReactElement, ReactNode } from "react";
 
+import { useExternalLink } from "../hooks/useExternalLink.js";
 import { Link } from "./uiParts";
 
 /** URL パターン（http(s):// で始まり、空白以外が続く） */
@@ -17,6 +18,7 @@ interface TextWithLinksProps {
  * URL 以外のテキスト部分はそのまま文字列として表示される。
  */
 export const TextWithLinks = ({ text }: TextWithLinksProps): ReactElement => {
+  const { openExternalLink } = useExternalLink();
   const parts: ReactNode[] = [];
   let lastIndex = 0;
   let match: RegExpExecArray | null;
@@ -36,15 +38,18 @@ export const TextWithLinks = ({ text }: TextWithLinksProps): ReactElement => {
     const url = rawUrl.replace(/[。、.,!?!?）)）\]】]+$/, "");
     const trailingPunctuation = rawUrl.slice(url.length);
 
+    const capturedUrl = url;
     parts.push(
       <Link
         key={matchIndex}
-        href={url}
-        target="_blank"
-        rel="noopener noreferrer"
-        sx={{ wordBreak: "break-all" }}
+        href={capturedUrl}
+        onClick={(e) => {
+          e.preventDefault();
+          openExternalLink(capturedUrl);
+        }}
+        sx={{ wordBreak: "break-all", cursor: "pointer" }}
       >
-        {url}
+        {capturedUrl}
       </Link>,
     );
 

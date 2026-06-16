@@ -12,6 +12,7 @@ import remarkGfm from "remark-gfm";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import { useMemo } from "react";
 import type { ReactElement, ReactNode } from "react";
+import { useExternalLink } from "../hooks/useExternalLink.js";
 import { Box, Link, Typography } from "./uiParts";
 import type { Components } from "react-markdown";
 
@@ -44,6 +45,8 @@ export const MarkdownContent = ({
   variant = "body1",
   paragraphSx,
 }: MarkdownContentProps): ReactElement => {
+  const { openExternalLink } = useExternalLink();
+
   // components オブジェクトは variant / paragraphSx が変わったときだけ再生成する
   const components: Components = useMemo(() => {
     const pSx = paragraphSx ? { mb: 0.5, mt: 0, ...paragraphSx } : { mb: 0.5, mt: 0 };
@@ -184,7 +187,7 @@ export const MarkdownContent = ({
       </Box>
     ),
 
-    // リンク: 新規タブで開く + セキュリティ対策
+    // リンク: 外部リンク確認モーダル経由で開く（#661）
     a: ({
       href,
       children,
@@ -192,7 +195,17 @@ export const MarkdownContent = ({
       href?: string;
       children?: ReactNode;
     }) => (
-      <Link href={href} target="_blank" rel="noopener noreferrer" underline="hover">
+      <Link
+        href={href}
+        onClick={(e) => {
+          if (href) {
+            e.preventDefault();
+            openExternalLink(href);
+          }
+        }}
+        underline="hover"
+        sx={{ cursor: "pointer" }}
+      >
         {children}
       </Link>
     ),
@@ -250,7 +263,7 @@ export const MarkdownContent = ({
     ),
 
     // 画像: img タグをサニタイズで除去しているが、念のためコンポーネントでもフォールバック
-    // src を alt テキストのリンクとして表示する
+    // src を alt テキストのリンクとして表示する（外部リンク確認モーダル経由・#661）
     img: ({
       src,
       alt,
@@ -260,8 +273,16 @@ export const MarkdownContent = ({
     }) => {
       const label = alt ?? src ?? "画像";
       if (src) {
+        const capturedSrc = src;
         return (
-          <Link href={src} target="_blank" rel="noopener noreferrer">
+          <Link
+            href={capturedSrc}
+            onClick={(e) => {
+              e.preventDefault();
+              openExternalLink(capturedSrc);
+            }}
+            sx={{ cursor: "pointer" }}
+          >
             [{label}]
           </Link>
         );
@@ -269,7 +290,7 @@ export const MarkdownContent = ({
       return <span>[{label}]</span>;
     },
   });
-  }, [variant, paragraphSx]);
+  }, [variant, paragraphSx, openExternalLink]);
 
   return (
     <ReactMarkdown

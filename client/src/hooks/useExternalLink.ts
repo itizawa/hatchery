@@ -6,6 +6,17 @@ import { ExternalLinkDialog } from "../components/ExternalLinkDialog.js";
 /** window.localStorage のキー。全外部リンク共通・ブラウザ単位で永続化。 */
 const STORAGE_KEY = "hatchery:external-link:skip-warning";
 
+/** localStorage へのアクセスを安全に行うヘルパー。
+ * Node.js 26 の実験的 localStorage は --localstorage-file 未指定で undefined になるため
+ * Optional chaining でガードする。 */
+function storageGet(key: string): string | null {
+  return window.localStorage?.getItem(key) ?? null;
+}
+
+function storageSet(key: string, value: string): void {
+  window.localStorage?.setItem(key, value);
+}
+
 /** 外部リンク確認フロー（Issue #661）で「外部リンク」を判定する関数。
  *
  * 判定基準: `http(s)` スキームかつアプリのオリジンと異なる host であること。
@@ -29,7 +40,17 @@ interface ExternalLinkContextValue {
   openExternalLink: (url: string) => void;
 }
 
-const ExternalLinkContext = createContext<ExternalLinkContextValue | null>(null);
+/** Provider 未使用時のフォールバック: モーダルを挟まず直接 window.open する。
+ * テスト等 Provider を持たない環境での安全な後退動作として使う。 */
+const fallbackContextValue: ExternalLinkContextValue = {
+  openExternalLink: (url: string) => {
+    if (isExternalUrl(url)) {
+      window.open(url, "_blank", "noopener,noreferrer");
+    }
+  },
+};
+
+const ExternalLinkContext = createContext<ExternalLinkContextValue>(fallbackContextValue);
 
 interface ExternalLinkProviderProps {
   children: ReactNode;
@@ -48,7 +69,7 @@ interface ExternalLinkProviderProps {
 export function ExternalLinkProvider({ children }: ExternalLinkProviderProps) {
   const [pendingUrl, setPendingUrl] = useState<string | null>(null);
   const [skipWarning, setSkipWarning] = useState<boolean>(
-    () => window.localStorage.getItem(STORAGE_KEY) === "true",
+    () => storageGet(STORAGE_KEY) === "true",
   );
 
   const openExternalLink = useCallback(
@@ -57,7 +78,7 @@ export function ExternalLinkProvider({ children }: ExternalLinkProviderProps) {
         // 内部リンクや非 http(s) スキームは何もしない
         return;
       }
-      if (skipWarning || window.localStorage.getItem(STORAGE_KEY) === "true") {
+      if (skipWarning || storageGet(STORAGE_KEY) === "true") {
         window.open(url, "_blank", "noopener,noreferrer");
         return;
       }
@@ -75,7 +96,7 @@ export function ExternalLinkProvider({ children }: ExternalLinkProviderProps) {
       window.open(pendingUrl, "_blank", "noopener,noreferrer");
     }
     if (skipWarning) {
-      window.localStorage.setItem(STORAGE_KEY, "true");
+      storageSet(STORAGE_KEY, "true");
     }
     setPendingUrl(null);
   }, [pendingUrl, skipWarning]);
@@ -104,13 +125,9 @@ export function ExternalLinkProvider({ children }: ExternalLinkProviderProps) {
 /**
  * 外部リンクを確認モーダル経由で開くフック（Issue #661）。
  *
- * `ExternalLinkProvider` の配下でのみ使用可能。
- * Provider の外で呼んだ場合は Error を throw する。
+ * `ExternalLinkProvider` の配下で使用すると確認モーダルを経由する。
+ * Provider の外（テスト等）では直接 window.open するフォールバック動作をする。
  */
 export function useExternalLink(): ExternalLinkContextValue {
-  const ctx = useContext(ExternalLinkContext);
-  if (!ctx) {
-    throw new Error("useExternalLink は ExternalLinkProvider の配下で使用してください");
-  }
-  return ctx;
+  return useContext(ExternalLinkContext);
 }

@@ -40,12 +40,12 @@ describe("AddWorkerDialog（#217 / #329）", () => {
     vi.unstubAllGlobals();
   });
 
-  it("open=true のときダイアログタイトル「社員を追加」が表示される", async () => {
-    stubFetch(201, { id: "new-id", displayName: "新社員" });
+  it("open=true のときダイアログタイトル「ワーカーを追加」が表示される", async () => {
+    stubFetch(201, { id: "new-id", displayName: "新ワーカー" });
     const onClose = vi.fn();
     renderWithClient(<AddWorkerDialog open={true} onClose={onClose} />);
     expect(await screen.findByRole("dialog")).toBeInTheDocument();
-    expect(screen.getByText("社員を追加")).toBeInTheDocument();
+    expect(screen.getByText("ワーカーを追加")).toBeInTheDocument();
   });
 
   it("open=false のときダイアログは非表示", () => {

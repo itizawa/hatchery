@@ -25,6 +25,7 @@ import { useAuth } from "../api/auth.js";
 import { AppHeader } from "../components/AppHeader";
 import { QueryBoundary } from "../components/QueryBoundary";
 import { SidebarCommunitySection } from "../components/SidebarCommunitySection";
+import { ExternalLinkProvider } from "../hooks/useExternalLink.js";
 import { SLACK_COLORS } from "../theme.js";
 
 const SIDEBAR_WIDTH = 260;
@@ -165,6 +166,7 @@ export const RootLayout = (): ReactElement => {
   } as const;
 
   return (
+    <ExternalLinkProvider>
     <Box
       data-testid="root-layout-outer"
       sx={{
@@ -238,5 +240,6 @@ export const RootLayout = (): ReactElement => {
         </Box>
       </Box>
     </Box>
+    </ExternalLinkProvider>
   );
 };

@@ -93,12 +93,13 @@ export function createAdminRouter(
     validateBody(CreateWorkerSchema),
     async (req, res, next) => {
       try {
-        const input = req.body as { displayName: string; role?: string; personality?: string };
+        const input = req.body as { displayName: string; role?: string; personality?: string; verbosity?: string };
         const worker = await workerRepository.create({
           id: randomUUID(),
           displayName: input.displayName,
           role: input.role,
           personality: input.personality,
+          verbosity: input.verbosity,
         });
         res.status(201).json(worker);
       } catch (err) {

@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Worker } from "@hatchery/common";
-import { WORKER_DISPLAY_NAME_MAX_LENGTH, WORKER_ROLE_MAX_LENGTH } from "@hatchery/common";
+import { WORKER_DISPLAY_NAME_MAX_LENGTH, WORKER_PERSONALITY_MAX_LENGTH, WORKER_ROLE_MAX_LENGTH } from "@hatchery/common";
 
 // useUpdateWorker のモック
 vi.mock("../api/workers.js", () => ({
@@ -107,11 +107,11 @@ describe("EditWorkerDialog（#181 / #329 / #490）", () => {
     expect(roleInput).toHaveAttribute("maxlength", String(WORKER_ROLE_MAX_LENGTH));
   });
 
-  it("personality の入力に maxLength=500 が設定されている", () => {
+  it("personality の入力に maxLength=WORKER_PERSONALITY_MAX_LENGTH が設定されている (#592)", () => {
     renderWithClient(<EditWorkerDialog worker={mockWorker} open onClose={vi.fn()} />);
 
     const personalityInput = screen.getByLabelText(/性格/);
-    expect(personalityInput).toHaveAttribute("maxlength", "500");
+    expect(personalityInput).toHaveAttribute("maxlength", String(WORKER_PERSONALITY_MAX_LENGTH));
   });
 
   it("参加コミュニティの複数選択 UI が表示される（#490）", () => {

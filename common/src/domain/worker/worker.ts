@@ -2,12 +2,15 @@ import { z } from "zod";
 
 export const WORKER_DISPLAY_NAME_MAX_LENGTH = 50;
 export const WORKER_ROLE_MAX_LENGTH = 50;
+export const WORKER_PERSONALITY_MAX_LENGTH = 500;
 /** 画像 URL の最大文字数（#220・#91）。 */
 export const WORKER_IMAGE_URL_MAX_LENGTH = 500;
+/** avatarUrl フィールドは #541 で削除済みだが、定数は将来の利用に備えて保持する（#592）。 */
+export const WORKER_AVATAR_URL_MAX_LENGTH = 2048;
 
 /**
  * ワーカーの文章量設定（#625）。
- * - concise: 簡潔（1〜2 文程度）
+ * - concise: 簡潔（1、2 文程度）
  * - standard: 標準（既定）
  * - detailed: 詳細（具体例や背景を交えてやや詳しめ）
  */
@@ -18,8 +21,8 @@ export const WorkerSchema = z.object({
   id: z.string().min(1),
   displayName: z.string().min(1).max(WORKER_DISPLAY_NAME_MAX_LENGTH),
   role: z.string().min(1).max(WORKER_ROLE_MAX_LENGTH).optional(),
-  personality: z.string().max(500).optional(),
-  /** 文章量設定（#625）。省略時は standard 相当。 */
+  personality: z.string().max(WORKER_PERSONALITY_MAX_LENGTH).optional(),
+  /** 文章量設定（#625）。策略時は standard 相当。 */
   verbosity: WorkerVerbositySchema.optional(),
   imageUrl: z.string().url().max(WORKER_IMAGE_URL_MAX_LENGTH).optional(),
   deletedAt: z.string().datetime().nullable().optional(),
@@ -30,8 +33,8 @@ export type Worker = z.infer<typeof WorkerSchema>;
 export const UpdateWorkerSchema = z.object({
   displayName: z.string().min(1).max(WORKER_DISPLAY_NAME_MAX_LENGTH).optional(),
   role: z.string().min(1).max(WORKER_ROLE_MAX_LENGTH).optional(),
-  personality: z.string().max(500).optional(),
-  /** 文章量設定（#625）。省略時は変更なし。 */
+  personality: z.string().max(WORKER_PERSONALITY_MAX_LENGTH).optional(),
+  /** 文章量設定（#625）。策略時は変更なし。 */
   verbosity: WorkerVerbositySchema.optional(),
 });
 
@@ -40,8 +43,8 @@ export type UpdateWorkerInput = z.infer<typeof UpdateWorkerSchema>;
 export const CreateWorkerSchema = z.object({
   displayName: z.string().min(1).max(WORKER_DISPLAY_NAME_MAX_LENGTH),
   role: z.string().min(1).max(WORKER_ROLE_MAX_LENGTH).optional(),
-  personality: z.string().max(500).optional(),
-  /** 文章量設定（#625）。省略時は standard 相当。 */
+  personality: z.string().max(WORKER_PERSONALITY_MAX_LENGTH).optional(),
+  /** 文章量設定（#625）。策略時は standard 相当。 */
   verbosity: WorkerVerbositySchema.optional(),
 });
 
@@ -58,7 +61,7 @@ export const formatWorkerDisplayName = (worker: {
   deletedAt?: Date | string | null;
 }): string => {
   if (worker.deletedAt != null) {
-    return `【削除済み】${worker.displayName}`;
+    return `》削除済み《${worker.displayName}`;
   }
   return worker.displayName;
 };

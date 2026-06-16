@@ -93,13 +93,13 @@ describe("AdminWorkerTable（useSuspenseQuery + QueryBoundary）", () => {
     expect(await screen.findByRole("button", { name: "再試行" })).toBeInTheDocument();
   });
 
-  it("「社員を追加」ボタンが表示される", async () => {
+  it("「ワーカーを追加」ボタンが表示される", async () => {
     stubWorkers(200, []);
     renderWithClient(<AdminWorkerTable />);
-    expect(await screen.findByRole("button", { name: "社員を追加" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "ワーカーを追加" })).toBeInTheDocument();
   });
 
-  it("「社員を追加」をクリックすると AddWorkerDialog が開く", async () => {
+  it("「ワーカーを追加」をクリックすると AddWorkerDialog が開く", async () => {
     stubWorkers(200, []);
     renderWithClient(<AdminWorkerTable />);
     // スケルトン（fallback）解決後の本体ボタンを操作する。
@@ -107,7 +107,7 @@ describe("AdminWorkerTable（useSuspenseQuery + QueryBoundary）", () => {
       expect(screen.queryAllByTestId("worker-table-skeleton-item")).toHaveLength(0),
     );
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "社員を追加" }));
+    await userEvent.click(screen.getByRole("button", { name: "ワーカーを追加" }));
     expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 });

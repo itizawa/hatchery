@@ -81,7 +81,7 @@ common: Zod スキーマ → server: zod-to-openapi で openapi.json 生成 → 
 実装上の対応:
 
 - **server** — `server/src/openapi/{registry,generate}.ts`。`@asteasolutions/zod-to-openapi` で common の Zod スキーマからレジストリを組み、`pnpm --filter @hatchery/server openapi`（script `openapi`）で `server/openapi.json` を生成する。
-- **client** — `pnpm --filter @hatchery/client gen-types`（script `gen-types`）が `openapi-typescript` で `server/openapi.json` → `client/src/api/openapi.gen.ts`（`paths` 型）を生成。型安全な **fetch クライアントは `client/src/api/client.ts` の `openApiClient`**（`openapi-fetch` の `createClient<paths>`）として実装済みで、`client/src/api/{auth,channels,scenes,admin}.ts` がこれを使う。
+- **client** — `pnpm --filter @hatchery/client gen-types`（script `gen-types`）が `openapi-typescript` で `server/openapi.json` → `client/src/api/openapi.gen.ts`（`paths` 型）を生成。型安全な **fetch クライアントは `client/src/api/client.ts` の `openApiClient`**（`openapi-fetch` の `createClient<paths>`）として実装済みで、`client/src/api/{auth,communities,workers,workerCommunities,admin,batchLogs,feed,posts,subscriptions,tokenUsage,votes}.ts` 等がこれを使う。
 
 生成物（型・openapi.json 由来の `*.gen.ts` / `generated/`）は**コミットしない**（`.gitignore` 済み）。ビルド前タスクで再生成し、Turborepo (`turbo.json`) で `@hatchery/server#openapi → @hatchery/client#gen-types → @hatchery/client#build` の順を保証する。
 
@@ -106,7 +106,7 @@ common: Zod スキーマ → server: zod-to-openapi で openapi.json 生成 → 
 
 - `useState` によるフォームフィールドの自前管理・自前 `isDirty` 実装は禁止。
 - バリデーション・ダーティ検知・送信ハンドリングはすべて `useForm` に委ねる。
-- 参照実装: `client/src/routes/LoginScene.tsx`（`useForm` + `form.Field` + MUI `TextField` の連携例）。
+- 参照実装: `client/src/routes/AccountScene.tsx`（`useForm` + `form.Field` + MUI `TextField` の連携例）。
 - 違反（生の `useState` によるフォーム管理・自前 isDirty 等）はレビューで指摘対象とする。
 
 ## e2e ユースケースの保守

@@ -40,7 +40,8 @@ describe("ExternalLinkDialog", () => {
 
     it("注意事項テキストが表示される", () => {
       render(<ExternalLinkDialog {...defaultProps} />);
-      expect(screen.getByText(/外部サイト/)).toBeInTheDocument();
+      // 注意事項テキスト（body）に外部サイトと個人情報の文言が含まれる
+      expect(screen.getByText(/外部サイトのコンテンツ/)).toBeInTheDocument();
       expect(screen.getByText(/個人情報/)).toBeInTheDocument();
     });
 

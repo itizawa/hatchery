@@ -8,13 +8,37 @@
  * - 「今後表示しない」永続化後はモーダルを挟まず遷移すること（AC5, AC8）
  * - 内部リンクが対象外であること（AC7, AC8）
  */
-import { render, screen, act } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ExternalLinkProvider, useExternalLink } from "./useExternalLink";
 
 const STORAGE_KEY = "hatchery:external-link:skip-warning";
+
+/** Node.js 26 の実験的 localStorage は --localstorage-file 未指定で undefined になるため
+ * テスト用のインメモリ実装で置き換える。jsdom の Storage API と同等の動作をする。 */
+function createLocalStorageMock() {
+  let store: Record<string, string> = {};
+  return {
+    getItem: (key: string) => store[key] ?? null,
+    setItem: (key: string, value: string) => {
+      store[key] = value;
+    },
+    removeItem: (key: string) => {
+      delete store[key];
+    },
+    clear: () => {
+      store = {};
+    },
+    get length() {
+      return Object.keys(store).length;
+    },
+    key: (index: number) => Object.keys(store)[index] ?? null,
+  };
+}
+
+const localStorageMock = createLocalStorageMock();
 
 // テスト用コンポーネント
 const TestComponent = ({ href }: { href: string }) => {
@@ -41,13 +65,17 @@ const renderWithProvider = (href: string) => {
 
 describe("useExternalLink", () => {
   beforeEach(() => {
-    localStorage.removeItem(STORAGE_KEY);
+    // Node.js 26 の localStorage は --localstorage-file 未指定で undefined になるため
+    // テスト用インメモリ実装で置き換える
+    vi.stubGlobal("localStorage", localStorageMock);
+    localStorageMock.removeItem(STORAGE_KEY);
     vi.spyOn(window, "open").mockImplementation(() => null);
   });
 
   afterEach(() => {
-    localStorage.removeItem(STORAGE_KEY);
+    localStorageMock.removeItem(STORAGE_KEY);
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   describe("外部リンクのクリック", () => {
@@ -59,8 +87,9 @@ describe("useExternalLink", () => {
     });
 
     it("内部リンク（同一オリジン）はモーダルを開かずに openExternalLink は何もしない", async () => {
-      // jsdom の window.location.origin は "http://localhost"
-      renderWithProvider("http://localhost/some-path");
+      // jsdom の window.location.origin を使ったパス（vitest では "http://localhost:3000"）
+      const internalUrl = `${window.location.origin}/some-path`;
+      renderWithProvider(internalUrl);
       await userEvent.click(screen.getByRole("button", { name: "リンク" }));
       // ダイアログが開かないこと
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -120,11 +149,11 @@ describe("useExternalLink", () => {
       await userEvent.click(screen.getByRole("button", { name: "リンク" }));
       await userEvent.click(screen.getByRole("checkbox", { name: /今後この警告を表示しない/ }));
       await userEvent.click(screen.getByRole("button", { name: "続行" }));
-      expect(localStorage.getItem(STORAGE_KEY)).toBe("true");
+      expect(localStorageMock.getItem(STORAGE_KEY)).toBe("true");
     });
 
     it("localStorage に保存済みの場合は外部リンクでもモーダルを開かず直接 window.open する", async () => {
-      localStorage.setItem(STORAGE_KEY, "true");
+      localStorageMock.setItem(STORAGE_KEY, "true");
       renderWithProvider("https://example.com");
       await userEvent.click(screen.getByRole("button", { name: "リンク" }));
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();

@@ -2,7 +2,7 @@ import { Alert, Box, Button, Chip, Skeleton, Snackbar, Tab, Table, TableBody, Ta
 
 import { useForm } from "@tanstack/react-form";
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { type SyntheticEvent, useState, type ReactElement, type ReactNode } from "react";
+import { type SyntheticEvent, useState, type ComponentType, type ReactElement, type ReactNode } from "react";
 
 import { APP_SETTING_VALUE_MAX_LENGTH } from "@hatchery/common";
 import { useAdminSettings, useSaveAdminSetting } from "../api/admin.js";
@@ -13,6 +13,29 @@ import { AdminWorkerTable } from "../components/AdminWorkerTable.js";
 import { CommunitiesTab } from "../components/CommunitiesTab.js";
 import { QueryBoundary } from "../components/QueryBoundary.js";
 import { type SettingsTabValue } from "./settingsTabValues.js";
+
+/**
+ * タブパネルの Inner コンポーネントを QueryBoundary + Skeleton でラップする汎用 HOC（#596）。
+ *
+ * 各タブで手書きしていた「`QueryBoundary fallback={...}` → `Inner` 」の三段構造を集約する。
+ * `Inner` は `useSuspenseQuery` を使うコンポーネント（データ取得待ちは Suspend、
+ * エラーは throw）を想定しており、この HOC がローディング表示とエラーリカバリを担う。
+ *
+ * @param Inner - タブ本体（QueryBoundary の子として使う）
+ * @param skeleton - ローディング中に表示する Skeleton（各タブ固有の形状を渡す）
+ */
+export function withSettingsTabPanel<P extends object>(
+  Inner: ComponentType<P>,
+  skeleton: ReactNode,
+): ComponentType<P> {
+  const WrappedTabPanel = (props: P): ReactElement => (
+    <QueryBoundary fallback={skeleton}>
+      <Inner {...props} />
+    </QueryBoundary>
+  );
+  WrappedTabPanel.displayName = `withSettingsTabPanel(${Inner.displayName ?? Inner.name ?? "Component"})`;
+  return WrappedTabPanel;
+}
 
 /** タブ内のローディング表示（スケルトン行）。data-testid で各タブを識別する。 */
 const TabSkeleton = ({ testId }: { testId: string }): ReactElement => (
@@ -118,12 +141,8 @@ const ApiTokenSettingsInner = (): ReactElement => {
   );
 };
 
-/** API トークン設定タブ（#52 / #463）。QueryBoundary でローディング・エラーを扱う。 */
-const ApiTokenSettings = (): ReactElement => (
-  <QueryBoundary fallback={<ApiTokenSettingsSkeleton />}>
-    <ApiTokenSettingsInner />
-  </QueryBoundary>
-);
+/** API トークン設定タブ（#52 / #463 / #596）。withSettingsTabPanel でローディング・エラーを扱う。 */
+const ApiTokenSettings = withSettingsTabPanel(ApiTokenSettingsInner, <ApiTokenSettingsSkeleton />);
 
 /** バッチログタブの本体（#75）。useSuspenseQuery で取得し data は undefined を取らない。 */
 const BatchLogsInner = (): ReactElement => {
@@ -180,12 +199,8 @@ const BatchLogsInner = (): ReactElement => {
   );
 };
 
-/** バッチログタブ（#75 / #463）。QueryBoundary でローディング・エラーを扱う。 */
-const BatchLogs = (): ReactElement => (
-  <QueryBoundary fallback={<TabSkeleton testId="batch-logs-skeleton" />}>
-    <BatchLogsInner />
-  </QueryBoundary>
-);
+/** バッチログタブ（#75 / #463 / #596）。withSettingsTabPanel でローディング・エラーを扱う。 */
+const BatchLogs = withSettingsTabPanel(BatchLogsInner, <TabSkeleton testId="batch-logs-skeleton" />);
 
 /** トークン使用量タブの本体（#153）。useSuspenseQuery で取得し data は undefined を取らない。 */
 const TokenUsageTabInner = (): ReactElement => {
@@ -248,12 +263,8 @@ const TokenUsageTabInner = (): ReactElement => {
   );
 };
 
-/** トークン使用量タブ（#153 / #463）。QueryBoundary でローディング・エラーを扱う。 */
-const TokenUsageTab = (): ReactElement => (
-  <QueryBoundary fallback={<TabSkeleton testId="token-usage-skeleton" />}>
-    <TokenUsageTabInner />
-  </QueryBoundary>
-);
+/** トークン使用量タブ（#153 / #463 / #596）。withSettingsTabPanel でローディング・エラーを扱う。 */
+const TokenUsageTab = withSettingsTabPanel(TokenUsageTabInner, <TabSkeleton testId="token-usage-skeleton" />);
 
 /** 管理画面のタブ定義。配列駆動にして将来のタブ追加（会社設定・定時設定など）を妨げない。 */
 interface SettingsTab {

@@ -14,19 +14,19 @@
   - 既存画面に挙動を足したら該当エリアの `usecases.md` に `## UC-...` を追記し、下表のユースケース欄を更新する。
 - ユースケースは **ユーザー視点の「観察可能な期待動作」**で書く（実装詳細ではなく、外から検証できる振る舞い）。
 - `/df` で機能を実装する際は、設計書（`docs/design/issue-<N>.md`）の受け入れ条件と整合する形で usecases を更新する。
-- このメンテナンスを怎ると `/release-check` の検証範囲が実機能から乖離するため、**実装 PR のセルフレビューで usecases 更新の有無を確認する**。
+- このメンテナンスを怏ると `/release-check` の検証範囲が実機能から乖離するため、**実装 PR のセルフレビューで usecases 更新の有無を確認する**。
 
 ## エリア一覧
 
 | エリア | 対応画面 / 機能 | 詳細 | ユースケース |
 |--------|----------------|------|-------------|
-| auth | ログイン・ログアウト・認証ガード（`LoginDialog.tsx` モーダル / #454, #455: Google のみ） | [auth/usecases.md](auth/usecases.md) | UC-AUTH-01〖07 |
-| home-feed | ホームフィード閲覧（`HomeFeedScene.tsx`, `/`）・外部リンク確認モーダル（#661） | [home-feed/usecases.md](home-feed/usecases.md) | UC-HOME-01〖14 |
-| community | コミュニティ一覧・詳細・購読（`/communities`）・サイドバーのコミュニティセクション開閉・共有メニュー・モバイルドロワーナビ見切れ防止・活気指標（#527） | [community/usecases.md](community/usecases.md) | UC-COMM-01〖13 |
-| post-thread | 投稿スレッド・upvote（`/posts/$postId`） | [post-thread/usecases.md](post-thread/usecases.md) | UC-POST-01〖14 |
-| admin | 管理画面（Worker / Community 管理, `/admin`） | [admin/usecases.md](admin/usecases.md) | UC-ADMIN-01〖14 |
-| account | アカウント設定・プロフィール編集（`/account`） | [account/usecases.md](account/usecases.md) | UC-ACCOUNT-01〖04 |
-| legal | 利用規約・プライバシーポリシー（`/terms`・`/privacy`） | [legal/usecases.md](legal/usecases.md) | UC-LEGAL-01〖04 |
+| auth | ログイン・ログアウト・認証ガード（`LoginDialog.tsx` モーダル / #454, #455: Google のみ） | [auth/usecases.md](auth/usecases.md) | UC-AUTH-01〇07 |
+| home-feed | ホームフィード閲覧（`HomeFeedScene.tsx`, `/`）・外部リンク確認モーダル（#661）・タブ復帰時自動再取得（#675） | [home-feed/usecases.md](home-feed/usecases.md) | UC-HOME-01〇15 |
+| community | コミュニティ一覧・詳細・購読（`/communities`）・サイドバーのコミュニティセクション開閉・共有メニュー・モバイルドロワーナビ見切れ防止・活気指標（#527） | [community/usecases.md](community/usecases.md) | UC-COMM-01〇13 |
+| post-thread | 投稿スレッド・upvote（`/posts/$postId`） | [post-thread/usecases.md](post-thread/usecases.md) | UC-POST-01〇14 |
+| admin | 管理画面（Worker / Community 管理, `/admin`） | [admin/usecases.md](admin/usecases.md) | UC-ADMIN-01〇14 |
+| account | アカウント設定・プロフィール編集（`/account`） | [account/usecases.md](account/usecases.md) | UC-ACCOUNT-01〇04 |
+| legal | 利用規約・プライバシーポリシー（`/terms`・`/privacy`） | [legal/usecases.md](legal/usecases.md) | UC-LEGAL-01〇04 |
 
 ## ユースケース一覧（サマリ）
 
@@ -34,13 +34,13 @@
 
 ### auth — ログイン・ログアウト・認証ガード（#455: Google 認証のみ / #454: モーダル化）
 
-- UC-AUTH-01: ヘッダーのログイン導線からログインモーダルが開く（ページ遷移せず背景保持、Google でログインボタンのみ・ID/パスワードフォームなし）
+- UC-AUTH-01: ヘッダーのログイン導線からログインモーダルが開く（ページ遷移せず背景保持、Google でログインボタンのみゾid/パスワードフォームなし）
 - UC-AUTH-02: Google でログインすると Google OAuth へリダイレクトされる
 - UC-AUTH-03: Google OAuth 完了後にホームへリダイレクトされる（モーダルは閉じる）
 - UC-AUTH-04: ログアウトすると未ログイン状態に戻る（モーダルは自動では開かない）
 - UC-AUTH-05: 未ログインで認証必須ページ（/account）にアクセスするとホーム上にログインモーダルが開く
 - UC-AUTH-06: 未ログインで管理画面（/admin）にアクセスするとホーム上にログインモーダルが開く
-- UC-AUTH-07: 旧 /login URL はホーム上のログインモーダルへ誘導される（後方互換）
+- UC-AUTH-07: 旧 /login URL はホーム上のログインモーダルへ誘導される（後方互抛）
 
 ### home-feed — ホームフィード閲覧
 
@@ -58,7 +58,8 @@
 - UC-HOME-12: ホームの各投稿に所属コミュニティ名（c/slug）が表示される（#503）
 - UC-HOME-13: 投稿本文が Markdown 書式で表示される（#513）
 - UC-HOME-14: 外部リンクをクリックすると確認モーダルが表示される（#661）
-- 補足（#486 / ADR-0030）: 定時バッチは 1 定時 = vote 重み付きランダムで選ばれた 1 コミュニティだけを生成する。毎定時で新着が増えるのは全コミュニティではなく選ばれた 1 コミュニティのみ（詳細は home-feed/usecases.md の冒頭補足）。
+- UC-HOME-15: タブ復帰時に stale なデータが自動再取得される（#675）
+- 補足（#486 / ADR-0030）: 定時バッチは 1 定時 = vote 重み付きランダムで選ばれた 1 コミュニティだけを生成する。毎定時で新着が増えるのは全コミュニティではなく選ばれた 1 コミュニティのみ（詳細は home-feed/usecases.md の凒頭補足）。
 
 ### community — コミュニティ一覧・詳細・購読
 

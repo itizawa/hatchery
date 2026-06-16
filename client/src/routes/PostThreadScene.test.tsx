@@ -260,27 +260,28 @@ describe("PostThreadScene タブタイトル (#528)", () => {
   });
 });
 
+function createPostOnlyWrapper() {
+  return function PostOnlyWrapper({ children }: { children: React.ReactNode }) {
+    const qc = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    });
+    // post はシードし、communities はシードしない（fetch が走る）
+    qc.setQueryData(postThreadQueryKey("post-1"), {
+      post: mockPosts[0],
+      comments: [],
+    });
+    qc.setQueryData(communitySubscriptionQueryKey("ai-dev"), { subscribed: false });
+    qc.setQueryData(AUTH_ME_QUERY_KEY, null);
+    return (
+      <QueryClientProvider client={qc}>
+        <Suspense fallback={null}>{children}</Suspense>
+      </QueryClientProvider>
+    );
+  };
+}
+
 // #409: レイアウトシフト解消（スケルトン）。
 describe("PostThreadScene レイアウトシフト解消 (#409)", () => {
-  function createPostOnlyWrapper() {
-    return function PostOnlyWrapper({ children }: { children: React.ReactNode }) {
-      const qc = new QueryClient({
-        defaultOptions: { queries: { retry: false, gcTime: 0 } },
-      });
-      // post はシードし、communities はシードしない（fetch が走る）
-      qc.setQueryData(postThreadQueryKey("post-1"), {
-        post: mockPosts[0],
-        comments: [],
-      });
-      qc.setQueryData(communitySubscriptionQueryKey("ai-dev"), { subscribed: false });
-      qc.setQueryData(AUTH_ME_QUERY_KEY, null);
-      return (
-        <QueryClientProvider client={qc}>
-          <Suspense fallback={null}>{children}</Suspense>
-        </QueryClientProvider>
-      );
-    };
-  }
 
   it("usePostThread ローディング中はスケルトンが描画される（2カラム構造）", async () => {
     server.use(
@@ -335,18 +336,7 @@ describe("PostThreadScene コミュニティパンくず (#525)", () => {
         return HttpResponse.json(mockCommunities);
       }),
     );
-    function PostOnlyWrapper({ children }: { children: React.ReactNode }) {
-      const qc = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
-      qc.setQueryData(postThreadQueryKey("post-1"), { post: mockPosts[0], comments: [] });
-      qc.setQueryData(communitySubscriptionQueryKey("ai-dev"), { subscribed: false });
-      qc.setQueryData(AUTH_ME_QUERY_KEY, null);
-      return (
-        <QueryClientProvider client={qc}>
-          <Suspense fallback={null}>{children}</Suspense>
-        </QueryClientProvider>
-      );
-    }
-    render(<BoundedScene />, { wrapper: PostOnlyWrapper });
+    render(<BoundedScene />, { wrapper: createPostOnlyWrapper() });
 
     // post はシード済み → 即時表示
     expect(screen.getByText("今日も元気に始めましょう")).toBeInTheDocument();

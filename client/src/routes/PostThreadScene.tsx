@@ -52,7 +52,7 @@ const SidebarSkeletonColumn = (): ReactElement => (
 );
 
 /**
- * 投稿スレッド左カラム上部のコミュニティパンくずリンク（#525）。
+ * 投稿スレッド左カラム上部のコミュニティパンくずリンク。
  * usePublicCommunities は Suspense クエリのため QueryBoundary で包んで使う。
  * コミュニティが特定できない場合は null を返す。
  */
@@ -184,7 +184,7 @@ export const PostThreadScene = (): ReactElement => {
       <Box sx={{ display: "flex", gap: 3, alignItems: "flex-start" }}>
         {/* 左カラム: post 本文 + コメント一覧 */}
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          {/* コミュニティへのパンくず（#525）: xs を含む全ブレークポイントで表示 */}
+          {/* xs を含む全ブレークポイントで表示（モバイルでも隠さない） */}
           <QueryBoundary
             fallback={
               <Skeleton

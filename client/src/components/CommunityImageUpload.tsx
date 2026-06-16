@@ -1,14 +1,15 @@
-import { useRef, type ReactElement } from "react";
+import { type ReactElement } from "react";
 import { Avatar, Box, CircularProgress, Tooltip } from "./uiParts";
 
 import { useUploadCommunityImage, type CommunityImageKind } from "../api/communities.js";
+import { useImageUpload, ACCEPTED_MIME } from "../hooks/useImageUpload.js";
 
 export interface CommunityImageUploadProps {
   /** 対象 Community の ID */
   communityId: string;
   /** アイコン / カバーの種別（#457） */
   kind: CommunityImageKind;
-  /** コミュニティ名（Avatar のイニシャル・alt テキストに使用） */
+  /** コミュニティ名（Avatar のイニシャル・ alt テキストに使用） */
   name: string;
   /** 現在の画像 URL（null の場合はプレースホルダ） */
   currentImageUrl: string | null;
@@ -18,7 +19,6 @@ export interface CommunityImageUploadProps {
 
 const ICON_SIZE = 64;
 const COVER_HEIGHT = 96;
-const ACCEPTED_MIME = "image/png,image/jpeg,image/webp,image/gif";
 
 /**
  * コミュニティのアイコン / カバー画像アップロードコンポーネント（#457）。
@@ -35,22 +35,14 @@ export const CommunityImageUpload = ({
   currentImageUrl,
   onSuccess,
 }: CommunityImageUploadProps): ReactElement => {
-  const inputRef = useRef<HTMLInputElement>(null);
   const upload = useUploadCommunityImage();
+  const { inputRef, handleClick, handleFileChange, handleKeyDown } = useImageUpload({
+    upload: (file) => upload.mutateAsync({ communityId, kind, file }),
+    isPending: upload.isPending,
+    onSuccess,
+  });
 
   const kindLabel = kind === "icon" ? "アイコン" : "カバー";
-
-  const handleClick = () => {
-    inputRef.current?.click();
-  };
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    e.target.value = "";
-    const result = await upload.mutateAsync({ communityId, kind, file });
-    onSuccess?.(result);
-  };
 
   const preview =
     kind === "icon" ? (
@@ -96,12 +88,7 @@ export const CommunityImageUpload = ({
         role="button"
         aria-label={`${name} の${kindLabel}画像をアップロード`}
         tabIndex={0}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            if (!upload.isPending) handleClick();
-          }
-        }}
+        onKeyDown={handleKeyDown}
       >
         {preview}
         {upload.isPending && (

@@ -3,6 +3,7 @@ import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import XIcon from "@mui/icons-material/X";
 import { useState, type ReactElement } from "react";
 
+import { useExternalLink } from "../hooks/useExternalLink.js";
 import { Alert, IconButton, ListItemIcon, ListItemText, Menu, MenuItem, Snackbar, Tooltip } from "./uiParts";
 
 interface ShareButtonProps {
@@ -30,6 +31,7 @@ export function buildXShareUrl(shareTitle: string, shareUrl: string): string {
 type CopyFeedback = { open: boolean; severity: "success" | "error" };
 
 export const ShareButton = ({ shareUrl, shareTitle }: ShareButtonProps): ReactElement => {
+  const { openExternalLink } = useExternalLink();
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [feedback, setFeedback] = useState<CopyFeedback>({ open: false, severity: "success" });
   const open = anchorEl !== null;
@@ -72,11 +74,10 @@ export const ShareButton = ({ shareUrl, shareTitle }: ShareButtonProps): ReactEl
           <ListItemText>URL をコピー</ListItemText>
         </MenuItem>
         <MenuItem
-          component="a"
-          href={buildXShareUrl(shareTitle, shareUrl)}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={handleClose}
+          onClick={() => {
+            handleClose();
+            openExternalLink(buildXShareUrl(shareTitle, shareUrl));
+          }}
         >
           <ListItemIcon>
             <XIcon fontSize="small" />

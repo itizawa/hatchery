@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ensureOk, unwrap } from "./client.js";
 
@@ -64,5 +64,54 @@ describe("ensureOk（#532）", () => {
   it("!response.ok（error 無し・空ボディ）でも throw する（label と status を含む）", () => {
     const r = result<undefined, never>({ status: 503 });
     expect(() => ensureOk(r, "GET /api/foo")).toThrow("GET /api/foo (503)");
+  });
+});
+
+// #591: apiBaseUrl 解決優先順位（env > window.origin > 空文字）のテスト。
+// apiBaseUrl はモジュール評価時に計算される定数のため、vi.resetModules + vi.doMock + 動的 import で
+// テストごとに異なる env / window 状態を差し込む。
+// vi.resetModules() を vi.doMock より先に呼ぶことで、このファイル上部の静的 import による
+// キャッシュをクリアし、次の動的 import で新たにモジュールを評価させる。
+describe("apiBaseUrl 解決優先順位（#591）", () => {
+  afterEach(() => {
+    vi.doUnmock("../config/env.js");
+    vi.resetModules();
+    vi.unstubAllGlobals();
+  });
+
+  it("(a) clientEnv.apiBaseUrl が設定されているときはその値を採用する", async () => {
+    vi.resetModules();
+    vi.doMock("../config/env.js", () => ({
+      clientEnv: { apiBaseUrl: "https://api.example.com", logLevel: "info" },
+    }));
+    const { apiBaseUrl } = await import("./client.js");
+    expect(apiBaseUrl).toBe("https://api.example.com");
+  });
+
+  it("(b) clientEnv.apiBaseUrl 未設定かつ window ありのとき window.location.origin を採用する", async () => {
+    vi.resetModules();
+    vi.doMock("../config/env.js", () => ({
+      clientEnv: { apiBaseUrl: undefined, logLevel: "info" },
+    }));
+    vi.stubGlobal("window", { location: { origin: "https://app.example.com" } });
+    const { apiBaseUrl } = await import("./client.js");
+    expect(apiBaseUrl).toBe("https://app.example.com");
+  });
+
+  it("(c) clientEnv.apiBaseUrl 未設定かつ window 無しのとき空文字を採用する", async () => {
+    vi.resetModules();
+    vi.doMock("../config/env.js", () => ({
+      clientEnv: { apiBaseUrl: undefined, logLevel: "info" },
+    }));
+    // jsdom 環境では window が常に存在するため、一時的に globalThis.window を削除する
+    const savedWindow = globalThis.window;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    delete (globalThis as any).window;
+    try {
+      const { apiBaseUrl } = await import("./client.js");
+      expect(apiBaseUrl).toBe("");
+    } finally {
+      globalThis.window = savedWindow;
+    }
   });
 });

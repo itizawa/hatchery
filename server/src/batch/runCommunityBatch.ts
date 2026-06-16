@@ -1,7 +1,9 @@
 import {
   type CommunityWeight,
   GenerationOutputSchema,
+  buildCommunityWeights,
   formatRecentLog,
+  generateSlotKey,
   type RecentEntry,
   selectCommunityWorkers,
   selectRotatedWorkers,
@@ -151,24 +153,16 @@ export interface RunCommunityBatchDeps {
 }
 
 /**
- * 現在時刻から slot_key を生成する（"YYYY-MM-DDTHH:MM" 形式・UTC 基準）。
- * Cron 二重発火ガードに使う。実行環境のタイムゾーンに依存しない。
+ * generateSlotKey は common へ移設済み（#597）。後方互換のため re-export する。
+ * @deprecated common から直接インポートすること。
  */
-export function generateSlotKey(now: Date = new Date()): string {
-  const pad = (n: number): string => String(n).padStart(2, "0");
-  const year = now.getUTCFullYear();
-  const month = pad(now.getUTCMonth() + 1);
-  const day = pad(now.getUTCDate());
-  const hour = pad(now.getUTCHours());
-  const minute = pad(now.getUTCMinutes());
-  return `${year}-${month}-${day}T${hour}:${minute}`;
-}
+export { generateSlotKey } from "@hatchery/common";
 
 /**
  * vote 重み付きランダムで 1 コミュニティを選ぶ（#486 / ADR-0030）。
  *
  * 直近 VOTE_WEIGHT_WINDOW_DAYS 日の community 別純 vote スコア（up−down）を集計し、
- * `weight = max(0, 純vote) + 1`（cold start 床 +1）で重みを作って重み付きランダム選定する。
+ * `buildCommunityWeights`（common）で重みを算出して重み付きランダム選定する（#597）。
  * 床 +1 により vote 0・新規コミュニティも必ず正の重みを持ち、稀に選ばれる。
  *
  * @returns 選ばれた CommunityRecord。community が 0 件のときは null。
@@ -184,11 +178,11 @@ async function selectOneCommunity(
   const since = new Date(now.getTime() - VOTE_WEIGHT_WINDOW_DAYS * 24 * 60 * 60 * 1000);
   const netScores = await voteRepo.netScoresByCommunitySince(since);
 
-  const weights: CommunityWeight[] = communities.map((community) => ({
-    communityId: community.id,
-    // cold start 床: weight = max(0, 純vote) + 1。
-    weight: Math.max(0, netScores.get(community.id) ?? 0) + 1,
-  }));
+  // 重み計算を common の純粋関数に委譲する（#597）。
+  const weights: CommunityWeight[] = buildCommunityWeights(
+    communities.map((c) => c.id),
+    netScores,
+  );
 
   const selectedId = selectWeightedCommunity(weights, rng);
   if (selectedId === null) return null;
@@ -290,6 +284,7 @@ export async function runCommunityBatch(
         displayName: w.displayName,
         role: w.role,
         personality: w.personality,
+        verbosity: w.verbosity,
       }));
       const workerIds = workers.map((w) => w.id);
 

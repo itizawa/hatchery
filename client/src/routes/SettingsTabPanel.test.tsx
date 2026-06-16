@@ -6,14 +6,19 @@
  */
 import { QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
-import { type ReactElement, type ReactNode } from "react";
+import { useState, type ReactElement, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createQueryClient } from "../queryClient.js";
 import { withSettingsTabPanel } from "./SettingsScene.js";
 
 function Wrapper({ children }: { children: ReactNode }): ReactElement {
-  const queryClient = createQueryClient();
+  // createQueryClient は再レンダリングのたびに呼ばれないよう、コンポーネント外で生成する必要がある。
+  // ここでは render ごとに新しい QueryClient を渡す簡易 Wrapper として実装しており、
+  // テスト内では Wrapper の再レンダリングを発生させないため問題ない。
+  // より厳密には各テストの beforeEach で生成する設計が望ましいが、
+  // このテストファイルのケース（再レンダリングなし）では本実装で十分。
+  const [queryClient] = useState(() => createQueryClient());
   return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
 }
 

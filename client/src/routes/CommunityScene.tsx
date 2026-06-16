@@ -23,6 +23,7 @@ import { SubscribeButton } from "../components/SubscribeButton.js";
 import { SubscriptionStatus } from "../components/SubscriptionStatus.js";
 import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
 import { useGuestVoteGuard } from "../hooks/useGuestVoteGuard.js";
+import type { Community } from "../api/communities.js";
 
 /**
  * 最近投稿したワーカーパネル（#207）。
@@ -35,22 +36,17 @@ const RecentWorkersPanel = ({ slug }: { slug: string }): ReactElement => {
 };
 
 /**
- * コミュニティページ（/communities/$slug）。
- * Reddit 風 2 カラムレイアウト（左: Post 一覧 / 右: コミュニティ詳細 sticky サイドバー）。
- * ADR-0018 / Issue #370。
- * #462: usePublicCommunities・useCommunityFeed は Suspense 化（ローディング/エラーは router の QueryBoundary に委譲）。
- * useRecentWorkers はサイドバーの局所 QueryBoundary に委譲する。
- * #481: ゲストの vote 押下は guardVote で握りつぶさずログイン誘導する。
+ * コミュニティが実在する場合のみレンダーされる内側コンポーネント。
+ * useCommunityFeed など、コミュニティ存在を前提とするフックをここに集約する（#524）。
+ * 存在しない slug の場合は CommunityScene が早期リターンしてこのコンポーネントはレンダーされない。
  */
-export const CommunityScene = (): ReactElement => {
-  const { slug } = useParams({ strict: false });
-  const communitySlug = slug ?? "";
-
-  const { data: communities } = usePublicCommunities();
-  const community = communities.find((c) => c.slug === communitySlug);
-
-  useDocumentTitle(community ? `${community.name} - Hatchery` : undefined);
-
+const CommunityContent = ({
+  community,
+  communitySlug,
+}: {
+  community: Community;
+  communitySlug: string;
+}): ReactElement => {
   const { data: posts } = useCommunityFeed(communitySlug);
   const { data: authUser } = useAuth();
 
@@ -62,31 +58,29 @@ export const CommunityScene = (): ReactElement => {
   const isSubscriptionPending = isSubscribing || isUnsubscribing;
 
   const shareUrl = typeof window !== "undefined" ? window.location.href : "";
-  const shareTitle = community?.name ?? communitySlug;
+  const shareTitle = community.name;
 
   return (
     <SubscriptionStatus communitySlug={communitySlug}>
       {(subscribed) => (
         <Box component="section" sx={{ p: 3, maxWidth: 1200, mx: "auto" }}>
           {/* Reddit 風ヘッダー: カバー画像＋左下に重ねた丸いアイコン＋name（#457） */}
-          {community && (
-            <CommunityHeader
-              community={community}
-              actions={
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <ShareButton shareUrl={shareUrl} shareTitle={shareTitle} />
-                  {authUser && (
-                    <SubscribeButton
-                      subscribed={subscribed}
-                      onSubscribe={() => subscribe()}
-                      onUnsubscribe={() => unsubscribe()}
-                      disabled={isSubscriptionPending}
-                    />
-                  )}
-                </Stack>
-              }
-            />
-          )}
+          <CommunityHeader
+            community={community}
+            actions={
+              <Stack direction="row" spacing={1} alignItems="center">
+                <ShareButton shareUrl={shareUrl} shareTitle={shareTitle} />
+                {authUser && (
+                  <SubscribeButton
+                    subscribed={subscribed}
+                    onSubscribe={() => subscribe()}
+                    onUnsubscribe={() => unsubscribe()}
+                    disabled={isSubscriptionPending}
+                  />
+                )}
+              </Stack>
+            }
+          />
 
           <Box sx={{ display: "flex", gap: 3, alignItems: "flex-start" }}>
             {/* 左カラム: Post 一覧（#462: useCommunityFeed は Suspense 化済みのため isLoading 分岐は不要） */}
@@ -123,55 +117,88 @@ export const CommunityScene = (): ReactElement => {
               )}
             </Box>
 
-            {/* 右カラム: コミュニティ詳細 sticky サイドバー（md 未満で非表示・未取得時は描画しない） */}
-            {community && (
-              <Box
-                sx={{
-                  width: 312,
-                  flexShrink: 0,
-                  display: { xs: "none", md: "block" },
-                  position: "sticky",
-                  top: 80,
-                }}
+            {/* 右カラム: コミュニティ詳細 sticky サイドバー（md 未満で非表示） */}
+            <Box
+              sx={{
+                width: 312,
+                flexShrink: 0,
+                display: { xs: "none", md: "block" },
+                position: "sticky",
+                top: 80,
+              }}
+            >
+              <CommunitySidebarCard
+                community={community}
+                shareUrl={shareUrl}
+                shareTitle={shareTitle}
+                showSubscribe={Boolean(authUser)}
+                subscribed={subscribed}
+                subscriptionPending={isSubscriptionPending}
+                onSubscribe={() => subscribe()}
+                onUnsubscribe={() => unsubscribe()}
               >
-                <CommunitySidebarCard
-                  community={community}
-                  shareUrl={shareUrl}
-                  shareTitle={shareTitle}
-                  showSubscribe={Boolean(authUser)}
-                  subscribed={subscribed}
-                  subscriptionPending={isSubscriptionPending}
-                  onSubscribe={() => subscribe()}
-                  onUnsubscribe={() => unsubscribe()}
-                >
-                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                    最近投稿したワーカー
-                  </Typography>
-                  {/* #462: useRecentWorkers は Suspense 化。サイドバー内の局所 QueryBoundary で
-                      ローディング/エラーを分離し、ページ本体（feed など）と独立して描画する。 */}
-                  <Box sx={{ mb: 2 }}>
-                    <QueryBoundary
-                      fallback={
-                        <Typography variant="body2" color="text.secondary">
-                          読み込み中...
-                        </Typography>
-                      }
-                      errorFallback={() => (
-                        <Typography variant="body2" color="text.secondary">
-                          読み込みに失敗しました
-                        </Typography>
-                      )}
-                    >
-                      <RecentWorkersPanel slug={communitySlug} />
-                    </QueryBoundary>
-                  </Box>
-                </CommunitySidebarCard>
-              </Box>
-            )}
+                <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                  最近投稿したワーカー
+                </Typography>
+                {/* #462: useRecentWorkers は Suspense 化。サイドバー内の局所 QueryBoundary で
+                    ローディング/エラーを分離し、ページ本体（feed など）と独立して描画する。 */}
+                <Box sx={{ mb: 2 }}>
+                  <QueryBoundary
+                    fallback={
+                      <Typography variant="body2" color="text.secondary">
+                        読み込み中...
+                      </Typography>
+                    }
+                    errorFallback={() => (
+                      <Typography variant="body2" color="text.secondary">
+                        読み込みに失敗しました
+                      </Typography>
+                    )}
+                  >
+                    <RecentWorkersPanel slug={communitySlug} />
+                  </QueryBoundary>
+                </Box>
+              </CommunitySidebarCard>
+            </Box>
           </Box>
           <LoginPromptSnackbar open={promptOpen} onClose={closePrompt} />
         </Box>
       )}
     </SubscriptionStatus>
   );
+};
+
+/**
+ * コミュニティページ（/communities/$slug）。
+ * Reddit 風 2 カラムレイアウト（左: Post 一覧 / 右: コミュニティ詳細 sticky サイドバー）。
+ * ADR-0018 / Issue #370。
+ * #462: usePublicCommunities・useCommunityFeed は Suspense 化（ローディング/エラーは router の QueryBoundary に委譲）。
+ * useRecentWorkers はサイドバーの局所 QueryBoundary に委譲する。
+ * #481: ゲストの vote 押下は guardVote で握りつぶさずログイン誘導する。
+ * #524: 存在しない slug のとき「コミュニティが見つかりません」を表示する。
+ */
+export const CommunityScene = (): ReactElement => {
+  const { slug } = useParams({ strict: false });
+  const communitySlug = slug ?? "";
+
+  const { data: communities } = usePublicCommunities();
+  const community = communities.find((c) => c.slug === communitySlug);
+
+  useDocumentTitle(community ? `${community.name} - Hatchery` : undefined);
+
+  if (!community) {
+    return (
+      <Box sx={{ textAlign: "center", py: 8, px: 3 }}>
+        <Typography variant="h6" gutterBottom>
+          コミュニティが見つかりません
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          URL を確認するか、以下からコミュニティを探してください。
+        </Typography>
+        <RouterLink to="/communities">コミュニティを探す</RouterLink>
+      </Box>
+    );
+  }
+
+  return <CommunityContent community={community} communitySlug={communitySlug} />;
 };

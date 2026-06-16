@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  WORKER_AVATAR_URL_MAX_LENGTH,
   WORKER_DISPLAY_NAME_MAX_LENGTH,
   WORKER_IMAGE_URL_MAX_LENGTH,
+  WORKER_PERSONALITY_MAX_LENGTH,
   WORKER_ROLE_MAX_LENGTH,
   createDisplayNameResolver,
   createAvatarUrlResolver,
@@ -12,6 +14,16 @@ import {
   UpdateWorkerSchema,
   formatWorkerDisplayName,
 } from "./worker.js";
+
+describe("名前付き定数のエクスポート (#592)", () => {
+  it("WORKER_PERSONALITY_MAX_LENGTH が 500 でエクスポートされる", () => {
+    expect(WORKER_PERSONALITY_MAX_LENGTH).toBe(500);
+  });
+
+  it("WORKER_AVATAR_URL_MAX_LENGTH が 2048 でエクスポートされる", () => {
+    expect(WORKER_AVATAR_URL_MAX_LENGTH).toBe(2048);
+  });
+});
 
 describe("WorkerSchema (A-1 / A-2)", () => {
   it("id / displayName を持つワーカーは parse 成功する（role は任意）", () => {
@@ -25,7 +37,7 @@ describe("WorkerSchema (A-1 / A-2)", () => {
     expect(WorkerSchema.safeParse({ id: "haru", displayName: "" }).success).toBe(false);
   });
 
-  // #331: ADR-0020 後処理。Worker は AI 投稿者のみとなり isBot 概念を撤廃した。
+  // #331: ADR-0020 後処理。Worker は AI 投稿者のみとなり isBot 概念を撒廃した。
   it("isBot フィールドを持たない（#331）", () => {
     const parsed = WorkerSchema.parse({ id: "haru", displayName: "haru" });
     expect(parsed).not.toHaveProperty("isBot");
@@ -59,13 +71,13 @@ describe("DEFAULT_WORKERS (#25)", () => {
 });
 
 describe("WorkerSchema: personality フィールド (#38)", () => {
-  it("personality が 500 文字以内なら parse 成功する", () => {
-    const result = WorkerSchema.safeParse({ id: "haru", displayName: "haru", personality: "a".repeat(500) });
+  it("personality が WORKER_PERSONALITY_MAX_LENGTH 文字以内なら parse 成功する (#592)", () => {
+    const result = WorkerSchema.safeParse({ id: "haru", displayName: "haru", personality: "a".repeat(WORKER_PERSONALITY_MAX_LENGTH) });
     expect(result.success).toBe(true);
   });
 
-  it("personality が 501 文字なら parse に失敗する", () => {
-    const result = WorkerSchema.safeParse({ id: "haru", displayName: "haru", personality: "a".repeat(501) });
+  it("personality が WORKER_PERSONALITY_MAX_LENGTH + 1 文字なら parse に失敗する (#592)", () => {
+    const result = WorkerSchema.safeParse({ id: "haru", displayName: "haru", personality: "a".repeat(WORKER_PERSONALITY_MAX_LENGTH + 1) });
     expect(result.success).toBe(false);
   });
 
@@ -129,8 +141,8 @@ describe("UpdateWorkerSchema (#38)", () => {
     expect(UpdateWorkerSchema.safeParse({ displayName: "" }).success).toBe(false);
   });
 
-  it("personality が 501 文字なら invalid", () => {
-    expect(UpdateWorkerSchema.safeParse({ personality: "a".repeat(501) }).success).toBe(false);
+  it("personality が WORKER_PERSONALITY_MAX_LENGTH + 1 文字なら invalid (#592)", () => {
+    expect(UpdateWorkerSchema.safeParse({ personality: "a".repeat(WORKER_PERSONALITY_MAX_LENGTH + 1) }).success).toBe(false);
   });
 
   it("すべてのフィールドを省略できる（空更新は valid）", () => {
@@ -188,7 +200,7 @@ describe("formatWorkerDisplayName (#218)", () => {
   });
 
   it("deletedAt が Date の場合は《削除済み》プレフィックスを付ける", () => {
-    expect(formatWorkerDisplayName({ displayName: "田中 太郎", deletedAt: new Date("2024-01-01") })).toBe("【削除済み】田中 太郎");
+    expect(formatWorkerDisplayName({ displayName: "田中 太郎", deletedAt: new Date("2024-01-01") })).toBe("》削除済み《田中 太郎");
   });
 });
 
@@ -227,12 +239,12 @@ describe("CreateWorkerSchema (#217)", () => {
     expect(CreateWorkerSchema.safeParse({ displayName: "ワーカーA" }).success).toBe(true);
   });
 
-  it("personality が 500 文字ちょうどなら valid", () => {
-    expect(CreateWorkerSchema.safeParse({ displayName: "ワーカーA", personality: "a".repeat(500) }).success).toBe(true);
+  it("personality が WORKER_PERSONALITY_MAX_LENGTH 文字ちょうどなら valid (#592)", () => {
+    expect(CreateWorkerSchema.safeParse({ displayName: "ワーカーA", personality: "a".repeat(WORKER_PERSONALITY_MAX_LENGTH) }).success).toBe(true);
   });
 
-  it("personality が 501 文字なら invalid", () => {
-    expect(CreateWorkerSchema.safeParse({ displayName: "ワーカーA", personality: "a".repeat(501) }).success).toBe(false);
+  it("personality が WORKER_PERSONALITY_MAX_LENGTH + 1 文字なら invalid (#592)", () => {
+    expect(CreateWorkerSchema.safeParse({ displayName: "ワーカーA", personality: "a".repeat(WORKER_PERSONALITY_MAX_LENGTH + 1) }).success).toBe(false);
   });
 });
 
@@ -287,6 +299,82 @@ describe("createAvatarUrlResolver (#300)", () => {
   });
 });
 
+describe("WorkerVerbositySchema (#625)", () => {
+  it("concise / standard / detailed を受理する", async () => {
+    const { WorkerVerbositySchema } = await import("./worker.js");
+    expect(WorkerVerbositySchema.safeParse("concise").success).toBe(true);
+    expect(WorkerVerbositySchema.safeParse("standard").success).toBe(true);
+    expect(WorkerVerbositySchema.safeParse("detailed").success).toBe(true);
+  });
+
+  it("未知値は弾く", async () => {
+    const { WorkerVerbositySchema } = await import("./worker.js");
+    expect(WorkerVerbositySchema.safeParse("verbose").success).toBe(false);
+    expect(WorkerVerbositySchema.safeParse("").success).toBe(false);
+    expect(WorkerVerbositySchema.safeParse("CONCISE").success).toBe(false);
+  });
+});
+
+describe("WorkerSchema: verbosity フィールド (#625)", () => {
+  it("verbosity を策略しても parse 成功する（任意フィールド）", () => {
+    expect(WorkerSchema.safeParse({ id: "haru", displayName: "haru" }).success).toBe(true);
+  });
+
+  it("verbosity に concise を指定すると parse 成功する", () => {
+    const result = WorkerSchema.safeParse({ id: "haru", displayName: "haru", verbosity: "concise" });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.verbosity).toBe("concise");
+  });
+
+  it("verbosity に standard を指定すると parse 成功する", () => {
+    const result = WorkerSchema.safeParse({ id: "haru", displayName: "haru", verbosity: "standard" });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.verbosity).toBe("standard");
+  });
+
+  it("verbosity に detailed を指定すると parse 成功する", () => {
+    const result = WorkerSchema.safeParse({ id: "haru", displayName: "haru", verbosity: "detailed" });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.verbosity).toBe("detailed");
+  });
+
+  it("verbosity に未知値を指定すると parse 失敗する", () => {
+    expect(WorkerSchema.safeParse({ id: "haru", displayName: "haru", verbosity: "unknown" }).success).toBe(false);
+  });
+});
+
+describe("UpdateWorkerSchema: verbosity フィールド (#625)", () => {
+  it("verbosity を策略しても valid（任意）", () => {
+    expect(UpdateWorkerSchema.safeParse({}).success).toBe(true);
+  });
+
+  it("verbosity に concise / standard / detailed を指定すると valid", () => {
+    expect(UpdateWorkerSchema.safeParse({ verbosity: "concise" }).success).toBe(true);
+    expect(UpdateWorkerSchema.safeParse({ verbosity: "standard" }).success).toBe(true);
+    expect(UpdateWorkerSchema.safeParse({ verbosity: "detailed" }).success).toBe(true);
+  });
+
+  it("verbosity に未知値を指定すると invalid", () => {
+    expect(UpdateWorkerSchema.safeParse({ verbosity: "unknown" }).success).toBe(false);
+  });
+});
+
+describe("CreateWorkerSchema: verbosity フィールド (#625)", () => {
+  it("verbosity を策略しても parse 成功する（任意）", () => {
+    expect(CreateWorkerSchema.safeParse({ displayName: "ワーカーA" }).success).toBe(true);
+  });
+
+  it("verbosity に concise / standard / detailed を指定すると valid", () => {
+    expect(CreateWorkerSchema.safeParse({ displayName: "ワーカーA", verbosity: "concise" }).success).toBe(true);
+    expect(CreateWorkerSchema.safeParse({ displayName: "ワーカーA", verbosity: "standard" }).success).toBe(true);
+    expect(CreateWorkerSchema.safeParse({ displayName: "ワーカーA", verbosity: "detailed" }).success).toBe(true);
+  });
+
+  it("verbosity に未知値を指定すると invalid", () => {
+    expect(CreateWorkerSchema.safeParse({ displayName: "ワーカーA", verbosity: "unknown" }).success).toBe(false);
+  });
+});
+
 describe("WorkerSchema: deletedAt フィールド（#372 HTTP 境界型整合）", () => {
   it("deletedAt に Date オブジェクトを渡すと parse 失敗する（HTTP 境界では文字列のみ）", () => {
     expect(WorkerSchema.safeParse({ id: "w1", displayName: "Alice", deletedAt: new Date() }).success).toBe(false);
@@ -300,7 +388,7 @@ describe("WorkerSchema: deletedAt フィールド（#372 HTTP 境界型整合）
     expect(WorkerSchema.safeParse({ id: "w1", displayName: "Alice", deletedAt: null }).success).toBe(true);
   });
 
-  it("deletedAt を省略しても parse 成功する（optional）", () => {
+  it("deletedAt を策略しても parse 成功する（optional）", () => {
     expect(WorkerSchema.safeParse({ id: "w1", displayName: "Alice" }).success).toBe(true);
   });
 });

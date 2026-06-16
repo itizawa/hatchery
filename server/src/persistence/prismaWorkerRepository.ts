@@ -9,6 +9,7 @@ function toRecord(row: {
   displayName: string;
   role: string | null;
   personality: string | null;
+  verbosity: string;
   deletedAt: Date | null;
   imageUrl: string | null;
 }): WorkerRecord {
@@ -17,6 +18,7 @@ function toRecord(row: {
     displayName: row.displayName,
     role: row.role,
     personality: row.personality,
+    verbosity: row.verbosity,
     imageUrl: row.imageUrl,
     deletedAt: row.deletedAt,
   };
@@ -38,6 +40,7 @@ export function createPrismaWorkerRepository(prisma: PrismaClient): WorkerReposi
             ...(input.displayName !== undefined && { displayName: input.displayName }),
             ...(input.role !== undefined && { role: input.role }),
             ...(input.personality !== undefined && { personality: input.personality }),
+            ...(input.verbosity !== undefined && { verbosity: input.verbosity }),
           },
         });
         return toRecord(row);
@@ -133,6 +136,7 @@ export function createPrismaWorkerRepository(prisma: PrismaClient): WorkerReposi
           displayName: input.displayName,
           role: input.role ?? null,
           personality: input.personality ?? null,
+          ...(input.verbosity !== undefined && { verbosity: input.verbosity }),
         },
       });
       return toRecord(row);

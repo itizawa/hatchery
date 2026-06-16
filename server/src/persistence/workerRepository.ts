@@ -5,6 +5,8 @@ export interface WorkerRecord {
   displayName: string;
   role: string | null;
   personality: string | null;
+  /** 文章量設定（#625）。concise / standard / detailed の 3 段階。null は未設定（標準扱い）。 */
+  verbosity: string | null;
   /** ワーカーの画像 URL（#220）。#204 でアップロード基盤実装後に値が入る。現時点は null。 */
   imageUrl: string | null;
   /** 論理削除日時（#218）。null=有効、値=削除済み。 */
@@ -17,6 +19,8 @@ export interface CreateWorkerInput {
   displayName: string;
   role?: string;
   personality?: string;
+  /** 文章量設定（#625）。省略時は null（DB デフォルト standard が適用される）。 */
+  verbosity?: string;
 }
 
 export interface WorkerRepository {
@@ -48,9 +52,10 @@ export interface WorkerRepository {
 
 export function createInMemoryWorkerRepository(
   initialWorkers: Array<
-    Omit<WorkerRecord, "deletedAt" | "imageUrl"> & {
+    Omit<WorkerRecord, "deletedAt" | "imageUrl" | "verbosity"> & {
       deletedAt?: Date | null;
       imageUrl?: string | null;
+      verbosity?: string | null;
     }
   > = [],
 ): WorkerRepository {
@@ -58,6 +63,7 @@ export function createInMemoryWorkerRepository(
     ...w,
     deletedAt: w.deletedAt ?? null,
     imageUrl: w.imageUrl ?? null,
+    verbosity: w.verbosity ?? null,
   }));
 
   return {
@@ -72,6 +78,7 @@ export function createInMemoryWorkerRepository(
       if (input.displayName !== undefined) worker.displayName = input.displayName;
       if (input.role !== undefined) worker.role = input.role;
       if (input.personality !== undefined) worker.personality = input.personality;
+      if (input.verbosity !== undefined) worker.verbosity = input.verbosity;
       return Promise.resolve({ ...worker });
     },
 
@@ -134,6 +141,7 @@ export function createInMemoryWorkerRepository(
         displayName: input.displayName,
         role: input.role ?? null,
         personality: input.personality ?? null,
+        verbosity: input.verbosity ?? null,
         imageUrl: null,
         deletedAt: null,
       };

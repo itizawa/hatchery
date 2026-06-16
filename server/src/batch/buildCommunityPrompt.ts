@@ -7,6 +7,16 @@ export interface WorkerDef {
   displayName: string;
   role?: string | null;
   personality?: string | null;
+  /** 文章量設定（#625）。concise / standard / detailed の 3 段階。省略・null は standard 相当。 */
+  verbosity?: string | null;
+}
+
+/** verbosity の値を日本語の分量指示文字列に変換する（#625）。 */
+function verbosityInstruction(verbosity: string | null | undefined): string | null {
+  if (verbosity === "concise") return "1〜2 文程度で簡潔に。要点のみ。";
+  if (verbosity === "detailed") return "具体例や背景を交えてやや詳しめに（ただし冗長になりすぎない）。";
+  // standard または未指定は特別な指示なし
+  return null;
 }
 
 /** 既存Post参照定義（プロンプトに露出する安定参照ID + 実postId マッピング用）。#555 */
@@ -109,6 +119,8 @@ export function buildCommunityPrompt(
       const parts = [`  - ID: ${w.id}`, `    名前: ${w.displayName}`];
       if (w.role) parts.push(`    役割: ${w.role}`);
       if (w.personality) parts.push(`    性格・バイブル: ${w.personality}`);
+      const verbInst = verbosityInstruction(w.verbosity);
+      if (verbInst) parts.push(`    文章量: ${verbInst}`);
       return parts.join("\n");
     })
     .join("\n");

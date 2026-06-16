@@ -67,8 +67,76 @@ jobs:
           fi
 
           # GitHub Release を作成する。
+          # フォールバックとしてコミット羅列ノートを設定する。AI 生成が成功した場合は次ステップで上書きされる。
           gh release create "$version" \
             --title "Release ${version}" \
             --notes "$(printf '## リリースノート\n\n%s\n' "$release_notes")"
 
           echo "タグ ${version} と GitHub Release を作成しました。"
+
+          # 後続ステップで AI リリースノートを生成するため、コミット行を環境変数に書き出す。
+          {
+            echo "RELEASE_VERSION=${version}"
+            # 複数行の値は GITHUB_ENV の heredoc 記法で渡す。
+            echo "COMMIT_LINES<<EOF_COMMITS"
+            echo "$release_notes"
+            echo "EOF_COMMITS"
+          } >> "$GITHUB_ENV"
+
+      # AI リリースノート生成に必要な Node.js・pnpm を他ワークフローと同じ方法でセットアップする。
+      # タグ・Release 作成ステップと分けることで、セットアップ失敗がリリース作成に影響しない。
+      - name: Setup pnpm
+        continue-on-error: true
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node
+        continue-on-error: true
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Generate AI release notes
+        # AI 生成の失敗でリリース自体を壊さない（フォールバック: コミット羅列ノートを保持）。
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          set -euo pipefail
+
+          # バージョンが取得できていない場合（前ステップでスキップされた等）はスキップ。
+          if [ -z "${RELEASE_VERSION:-}" ]; then
+            echo "RELEASE_VERSION が未設定のためリリースノート生成をスキップします。"
+            exit 0
+          fi
+
+          # ANTHROPIC_API_KEY が設定されていない場合はスキップ（フォールバック維持）。
+          if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
+            echo "ANTHROPIC_API_KEY が未設定のためリリースノート生成をスキップします。"
+            exit 0
+          fi
+
+          # 依存インストール（common を含む server のみ）。
+          pnpm install --filter @hatchery/server... --frozen-lockfile
+
+          # common をビルドして server から利用可能にする。
+          pnpm --filter @hatchery/common build
+
+          # コミット行を配列として渡す（各行を --commits 引数に）。
+          # mapfile で改行区切りの COMMIT_LINES を配列化する。
+          mapfile -t commit_args <<< "${COMMIT_LINES:-}"
+
+          # AI リリースノートを生成して stdout のみを受け取る（stderr は分離してログに流す）。
+          # pnpm のスクリプト実行ヘッダーや tsx のログが stderr に出るため 2>&1 は使わない。
+          # 生成に失敗した場合は exit 1 となり continue-on-error が拾う。
+          ai_notes=$(pnpm --filter @hatchery/server release-notes \
+            --version "${RELEASE_VERSION}" \
+            --commits "${commit_args[@]+"${commit_args[@]}"}") || {
+            echo "AI リリースノートの生成に失敗しました。コミット羅列ノートを保持します。"
+            exit 1
+          }
+
+          # GitHub Release 本文を AI 生成ノートで上書きする。
+          gh release edit "${RELEASE_VERSION}" --notes "${ai_notes}"
+          echo "AI リリースノートで GitHub Release を更新しました（バージョン: ${RELEASE_VERSION}）。"

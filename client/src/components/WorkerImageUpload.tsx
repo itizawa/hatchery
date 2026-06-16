@@ -1,7 +1,8 @@
-import { useRef, type ReactElement } from "react";
+import { type ReactElement } from "react";
 import { Avatar, Box, CircularProgress, Tooltip } from "./uiParts";
 
 import { useUploadWorkerImage } from "../api/workers.js";
+import { useImageUpload, ACCEPTED_MIME } from "../hooks/useImageUpload.js";
 
 export interface WorkerImageUploadProps {
   /** 対象 Worker の ID */
@@ -15,7 +16,6 @@ export interface WorkerImageUploadProps {
 }
 
 const AVATAR_SIZE = 48;
-const ACCEPTED_MIME = "image/png,image/jpeg,image/webp,image/gif";
 
 /**
  * ワーカーのアバター画像アップロードコンポーネント（#204 / #329）。
@@ -30,22 +30,12 @@ export const WorkerImageUpload = ({
   currentImageUrl,
   onSuccess,
 }: WorkerImageUploadProps): ReactElement => {
-  const inputRef = useRef<HTMLInputElement>(null);
   const upload = useUploadWorkerImage();
-
-  const handleClick = () => {
-    inputRef.current?.click();
-  };
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    // ファイル入力をリセット（同じファイルの再選択を可能にする）
-    e.target.value = "";
-
-    const result = await upload.mutateAsync({ workerId, file });
-    onSuccess?.(result);
-  };
+  const { inputRef, handleClick, handleFileChange, handleKeyDown } = useImageUpload({
+    upload: (file) => upload.mutateAsync({ workerId, file }),
+    isPending: upload.isPending,
+    onSuccess,
+  });
 
   return (
     <Tooltip title="クリックして画像をアップロード" placement="top">
@@ -59,12 +49,7 @@ export const WorkerImageUpload = ({
         role="button"
         aria-label={`${displayName} の画像をアップロード`}
         tabIndex={0}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            if (!upload.isPending) handleClick();
-          }
-        }}
+        onKeyDown={handleKeyDown}
       >
         <Avatar
           src={currentImageUrl ?? undefined}

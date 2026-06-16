@@ -30,3 +30,6 @@ export * from "./logic/selectWeightedCommunity.js";
 export * from "./logic/calcPostedAtOffsets.js";
 export * from "./logic/formatRelativeTime.js";
 export * from "./logic/ogp.js";
+
+// ── リリースノート（#602）──────────────────────────────────────
+export * from "./releaseNotes/index.js";

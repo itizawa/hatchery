@@ -51,7 +51,7 @@ describe("管理画面（#50）", () => {
     expect(await screen.findByRole("heading", { name: /管理画面/ })).toBeInTheDocument();
   });
 
-  it("管理画面（/admin）のワーカー管理タブに「社員を追加」ボタンが表示される（#217）", async () => {
+  it("管理画面（/admin）のワーカー管理タブに「ワーカーを追加」ボタンが表示される（#217）", async () => {
     vi.spyOn(authApi, "fetchMe").mockResolvedValue({ id: "user1", displayName: "Alice", role: "admin" });
     vi.spyOn(adminApi, "useAdminWorkers").mockReturnValue({
       data: DEFAULT_WORKERS.map((w) => ({ ...w })),
@@ -60,7 +60,7 @@ describe("管理画面（#50）", () => {
 
     expect(await screen.findByRole("tab", { name: /ワーカー管理/ })).toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "社員を追加" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "ワーカーを追加" })).toBeInTheDocument();
     });
   });
 });

@@ -5,10 +5,8 @@ import { type ReleaseNotesGenerator, runGenerateReleaseNotes } from "./generateR
 // main() はプロセスに依存するため、ロジック層 runGenerateReleaseNotes を切り出してテストする。
 
 describe("runGenerateReleaseNotes", () => {
-  let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
-
   beforeEach(() => {
-    consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
   afterEach(() => {

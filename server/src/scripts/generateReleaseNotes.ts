@@ -8,10 +8,19 @@
  * エラー時: stderr に出力して exit code 1（ワークフロー側が continue-on-error: true で吸収する）
  */
 
+import { pathToFileURL } from "node:url";
+
 import Anthropic from "@anthropic-ai/sdk";
 import { ReleaseNotesSummarySchema, buildReleaseNotesPrompt, renderReleaseNotesMarkdown } from "@hatchery/common";
 
 import { DEFAULT_BATCH_MODEL } from "../config/env.js";
+
+/**
+ * リリースノート生成の max_tokens。
+ * overview（最大 500 文字 ≈ 375 トークン）+ カテゴリ項目（最大 200 文字 × 複数）+ JSON 構造オーバーヘッドを考慮し、
+ * 大規模リリースでも切り詰めが起きないよう十分な値を確保する。
+ */
+const RELEASE_NOTES_MAX_TOKENS = 2048;
 
 /** AI にプロンプトを投げてテキストを返す関数型（DI 用）。 */
 export type ReleaseNotesGenerator = (prompt: string, apiKey: string) => Promise<string>;
@@ -99,7 +108,7 @@ function createDefaultGenerator(): ReleaseNotesGenerator {
     const client = new Anthropic({ apiKey });
     const message = await client.messages.create({
       model: DEFAULT_BATCH_MODEL,
-      max_tokens: 1024,
+      max_tokens: RELEASE_NOTES_MAX_TOKENS,
       messages: [{ role: "user", content: prompt }],
     });
     const textBlock = message.content.find((c) => c.type === "text");
@@ -146,14 +155,13 @@ async function main(): Promise<void> {
   process.stdout.write(result.markdown + "\n");
 }
 
-// このファイルが直接実行されているとき（import によるテスト時ではない）のみ main を呼ぶ。
-// ESM では import.meta.url と process.argv[1] を比較する標準的な方法を使う。
-import { fileURLToPath } from "url";
+// 直接実行（tsx src/scripts/generateReleaseNotes.ts）のときだけ main を起動する。
+// テストからの import ではスクリプトを実行しない。
+// communityBatchIndex.ts と同じ確立済みパターン（pathToFileURL による厳密比較）を使う。
+const isDirectRun =
+  process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
 
-const isMain = process.argv[1] !== undefined &&
-  fileURLToPath(import.meta.url).endsWith(process.argv[1].replace(/\.[cm]?js$/, ".ts").split("/").pop() ?? "");
-
-if (isMain || process.argv[1]?.includes("generateReleaseNotes")) {
+if (isDirectRun) {
   main().catch((err) => {
     console.error("予期しないエラーが発生しました:", err);
     process.exit(1);

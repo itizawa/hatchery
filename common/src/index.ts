@@ -27,6 +27,8 @@ export * from "./result/index.js";
 export * from "./logic/formatRecentLog.js";
 export * from "./logic/selectAppearingMembers.js";
 export * from "./logic/selectWeightedCommunity.js";
+export * from "./logic/buildCommunityWeights.js";
+export * from "./logic/generateSlotKey.js";
 export * from "./logic/calcPostedAtOffsets.js";
 export * from "./logic/formatRelativeTime.js";
 export * from "./logic/ogp.js";

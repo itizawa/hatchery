@@ -62,7 +62,7 @@ export const AddWorkerDialog = ({ open, onClose }: AddWorkerDialogProps): ReactE
 
   return (
     <Dialog open={open} onClose={handleClose} fullWidth maxWidth="xs">
-      <DialogTitle>社員を追加</DialogTitle>
+      <DialogTitle>ワーカーを追加</DialogTitle>
       <Box
         component="form"
         onSubmit={(e) => {

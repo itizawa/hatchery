@@ -7,18 +7,18 @@ import { AddWorkerDialog } from "./AddWorkerDialog.js";
 import { QueryBoundary } from "./QueryBoundary.js";
 import { WorkerTable } from "./WorkerTable.js";
 
-/** 「社員を追加」ボタン（ローディング・成功で共有するヘッダ）。 */
+/** 「ワーカーを追加」ボタン（ローディング・成功で共有するヘッダ）。 */
 const AddWorkerButton = ({ onClick }: { onClick: () => void }): ReactElement => (
   <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 1 }}>
-    <Button variant="contained" size="small" onClick={onClick} aria-label="社員を追加">
-      社員を追加
+    <Button variant="contained" size="small" onClick={onClick} aria-label="ワーカーを追加">
+      ワーカーを追加
     </Button>
   </Box>
 );
 
 /**
  * ローディング中の fallback（QueryBoundary の fallback として使う・#463）。
- * 「社員を追加」ボタンと WorkerTable のスケルトン行を表示して従来の見た目を維持する。
+ * 「ワーカーを追加」ボタンと WorkerTable のスケルトン行を表示して従来の見た目を維持する。
  */
 const AdminWorkerTableSkeleton = (): ReactElement => (
   <Box>

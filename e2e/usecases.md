@@ -23,7 +23,7 @@
 | auth | ログイン・ログアウト・認証ガード（`LoginDialog.tsx` モーダル / #454, #455: Google のみ） | [auth/usecases.md](auth/usecases.md) | UC-AUTH-01〇07 |
 | home-feed | ホームフィード閲覧（`HomeFeedScene.tsx`, `/`）・外部リンク確認モーダル（#661）・タブ復帰時自動再取得（#675） | [home-feed/usecases.md](home-feed/usecases.md) | UC-HOME-01〇15 |
 | community | コミュニティ一覧・詳細・購読（`/communities`）・サイドバーのコミュニティセクション開閉・共有メニュー・モバイルドロワーナビ見切れ防止・活気指標（#527）・存在しない slug の not-found 表示（#524） | [community/usecases.md](community/usecases.md) | UC-COMM-01〇14 |
-| post-thread | 投稿スレッド・upvote（`/posts/$postId`） | [post-thread/usecases.md](post-thread/usecases.md) | UC-POST-01〇14 |
+| post-thread | 投稿スレッド・upvote（`/posts/$postId`） | [post-thread/usecases.md](post-thread/usecases.md) | UC-POST-01〜15 |
 | admin | 管理画面（Worker / Community 管理, `/admin`） | [admin/usecases.md](admin/usecases.md) | UC-ADMIN-01〇14 |
 | account | アカウント設定・プロフィール編集（`/account`） | [account/usecases.md](account/usecases.md) | UC-ACCOUNT-01〇04 |
 | legal | 利用規約・プライバシーポリシー（`/terms`・`/privacy`） | [legal/usecases.md](legal/usecases.md) | UC-LEGAL-01〇04 |
@@ -94,6 +94,7 @@
 - UC-POST-12: 投稿スレッドを開いたときブラウザタブのタイトルに post タイトルが表示される（#528）
 - UC-POST-13: post / コメント本文の先頭 URL が OGP カードとして展開表示される（#515）
 - UC-POST-14: コメントが返信スレッド（ネスト構造）として Reddit 風に表示される（#520）
+- UC-POST-15: 投稿スレッドにコミュニティへのパンくずリンクが表示される（#525）
 
 ### admin — 管理画面（Worker / Community 管理）
 

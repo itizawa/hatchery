@@ -23,8 +23,6 @@ import { useForm } from "@tanstack/react-form";
 import { type ReactElement, useState } from "react";
 
 import {
-  COMMUNITY_DESCRIPTION_MAX_LENGTH,
-  COMMUNITY_GENERATION_INSTRUCTION_MAX_LENGTH,
   COMMUNITY_SLUG_MAX_LENGTH,
   COMMUNITY_SLUG_REGEX,
 } from "@hatchery/common";
@@ -97,50 +95,7 @@ function CreateCommunityForm(): ReactElement {
           />
         )}
       </form.Field>
-      <form.Field
-        name="name"
-        validators={{
-          onSubmit: ({ value }) => (!value ? "コミュニティ名は必須です" : undefined),
-        }}
-      >
-        {(nameField) => (
-          <form.Field
-            name="description"
-            validators={{
-              onSubmit: ({ value }) => (!value ? "作風の説明は必須です" : undefined),
-            }}
-          >
-            {(descField) => (
-              <form.Field name="generationInstruction">
-                {(genField) => (
-                  <CommunityFormFields
-                    name={{
-                      value: nameField.state.value,
-                      onChange: (e) => nameField.handleChange(e.target.value),
-                      onBlur: nameField.handleBlur,
-                      error: nameField.state.meta.errors.length > 0,
-                      helperText: nameField.state.meta.errors[0] ?? "",
-                    }}
-                    description={{
-                      value: descField.state.value,
-                      onChange: (e) => descField.handleChange(e.target.value),
-                      onBlur: descField.handleBlur,
-                      error: descField.state.meta.errors.length > 0,
-                      helperText: descField.state.meta.errors[0] ?? `最大 ${COMMUNITY_DESCRIPTION_MAX_LENGTH} 文字`,
-                    }}
-                    generationInstruction={{
-                      value: genField.state.value ?? "",
-                      onChange: (e) => genField.handleChange(e.target.value),
-                      onBlur: genField.handleBlur,
-                      helperText: `最大 ${COMMUNITY_GENERATION_INSTRUCTION_MAX_LENGTH} 文字（省略時は概要を使用）`,
-                    }}
-                  />
-                )}
-              </form.Field>
-            )}
-          </form.Field>
-        )}
-      </form.Field>
+      <CommunityFormFields form={form} />
       <Button
         type="submit"
         variant="contained"
@@ -226,50 +181,7 @@ function EditCommunityForm({ community, onCancel }: EditCommunityFormProps): Rea
           </Typography>
         </Box>
       </Box>
-      <form.Field
-        name="name"
-        validators={{
-          onSubmit: ({ value }) => (!value ? "コミュニティ名は必須です" : undefined),
-        }}
-      >
-        {(nameField) => (
-          <form.Field
-            name="description"
-            validators={{
-              onSubmit: ({ value }) => (!value ? "作風の説明は必須です" : undefined),
-            }}
-          >
-            {(descField) => (
-              <form.Field name="generationInstruction">
-                {(genField) => (
-                  <CommunityFormFields
-                    name={{
-                      value: nameField.state.value ?? "",
-                      onChange: (e) => nameField.handleChange(e.target.value),
-                      onBlur: nameField.handleBlur,
-                      error: nameField.state.meta.errors.length > 0,
-                      helperText: nameField.state.meta.errors[0] ?? "",
-                    }}
-                    description={{
-                      value: descField.state.value ?? "",
-                      onChange: (e) => descField.handleChange(e.target.value),
-                      onBlur: descField.handleBlur,
-                      error: descField.state.meta.errors.length > 0,
-                      helperText: descField.state.meta.errors[0] ?? `最大 ${COMMUNITY_DESCRIPTION_MAX_LENGTH} 文字`,
-                    }}
-                    generationInstruction={{
-                      value: genField.state.value ?? "",
-                      onChange: (e) => genField.handleChange(e.target.value),
-                      onBlur: genField.handleBlur,
-                      helperText: `最大 ${COMMUNITY_GENERATION_INSTRUCTION_MAX_LENGTH} 文字（省略時は概要を使用）`,
-                    }}
-                  />
-                )}
-              </form.Field>
-            )}
-          </form.Field>
-        )}
-      </form.Field>
+      <CommunityFormFields form={form} />
       <Box sx={{ display: "flex", gap: 1 }}>
         <Button type="submit" variant="contained" size="small" disabled={updateMutation.isPending}>
           保存

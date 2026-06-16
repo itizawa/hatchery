@@ -130,7 +130,7 @@ export const PostCard = ({
         </Box>
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Typography
-            variant="subtitle1"
+            variant="h6"
             component="h3"
             sx={{ fontWeight: 600, mb: 0.5 }}
           >
@@ -143,7 +143,7 @@ export const PostCard = ({
           </Box>
           <MarkdownContent
             content={post.text}
-            variant="body1"
+            variant="body2"
             paragraphSx={
               truncateText
                 ? {

@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Worker } from "@hatchery/common";
-import { WORKER_DISPLAY_NAME_MAX_LENGTH, WORKER_ROLE_MAX_LENGTH } from "@hatchery/common";
+import { WORKER_DISPLAY_NAME_MAX_LENGTH, WORKER_PERSONALITY_MAX_LENGTH, WORKER_ROLE_MAX_LENGTH } from "@hatchery/common";
 
 // useUpdateWorker のモック
 vi.mock("../api/workers.js", () => ({
@@ -107,11 +107,11 @@ describe("EditWorkerDialog（#181 / #329 / #490）", () => {
     expect(roleInput).toHaveAttribute("maxlength", String(WORKER_ROLE_MAX_LENGTH));
   });
 
-  it("personality の入力に maxLength=500 が設定されている", () => {
+  it("personality の入力に maxLength=WORKER_PERSONALITY_MAX_LENGTH が設定されている (#592)", () => {
     renderWithClient(<EditWorkerDialog worker={mockWorker} open onClose={vi.fn()} />);
 
     const personalityInput = screen.getByLabelText(/性格/);
-    expect(personalityInput).toHaveAttribute("maxlength", "500");
+    expect(personalityInput).toHaveAttribute("maxlength", String(WORKER_PERSONALITY_MAX_LENGTH));
   });
 
   it("参加コミュニティの複数選択 UI が表示される（#490）", () => {
@@ -136,6 +136,7 @@ describe("EditWorkerDialog（#181 / #329 / #490）", () => {
           displayName: "ハル",
           role: "ムードメーカー",
           personality: "明るく元気",
+          verbosity: "standard",
         },
       });
     });
@@ -207,6 +208,40 @@ describe("EditWorkerDialog（#181 / #329 / #490）", () => {
     renderWithClient(<EditWorkerDialog worker={mockWorker} open onClose={vi.fn()} />);
 
     expect(screen.queryByText(/失敗/)).not.toBeInTheDocument();
+  });
+
+  it("文章量（verbosity）の選択 UI が表示される（#625）", () => {
+    renderWithClient(<EditWorkerDialog worker={mockWorker} open onClose={vi.fn()} />);
+    expect(screen.getByLabelText(/文章量/)).toBeInTheDocument();
+  });
+
+  it("worker.verbosity が未設定のとき文章量の初期値は standard（#625）", () => {
+    renderWithClient(<EditWorkerDialog worker={{ ...mockWorker, verbosity: undefined }} open onClose={vi.fn()} />);
+    // 初期値が standard であること（Select の value 表示）
+    expect(screen.getByLabelText(/文章量/)).toBeInTheDocument();
+  });
+
+  it("worker.verbosity=concise のとき文章量の初期値は concise（#625）", () => {
+    renderWithClient(<EditWorkerDialog worker={{ ...mockWorker, verbosity: "concise" }} open onClose={vi.fn()} />);
+    // 「簡潔」という表示文字が含まれていること
+    expect(screen.getByText("簡潔")).toBeInTheDocument();
+  });
+
+  it("保存ボタンを押すと verbosity が body に含まれる（#625）", async () => {
+    const updateMutateAsync = vi.fn().mockResolvedValue(undefined);
+    const setMutateAsync = vi.fn().mockResolvedValue([]);
+    stubAll({ updateMutateAsync, setMutateAsync, current: [] });
+
+    renderWithClient(<EditWorkerDialog worker={{ ...mockWorker, verbosity: "detailed" }} open onClose={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /保存/ }));
+
+    await waitFor(() => {
+      expect(updateMutateAsync).toHaveBeenCalledWith({
+        id: "haru",
+        body: expect.objectContaining({ verbosity: "detailed" }),
+      });
+    });
   });
 
   it("参加コミュニティ取得が失敗しても名前・役割は編集・保存でき、置換 API は呼ばれない（#490）", async () => {

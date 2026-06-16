@@ -111,8 +111,8 @@ export function ExternalLinkProvider({ children }: ExternalLinkProviderProps) {
     children,
     pendingUrl != null
       ? createElement(ExternalLinkDialog, {
-          open: pendingUrl != null,
-          url: pendingUrl ?? "",
+          open: true,
+          url: pendingUrl,
           onClose: handleClose,
           onContinue: handleContinue,
           skipWarning,

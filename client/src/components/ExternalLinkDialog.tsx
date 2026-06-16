@@ -15,7 +15,6 @@ import {
 /** ダイアログ内の UI 文言定数（表示崩れを防ぐため一元管理）。 */
 const TEXTS = {
   title: "外部サイトへのアクセス",
-  cautionHeader: "このリンクは外部サイトにアクセスします",
   cautionBody:
     "外部サイトのコンテンツは Hatchery の管理外であり、当サイトは内容について責任を負いません。個人情報の入力には十分ご注意ください。",
   destinationLabel: "アクセス先:",

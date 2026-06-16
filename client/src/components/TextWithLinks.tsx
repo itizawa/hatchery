@@ -13,8 +13,10 @@ interface TextWithLinksProps {
 }
 
 /**
- * テキスト中の http(s):// URL を `<a target="_blank" rel="noopener noreferrer">` リンクに変換する（#515）。
+ * テキスト中の http(s):// URL を外部リンク確認モーダル経由で開くリンクに変換する（#515 / #661）。
  * 生 HTML 注入を使わず React 要素として組み立てることで XSS を防ぐ。
+ * 左クリックは確認モーダルを経由し、中クリック / Ctrl+クリック等のネイティブ操作は
+ * href + target="_blank" により新規タブで直接開く（モーダル回避は許容）。
  * URL 以外のテキスト部分はそのまま文字列として表示される。
  */
 export const TextWithLinks = ({ text }: TextWithLinksProps): ReactElement => {
@@ -43,6 +45,8 @@ export const TextWithLinks = ({ text }: TextWithLinksProps): ReactElement => {
       <Link
         key={matchIndex}
         href={capturedUrl}
+        target="_blank"
+        rel="noopener noreferrer"
         onClick={(e) => {
           e.preventDefault();
           openExternalLink(capturedUrl);

@@ -187,7 +187,8 @@ export const MarkdownContent = ({
       </Box>
     ),
 
-    // リンク: 外部リンク確認モーダル経由で開く（#661）
+    // リンク: 左クリックは外部リンク確認モーダル経由で開く（#661）。
+    // href + target="_blank" は中クリック / Ctrl+クリック等ネイティブ操作の後退動作として保持する。
     a: ({
       href,
       children,
@@ -197,6 +198,8 @@ export const MarkdownContent = ({
     }) => (
       <Link
         href={href}
+        target="_blank"
+        rel="noopener noreferrer"
         onClick={(e) => {
           if (href) {
             e.preventDefault();
@@ -277,6 +280,8 @@ export const MarkdownContent = ({
         return (
           <Link
             href={capturedSrc}
+            target="_blank"
+            rel="noopener noreferrer"
             onClick={(e) => {
               e.preventDefault();
               openExternalLink(capturedSrc);

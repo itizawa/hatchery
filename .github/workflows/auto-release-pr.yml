@@ -43,11 +43,14 @@ jobs:
             exit 0
           fi
 
-          # 直近 open マイルストーン（due_on 昇順）の名前を取得してタイトルに含める。
+          # 直近 open マイルストーン（セマンティックバージョン昇順で最小）の名前を取得してタイトルに含める。
+          # due_on が null のマイルストーンが混在すると GitHub API の due_on ソートが不定になるため、
+          # 全件取得して v* タイトルを sort -V で並べ最小バージョンを選ぶ。
           # API 失敗時・マイルストーン未設定時はフォールバックタイトルを使用し、ジョブを失敗させない。
           milestone_name=$(gh api \
-            "repos/$GITHUB_REPOSITORY/milestones?state=open&sort=due_on&direction=asc&per_page=1" \
-            --jq '.[0].title // ""' 2>/dev/null || true)
+            "repos/$GITHUB_REPOSITORY/milestones?state=open&per_page=100" \
+            --jq '.[].title' 2>/dev/null \
+            | grep '^v' | sort -V | head -1 || true)
 
           if [ -n "$milestone_name" ]; then
             title="Release ${milestone_name}: develop -> main ($(date -u +%Y-%m-%d))"

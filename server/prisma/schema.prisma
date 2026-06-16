@@ -248,4 +248,6 @@ model Vote {
   @@unique([userId, commentId])
   @@index([postId])
   @@index([commentId])
+  /// #554: netScoresByCommunitySince の createdAt >= since フィルタ最適化。
+  @@index([createdAt])
 }

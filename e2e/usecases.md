@@ -22,7 +22,7 @@
 |--------|----------------|------|-------------|
 | auth | ログイン・ログアウト・認証ガード（`LoginDialog.tsx` モーダル / #454, #455: Google のみ） | [auth/usecases.md](auth/usecases.md) | UC-AUTH-01〇07 |
 | home-feed | ホームフィード閲覧（`HomeFeedScene.tsx`, `/`）・外部リンク確認モーダル（#661）・タブ復帰時自動再取得（#675） | [home-feed/usecases.md](home-feed/usecases.md) | UC-HOME-01〇15 |
-| community | コミュニティ一覧・詳細・購読（`/communities`）・サイドバーのコミュニティセクション開閉・共有メニュー・モバイルドロワーナビ見切れ防止・活気指標（#527） | [community/usecases.md](community/usecases.md) | UC-COMM-01〇13 |
+| community | コミュニティ一覧・詳細・購読（`/communities`）・サイドバーのコミュニティセクション開閉・共有メニュー・モバイルドロワーナビ見切れ防止・活気指標（#527）・存在しない slug の not-found 表示（#524） | [community/usecases.md](community/usecases.md) | UC-COMM-01〇14 |
 | post-thread | 投稿スレッド・upvote（`/posts/$postId`） | [post-thread/usecases.md](post-thread/usecases.md) | UC-POST-01〇14 |
 | admin | 管理画面（Worker / Community 管理, `/admin`） | [admin/usecases.md](admin/usecases.md) | UC-ADMIN-01〇14 |
 | account | アカウント設定・プロフィール編集（`/account`） | [account/usecases.md](account/usecases.md) | UC-ACCOUNT-01〇04 |
@@ -76,6 +76,7 @@
 - UC-COMM-11: コミュニティ詳細の投稿一覧では本文が数行に省略表示される（#501）
 - UC-COMM-12: モバイルドロワーを開いたとき全ナビ項目が見切れず表示される（#514）
 - UC-COMM-13: コミュニティ一覧に投稿数・最終投稿の活気指標が表示される（#527）
+- UC-COMM-14: 存在しないコミュニティ URL を開くと「コミュニティが見つかりません」と表示される（#524）
 
 ### post-thread — 投稿スレッド・upvote
 

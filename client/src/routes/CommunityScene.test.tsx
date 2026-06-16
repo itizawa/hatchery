@@ -77,6 +77,25 @@ function renderScene({ seedRecentWorkers = true }: { seedRecentWorkers?: boolean
   );
 }
 
+/**
+ * 存在しない slug のとき（#524）— communities キャッシュに該当コミュニティが無い状態を再現。
+ * inner component（CommunityContent）はレンダーされないため feed/subscription/auth のシードは不要。
+ */
+function renderNotFoundScene() {
+  const qc = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+  });
+  qc.setQueryData(["communities"], []);
+
+  return render(
+    <QueryClientProvider client={qc}>
+      <QueryBoundary fallback={<MainContentSkeleton />}>
+        <CommunityScene />
+      </QueryBoundary>
+    </QueryClientProvider>,
+  );
+}
+
 describe("CommunityScene", () => {
   it("h1 にコミュニティの表示名が表示される", async () => {
     renderScene();
@@ -136,5 +155,23 @@ describe("CommunityScene", () => {
     // 本体（見出し）は表示され続ける
     expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument();
     errorSpy.mockRestore();
+  });
+
+  it("存在しない slug のとき「コミュニティが見つかりません」を表示する（#524）", async () => {
+    renderNotFoundScene();
+    expect(await screen.findByText("コミュニティが見つかりません")).toBeInTheDocument();
+  });
+
+  it("存在しない slug のとき /communities へのリンクを表示する（#524）", async () => {
+    renderNotFoundScene();
+    await screen.findByText("コミュニティが見つかりません");
+    const link = screen.getByRole("link", { name: /コミュニティを探す/ });
+    expect(link).toHaveAttribute("href", "/communities");
+  });
+
+  it("実在コミュニティで投稿が 0 件のとき待機メッセージを表示する（#524）", async () => {
+    renderScene();
+    await screen.findByRole("heading", { level: 1 });
+    expect(screen.getByText("このコミュニティにはまだ投稿がありません。")).toBeInTheDocument();
   });
 });

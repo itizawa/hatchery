@@ -5,11 +5,12 @@
  * - 代表的な Markdown 記法が期待どおりの要素にレンダリングされる（受け入れ条件 5）
  * - XSS 防止: <script> タグ・javascript: スキーム・onerror 等がスクリプト実行可能な DOM に変換されない（受け入れ条件 4）
  * - 画像インライン埋め込みを許可しない（受け入れ条件 2）
- * - リンクは target="_blank" + rel="noopener noreferrer" で開く（受け入れ条件 2）
+ * - 外部リンクは外部リンク確認フローを経由して開く（#661 受け入れ条件 2）
  * - プレーンテキストも破綻なく表示できる（受け入れ条件 3・後方互換）
  */
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
 
 import { MarkdownContent } from "./MarkdownContent";
 
@@ -127,17 +128,23 @@ const x = 1;
   });
 
   describe("リンクの挙動", () => {
-    it("外部リンクは target='_blank' で開く", () => {
+    it("外部リンクをクリックすると外部リンク確認フローを経由する（#661: Provider 外では直接 window.open）", async () => {
+      // ExternalLinkProvider なし（フォールバック）の環境では window.open を直接呼ぶ
+      const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
       const { container } = render(<MarkdownContent content="[外部リンク](https://example.com)" />);
       const link = container.querySelector("a");
-      expect(link?.getAttribute("target")).toBe("_blank");
+      expect(link).not.toBeNull();
+      if (link) {
+        await userEvent.click(link);
+      }
+      expect(openSpy).toHaveBeenCalledWith("https://example.com", "_blank", "noopener,noreferrer");
+      openSpy.mockRestore();
     });
 
-    it("外部リンクに rel='noopener noreferrer' が設定されている", () => {
+    it("外部リンクに href 属性が設定されている", () => {
       const { container } = render(<MarkdownContent content="[外部リンク](https://example.com)" />);
       const link = container.querySelector("a");
-      expect(link?.getAttribute("rel")).toContain("noopener");
-      expect(link?.getAttribute("rel")).toContain("noreferrer");
+      expect(link?.getAttribute("href")).toBe("https://example.com");
     });
   });
 

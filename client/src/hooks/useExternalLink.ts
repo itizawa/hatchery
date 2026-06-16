@@ -88,6 +88,9 @@ export function ExternalLinkProvider({ children }: ExternalLinkProviderProps) {
   );
 
   const handleClose = useCallback(() => {
+    // チェックボックスの変更は「続行」時のみ確定する。
+    // キャンセル時はチェック状態をリセットし、次回モーダル表示時に初期値に戻す。
+    setSkipWarning(storageGet(STORAGE_KEY) === "true");
     setPendingUrl(null);
   }, []);
 

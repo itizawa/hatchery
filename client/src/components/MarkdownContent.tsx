@@ -12,7 +12,7 @@ import remarkGfm from "remark-gfm";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import { useMemo } from "react";
 import type { ReactElement, ReactNode } from "react";
-import { useExternalLink } from "../hooks/useExternalLink.js";
+import { isExternalUrl, useExternalLink } from "../hooks/useExternalLink.js";
 import { Box, Link, Typography } from "./uiParts";
 import type { Components } from "react-markdown";
 
@@ -187,8 +187,10 @@ export const MarkdownContent = ({
       </Box>
     ),
 
-    // リンク: 左クリックは外部リンク確認モーダル経由で開く（#661）。
+    // リンク: 外部リンクの左クリックは確認モーダル経由で開く（#661）。
     // href + target="_blank" は中クリック / Ctrl+クリック等ネイティブ操作の後退動作として保持する。
+    // 相対パス・同一オリジン URL は外部リンク判定外のため preventDefault せずブラウザの
+    // デフォルト動作（href に従ったナビゲーション）に委ねる。
     a: ({
       href,
       children,
@@ -201,7 +203,7 @@ export const MarkdownContent = ({
         target="_blank"
         rel="noopener noreferrer"
         onClick={(e) => {
-          if (href) {
+          if (href && isExternalUrl(href)) {
             e.preventDefault();
             openExternalLink(href);
           }

@@ -73,16 +73,17 @@ describe("ShareButton", () => {
     expect(screen.queryByText("URL をコピーしました")).not.toBeInTheDocument();
   });
 
-  it("「X でシェア」が intent URL を href に持ち、text(title 含む)・url(shareUrl) を含み target=_blank / rel=noopener noreferrer を持つ", async () => {
+  it("「X でシェア」をクリックすると X intent URL で外部リンク確認フローを経由する（#661: Provider 外では直接 window.open）", async () => {
+    const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
     render(<ShareButton shareUrl={SHARE_URL} shareTitle={SHARE_TITLE} />);
     await userEvent.click(screen.getByRole("button", { name: "共有" }));
-    const xShare = await screen.findByRole("menuitem", { name: "X でシェア" });
-    const href = xShare.getAttribute("href") ?? "";
-    expect(href).toContain("https://twitter.com/intent/tweet");
-    const url = new URL(href);
-    expect(url.searchParams.get("url")).toBe(SHARE_URL);
-    expect(url.searchParams.get("text")).toContain(SHARE_TITLE);
-    expect(xShare).toHaveAttribute("target", "_blank");
-    expect(xShare).toHaveAttribute("rel", "noopener noreferrer");
+    await userEvent.click(await screen.findByRole("menuitem", { name: "X でシェア" }));
+    expect(openSpy).toHaveBeenCalledTimes(1);
+    const calledUrl = (openSpy.mock.calls[0] as string[])[0];
+    expect(calledUrl).toContain("https://twitter.com/intent/tweet");
+    const xUrl = new URL(calledUrl);
+    expect(xUrl.searchParams.get("url")).toBe(SHARE_URL);
+    expect(xUrl.searchParams.get("text")).toContain(SHARE_TITLE);
+    openSpy.mockRestore();
   });
 });

@@ -1,5 +1,6 @@
 import type { ReactElement, ReactNode } from "react";
 
+import { useExternalLink } from "../hooks/useExternalLink.js";
 import { Link } from "./uiParts";
 
 /** URL パターン（http(s):// で始まり、空白以外が続く） */
@@ -12,11 +13,14 @@ interface TextWithLinksProps {
 }
 
 /**
- * テキスト中の http(s):// URL を `<a target="_blank" rel="noopener noreferrer">` リンクに変換する（#515）。
+ * テキスト中の http(s):// URL を外部リンク確認モーダル経由で開くリンクに変換する（#515 / #661）。
  * 生 HTML 注入を使わず React 要素として組み立てることで XSS を防ぐ。
+ * 左クリックは確認モーダルを経由し、中クリック / Ctrl+クリック等のネイティブ操作は
+ * href + target="_blank" により新規タブで直接開く（モーダル回避は許容）。
  * URL 以外のテキスト部分はそのまま文字列として表示される。
  */
 export const TextWithLinks = ({ text }: TextWithLinksProps): ReactElement => {
+  const { openExternalLink } = useExternalLink();
   const parts: ReactNode[] = [];
   let lastIndex = 0;
   let match: RegExpExecArray | null;
@@ -36,15 +40,20 @@ export const TextWithLinks = ({ text }: TextWithLinksProps): ReactElement => {
     const url = rawUrl.replace(/[。、.,!?!?）)）\]】]+$/, "");
     const trailingPunctuation = rawUrl.slice(url.length);
 
+    const capturedUrl = url;
     parts.push(
       <Link
         key={matchIndex}
-        href={url}
+        href={capturedUrl}
         target="_blank"
         rel="noopener noreferrer"
-        sx={{ wordBreak: "break-all" }}
+        onClick={(e) => {
+          e.preventDefault();
+          openExternalLink(capturedUrl);
+        }}
+        sx={{ wordBreak: "break-all", cursor: "pointer" }}
       >
-        {url}
+        {capturedUrl}
       </Link>,
     );
 

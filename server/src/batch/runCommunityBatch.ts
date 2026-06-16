@@ -290,6 +290,7 @@ export async function runCommunityBatch(
         displayName: w.displayName,
         role: w.role,
         personality: w.personality,
+        verbosity: w.verbosity,
       }));
       const workerIds = workers.map((w) => w.id);
 

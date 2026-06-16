@@ -21,7 +21,7 @@
 | エリア | 対応画面 / 機能 | 詳細 | ユースケース |
 |--------|----------------|------|-------------|
 | auth | ログイン・ログアウト・認証ガード（`LoginDialog.tsx` モーダル / #454, #455: Google のみ） | [auth/usecases.md](auth/usecases.md) | UC-AUTH-01〖07 |
-| home-feed | ホームフィード閲覧（`HomeFeedScene.tsx`, `/`） | [home-feed/usecases.md](home-feed/usecases.md) | UC-HOME-01〖13 |
+| home-feed | ホームフィード閲覧（`HomeFeedScene.tsx`, `/`）・外部リンク確認モーダル（#661） | [home-feed/usecases.md](home-feed/usecases.md) | UC-HOME-01〖14 |
 | community | コミュニティ一覧・詳細・購読（`/communities`）・サイドバーのコミュニティセクション開閉・共有メニュー・モバイルドロワーナビ見切れ防止・活気指標（#527） | [community/usecases.md](community/usecases.md) | UC-COMM-01〖13 |
 | post-thread | 投稿スレッド・upvote（`/posts/$postId`） | [post-thread/usecases.md](post-thread/usecases.md) | UC-POST-01〖14 |
 | admin | 管理画面（Worker / Community 管理, `/admin`） | [admin/usecases.md](admin/usecases.md) | UC-ADMIN-01〖14 |
@@ -57,6 +57,7 @@
 - UC-HOME-11: 投稿カードに投稿時刻（相対時間）が表示される（#502）
 - UC-HOME-12: ホームの各投稿に所属コミュニティ名（c/slug）が表示される（#503）
 - UC-HOME-13: 投稿本文が Markdown 書式で表示される（#513）
+- UC-HOME-14: 外部リンクをクリックすると確認モーダルが表示される（#661）
 - 補足（#486 / ADR-0030）: 定時バッチは 1 定時 = vote 重み付きランダムで選ばれた 1 コミュニティだけを生成する。毎定時で新着が増えるのは全コミュニティではなく選ばれた 1 コミュニティのみ（詳細は home-feed/usecases.md の冒頭補足）。
 
 ### community — コミュニティ一覧・詳細・購読
@@ -108,6 +109,7 @@
 - UC-ADMIN-12: Worker 編集の保存に失敗するとエラー内容が表示される
 - UC-ADMIN-13: API トークン設定の保存に失敗するとエラー内容が表示される
 - UC-ADMIN-14: admin ユーザーがコミュニティに生成プロンプト指示（非公開）を設定できる
+- UC-ADMIN-15: admin ユーザーが Worker の文章量（verbosity）を編集できる（#625）
 
 ### account — アカウント設定・プロフィール編集
 

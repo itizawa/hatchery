@@ -1,5 +1,5 @@
-import type { Worker } from "@hatchery/common";
-import { WORKER_DISPLAY_NAME_MAX_LENGTH, WORKER_ROLE_MAX_LENGTH } from "@hatchery/common";
+import type { Worker, WorkerVerbosity } from "@hatchery/common";
+import { WORKER_DISPLAY_NAME_MAX_LENGTH, WORKER_PERSONALITY_MAX_LENGTH, WORKER_ROLE_MAX_LENGTH } from "@hatchery/common";
 import { useForm } from "@tanstack/react-form";
 import type { ReactElement } from "react";
 
@@ -19,11 +19,20 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
   Snackbar,
   TextField,
 } from "./uiParts/index.js";
 
-const PERSONALITY_MAX_LENGTH = 500;
+/** 文章量の選択肢（#625）。 */
+const VERBOSITY_OPTIONS: { value: WorkerVerbosity; label: string }[] = [
+  { value: "concise", label: "簡潔" },
+  { value: "standard", label: "標準" },
+  { value: "detailed", label: "詳細" },
+];
 
 interface EditWorkerDialogProps {
   /** 編集対象のワーカー */
@@ -69,6 +78,7 @@ export function EditWorkerDialog({ worker, open, onClose }: EditWorkerDialogProp
       displayName: worker.displayName,
       role: worker.role ?? "",
       personality: worker.personality ?? "",
+      verbosity: (worker.verbosity as WorkerVerbosity | undefined) ?? "standard",
       communityIds: initialCommunityIds ?? [],
     },
     onSubmit: async ({ value }) => {
@@ -79,6 +89,7 @@ export function EditWorkerDialog({ worker, open, onClose }: EditWorkerDialogProp
             displayName: value.displayName || undefined,
             role: value.role || undefined,
             personality: value.personality || undefined,
+            verbosity: value.verbosity,
           },
         });
         // 参加コミュニティの取得に成功している場合のみ置換する。
@@ -92,7 +103,7 @@ export function EditWorkerDialog({ worker, open, onClose }: EditWorkerDialogProp
         onClose();
       } catch {
         // エラー表示は updateMutation / setCommunitiesMutation の状態に委ねる（#476）。
-        // mutateAsync の reject を握りつぶさないため catch するが、ここでは何もしない。
+        // mutateAsync の reject を握り潰ぶさないため catch するが、ここでは何もしない。
       }
     },
   });
@@ -153,7 +164,7 @@ export function EditWorkerDialog({ worker, open, onClose }: EditWorkerDialogProp
                   <TextField
                     label="性格"
                     id="edit-worker-personality"
-                    inputProps={{ "aria-label": "性格", maxLength: PERSONALITY_MAX_LENGTH }}
+                    inputProps={{ "aria-label": "性格", maxLength: WORKER_PERSONALITY_MAX_LENGTH }}
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
@@ -161,8 +172,30 @@ export function EditWorkerDialog({ worker, open, onClose }: EditWorkerDialogProp
                     multiline
                     rows={3}
                     size="small"
-                    helperText={`${field.state.value.length}/${PERSONALITY_MAX_LENGTH}`}
+                    helperText={`${field.state.value.length}/${WORKER_PERSONALITY_MAX_LENGTH}`}
                   />
+                )}
+              </form.Field>
+              <form.Field name="verbosity">
+                {(field) => (
+                  <FormControl fullWidth size="small">
+                    <InputLabel id="edit-worker-verbosity-label">文章量</InputLabel>
+                    <Select
+                      labelId="edit-worker-verbosity-label"
+                      id="edit-worker-verbosity"
+                      label="文章量"
+                      inputProps={{ "aria-label": "文章量" }}
+                      value={field.state.value}
+                      onChange={(e) => field.handleChange(e.target.value as WorkerVerbosity)}
+                      onBlur={field.handleBlur}
+                    >
+                      {VERBOSITY_OPTIONS.map((opt) => (
+                        <MenuItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
                 )}
               </form.Field>
               {isInitializing ? (

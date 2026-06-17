@@ -54,7 +54,7 @@ describe("管理画面（#50）", () => {
   it("管理画面（/admin）のワーカー管理タブに「ワーカーを追加」ボタンが表示される（#217）", async () => {
     vi.spyOn(authApi, "fetchMe").mockResolvedValue({ id: "user1", displayName: "Alice", role: "admin" });
     vi.spyOn(adminApi, "useAdminWorkers").mockReturnValue({
-      data: DEFAULT_WORKERS.map((w) => ({ ...w })),
+      data: { workers: DEFAULT_WORKERS.map((w) => ({ ...w })), total: DEFAULT_WORKERS.length, page: 1, limit: 10 },
     } as ReturnType<typeof adminApi.useAdminWorkers>);
     renderApp("/admin");
 

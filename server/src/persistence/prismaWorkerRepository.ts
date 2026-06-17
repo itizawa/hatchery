@@ -93,6 +93,19 @@ export function createPrismaWorkerRepository(prisma: PrismaClient): WorkerReposi
       return rows.map((row) => toRecord(row));
     },
 
+    async listBotWorkersPaginated(
+      page: number,
+      limit: number,
+      includeDeleted = false,
+    ): Promise<{ workers: WorkerRecord[]; total: number }> {
+      const where = includeDeleted ? {} : { deletedAt: null };
+      const [rows, total] = await Promise.all([
+        prisma.worker.findMany({ where, skip: (page - 1) * limit, take: limit, orderBy: { id: "asc" } }),
+        prisma.worker.count({ where }),
+      ]);
+      return { workers: rows.map((row) => toRecord(row)), total };
+    },
+
     async softDelete(id: string): Promise<WorkerRecord | null> {
       try {
         const row = await prisma.worker.update({

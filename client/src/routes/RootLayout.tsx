@@ -241,7 +241,7 @@ export const RootLayout = (): ReactElement => {
             <Outlet />
           </Suspense>
         </Box>
-        <ScrollToTopButton scrollContainerRef={mainRef} />
+        <ScrollToTopButton key={location.pathname} scrollContainerRef={mainRef} />
       </Box>
     </Box>
     </ExternalLinkProvider>

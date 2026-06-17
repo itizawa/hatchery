@@ -21,6 +21,8 @@ export const ScrollToTopButton = ({ scrollContainerRef }: ScrollToTopButtonProps
       setVisible(container.scrollTop >= 300);
     };
 
+    // マウント時に現在の scrollTop で初期状態を同期する（ナビゲーション後の再マウント時も正確に反映するため）
+    handleScroll();
     container.addEventListener("scroll", handleScroll);
     return () => {
       container.removeEventListener("scroll", handleScroll);

@@ -19,7 +19,7 @@ export function useBotWorkers() {
     queryFn: async (): Promise<Worker[]> => {
       const { data, error } = await openApiClient.GET("/api/workers");
       if (error) throw new Error(JSON.stringify(error));
-      return data ?? [];
+      return (data?.workers ?? []) as Worker[];
     },
   });
 }

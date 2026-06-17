@@ -1,4 +1,4 @@
-import { Box, Button } from "./uiParts";
+import { Box, Button, TablePagination } from "./uiParts";
 
 import { useState, type ReactElement } from "react";
 
@@ -6,6 +6,8 @@ import { useAdminWorkers } from "../api/admin.js";
 import { AddWorkerDialog } from "./AddWorkerDialog.js";
 import { QueryBoundary } from "./QueryBoundary.js";
 import { WorkerTable } from "./WorkerTable.js";
+
+const ROWS_PER_PAGE = 10;
 
 /** 「ワーカーを追加」ボタン（ローディング・成功で共有するヘッダ）。 */
 const AddWorkerButton = ({ onClick }: { onClick: () => void }): ReactElement => (
@@ -28,18 +30,27 @@ const AdminWorkerTableSkeleton = (): ReactElement => (
 );
 
 /**
- * 管理画面のワーカー一覧本体（#217 / #329 / #490）。
- * useSuspenseQuery で全 Worker を取得し WorkerTable に渡す（data は undefined を取らない）。
+ * 管理画面のワーカー一覧本体（#217 / #329 / #490 / #545）。
+ * サーバーサイドページネーション（10件/ページ）で Worker を取得し WorkerTable に渡す。
  * ローディング・エラーは外側の QueryBoundary に委譲する。
  */
 const AdminWorkerTableInner = (): ReactElement => {
-  const { data: workers } = useAdminWorkers();
+  const [page, setPage] = useState(0); // MUI TablePagination は 0-indexed
+  const { data } = useAdminWorkers(page + 1); // API は 1-indexed
   const [dialogOpen, setDialogOpen] = useState(false);
 
   return (
     <Box>
       <AddWorkerButton onClick={() => setDialogOpen(true)} />
-      <WorkerTable workers={workers} isEditable />
+      <WorkerTable workers={data.workers} isEditable />
+      <TablePagination
+        component="div"
+        count={data.total}
+        page={page}
+        rowsPerPage={ROWS_PER_PAGE}
+        rowsPerPageOptions={[ROWS_PER_PAGE]}
+        onPageChange={(_, newPage) => setPage(newPage)}
+      />
       <AddWorkerDialog open={dialogOpen} onClose={() => setDialogOpen(false)} />
     </Box>
   );

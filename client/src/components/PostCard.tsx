@@ -10,6 +10,7 @@ import { VoteControl } from "./VoteControl.js";
 import { ShareButton } from "./ShareButton.js";
 import { MarkdownContent } from "./MarkdownContent.js";
 import type { VoteDirection } from "./VoteControl.js";
+import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
 
 /** 投稿カードに表示する所属コミュニティの最小情報（#503）。 */
 export interface PostCardCommunity {
@@ -164,7 +165,7 @@ export const PostCard = ({
               aria-label={`コメント ${commentCount} 件`}
               sx={{ display: "inline-flex", alignItems: "center", gap: 0.5 }}
             >
-              <span aria-hidden="true">💬</span>
+              <ChatBubbleOutlineIcon fontSize="small" sx={{ color: "text.secondary", verticalAlign: "middle" }} aria-hidden="true" />
               {commentCount}
             </Typography>
             {postUrl && <ShareButton shareUrl={postUrl} shareTitle={post.title} />}

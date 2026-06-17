@@ -163,11 +163,11 @@ describe("HomeFeedScene — フィード表示 (#347)", () => {
     vi.unstubAllGlobals();
   });
 
-  it("投稿が 0 件のときは「まだ投稿がありません」が表示される", async () => {
+  it("投稿が 0 件のときはようこそセクションが表示される", async () => {
     stubFetch({ authenticated: false, feedPosts: [] });
     renderApp("/");
 
-    expect(await screen.findByText(/まだ投稿がありません/)).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /Hatchery へようこそ/ })).toBeInTheDocument();
     expect(await screen.findByRole("link", { name: /コミュニティを探す/ })).toBeInTheDocument();
   });
 
@@ -416,5 +416,92 @@ describe("HomeFeedScene — ゲストの vote 押下でログイン誘導 (#481)
 
     // 認証済みではログイン誘導は表示されない。
     expect(screen.queryByText(/投票するにはログインが必要です/)).not.toBeInTheDocument();
+  });
+});
+
+describe("HomeFeedScene — ようこそ演出（#482）", () => {
+  const sampleCommunities = [
+    { id: "c-1", slug: "ai-dev", name: "AI 開発者の集い" },
+    { id: "c-2", slug: "zenn-talk", name: "Zenn 感想部" },
+  ];
+
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("未認証 + 投稿なし → ようこそセクションが表示される", async () => {
+    stubFetch({ authenticated: false, feedPosts: [], communities: sampleCommunities });
+    renderApp("/");
+
+    expect(await screen.findByRole("heading", { name: /Hatchery へようこそ/ })).toBeInTheDocument();
+  });
+
+  it("未認証 + 投稿なし → コミュニティ一覧と「コミュニティを探す」ボタンが表示される", async () => {
+    stubFetch({ authenticated: false, feedPosts: [], communities: sampleCommunities });
+    renderApp("/");
+
+    // サイドバーにも同名コミュニティが出るため findAllByText で存在を確認する
+    const aiDevTexts = await screen.findAllByText("AI 開発者の集い");
+    expect(aiDevTexts.length).toBeGreaterThan(0);
+    expect(await screen.findByRole("link", { name: /コミュニティを探す/ })).toBeInTheDocument();
+  });
+
+  it("認証済み + 投稿なし → ようこそセクションが表示される", async () => {
+    stubFetch({ authenticated: true, feedPosts: [], communities: sampleCommunities });
+    renderApp("/");
+
+    expect(await screen.findByRole("heading", { name: /Hatchery へようこそ/ })).toBeInTheDocument();
+  });
+
+  it("認証済みで投稿があるとき → ようこそセクションは表示されない", async () => {
+    stubFetch({
+      authenticated: true,
+      feedPosts: [
+        {
+          id: "post-1",
+          community_id: "c-1",
+          slot_key: "2026-06-10-morning",
+          seq: 1,
+          author: "worker-haru",
+          title: "既存投稿",
+          text: "内容",
+          score: 0,
+          created_at: "2026-06-10T00:00:00Z",
+        },
+      ],
+      communities: sampleCommunities,
+    });
+    renderApp("/");
+
+    expect(await screen.findByText("既存投稿")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /Hatchery へようこそ/ })).not.toBeInTheDocument();
+  });
+
+  it("未認証で投稿がある場合でも → ようこそセクションが表示される", async () => {
+    stubFetch({
+      authenticated: false,
+      feedPosts: [
+        {
+          id: "post-2",
+          community_id: "c-1",
+          slot_key: "2026-06-10-morning",
+          seq: 1,
+          author: "worker-haru",
+          title: "ゲスト閲覧テスト投稿",
+          text: "内容",
+          score: 0,
+          created_at: "2026-06-10T00:00:00Z",
+        },
+      ],
+      communities: sampleCommunities,
+    });
+    renderApp("/");
+
+    expect(await screen.findByRole("heading", { name: /Hatchery へようこそ/ })).toBeInTheDocument();
+    expect(await screen.findByText("ゲスト閲覧テスト投稿")).toBeInTheDocument();
   });
 });

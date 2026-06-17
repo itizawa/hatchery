@@ -139,18 +139,17 @@ export const PostCard = ({
           >
             {post.title}
           </Typography>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1, flexWrap: "wrap" }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: compact ? 0.5 : 1, flexWrap: "wrap" }}>
             {community && <CommunityByline community={community} onClick={onCommunityClick} />}
             <AuthorByline author={post.author} authorWorker={post.author_worker} />
             <PostedTime createdAt={post.created_at} />
           </Box>
-          <MarkdownContent
-            content={post.text}
-            variant="body2"
-            paragraphSx={
-              compact
-                ? { display: "none" }
-                : truncateText
+          {!compact && (
+            <MarkdownContent
+              content={post.text}
+              variant="body2"
+              paragraphSx={
+                truncateText
                   ? {
                       display: "-webkit-box",
                       WebkitLineClamp: 3,
@@ -158,8 +157,9 @@ export const PostCard = ({
                       overflow: "hidden",
                     }
                   : undefined
-            }
-          />
+              }
+            />
+          )}
           {firstUrl && <OgpCard url={firstUrl} />}
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 1 }}>
             <Typography

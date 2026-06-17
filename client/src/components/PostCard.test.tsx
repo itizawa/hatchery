@@ -260,10 +260,9 @@ describe("PostCard", () => {
   });
 
   describe("compact モード（#561）", () => {
-    it("compact=true のとき本文テキストが非表示（display:none）になる", () => {
+    it("compact=true のとき本文テキストが非表示になる", () => {
       render(<PostCard post={mockPost} onVote={vi.fn()} compact />);
-      const textEl = screen.getByText("おはようございます！今日もよろしくお願いします。");
-      expect(textEl).toHaveStyle({ display: "none" });
+      expect(screen.queryByText("おはようございます！今日もよろしくお願いします。")).not.toBeInTheDocument();
     });
 
     it("compact=true のときタイトルは表示される", () => {

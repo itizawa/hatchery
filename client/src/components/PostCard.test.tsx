@@ -100,14 +100,20 @@ describe("PostCard", () => {
   });
 
   describe("comment_count（コメント数表示・#500）", () => {
-    it("コメント数を「💬 N」相当で表示する（N>0）", () => {
+    it("コメント数をアイコン付きで表示する（N>0）", () => {
       render(<PostCard post={mockPost} onVote={vi.fn()} />);
       const el = screen.getByLabelText("コメント 3 件");
       expect(el).toBeInTheDocument();
       expect(el).toHaveTextContent("3");
     });
 
-    it("コメントが無い場合は「💬 0」を表示する（N=0）", () => {
+    it("コメント数アイコンは MUI の ChatBubbleOutlineIcon を使用し絵文字は含まない（#688）", () => {
+      render(<PostCard post={mockPost} onVote={vi.fn()} />);
+      const el = screen.getByLabelText("コメント 3 件");
+      expect(el).not.toHaveTextContent("💬");
+    });
+
+    it("コメントが無い場合は 0 を表示する（N=0）", () => {
       render(<PostCard post={{ ...mockPost, comment_count: 0 }} onVote={vi.fn()} />);
       const el = screen.getByLabelText("コメント 0 件");
       expect(el).toBeInTheDocument();

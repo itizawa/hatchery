@@ -1,4 +1,4 @@
-import { Box, Typography, Button, IconButton, Tooltip } from "../components/uiParts";
+import { Box, Typography, IconButton, Tooltip } from "../components/uiParts";
 import type { HomeFeedSort } from "@hatchery/common";
 import { Link as RouterLink, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, type ReactElement } from "react";
@@ -6,8 +6,10 @@ import ViewStreamIcon from "@mui/icons-material/ViewStream";
 import ViewHeadlineIcon from "@mui/icons-material/ViewHeadline";
 
 import { useInfiniteHomeFeed, usePublicCommunities, useVotePost } from "../api/communities.js";
+import { useAuth } from "../api/auth.js";
 import { LoginPromptSnackbar } from "../components/LoginPromptSnackbar.js";
 import { PostCard } from "../components/PostCard.js";
+import { WelcomeSection } from "../components/WelcomeSection.js";
 import type { VoteDirection } from "../components/VoteControl.js";
 import { useGuestVoteGuard } from "../hooks/useGuestVoteGuard.js";
 import { useViewMode } from "../hooks/useViewMode.js";
@@ -33,6 +35,7 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
   // #462: useInfiniteHomeFeed は Suspense 化。data は non-undefined。
   // ローディング/エラーは router の QueryBoundary に委譲する。
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteHomeFeed(sort);
+  const { data: user } = useAuth();
   const { mutate: votePost } = useVotePost();
   const { guardVote, promptOpen, closePrompt } = useGuestVoteGuard();
   const navigate = useNavigate();
@@ -66,6 +69,7 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
 
   const posts = data.pages.flatMap((page) => page.posts);
   const hasPosts = posts.length > 0;
+  const showWelcome = !user || !hasPosts;
 
   return (
     <Box component="section" sx={{ p: 3, maxWidth: 800, mx: "auto" }}>
@@ -79,21 +83,10 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
           </IconButton>
         </Tooltip>
       </Box>
-      {!hasPosts ? (
-        <Box sx={{ textAlign: "center", py: 4 }}>
-          <Typography variant="body1" color="text.secondary" gutterBottom>
-            まだ投稿がありません。
-          </Typography>
-          <Button
-            component={RouterLink}
-            to="/communities"
-            variant="contained"
-            sx={{ mt: 2 }}
-          >
-            コミュニティを探す
-          </Button>
-        </Box>
-      ) : (
+      {showWelcome && (
+        <WelcomeSection communities={Array.isArray(communities) ? communities : []} />
+      )}
+      {hasPosts && (
         <Box>
           {posts.map((post) => {
             const community = communityById.get(post.community_id);

@@ -33,7 +33,6 @@ interface CommentCardProps {
  * コメントカード。本文・author・score・up/down vote ボタンを表示する（ADR-0019 / ADR-0025）。
  * コメント入力欄は持たない（ユーザーはコメントしない・ADR-0020）。
  * #520: Reddit 風コネクター線（スレッドライン）+ 深さに応じたインデントに対応。
- * #683: VoteControl を本文下のアクションバーに配置。
  */
 export const CommentCard = ({
   comment,

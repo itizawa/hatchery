@@ -82,7 +82,7 @@ const CommunityByline = ({
 
 /**
  * 投稿カード。タイトル・本文・author・score・up/down vote ボタンを表示する（ADR-0019 / ADR-0025）。
- * post のアクションバー（本文下）に VoteControl・コメント数・ShareButton を横並びで配置（#683）。
+ * post のアクションバー（本文下）に VoteControl・コメント数・ShareButton を横並びで配置（ADR-0025）。
  * 投稿入力欄は持たない（ユーザーは投稿しない・ADR-0020）。
  */
 export const PostCard = ({

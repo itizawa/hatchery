@@ -74,6 +74,16 @@ describe("CommentCard", () => {
     });
   });
 
+  describe("アクションバーのレイアウト（#683）", () => {
+    it("vote コントロール（up vote ボタン）が本文テキストより後（DOM 順で後）に現れる", () => {
+      render(<CommentCard comment={mockComment} onVote={vi.fn()} />);
+      const upVoteBtn = screen.getByRole("button", { name: /up vote/i });
+      const bodyEl = screen.getByText("いつも元気ですね！");
+      // bodyEl が upVoteBtn より前（upVoteBtn は bodyEl の後に現れる）
+      expect(bodyEl.compareDocumentPosition(upVoteBtn) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+  });
+
   describe("author_worker（発言者のアバター + 表示名・#479）", () => {
     const commentWithWorker = {
       ...mockComment,

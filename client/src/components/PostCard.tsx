@@ -144,12 +144,13 @@ export const PostCard = ({
             <AuthorByline author={post.author} authorWorker={post.author_worker} />
             <PostedTime createdAt={post.created_at} />
           </Box>
-          <Box data-testid="post-body" sx={{ display: compact ? "none" : undefined }}>
-            <MarkdownContent
-              content={post.text}
-              variant="body2"
-              paragraphSx={
-                truncateText
+          <MarkdownContent
+            content={post.text}
+            variant="body2"
+            paragraphSx={
+              compact
+                ? { display: "none" }
+                : truncateText
                   ? {
                       display: "-webkit-box",
                       WebkitLineClamp: 3,
@@ -157,10 +158,9 @@ export const PostCard = ({
                       overflow: "hidden",
                     }
                   : undefined
-              }
-            />
-            {firstUrl && <OgpCard url={firstUrl} />}
-          </Box>
+            }
+          />
+          {firstUrl && <OgpCard url={firstUrl} />}
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 1 }}>
             <Typography
               variant="body2"

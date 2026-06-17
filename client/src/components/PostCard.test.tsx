@@ -258,4 +258,23 @@ describe("PostCard", () => {
       expect(screen.queryByRole("button", { name: "c/zenn" })).not.toBeInTheDocument();
     });
   });
+
+  describe("compact モード（#561）", () => {
+    it("compact=true のとき本文テキストが非表示（display:none）になる", () => {
+      render(<PostCard post={mockPost} onVote={vi.fn()} compact />);
+      const textEl = screen.getByText("おはようございます！今日もよろしくお願いします。");
+      expect(textEl).toHaveStyle({ display: "none" });
+    });
+
+    it("compact=true のときタイトルは表示される", () => {
+      render(<PostCard post={mockPost} onVote={vi.fn()} compact />);
+      expect(screen.getByText("今日も元気に始めましょう")).toBeInTheDocument();
+    });
+
+    it("compact 未指定（デフォルト false）のとき本文テキストは表示される", () => {
+      render(<PostCard post={mockPost} onVote={vi.fn()} />);
+      const textEl = screen.getByText("おはようございます！今日もよろしくお願いします。");
+      expect(textEl).not.toHaveStyle({ display: "none" });
+    });
+  });
 });

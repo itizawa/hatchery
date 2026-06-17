@@ -1,11 +1,13 @@
-import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import type { AppSettingResponse, Worker } from "@hatchery/common";
+import { keepPreviousData, useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import type { AppSettingResponse, Worker, WorkerListResponse } from "@hatchery/common";
 
 import { ensureOk, openApiClient, unwrap } from "./client.js";
 import { BOT_WORKERS_QUERY_KEY } from "./workers.js";
 
 export const ADMIN_SETTINGS_QUERY_KEY = ["admin", "settings"] as const;
 export const ADMIN_WORKERS_QUERY_KEY = ["admin", "workers"] as const;
+
+export const ADMIN_WORKERS_PAGE_SIZE = 10;
 
 export type { AppSettingResponse };
 
@@ -59,26 +61,34 @@ export async function deleteWorker(id: string): Promise<{ id: string; deletedAt:
   return unwrap(result, `DELETE /api/admin/workers/${id}`);
 }
 
-export const BOT_WORKERS_ADMIN_QUERY_KEY = ["admin", "workers"] as const;
-
 /** Worker 論理削除の useMutation フック（#218 / #329）。成功時はワーカー一覧のキャッシュを無効化する。 */
 export function useDeleteWorker() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => deleteWorker(id),
     onSuccess: () => {
-      // ワーカー一覧を再取得するためキャッシュを無効化
-      void queryClient.invalidateQueries({ queryKey: ["workers"] });
+      // 管理画面ページネーションキャッシュ（全ページ）+ Bot Worker 一覧を両方無効化する。
+      void queryClient.invalidateQueries({ queryKey: ADMIN_WORKERS_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: BOT_WORKERS_QUERY_KEY });
     },
   });
 }
 
-/** GET /api/workers で Worker 一覧を取得する（管理画面ユーザー一覧用・#217 / #329）。 */
-export async function fetchAdminWorkers(): Promise<Worker[]> {
+/**
+ * GET /api/workers をページネーションパラメータ付きで取得する（管理画面用・#545）。
+ * page と limit を指定し、{ workers, total, page, limit } 形式のレスポンスを返す。
+ */
+export async function fetchAdminWorkers(
+  page: number,
+  limit: number,
+): Promise<WorkerListResponse> {
   const result = await openApiClient.GET("/api/workers", {
+    params: { query: { page, limit } },
     credentials: "include",
   });
-  return ensureOk(result, "GET /api/workers") ?? [];
+  const data = ensureOk(result, "GET /api/workers");
+  if (!data) throw new Error("GET /api/workers: empty response");
+  return data as WorkerListResponse;
 }
 
 /** POST /api/admin/workers で新規 Worker を作成する（#217 / #329）。 */
@@ -95,13 +105,15 @@ export async function createAdminWorker(input: {
 }
 
 /**
- * 管理画面のワーカー一覧（全 Worker）を取得するフック（#217 / #329）。
+ * 管理画面のワーカー一覧（ページネーション）を取得するフック（#217 / #329 / #545）。
  * useSuspenseQuery（#459/#463）。ローディング・エラーは呼び出し元の QueryBoundary に委譲する。
+ * page は 1-indexed。queryKey にページ番号を含めて TanStack Query でページ別にキャッシュする。
  */
-export function useAdminWorkers() {
+export function useAdminWorkers(page = 1) {
   return useSuspenseQuery({
-    queryKey: ADMIN_WORKERS_QUERY_KEY,
-    queryFn: fetchAdminWorkers,
+    queryKey: [...ADMIN_WORKERS_QUERY_KEY, page] as const,
+    queryFn: () => fetchAdminWorkers(page, ADMIN_WORKERS_PAGE_SIZE),
+    placeholderData: keepPreviousData,
   });
 }
 

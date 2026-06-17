@@ -2,12 +2,10 @@ import { Box, Button, TablePagination } from "./uiParts";
 
 import { useState, type ReactElement } from "react";
 
-import { useAdminWorkers } from "../api/admin.js";
+import { ADMIN_WORKERS_PAGE_SIZE, useAdminWorkers } from "../api/admin.js";
 import { AddWorkerDialog } from "./AddWorkerDialog.js";
 import { QueryBoundary } from "./QueryBoundary.js";
 import { WorkerTable } from "./WorkerTable.js";
-
-const ROWS_PER_PAGE = 10;
 
 /** 「ワーカーを追加」ボタン（ローディング・成功で共有するヘッダ）。 */
 const AddWorkerButton = ({ onClick }: { onClick: () => void }): ReactElement => (
@@ -47,8 +45,8 @@ const AdminWorkerTableInner = (): ReactElement => {
         component="div"
         count={data.total}
         page={page}
-        rowsPerPage={ROWS_PER_PAGE}
-        rowsPerPageOptions={[ROWS_PER_PAGE]}
+        rowsPerPage={ADMIN_WORKERS_PAGE_SIZE}
+        rowsPerPageOptions={[ADMIN_WORKERS_PAGE_SIZE]}
         onPageChange={(_, newPage) => setPage(newPage)}
       />
       <AddWorkerDialog open={dialogOpen} onClose={() => setDialogOpen(false)} />

@@ -1,15 +1,32 @@
 import { act, renderHook } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useViewMode } from "./useViewMode.js";
 
+const STORAGE_KEY = "feedViewMode";
+
 describe("useViewMode", () => {
+  let mockStore: Record<string, string> = {};
+  const localStorageMock = {
+    getItem: (key: string) => mockStore[key] ?? null,
+    setItem: (key: string, value: string) => {
+      mockStore[key] = value;
+    },
+    removeItem: (key: string) => {
+      delete mockStore[key];
+    },
+    clear: () => {
+      mockStore = {};
+    },
+  };
+
   beforeEach(() => {
-    localStorage.clear();
+    mockStore = {};
+    vi.stubGlobal("localStorage", localStorageMock);
   });
 
   afterEach(() => {
-    localStorage.clear();
+    vi.unstubAllGlobals();
   });
 
   it("初期値は 'card'（localStorage に値がない場合）", () => {
@@ -41,11 +58,11 @@ describe("useViewMode", () => {
     act(() => {
       result.current.toggleViewMode();
     });
-    expect(localStorage.getItem("feedViewMode")).toBe("compact");
+    expect(localStorageMock.getItem(STORAGE_KEY)).toBe("compact");
   });
 
   it("localStorage に既存値がある場合、その値で初期化される", () => {
-    localStorage.setItem("feedViewMode", "compact");
+    localStorageMock.setItem(STORAGE_KEY, "compact");
     const { result } = renderHook(() => useViewMode());
     expect(result.current.viewMode).toBe("compact");
   });

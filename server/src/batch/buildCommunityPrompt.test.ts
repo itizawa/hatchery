@@ -399,6 +399,62 @@ describe("generationInstruction フォールバック（#488）", () => {
   });
 });
 
+describe("重複回避指示（#526）", () => {
+  const baseCommunity = {
+    id: "community-1",
+    slug: "technology",
+    name: "テクノロジー",
+    description: "テクノロジーとプログラミングの話題を楽しむコミュニティ。",
+    generationInstruction: null,
+    synopsis: null,
+    lastSlotKey: null,
+    iconUrl: null,
+    coverUrl: null,
+    createdAt: new Date("2026-01-01"),
+  };
+  const workers = [
+    { id: "haru", displayName: "haru", role: "ムードメーカー", personality: "明るく前向き" },
+    { id: "ken", displayName: "ken", role: "ベテラン", personality: "落ち着いた物知り" },
+  ];
+
+  it("recentLog があるとき重複回避の指示がプロンプトに含まれる (#526)", () => {
+    const { prompt } = buildCommunityPrompt({
+      community: baseCommunity,
+      workers,
+      recentLog: ["[technology] haru: TypeScript の新機能について", "[technology] ken: LLM の進歩が速い"],
+    });
+    expect(prompt).toContain("重複しない");
+  });
+
+  it("recentLog が空のとき重複回避の指示はプロンプトに含まれない (#526)", () => {
+    const { prompt } = buildCommunityPrompt({
+      community: baseCommunity,
+      workers,
+      recentLog: [],
+    });
+    expect(prompt).toBeTruthy();
+    expect(prompt).toContain("テクノロジーとプログラミングの話題を楽しむコミュニティ。");
+    expect(prompt).not.toContain("重複しない");
+  });
+
+  it("重複回避指示は直近ログ内容より後・JSON 出力指示より前に置かれる (#526)", () => {
+    const { prompt } = buildCommunityPrompt({
+      community: baseCommunity,
+      workers,
+      recentLog: ["[technology] haru: Rust を学んでみた"],
+    });
+    const recentLogContentIdx = prompt.indexOf("[technology] haru: Rust を学んでみた");
+    const avoidDuplicateIdx = prompt.indexOf("重複しない");
+    const outputFormatIdx = prompt.indexOf("以下のJSON形式のみで出力してください");
+
+    expect(recentLogContentIdx).toBeGreaterThanOrEqual(0);
+    expect(avoidDuplicateIdx).toBeGreaterThanOrEqual(0);
+    expect(outputFormatIdx).toBeGreaterThanOrEqual(0);
+    expect(recentLogContentIdx).toBeLessThan(avoidDuplicateIdx);
+    expect(avoidDuplicateIdx).toBeLessThan(outputFormatIdx);
+  });
+});
+
 describe("既存Post参照（#555）", () => {
   const workers = [{ id: "haru", displayName: "haru" }];
   const baseCommunity = {

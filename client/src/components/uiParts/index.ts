@@ -1,4 +1,6 @@
 export { default as Alert } from "@mui/material/Alert";
+export { default as Fab } from "@mui/material/Fab";
+export { default as Fade } from "@mui/material/Fade";
 export { default as Divider } from "@mui/material/Divider";
 export { default as ListItemIcon } from "@mui/material/ListItemIcon";
 export { default as Avatar } from "@mui/material/Avatar";

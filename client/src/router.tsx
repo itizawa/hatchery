@@ -18,6 +18,7 @@ import {
 
 export { SETTINGS_TAB_VALUES, type SettingsTabValue } from "./routes/settingsTabValues.js";
 import { AuthLayout } from "./routes/AuthLayout";
+import { NotFoundScene } from "./routes/NotFoundScene";
 import { RootLayout } from "./routes/RootLayout";
 import { MainContentSkeleton } from "./components/MainContentSkeleton";
 import { LoginDialog } from "./components/LoginDialog";
@@ -134,6 +135,7 @@ function AppShell(): ReactElement {
 const rootRoute = createRootRoute({
   component: AppShell,
   validateSearch: validateRootSearch,
+  notFoundComponent: NotFoundScene,
 });
 
 /** ホームフィード（/）。認証済みなら購読フィード、未認証ならゲスト向け誘導 UI を表示する（#341）。 */

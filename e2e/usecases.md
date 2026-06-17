@@ -19,9 +19,9 @@
 ## エリア一覧
 
 | エリア | 対応画面 / 機能 | 詳細 | ユースケース |
-|--------|----------------|------|--------------|
+|--------|----------------|------|-------------- |
 | auth | ログイン・ログアウト・認証ガード（`LoginDialog.tsx` モーダル / #454, #455: Google のみ） | [auth/usecases.md](auth/usecases.md) | UC-AUTH-01〇07 |
-| home-feed | ホームフィード閲覧（`HomeFeedScene.tsx`, `/`）・外部リンク確認モーダル（#661）・タブ復帰時自動再取得（#675）・カード/コンパクト表示切り替え（#561） | [home-feed/usecases.md](home-feed/usecases.md) | UC-HOME-01〇16 |
+| home-feed | ホームフィード閲覧（`HomeFeedScene.tsx`, `/`）・外部リンク確認モーダル（#661）・タブ復帰時自動再取得（#675）・カード/コンパクト表示切り替え（#561）・ゲスト向けようこそ演出（#482） | [home-feed/usecases.md](home-feed/usecases.md) | UC-HOME-01〇19 |
 | community | コミュニティ一覧・詳細・購読（`/communities`）・サイドバーのコミュニティセクション開閉・共有メニュー・モバイルドロワーナビ見切れ防止・活気指標（#527）・存在しない slug の not-found 表示（#524）・カード/コンパクト表示切り替え（#561） | [community/usecases.md](community/usecases.md) | UC-COMM-01〇15 |
 | post-thread | 投稿スレッド・upvote（`/posts/$postId`） | [post-thread/usecases.md](post-thread/usecases.md) | UC-POST-01〜15 |
 | admin | 管理画面（Worker / Community 管理, `/admin`） | [admin/usecases.md](admin/usecases.md) | UC-ADMIN-01〇14 |
@@ -61,6 +61,9 @@
 - UC-HOME-14: 外部リンクをクリックすると確認モーダルが表示される（#661）
 - UC-HOME-15: タブ復帰時に stale なデータが自動再取得される（#675）
 - UC-HOME-16: フィードの表示モードをカード/コンパクトで切り替えられる（#561）
+- UC-HOME-17: 未認証ユーザーが / を開くとようこそセクションが表示される（#482）
+- UC-HOME-18: 認証済みで投稿がある場合はようこそセクションが表示されない（#482）
+- UC-HOME-19: 認証済みで投稿が 0 件のときはようこそセクションが表示される（#482）
 - 補足（#486 / ADR-0030）: 定時バッチは 1 定時 = vote 重み付きランダムで選ばれた 1 コミュニティだけを生成する。毎定時で新着が増えるのは全コミュニティではなく選ばれた 1 コミュニティのみ（詳細は home-feed/usecases.md の凒頭補足）。
 
 ### community — コミュニティ一覧・詳細・購読

@@ -240,7 +240,8 @@ test("UC-HOME-05: 投稿が 0 件のとき空状態の案内が表示される",
   );
 
   await page.goto("/");
-  await expect(page.getByText(/まだ投稿がありません/)).toBeVisible();
+  // #482: 投稿 0 件のときは WelcomeSection（「Hatchery へようこそ」）が表示される
+  await expect(page.getByRole("heading", { name: /Hatchery へようこそ/ })).toBeVisible();
 });
 
 test(
@@ -348,3 +349,9 @@ test(
 test.todo("UC-HOME-15: タブ復帰時に stale なデータが自動再取得される（#675）");
 
 test.todo("UC-HOME-16: フィードの表示モードをカード/コンパクトで切り替えられる（#561）");
+
+test.todo("UC-HOME-17: 未認証ユーザーが / を開くとようこそセクションが表示される（#482）");
+
+test.todo("UC-HOME-18: 認証済みで投稿がある場合はようこそセクションが表示されない（#482）");
+
+test.todo("UC-HOME-19: 認証済みで投稿が 0 件のときはようこそセクションが表示される（#482）");

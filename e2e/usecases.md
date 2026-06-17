@@ -27,6 +27,7 @@
 | admin | 管理画面（Worker / Community 管理, `/admin`） | [admin/usecases.md](admin/usecases.md) | UC-ADMIN-01〇14 |
 | account | アカウント設定・プロフィール編集（`/account`） | [account/usecases.md](account/usecases.md) | UC-ACCOUNT-01〇04 |
 | legal | 利用規約・プライバシーポリシー（`/terms`・`/privacy`） | [legal/usecases.md](legal/usecases.md) | UC-LEGAL-01〇04 |
+| not-found | 未マッチ URL のグローバル 404 画面（`NotFoundScene`） | [not-found/usecases.md](not-found/usecases.md) | UC-404-01〜02 |
 
 ## ユースケース一覧（サマリ）
 
@@ -127,3 +128,8 @@
 - UC-LEGAL-02: プライバシーポリシーページ（/privacy）が未ログインでも閲覧できる
 - UC-LEGAL-03: サイドバーから利用規約・プライバシーポリシーへ遷移できる
 - UC-LEGAL-04: リーガルページの本文が暫定（ドラフト）である旨が明示される
+
+### not-found — グローバル 404 画面
+
+- UC-404-01: 未マッチ URL を開くとカスタム 404 画面が表示される（日本語・アプリシェル維持・ホーム導線あり）（#529）
+- UC-404-02: 404 画面のホーム導線をクリックするとホームへ遷移できる（#529）

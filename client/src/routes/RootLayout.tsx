@@ -16,9 +16,10 @@ import HomeIcon from "@mui/icons-material/Home";
 import PrivacyTipIcon from "@mui/icons-material/PrivacyTip";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import { Link as RouterLink, Outlet, useLocation } from "@tanstack/react-router";
-import { Suspense, useEffect, useState, type ReactElement } from "react";
+import { Suspense, useEffect, useRef, useState, type ReactElement } from "react";
 
 import { MainContentSkeleton } from "../components/MainContentSkeleton";
+import { ScrollToTopButton } from "../components/ScrollToTopButton";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 
 import { useAuth } from "../api/auth.js";
@@ -143,6 +144,7 @@ export const RootLayout = (): ReactElement => {
   const isMobile = useIsMobile();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const location = useLocation();
+  const mainRef = useRef<HTMLElement | null>(null);
 
   // ナビゲーション（パス変化）またはモバイル→デスクトップ切り替わりでドロワーを自動クローズする
   useEffect(() => {
@@ -225,6 +227,7 @@ export const RootLayout = (): ReactElement => {
 
         <Box
           component="main"
+          ref={mainRef}
           sx={{
             flexGrow: 1,
             minWidth: 0,
@@ -238,6 +241,7 @@ export const RootLayout = (): ReactElement => {
             <Outlet />
           </Suspense>
         </Box>
+        <ScrollToTopButton key={location.pathname} scrollContainerRef={mainRef} />
       </Box>
     </Box>
     </ExternalLinkProvider>

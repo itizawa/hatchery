@@ -64,7 +64,7 @@ const CommunityBreadcrumb = ({ communityId }: { communityId: string }): ReactEle
     <Box sx={{ mb: 1 }}>
       <RouterLink to="/communities/$slug" params={{ slug: community.slug }}>
         <Typography variant="body2" component="span" sx={{ color: "text.secondary", fontWeight: 600 }}>
-          c/{community.slug}
+          ポスト一覧
         </Typography>
       </RouterLink>
     </Box>

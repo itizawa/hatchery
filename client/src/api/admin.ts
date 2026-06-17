@@ -1,4 +1,4 @@
-import { keepPreviousData, useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import type { AppSettingResponse, Worker, WorkerListResponse } from "@hatchery/common";
 
 import { ensureOk, openApiClient, unwrap } from "./client.js";
@@ -113,7 +113,6 @@ export function useAdminWorkers(page = 1) {
   return useSuspenseQuery({
     queryKey: [...ADMIN_WORKERS_QUERY_KEY, page] as const,
     queryFn: () => fetchAdminWorkers(page, ADMIN_WORKERS_PAGE_SIZE),
-    placeholderData: keepPreviousData,
   });
 }
 

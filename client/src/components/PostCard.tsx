@@ -40,6 +40,8 @@ interface PostCardProps {
    * 未指定時は c/{slug} をテキストのみで表示する。
    */
   onCommunityClick?: () => void;
+  /** コンパクト表示モード（#561）。true のとき本文を非表示・パディングを縮小する。 */
+  compact?: boolean;
 }
 
 /**
@@ -81,7 +83,7 @@ const CommunityByline = ({
 
 /**
  * 投稿カード。タイトル・本文・author・score・up/down vote ボタンを表示する（ADR-0019 / ADR-0025）。
- * post のアクションバーに ShareButton を追加（ADR-0025）。
+ * post のアクションバー（本文下）に VoteControl・コメント数・ShareButton を横並びで配置（ADR-0025）。
  * 投稿入力欄は持たない（ユーザーは投稿しない・ADR-0020）。
  */
 export const PostCard = ({
@@ -94,6 +96,7 @@ export const PostCard = ({
   truncateText = false,
   community,
   onCommunityClick,
+  compact = false,
 }: PostCardProps): ReactElement => {
   // comment_count はサーバ集計値（#500）。未指定（後方互換）は 0 として扱う。
   const commentCount = post.comment_count ?? 0;
@@ -112,16 +115,42 @@ export const PostCard = ({
         border: "1px solid",
         borderColor: "divider",
         borderRadius: 1,
-        p: 2,
+        p: compact ? 1 : 2,
         bgcolor: "background.paper",
-        mb: 1,
+        mb: compact ? 0.5 : 1,
       }}
     >
-      <Box sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}>
-        <Box
-          sx={{ pt: 0.5 }}
-          onClick={handleVoteClick}
-        >
+      <Typography
+        variant="h6"
+        component="h3"
+        sx={{ fontWeight: 600, mb: compact ? 0 : 0.5 }}
+      >
+        {post.title}
+      </Typography>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: compact ? 0.5 : 1, flexWrap: "wrap" }}>
+        {community && <CommunityByline community={community} onClick={onCommunityClick} />}
+        <AuthorByline author={post.author} authorWorker={post.author_worker} />
+        <PostedTime createdAt={post.created_at} />
+      </Box>
+      {!compact && (
+        <MarkdownContent
+          content={post.text}
+          variant="body2"
+          paragraphSx={
+            truncateText
+              ? {
+                  display: "-webkit-box",
+                  WebkitLineClamp: 3,
+                  WebkitBoxOrient: "vertical",
+                  overflow: "hidden",
+                }
+              : undefined
+          }
+        />
+      )}
+      {firstUrl && <OgpCard url={firstUrl} />}
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 1 }}>
+        <Box onClick={handleVoteClick}>
           <VoteControl
             score={post.score}
             onVote={onVote}
@@ -129,48 +158,17 @@ export const PostCard = ({
             disabled={voteDisabled}
           />
         </Box>
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography
-            variant="h6"
-            component="h3"
-            sx={{ fontWeight: 600, mb: 0.5 }}
-          >
-            {post.title}
-          </Typography>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1, flexWrap: "wrap" }}>
-            {community && <CommunityByline community={community} onClick={onCommunityClick} />}
-            <AuthorByline author={post.author} authorWorker={post.author_worker} />
-            <PostedTime createdAt={post.created_at} />
-          </Box>
-          <MarkdownContent
-            content={post.text}
-            variant="body2"
-            paragraphSx={
-              truncateText
-                ? {
-                    display: "-webkit-box",
-                    WebkitLineClamp: 3,
-                    WebkitBoxOrient: "vertical",
-                    overflow: "hidden",
-                  }
-                : undefined
-            }
-          />
-          {firstUrl && <OgpCard url={firstUrl} />}
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 1 }}>
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              component="span"
-              aria-label={`コメント ${commentCount} 件`}
-              sx={{ display: "inline-flex", alignItems: "center", gap: 0.5 }}
-            >
-              <ChatBubbleOutlineIcon fontSize="small" sx={{ color: "text.secondary", verticalAlign: "middle" }} aria-hidden="true" />
-              {commentCount}
-            </Typography>
-            {postUrl && <ShareButton shareUrl={postUrl} shareTitle={post.title} />}
-          </Box>
-        </Box>
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          component="span"
+          aria-label={`コメント ${commentCount} 件`}
+          sx={{ display: "inline-flex", alignItems: "center", gap: 0.5 }}
+        >
+          <ChatBubbleOutlineIcon fontSize="small" sx={{ color: "text.secondary", verticalAlign: "middle" }} aria-hidden="true" />
+          {commentCount}
+        </Typography>
+        {postUrl && <ShareButton shareUrl={postUrl} shareTitle={post.title} />}
       </Box>
     </Box>
   );

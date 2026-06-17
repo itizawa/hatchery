@@ -264,4 +264,40 @@ describe("PostCard", () => {
       expect(screen.queryByRole("button", { name: "c/zenn" })).not.toBeInTheDocument();
     });
   });
+
+  describe("アクションバーのレイアウト（#683）", () => {
+    it("up vote ボタンがタイトルより後（DOM 順で後）に現れる", () => {
+      render(<PostCard post={mockPost} onVote={vi.fn()} />);
+      const upVoteBtn = screen.getByRole("button", { name: /up vote/i });
+      const titleEl = screen.getByText("今日も元気に始めましょう");
+      // titleEl が upVoteBtn より前（upVoteBtn は titleEl の後に現れる）
+      expect(titleEl.compareDocumentPosition(upVoteBtn) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it("アクションバーで up vote ボタンがコメント数より前（DOM 順で先）に現れる", () => {
+      render(<PostCard post={mockPost} onVote={vi.fn()} />);
+      const upVoteBtn = screen.getByRole("button", { name: /up vote/i });
+      const commentCountEl = screen.getByLabelText("コメント 3 件");
+      // upVoteBtn が commentCountEl より前（commentCountEl は upVoteBtn の後に現れる）
+      expect(upVoteBtn.compareDocumentPosition(commentCountEl) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+  });
+
+  describe("compact モード（#561）", () => {
+    it("compact=true のとき本文テキストが非表示になる", () => {
+      render(<PostCard post={mockPost} onVote={vi.fn()} compact />);
+      expect(screen.queryByText("おはようございます！今日もよろしくお願いします。")).not.toBeInTheDocument();
+    });
+
+    it("compact=true のときタイトルは表示される", () => {
+      render(<PostCard post={mockPost} onVote={vi.fn()} compact />);
+      expect(screen.getByText("今日も元気に始めましょう")).toBeInTheDocument();
+    });
+
+    it("compact 未指定（デフォルト false）のとき本文テキストは表示される", () => {
+      render(<PostCard post={mockPost} onVote={vi.fn()} />);
+      const textEl = screen.getByText("おはようございます！今日もよろしくお願いします。");
+      expect(textEl).not.toHaveStyle({ display: "none" });
+    });
+  });
 });

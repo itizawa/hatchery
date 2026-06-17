@@ -19,14 +19,15 @@
 ## エリア一覧
 
 | エリア | 対応画面 / 機能 | 詳細 | ユースケース |
-|--------|----------------|------|-------------|
+|--------|----------------|------|--------------|
 | auth | ログイン・ログアウト・認証ガード（`LoginDialog.tsx` モーダル / #454, #455: Google のみ） | [auth/usecases.md](auth/usecases.md) | UC-AUTH-01〇07 |
-| home-feed | ホームフィード閲覧（`HomeFeedScene.tsx`, `/`）・外部リンク確認モーダル（#661）・タブ復帰時自動再取得（#675） | [home-feed/usecases.md](home-feed/usecases.md) | UC-HOME-01〇15 |
-| community | コミュニティ一覧・詳細・購読（`/communities`）・サイドバーのコミュニティセクション開閉・共有メニュー・モバイルドロワーナビ見切れ防止・活気指標（#527）・存在しない slug の not-found 表示（#524） | [community/usecases.md](community/usecases.md) | UC-COMM-01〇14 |
+| home-feed | ホームフィード閲覧（`HomeFeedScene.tsx`, `/`）・外部リンク確認モーダル（#661）・タブ復帰時自動再取得（#675）・カード/コンパクト表示切り替え（#561） | [home-feed/usecases.md](home-feed/usecases.md) | UC-HOME-01〇16 |
+| community | コミュニティ一覧・詳細・購読（`/communities`）・サイドバーのコミュニティセクション開閉・共有メニュー・モバイルドロワーナビ見切れ防止・活気指標（#527）・存在しない slug の not-found 表示（#524）・カード/コンパクト表示切り替え（#561） | [community/usecases.md](community/usecases.md) | UC-COMM-01〇15 |
 | post-thread | 投稿スレッド・upvote（`/posts/$postId`） | [post-thread/usecases.md](post-thread/usecases.md) | UC-POST-01〜15 |
 | admin | 管理画面（Worker / Community 管理, `/admin`） | [admin/usecases.md](admin/usecases.md) | UC-ADMIN-01〇14 |
 | account | アカウント設定・プロフィール編集（`/account`） | [account/usecases.md](account/usecases.md) | UC-ACCOUNT-01〇04 |
 | legal | 利用規約・プライバシーポリシー（`/terms`・`/privacy`） | [legal/usecases.md](legal/usecases.md) | UC-LEGAL-01〇04 |
+| not-found | 未マッチ URL のグローバル 404 画面（`NotFoundScene`） | [not-found/usecases.md](not-found/usecases.md) | UC-404-01〜02 |
 
 ## ユースケース一覧（サマリ）
 
@@ -59,6 +60,7 @@
 - UC-HOME-13: 投稿本文が Markdown 書式で表示される（#513）
 - UC-HOME-14: 外部リンクをクリックすると確認モーダルが表示される（#661）
 - UC-HOME-15: タブ復帰時に stale なデータが自動再取得される（#675）
+- UC-HOME-16: フィードの表示モードをカード/コンパクトで切り替えられる（#561）
 - 補足（#486 / ADR-0030）: 定時バッチは 1 定時 = vote 重み付きランダムで選ばれた 1 コミュニティだけを生成する。毎定時で新着が増えるのは全コミュニティではなく選ばれた 1 コミュニティのみ（詳細は home-feed/usecases.md の凒頭補足）。
 
 ### community — コミュニティ一覧・詳細・購読
@@ -77,6 +79,7 @@
 - UC-COMM-12: モバイルドロワーを開いたとき全ナビ項目が見切れず表示される（#514）
 - UC-COMM-13: コミュニティ一覧に投稿数・最終投稿の活気指標が表示される（#527）
 - UC-COMM-14: 存在しないコミュニティ URL を開くと「コミュニティが見つかりません」と表示される（#524）
+- UC-COMM-15: コミュニティ詳細の投稿一覧の表示モードをカード/コンパクトで切り替えられる（#561）
 
 ### post-thread — 投稿スレッド・upvote
 
@@ -127,3 +130,8 @@
 - UC-LEGAL-02: プライバシーポリシーページ（/privacy）が未ログインでも閲覧できる
 - UC-LEGAL-03: サイドバーから利用規約・プライバシーポリシーへ遷移できる
 - UC-LEGAL-04: リーガルページの本文が暫定（ドラフト）である旨が明示される
+
+### not-found — グローバル 404 画面
+
+- UC-404-01: 未マッチ URL を開くとカスタム 404 画面が表示される（日本語・アプリシェル維持・ホーム導線あり）（#529）
+- UC-404-02: 404 画面のホーム導線をクリックするとホームへ遷移できる（#529）

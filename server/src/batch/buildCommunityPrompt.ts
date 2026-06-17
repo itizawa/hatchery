@@ -127,7 +127,7 @@ export function buildCommunityPrompt(
 
   const recentLogSection =
     recentLog.length > 0
-      ? `直近の投稿・コメント（${recentLog.length} 件）:\n${recentLog.join("\n")}`
+      ? `直近の投稿・コメント（${recentLog.length} 件）:\n${recentLog.join("\n")}\n\n（↑ 上記で既に扱った記事・話題と重複しない新しい題材を選んでください）`
       : "直近の投稿・コメント: (なし)";
 
   const toneInstruction = community.generationInstruction || community.description;

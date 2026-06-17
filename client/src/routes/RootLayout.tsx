@@ -94,23 +94,25 @@ const SidebarContent = (): ReactElement => {
       <SidebarGlobalNav />
       <Divider sx={{ my: 1 }} />
       <SidebarCommunitySection />
-      <Divider sx={{ my: 1 }} />
-      <List dense>
-        {user && isAdmin(user) && (
-          <ListItem disablePadding>
-            <ListItemButton
-              component={RouterLink}
-              to="/admin"
-              sx={{ color: SLACK_COLORS.sidebarText }}
-            >
-              <ListItemIcon sx={SIDEBAR_ICON_SX}>
-                <AdminPanelSettingsIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText primary="管理画面" />
-            </ListItemButton>
-          </ListItem>
-        )}
-      </List>
+      {user && isAdmin(user) && (
+        <>
+          <Divider sx={{ my: 1 }} />
+          <List dense>
+            <ListItem disablePadding>
+              <ListItemButton
+                component={RouterLink}
+                to="/admin"
+                sx={{ color: SLACK_COLORS.sidebarText }}
+              >
+                <ListItemIcon sx={SIDEBAR_ICON_SX}>
+                  <AdminPanelSettingsIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText primary="管理画面" />
+              </ListItemButton>
+            </ListItem>
+          </List>
+        </>
+      )}
       {/* リーガルリンク（#484）。全ユーザー（未ログイン含む）がいつでも参照できるよう常時表示する。 */}
       <Divider sx={{ my: 1 }} />
       <List dense>

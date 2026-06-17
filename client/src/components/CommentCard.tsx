@@ -33,6 +33,7 @@ interface CommentCardProps {
  * コメントカード。本文・author・score・up/down vote ボタンを表示する（ADR-0019 / ADR-0025）。
  * コメント入力欄は持たない（ユーザーはコメントしない・ADR-0020）。
  * #520: Reddit 風コネクター線（スレッドライン）+ 深さに応じたインデントに対応。
+ * #683: VoteControl を本文下のアクションバーに配置。
  */
 export const CommentCard = ({
   comment,
@@ -78,25 +79,21 @@ export const CommentCard = ({
           pl: depth > 0 ? 1 : 0,
         }}
       >
-        <Box sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}>
-          <Box sx={{ pt: 0.25 }}>
-            <VoteControl
-              score={comment.score}
-              onVote={onVote}
-              currentVote={currentVote}
-              disabled={voteDisabled}
-            />
-          </Box>
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Box
-              sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5, flexWrap: "wrap" }}
-            >
-              <AuthorByline author={comment.author} authorWorker={comment.author_worker} />
-              <PostedTime createdAt={comment.created_at} />
-            </Box>
-            <MarkdownContent content={comment.text} variant="body2" />
-            {firstUrl && <OgpCard url={firstUrl} />}
-          </Box>
+        <Box
+          sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5, flexWrap: "wrap" }}
+        >
+          <AuthorByline author={comment.author} authorWorker={comment.author_worker} />
+          <PostedTime createdAt={comment.created_at} />
+        </Box>
+        <MarkdownContent content={comment.text} variant="body2" />
+        {firstUrl && <OgpCard url={firstUrl} />}
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 0.5 }}>
+          <VoteControl
+            score={comment.score}
+            onVote={onVote}
+            currentVote={currentVote}
+            disabled={voteDisabled}
+          />
         </Box>
       </Box>
 

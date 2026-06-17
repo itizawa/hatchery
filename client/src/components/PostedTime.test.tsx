@@ -46,10 +46,13 @@ describe("PostedTime", () => {
 
   describe("不正な日付文字列のとき何も描画しない（例外が投げられない）", () => {
     it('createdAt が "not-a-date" のとき <time> 要素を描画しない', () => {
+      // render 呼び出し自体が例外を投げないことを確認する
+      let container!: HTMLElement;
       expect(() => {
-        const { container } = render(<PostedTime createdAt="not-a-date" />);
-        expect(container.querySelector("time")).toBeNull();
+        ({ container } = render(<PostedTime createdAt="not-a-date" />));
       }).not.toThrow();
+      // 描画されていないことを確認する（アサーションエラーが not.toThrow に飲まれないよう分離）
+      expect(container.querySelector("time")).toBeNull();
     });
   });
 });

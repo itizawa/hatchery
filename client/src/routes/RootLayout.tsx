@@ -16,9 +16,10 @@ import HomeIcon from "@mui/icons-material/Home";
 import PrivacyTipIcon from "@mui/icons-material/PrivacyTip";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import { Link as RouterLink, Outlet, useLocation } from "@tanstack/react-router";
-import { Suspense, useEffect, useState, type ReactElement } from "react";
+import { Suspense, useEffect, useRef, useState, type ReactElement } from "react";
 
 import { MainContentSkeleton } from "../components/MainContentSkeleton";
+import { ScrollToTopButton } from "../components/ScrollToTopButton";
 import { useIsMobile } from "../hooks/useIsMobile.js";
 
 import { useAuth } from "../api/auth.js";
@@ -93,23 +94,25 @@ const SidebarContent = (): ReactElement => {
       <SidebarGlobalNav />
       <Divider sx={{ my: 1 }} />
       <SidebarCommunitySection />
-      <Divider sx={{ my: 1 }} />
-      <List dense>
-        {user && isAdmin(user) && (
-          <ListItem disablePadding>
-            <ListItemButton
-              component={RouterLink}
-              to="/admin"
-              sx={{ color: SLACK_COLORS.sidebarText }}
-            >
-              <ListItemIcon sx={SIDEBAR_ICON_SX}>
-                <AdminPanelSettingsIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText primary="管理画面" />
-            </ListItemButton>
-          </ListItem>
-        )}
-      </List>
+      {user && isAdmin(user) && (
+        <>
+          <Divider sx={{ my: 1 }} />
+          <List dense>
+            <ListItem disablePadding>
+              <ListItemButton
+                component={RouterLink}
+                to="/admin"
+                sx={{ color: SLACK_COLORS.sidebarText }}
+              >
+                <ListItemIcon sx={SIDEBAR_ICON_SX}>
+                  <AdminPanelSettingsIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText primary="管理画面" />
+              </ListItemButton>
+            </ListItem>
+          </List>
+        </>
+      )}
       {/* リーガルリンク（#484）。全ユーザー（未ログイン含む）がいつでも参照できるよう常時表示する。 */}
       <Divider sx={{ my: 1 }} />
       <List dense>
@@ -143,6 +146,7 @@ export const RootLayout = (): ReactElement => {
   const isMobile = useIsMobile();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const location = useLocation();
+  const mainRef = useRef<HTMLElement | null>(null);
 
   // ナビゲーション（パス変化）またはモバイル→デスクトップ切り替わりでドロワーを自動クローズする
   useEffect(() => {
@@ -225,6 +229,7 @@ export const RootLayout = (): ReactElement => {
 
         <Box
           component="main"
+          ref={mainRef}
           sx={{
             flexGrow: 1,
             minWidth: 0,
@@ -238,6 +243,7 @@ export const RootLayout = (): ReactElement => {
             <Outlet />
           </Suspense>
         </Box>
+        <ScrollToTopButton key={location.pathname} scrollContainerRef={mainRef} />
       </Box>
     </Box>
     </ExternalLinkProvider>

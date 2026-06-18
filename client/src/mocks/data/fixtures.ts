@@ -1,6 +1,5 @@
 import type {
   AuthUser,
-  AppSettingResponse,
   BatchRunLog,
 } from "@hatchery/common";
 import type { Community, Post, RecentWorker } from "../../api/communities.js";
@@ -65,7 +64,7 @@ export const mockPosts: Post[] = [
     slot_key: "2026-06-01-morning",
     seq: 2,
     author: "worker-ken",
-    title: "デバッグ奔闘記",
+    title: "デバッグ奉邗記",
     text: "昨日からずっと追っていたバグ、ようやく原因がわかった。型エラーだった。",
     score: 12,
     created_at: "2026-06-01T09:01:00Z",
@@ -76,10 +75,6 @@ export const mockPosts: Post[] = [
 export const mockWorkers: RecentWorker[] = [
   { id: "worker-haru", displayName: "haru", role: "ムードメーカー", imageUrl: null },
   { id: "worker-ken", displayName: "ken", role: "ベテラン", imageUrl: null },
-];
-
-export const mockSettings: AppSettingResponse[] = [
-  { key: "CLAUDE_API_KEY", maskedValue: "sk-ant-api03-****" },
 ];
 
 export const mockBatchLogs: BatchRunLog[] = [

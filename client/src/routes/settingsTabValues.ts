@@ -1,2 +1,2 @@
-export const SETTINGS_TAB_VALUES = ["users", "api-token", "batch-logs", "token-usage", "communities"] as const;
+export const SETTINGS_TAB_VALUES = ["users", "batch-logs", "token-usage", "communities"] as const;
 export type SettingsTabValue = (typeof SETTINGS_TAB_VALUES)[number];

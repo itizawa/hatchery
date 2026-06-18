@@ -4,7 +4,6 @@ import {
   mockAdminUser,
   mockCommunities,
   mockPosts,
-  mockSettings,
   mockBatchLogs,
   mockWorkers,
 } from "./data/fixtures.js";
@@ -39,8 +38,6 @@ export const handlers = [
   http.post("/api/comments/:commentId/vote", () =>
     HttpResponse.json({ id: "comment-1", score: 1 }),
   ),
-
-  http.get("/api/admin/settings", () => HttpResponse.json(mockSettings)),
 
   http.get("/api/admin/batch-logs", () => HttpResponse.json(mockBatchLogs)),
 

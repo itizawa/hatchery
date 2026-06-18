@@ -1,13 +1,8 @@
 import {
-  type CommunityWeight,
   GenerationOutputSchema,
-  buildCommunityWeights,
-  formatRecentLog,
   generateSlotKey,
-  type RecentEntry,
   selectCommunityWorkers,
   selectRotatedWorkers,
-  selectWeightedCommunity,
   validateGenerationOutput,
   type WorkerState,
 } from "@hatchery/common";
@@ -15,7 +10,7 @@ import {
 import type { AppSettingRepository } from "../persistence/appSettingRepository.js";
 import type { BatchRunLogRepository } from "../persistence/batchRunLogRepository.js";
 import type { CommentRecord, CommentRepository } from "../persistence/commentRepository.js";
-import type { CommunityRecord, CommunityRepository } from "../persistence/communityRepository.js";
+import type { CommunityRepository } from "../persistence/communityRepository.js";
 import type { PostRecord, PostRepository } from "../persistence/postRepository.js";
 import type { VoteRepository } from "../persistence/voteRepository.js";
 import type { WorkerCommunityRepository } from "../persistence/workerCommunityRepository.js";
@@ -27,10 +22,12 @@ import {
   generateConversationWithClaude,
   type ConversationGenerator,
 } from "./aiMessageGenerator.js";
-import { assignDripTimestamps } from "./assignDripTimestamps.js";
 import { buildCommunityPrompt, type WorkerDef } from "./buildCommunityPrompt.js";
+import { fetchRecentContext } from "./fetchRecentContext.js";
 import { generateCountHints } from "./generateCountHints.js";
 import { extractErrorMessage, logBatchError, logBatchInfo } from "./logger.js";
+import { persistBatchOutput } from "./persistBatchOutput.js";
+import { selectOneCommunity } from "./selectTargetCommunity.js";
 
 /** プロンプトに載せる直近 post/comment の既定件数。 */
 const DEFAULT_RECENT_LIMIT = 30;
@@ -48,11 +45,8 @@ const MAX_RECENT_POSTS_FOR_REPLY = 5;
  */
 const DEFAULT_DRIP_WINDOW_MS = 3 * 60 * 60 * 1000; // 3 時間
 
-/**
- * vote 重みの集計対象期間（日数）。直近この日数の vote 純スコアで重みを算出する（#486 / ADR-0030）。
- * 後からチューニングしやすいよう名前付き定数として切り出す。
- */
-export const VOTE_WEIGHT_WINDOW_DAYS = 7;
+/** vote 重みの集計対象期間（日数）。selectTargetCommunity.ts へ移設済み。後方互換のため re-export。 */
+export { VOTE_WEIGHT_WINDOW_DAYS } from "./selectTargetCommunity.js";
 
 /**
  * 人気トピック還元の集計対象期間（日数）（#558）。
@@ -159,37 +153,6 @@ export interface RunCommunityBatchDeps {
 export { generateSlotKey } from "@hatchery/common";
 
 /**
- * vote 重み付きランダムで 1 コミュニティを選ぶ（#486 / ADR-0030）。
- *
- * 直近 VOTE_WEIGHT_WINDOW_DAYS 日の community 別純 vote スコア（up−down）を集計し、
- * `buildCommunityWeights`（common）で重みを算出して重み付きランダム選定する（#597）。
- * 床 +1 により vote 0・新規コミュニティも必ず正の重みを持ち、稀に選ばれる。
- *
- * @returns 選ばれた CommunityRecord。community が 0 件のときは null。
- */
-async function selectOneCommunity(
-  communities: readonly CommunityRecord[],
-  voteRepo: VoteRepository,
-  rng: () => number,
-  now: Date,
-): Promise<CommunityRecord | null> {
-  if (communities.length === 0) return null;
-
-  const since = new Date(now.getTime() - VOTE_WEIGHT_WINDOW_DAYS * 24 * 60 * 60 * 1000);
-  const netScores = await voteRepo.netScoresByCommunitySince(since);
-
-  // 重み計算を common の純粋関数に委譲する（#597）。
-  const weights: CommunityWeight[] = buildCommunityWeights(
-    communities.map((c) => c.id),
-    netScores,
-  );
-
-  const selectedId = selectWeightedCommunity(weights, rng);
-  if (selectedId === null) return null;
-  return communities.find((c) => c.id === selectedId) ?? null;
-}
-
-/**
  * community 単位の定時バッチ本体（#306 / #486 / ADR-0019 / ADR-0020 / ADR-0009 / ADR-0030）。
  *
  * **1 定時 = vote 重み付きランダムで 1 コミュニティだけを選び、そのコミュニティのみ生成する**（ADR-0030）。
@@ -241,7 +204,7 @@ export async function runCommunityBatch(
   const appearedWorkerIds = new Set<string>();
 
   // vote 重み付きランダムで 1 コミュニティを選ぶ（#486 / ADR-0030）。
-  const selected = await selectOneCommunity(communities, deps.voteRepo, rng, now);
+  const selected = await selectOneCommunity({ communities, voteRepo: deps.voteRepo, rng, now });
   if (!selected) {
     // community 0 件 → 何も生成せず正常終了（既存のスキップ挙動と整合）。
     await deps.batchRunLogRepository?.create({
@@ -288,51 +251,18 @@ export async function runCommunityBatch(
       }));
       const workerIds = workers.map((w) => w.id);
 
-      // 直近 post/comment をログ形式に変換
-      // reveal フィルタ（#556）: now を渡して未解禁分をコンテキストから除外する（受け入れ条件 6）。
-      const recentPosts = await deps.postRepo.listByCommunity(community.id, recentLimit, { now });
-      const recentComments = await deps.commentRepo.listByCommunity(community.id, recentLimit, { now });
-      // post と comment を createdAt で時系列マージし直近 recentLimit 件をプロンプトに載せる
-      const allEntries: (RecentEntry & { createdAt: Date })[] = [
-        ...recentPosts.map((p) => ({
-          community_id: community.slug,
-          author: p.author,
-          text: p.text,
-          title: p.title,
-          createdAt: p.createdAt,
-        })),
-        ...recentComments.map((c) => ({
-          community_id: community.slug,
-          author: c.author,
-          text: c.text,
-          createdAt: c.createdAt,
-        })),
-      ].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
-      const recentLog = formatRecentLog(allEntries, recentLimit);
-
-      // 既存Post参照リストを構築（#555）: 最新 MAX_RECENT_POSTS_FOR_REPLY 件を露出
-      const recentPostsForReply = recentPosts
-        .slice(0, MAX_RECENT_POSTS_FOR_REPLY)
-        .map((p, i) => ({
-          ref: `ref-${i + 1}`,
-          id: p.id,
-          title: p.title,
-        }));
-
-      // 人気トピック還元: 直近の高スコア post を取得してプロンプトに渡す（#558 / ADR-0030）
-      const popularPostsSince = new Date(
-        now.getTime() - POPULAR_POSTS_WINDOW_DAYS * 24 * 60 * 60 * 1000,
-      );
-      const topPosts = await deps.postRepo.listTopByCommunity(community.id, {
-        since: popularPostsSince,
-        minScore: POPULAR_POSTS_MIN_SCORE,
-        limit: POPULAR_POSTS_LIMIT,
+      // 直近 post/comment・人気トピックをコンテキストとして取得する
+      const { recentLog, recentPostsForReply, popularPosts } = await fetchRecentContext({
+        postRepo: deps.postRepo,
+        commentRepo: deps.commentRepo,
+        community,
+        recentLimit,
+        maxPostsForReply: MAX_RECENT_POSTS_FOR_REPLY,
+        now,
+        popularPostsWindowDays: POPULAR_POSTS_WINDOW_DAYS,
+        popularPostsMinScore: POPULAR_POSTS_MIN_SCORE,
+        popularPostsLimit: POPULAR_POSTS_LIMIT,
       });
-      const popularPosts = topPosts.map((p) => ({
-        title: p.title,
-        author: p.author,
-        score: p.score,
-      }));
 
       // post 数・コメント数のヒントを生成する（#557）。
       // postRange / commentRange が注入されていれば rng で件数を決定し、countHints としてプロンプトに渡す。
@@ -391,121 +321,21 @@ export async function runCommunityBatch(
         continue;
       }
 
-      // post をバルク作成（(community_id, slot_key, seq) 複合ユニーク制約でガード）
-      // Post の createdAt は now（スロット時刻）基準でわずかに stagger させる（受け入れ条件 7）。
-      // 複数 Post があるとき、フィード先頭が一度に埋まらないよう均等に散らす。
-      const postCount = output.posts.length;
-      const postStaggerMs = postCount > 1 ? Math.floor(dripWindowMs / (postCount * 10)) : 0;
-      const postInputs = output.posts.map((post, postIdx) => ({
+      // post / comment / reply を永続化する
+      const persisted = await persistBatchOutput({
+        postRepo: deps.postRepo,
+        commentRepo: deps.commentRepo,
+        communityId: community.id,
+        output,
+        postRefMap,
         slotKey,
-        seq: postIdx,
-        author: post.author,
-        title: post.title,
-        text: post.text,
-        // Post は即時公開: スロット時刻 + 軽いオフセット（stagger）。
-        createdAt: new Date(now.getTime() + postIdx * postStaggerMs),
-      }));
-      const createdPosts = await deps.postRepo.createMany(community.id, postInputs);
-      savedPosts.push(...createdPosts);
-
-      // comment をバルク作成
-      // seq は全コメントを通じてユニークにする（community + slotKey でフラット管理）
-      // reply_to → parentCommentId 解決の方針（#520）:
-      //   各 post のコメントを 2 パスで処理する。
-      //   1st pass: seq なし / parentCommentId なし でバルク作成 → 採番済み id を取得。
-      //   2nd pass: reply_to が有効（同一 post 内の別コメントの 0-index）なら
-      //             対応する createdId を parentCommentId にセット → update。
-      //   ただし Prisma のバルク upsert は update で parentCommentId を上書きしないため、
-      //   1st pass でまず全コメントを null で作り、2nd pass で有効な reply_to のみ update する。
-      // ドリップ割当（#556）: 全コメント数に対してジッタ付きタイムスタンプを割り当てる。
-      const totalCommentCount = output.posts.reduce((sum, p) => sum + p.comments.length, 0);
-      const dripTimestamps = assignDripTimestamps({
-        slotAt: now,
-        windowMs: dripWindowMs,
-        count: totalCommentCount,
+        commentSeqStart: 0,
+        now,
+        dripWindowMs,
         rng,
       });
-
-      let commentSeq = 0;
-      let dripIdx = 0;
-      for (let postIdx = 0; postIdx < output.posts.length; postIdx++) {
-        const post = output.posts[postIdx];
-        const createdPost = createdPosts[postIdx];
-        if (!post || !createdPost) continue;
-
-        if (post.comments.length === 0) continue;
-
-        // 1st pass: parentCommentId=null で全コメントを作成し id を取得する。
-        // ドリップ割当（#556）の createdAt も同時に付与する。
-        const commentInputsFirstPass = post.comments.map((comment) => {
-          const commentCreatedAt = dripTimestamps[dripIdx++] ?? new Date(now.getTime() + dripIdx * 1000);
-          return {
-            postId: createdPost.id,
-            slotKey,
-            seq: commentSeq++,
-            author: comment.author,
-            text: comment.text,
-            // ドリップ割当（#556）: 未来の createdAt を付与し、reveal フィルタと組み合わせて解禁。
-            createdAt: commentCreatedAt,
-            parentCommentId: null,
-          };
-        });
-        const createdComments = await deps.commentRepo.createMany(community.id, commentInputsFirstPass);
-        savedComments.push(...createdComments);
-
-        // 2nd pass: reply_to が設定されているコメントの parentCommentId を解決する（#520）。
-        // reply_to は出力内コメントの 0-index を指す。有効範囲外・自己参照は null 扱い。
-        if (deps.commentRepo.updateParentCommentId) {
-          for (let ci = 0; ci < post.comments.length; ci++) {
-            const genComment = post.comments[ci];
-            const createdComment = createdComments[ci];
-            if (!genComment || !createdComment) continue;
-
-            const replyTo = genComment.reply_to ?? null;
-            if (replyTo === null) continue;
-
-            // 有効範囲チェック: 0 以上 & 自分自身でない & 同一 post 内の有効 index
-            if (replyTo < 0 || replyTo >= post.comments.length || replyTo === ci) continue;
-
-            const parentCreated = createdComments[replyTo];
-            if (!parentCreated) continue;
-
-            // 循環参照チェックは buildCommentTree で行うため、ここでは単純に設定する。
-            await deps.commentRepo.updateParentCommentId(createdComment.id, parentCreated.id);
-            // savedComments の対象エントリを更新する（参照更新）。
-            const idx = savedComments.findIndex((c) => c.id === createdComment.id);
-            if (idx !== -1) {
-              savedComments[idx] = { ...savedComments[idx]!, parentCommentId: parentCreated.id };
-            }
-          }
-        }
-      }
-
-      // replies（既存Post宛コメント）をバルク作成（#555）
-      // targetPostRef → 実postId に解決してコメントを永続化する
-      if (output.replies && output.replies.length > 0) {
-        for (const reply of output.replies) {
-          const targetPostId = postRefMap.get(reply.targetPostRef);
-          if (!targetPostId) {
-            // 解決できない参照はスキップ（validateGenerationOutput で弾かれているはずだが念のため）
-            continue;
-          }
-          const replyInputs = [
-            {
-              postId: targetPostId,
-              slotKey,
-              seq: commentSeq++,
-              author: reply.author,
-              text: reply.text,
-            },
-          ];
-          const createdReplyComments = await deps.commentRepo.createMany(
-            community.id,
-            replyInputs,
-          );
-          savedComments.push(...createdReplyComments);
-        }
-      }
+      savedPosts.push(...persisted.savedPosts);
+      savedComments.push(...persisted.savedComments);
 
       // 生成・永続化に成功したので、この定時で登場したワーカーを記録する（#464）。
       // post / comment / reply の author として実際に発言したワーカーを登場扱いにする（author 検証済みの既知 id）。

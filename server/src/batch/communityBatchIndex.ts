@@ -58,6 +58,7 @@ async function main(): Promise<void> {
     { createPrismaWorkerCommunityRepository },
     { createPrismaWorkerRepository },
     { createPrismaWorldStateRepository },
+    { createPrismaTokenUsageLogRepository },
   ] = await Promise.all([
     import("../persistence/prismaClient.js"),
     import("../persistence/prismaBatchRunLogRepository.js"),
@@ -68,6 +69,7 @@ async function main(): Promise<void> {
     import("../persistence/prismaWorkerCommunityRepository.js"),
     import("../persistence/prismaWorkerRepository.js"),
     import("../persistence/prismaWorldStateRepository.js"),
+    import("../persistence/prismaTokenUsageLogRepository.js"),
   ]);
 
   const workerRepo = createPrismaWorkerRepository(prisma);
@@ -96,6 +98,8 @@ async function main(): Promise<void> {
       commentRange: { min: env.batchCommentMin, max: env.batchCommentMax },
       // ドリップ窓の設定化（#556）: env.batchDripWindowMs を dripWindowMs に反映する。
       dripWindowMs: env.batchDripWindowMs,
+      // トークン使用量の記録（#663）: generate() 成功後に TokenUsageLog を保存する。
+      tokenUsageLogRepository: createPrismaTokenUsageLogRepository(prisma),
     },
     disconnect: () => prisma.$disconnect(),
   });

@@ -11,6 +11,7 @@ import type { BatchRunLogRepository } from "../persistence/batchRunLogRepository
 import type { CommentRecord, CommentRepository } from "../persistence/commentRepository.js";
 import type { CommunityRepository } from "../persistence/communityRepository.js";
 import type { PostRecord, PostRepository } from "../persistence/postRepository.js";
+import type { TokenUsageLogRepository } from "../persistence/tokenUsageLogRepository.js";
 import type { VoteRepository } from "../persistence/voteRepository.js";
 import type { WorkerCommunityRepository } from "../persistence/workerCommunityRepository.js";
 import type { WorkerRecord } from "../persistence/workerRepository.js";
@@ -92,6 +93,12 @@ export interface RunCommunityBatchDeps {
   botWorkerProvider?: () => Promise<readonly WorkerRecord[]>;
   /** バッチ実行ログの永続化（省略時はログ保存しない）。 */
   batchRunLogRepository?: BatchRunLogRepository;
+  /**
+   * トークン使用量の記録（省略時は記録しない）（#663）。
+   * generate() が usage を返したときのみ create() を呼ぶ。
+   * API キー未設定 / community 0 件でスキップした定時は記録しない。
+   */
+  tokenUsageLogRepository?: TokenUsageLogRepository;
   /**
    * 登場ローテーション用の WorldState 永続化（#464）。
    * 注入されたときのみ、(a) 解決した登場ワーカーを lastAppearedSlotKey の新旧で並べ替え（最近登場
@@ -190,6 +197,7 @@ export async function runCommunityBatch(
   const savedPosts: PostRecord[] = [];
   const savedComments: CommentRecord[] = [];
   const errors: string[] = [];
+  let pendingUsage: { model: string; inputTokens: number; outputTokens: number } | undefined;
 
   // 登場ローテーション（#464）: worldStateRepository があれば現在の workerStates を読み、
   // 生成成功後に登場ワーカーの lastAppearedSlotKey を更新する。
@@ -278,7 +286,20 @@ export async function runCommunityBatch(
       });
 
       // AI 生成（1 コミュニティ = 1 API コール・ADR-0009）
-      const raw = await generate(prompt, apiKey);
+      const generationResult = await generate(prompt, apiKey);
+      const raw = generationResult.text;
+      // usage が取得できた場合は後で記録する（#663）
+      if (
+        generationResult.model !== undefined &&
+        generationResult.inputTokens !== undefined &&
+        generationResult.outputTokens !== undefined
+      ) {
+        pendingUsage = {
+          model: generationResult.model,
+          inputTokens: generationResult.inputTokens,
+          outputTokens: generationResult.outputTokens,
+        };
+      }
 
       // JSON パース（失敗時はスキップ）
       let parsed: unknown;
@@ -367,13 +388,23 @@ export async function runCommunityBatch(
     });
   }
 
-  // バッチ実行ログを保存
-  await deps.batchRunLogRepository?.create({
+  // バッチ実行ログを保存し、ID をトークン使用量の紐づけに使う（#663）
+  const batchRunLog = await deps.batchRunLogRepository?.create({
     status: errors.length > 0 ? "failure" : "success",
     messageCount: savedPosts.length + savedComments.length,
     errorMessage: errors.length > 0 ? errors.join("; ") : null,
     errorCode: null,
   });
+
+  // トークン使用量を記録（generate が usage を返した定時のみ・#663）
+  if (deps.tokenUsageLogRepository && pendingUsage) {
+    await deps.tokenUsageLogRepository.create({
+      model: pendingUsage.model,
+      inputTokens: pendingUsage.inputTokens,
+      outputTokens: pendingUsage.outputTokens,
+      batchRunLogId: batchRunLog?.id ?? null,
+    });
+  }
 
   return { posts: savedPosts, comments: savedComments };
 }

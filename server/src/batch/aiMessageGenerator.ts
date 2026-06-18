@@ -5,10 +5,25 @@ import { DEFAULT_BATCH_MODEL, type BatchModel } from "../config/env.js";
 import { logBatchError, logBatchInfo } from "./logger.js";
 
 /**
- * チャンネル会話を生成する関数（#53）。プロンプトと API キーを受け、モデルの生テキストを返す。
+ * ConversationGenerator の戻り値型（#663）。
+ * text は生成テキスト、inputTokens / outputTokens / model は Claude API の使用量情報。
+ * usage が取得できない場合（スタブ等）は undefined になり、呼び出し側が記録をスキップする。
+ */
+export type ConversationGeneratorResult = {
+  text: string;
+  inputTokens?: number;
+  outputTokens?: number;
+  model?: string;
+};
+
+/**
+ * チャンネル会話を生成する関数（#53）。プロンプトと API キーを受け、生成結果を返す。
  * テストではスタブを注入し、本番は Claude を使う（依存注入パターン）。
  */
-export type ConversationGenerator = (prompt: string, apiKey: string) => Promise<string>;
+export type ConversationGenerator = (
+  prompt: string,
+  apiKey: string,
+) => Promise<ConversationGeneratorResult>;
 
 /** チャンネルのあらすじを生成する関数（#53）。 */
 export type SummaryGenerator = (prompt: string, apiKey: string) => Promise<string>;
@@ -31,13 +46,13 @@ const CONVERSATION_MAX_TOKENS = 8192;
  */
 const SUMMARY_MAX_TOKENS = 512;
 
-/** Claude にプロンプトを投げ、最初のテキストブロックを返す共通処理。 */
+/** Claude にプロンプトを投げ、テキストと usage を返す共通処理（#663）。 */
 async function callClaudeText(
   client: Anthropic,
   prompt: string,
   model: string,
   maxTokens: number,
-): Promise<string> {
+): Promise<ConversationGeneratorResult> {
   const message = await client.messages.create({
     model,
     max_tokens: maxTokens,
@@ -50,7 +65,12 @@ async function callClaudeText(
       promptSnippet: snippet,
     });
   }
-  return extractFirstText(message.content);
+  return {
+    text: extractFirstText(message.content),
+    inputTokens: message.usage?.input_tokens,
+    outputTokens: message.usage?.output_tokens,
+    model: message.model,
+  };
 }
 
 /** message.content から最初のテキストブロックを取り出す（無ければ空文字）。 */
@@ -73,8 +93,15 @@ export const generateConversationWithClaude: ConversationGenerator =
   createClaudeConversationGenerator(DEFAULT_BATCH_MODEL);
 
 /** Claude であらすじを生成する既定実装（#53）。 */
-export const generateSummaryWithClaude: SummaryGenerator = (prompt, apiKey) =>
-  callClaudeText(new Anthropic({ apiKey }), prompt, SUMMARY_MODEL, SUMMARY_MAX_TOKENS);
+export const generateSummaryWithClaude: SummaryGenerator = async (prompt, apiKey) => {
+  const result = await callClaudeText(
+    new Anthropic({ apiKey }),
+    prompt,
+    SUMMARY_MODEL,
+    SUMMARY_MAX_TOKENS,
+  );
+  return result.text;
+};
 
 /**
  * Batches API 経路の ConversationGenerator を作る依存（#389 AC3・DI でテスト可能にする）。
@@ -108,7 +135,14 @@ const defaultSleep = (ms: number): Promise<void> => new Promise((resolve) => set
 interface BatchResultLike {
   custom_id: string;
   result:
-    | { type: "succeeded"; message: { content: readonly Anthropic.Messages.ContentBlock[] } }
+    | {
+        type: "succeeded";
+        message: {
+          content: readonly Anthropic.Messages.ContentBlock[];
+          usage?: { input_tokens: number; output_tokens: number };
+          model?: string;
+        };
+      }
     | { type: "errored" | "canceled" | "expired" };
 }
 
@@ -130,7 +164,7 @@ export function createBatchConversationGenerator(
   const pollIntervalMs = deps.pollIntervalMs ?? 60_000;
   const maxPolls = deps.maxPolls ?? 60;
 
-  return async (prompt, apiKey) => {
+  return async (prompt, apiKey): Promise<ConversationGeneratorResult> => {
     const client = createClient(apiKey);
 
     const batch = await client.messages.batches.create({
@@ -158,7 +192,7 @@ export function createBatchConversationGenerator(
         batchId: batch.id,
         maxPolls,
       });
-      return "";
+      return { text: "" };
     }
 
     // custom_id 一致の succeeded からテキストを取り出す。
@@ -168,15 +202,21 @@ export function createBatchConversationGenerator(
     for await (const result of results) {
       if (result.custom_id !== deps.customId) continue;
       if (result.result.type === "succeeded") {
-        return extractFirstText(result.result.message.content);
+        const msg = result.result.message;
+        return {
+          text: extractFirstText(msg.content),
+          inputTokens: msg.usage?.input_tokens,
+          outputTokens: msg.usage?.output_tokens,
+          model: msg.model,
+        };
       }
       logBatchError(
         "ai_generation.batch_result_failed",
         `batch result type was ${result.result.type}`,
         { customId: result.custom_id, resultType: result.result.type },
       );
-      return "";
+      return { text: "" };
     }
-    return "";
+    return { text: "" };
   };
 }

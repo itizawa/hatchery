@@ -409,9 +409,9 @@ export async function runCommunityBatch(
   const savedComments: CommentRecord[] = [];
   const appearedWorkerIds = new Set<string>();
 
-  for (let i = 0; i < results.length; i++) {
-    const result = results[i];
-    const community = communities[i];
+  for (const [i, result] of results.entries()) {
+    // communities と results は同じ communities 配列から生成されるため長さが一致する。
+    const community = communities[i]!;
     if (result.status === "fulfilled") {
       savedPosts.push(...result.value.posts);
       savedComments.push(...result.value.comments);

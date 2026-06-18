@@ -133,7 +133,7 @@ describe("runCommunityBatch (#306)", () => {
 
   it("正常系: community ごとに post と comment が永続化される", async () => {
     const deps = buildDeps([community1]);
-    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+    const generate = vi.fn().mockResolvedValue({ text: validGenerationOutput });
 
     const result = await runCommunityBatch({ ...deps, generate });
 
@@ -147,7 +147,7 @@ describe("runCommunityBatch (#306)", () => {
 
   it("複数コミュニティがあっても generate は最大 1 回だけ呼ばれる（1 コミュニティのみ選定）", async () => {
     const deps = buildDeps([community1, community2]);
-    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+    const generate = vi.fn().mockResolvedValue({ text: validGenerationOutput });
 
     await runCommunityBatch({ ...deps, generate });
 
@@ -155,7 +155,7 @@ describe("runCommunityBatch (#306)", () => {
   });
 
   it("rng を固定すると決定的に選ばれたコミュニティのみ生成・永続化される", async () => {
-    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+    const generate = vi.fn().mockResolvedValue({ text: validGenerationOutput });
 
     const depsA = buildDeps([community1, community2]);
     const resultA = await runCommunityBatch({ ...depsA, generate, rng: () => 0 });
@@ -175,7 +175,7 @@ describe("runCommunityBatch (#306)", () => {
       netScoresByCommunitySince: () =>
         Promise.resolve(new Map<string, number>([["community-2", 5]])),
     };
-    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+    const generate = vi.fn().mockResolvedValue({ text: validGenerationOutput });
 
     const result = await runCommunityBatch({
       ...deps,
@@ -194,7 +194,7 @@ describe("runCommunityBatch (#306)", () => {
       netScoresByCommunitySince: () =>
         Promise.resolve(new Map<string, number>([["community-1", 10]])),
     };
-    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+    const generate = vi.fn().mockResolvedValue({ text: validGenerationOutput });
 
     const result = await runCommunityBatch({
       ...deps,
@@ -227,7 +227,7 @@ describe("runCommunityBatch (#306)", () => {
         },
       ],
     });
-    const generate = vi.fn().mockResolvedValue(invalidOutput);
+    const generate = vi.fn().mockResolvedValue({ text: invalidOutput });
 
     const result = await runCommunityBatch({ ...deps, generate });
 
@@ -237,7 +237,7 @@ describe("runCommunityBatch (#306)", () => {
 
   it("選定したコミュニティの生成出力が JSON パース失敗のときは何も永続化しない", async () => {
     const deps = buildDeps([community1, community2]);
-    const generate = vi.fn().mockResolvedValue("不正なJSON{");
+    const generate = vi.fn().mockResolvedValue({ text: "不正なJSON{" });
 
     const result = await runCommunityBatch({ ...deps, generate, rng: () => 0 });
 
@@ -248,7 +248,7 @@ describe("runCommunityBatch (#306)", () => {
 
   it("二重発火ガード: 同一 slotKey で 2 回実行しても 2 回目は skip される", async () => {
     const deps = buildDeps([community1]);
-    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+    const generate = vi.fn().mockResolvedValue({ text: validGenerationOutput });
     const fixedSlotKey = "2026-06-10T09:00";
 
     await runCommunityBatch({ ...deps, generate, slotKey: fixedSlotKey });
@@ -261,7 +261,7 @@ describe("runCommunityBatch (#306)", () => {
 
   it("API キー未設定の場合は何も生成せず空を返す", async () => {
     const deps = buildDeps([community1]);
-    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+    const generate = vi.fn().mockResolvedValue({ text: validGenerationOutput });
 
     const result = await runCommunityBatch({ ...deps, generate, anthropicApiKey: undefined });
 
@@ -272,7 +272,7 @@ describe("runCommunityBatch (#306)", () => {
 
   it("community が 0 件の場合は空を返す", async () => {
     const deps = buildDeps([]);
-    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+    const generate = vi.fn().mockResolvedValue({ text: validGenerationOutput });
 
     const result = await runCommunityBatch({ ...deps, generate });
 
@@ -299,7 +299,7 @@ describe("runCommunityBatch (#306)", () => {
       workers: [botWorkers[0]!],
       links: [{ workerId: "haru", communityId: "community-1" }],
     });
-    const generate = vi.fn().mockResolvedValue(outputWithScore);
+    const generate = vi.fn().mockResolvedValue({ text: outputWithScore });
 
     const result = await runCommunityBatch({ ...deps, generate });
 
@@ -332,14 +332,14 @@ describe("runCommunityBatch (#306)", () => {
 
     const okResult = await runCommunityBatch({
       ...deps,
-      generate: vi.fn().mockResolvedValue(meiOutput),
+      generate: vi.fn().mockResolvedValue({ text: meiOutput }),
       slotKey: "2026-06-13T09:00",
     });
     expect(okResult.posts.map((p) => p.author)).toEqual(["mei"]);
 
     const ngResult = await runCommunityBatch({
       ...deps,
-      generate: vi.fn().mockResolvedValue(haruOutput),
+      generate: vi.fn().mockResolvedValue({ text: haruOutput }),
       slotKey: "2026-06-13T12:00",
     });
     expect(ngResult.posts.length).toBe(0);
@@ -347,7 +347,7 @@ describe("runCommunityBatch (#306)", () => {
 
   it("recentLimit を指定すると直近ログ取得件数に反映される（#389 AC2）", async () => {
     const deps = buildDeps([community1]);
-    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+    const generate = vi.fn().mockResolvedValue({ text: validGenerationOutput });
     const postSpy = vi.spyOn(deps.postRepo, "listByCommunity");
     const commentSpy = vi.spyOn(deps.commentRepo, "listByCommunity");
 
@@ -360,7 +360,7 @@ describe("runCommunityBatch (#306)", () => {
 
   it("recentLimit 未指定なら既定の 30 件で取得する（#389 AC2）", async () => {
     const deps = buildDeps([community1]);
-    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+    const generate = vi.fn().mockResolvedValue({ text: validGenerationOutput });
     const postSpy = vi.spyOn(deps.postRepo, "listByCommunity");
 
     await runCommunityBatch({ ...deps, generate });
@@ -371,7 +371,7 @@ describe("runCommunityBatch (#306)", () => {
 
   it("紐づくワーカーが 0 件の community は全 Bot ワーカーへフォールバックする（#489 AC3）", async () => {
     const deps = buildDeps([community1], { workers: [], links: [] });
-    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+    const generate = vi.fn().mockResolvedValue({ text: validGenerationOutput });
 
     const result = await runCommunityBatch({ ...deps, generate });
 
@@ -381,7 +381,7 @@ describe("runCommunityBatch (#306)", () => {
 
   it("紐づきも Bot ワーカーも 0 件の community は生成をスキップする（#489 AC3）", async () => {
     const deps = buildDeps([community1], { workers: [], links: [] });
-    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+    const generate = vi.fn().mockResolvedValue({ text: validGenerationOutput });
 
     const result = await runCommunityBatch({
       ...deps,
@@ -421,7 +421,7 @@ describe("runCommunityBatch (#306)", () => {
 
     // generate の呼び出し前に postRefMap が構築されるよう、事前に既存Postを配置済み
     // runCommunityBatch 内でrecentPostsとして取得され、ref-1 -> existingPostId にマップされるはず
-    const generate = vi.fn().mockResolvedValue(outputWithReplies);
+    const generate = vi.fn().mockResolvedValue({ text: outputWithReplies });
 
     const result = await runCommunityBatch({
       ...deps,
@@ -460,7 +460,7 @@ describe("runCommunityBatch (#306)", () => {
       ],
     });
 
-    const generate = vi.fn().mockResolvedValue(outputWithUnknownRef);
+    const generate = vi.fn().mockResolvedValue({ text: outputWithUnknownRef });
 
     const result = await runCommunityBatch({
       ...deps,
@@ -477,7 +477,7 @@ describe("runCommunityBatch (#306)", () => {
   it("直近Postがない（新規コミュニティ等）場合でも正常動作し新規Postのみ生成する（#555 AC5）", async () => {
     const deps = buildDeps([community1]);
     // postRepo に何も入っていない状態
-    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+    const generate = vi.fn().mockResolvedValue({ text: validGenerationOutput });
 
     const result = await runCommunityBatch({ ...deps, generate });
 
@@ -526,7 +526,7 @@ describe("runCommunityBatch worldState 登場ローテーション (#464)", () =
 
   it("生成成功時、登場した全ワーカーの lastAppearedSlotKey が当該 slotKey に更新される", async () => {
     const deps = buildDeps([community1]);
-    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+    const generate = vi.fn().mockResolvedValue({ text: validGenerationOutput });
     const slotKey = "2026-06-13T09:00";
 
     await runCommunityBatch({ ...deps, generate, slotKey });
@@ -543,7 +543,7 @@ describe("runCommunityBatch worldState 登場ローテーション (#464)", () =
       summaryVersion: 0,
       workerStates: { mei: { lastAppearedSlotKey: "2026-06-12T09:00" } },
     });
-    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+    const generate = vi.fn().mockResolvedValue({ text: validGenerationOutput });
     const slotKey = "2026-06-13T12:00";
 
     await runCommunityBatch({ ...deps, generate, slotKey });
@@ -556,7 +556,7 @@ describe("runCommunityBatch worldState 登場ローテーション (#464)", () =
 
   it("生成スキップ（二重発火）時は lastAppearedSlotKey を更新しない", async () => {
     const deps = buildDeps([community1]);
-    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+    const generate = vi.fn().mockResolvedValue({ text: validGenerationOutput });
     const slotKey = "2026-06-13T15:00";
 
     await runCommunityBatch({ ...deps, generate, slotKey });
@@ -574,7 +574,7 @@ describe("runCommunityBatch worldState 登場ローテーション (#464)", () =
 
   it("worldStateRepository 未注入でも従来どおり生成・永続化される（後方互換）", async () => {
     const deps = buildDeps([community1]);
-    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+    const generate = vi.fn().mockResolvedValue({ text: validGenerationOutput });
 
     const result = await runCommunityBatch({
       ...deps,
@@ -603,15 +603,15 @@ describe("runCommunityBatch worldState 登場ローテーション (#464)", () =
     let receivedPrompt = "";
     const generate = vi.fn().mockImplementation((prompt: string) => {
       receivedPrompt = prompt;
-      return Promise.resolve(
-        JSON.stringify({
+      return Promise.resolve({
+        text: JSON.stringify({
           topic: "rotation",
           posts: [
             { id: "p1", author: "ken", title: "t", text: "x", comments: [] },
             { id: "p2", author: "mei", title: "t2", text: "y", comments: [] },
           ],
         }),
-      );
+      });
     });
 
     const result = await runCommunityBatch({
@@ -670,7 +670,7 @@ describe("runCommunityBatch ドリップ割当（#556）", () => {
 
   it("コメントの createdAt がスロット時刻以降・now + dripWindowMs 未満に割り当てられる", async () => {
     const deps = buildDeps([community1]);
-    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+    const generate = vi.fn().mockResolvedValue({ text: validGenerationOutput });
     const slotNow = new Date("2026-06-15T09:00:00Z");
     const dripWindowMs = 3 * 60 * 60 * 1000; // 3h
 
@@ -691,7 +691,7 @@ describe("runCommunityBatch ドリップ割当（#556）", () => {
 
   it("Post の createdAt はスロット時刻（即時公開）に設定される", async () => {
     const deps = buildDeps([community1]);
-    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+    const generate = vi.fn().mockResolvedValue({ text: validGenerationOutput });
     const slotNow = new Date("2026-06-15T09:00:00Z");
     const dripWindowMs = 3 * 60 * 60 * 1000;
 
@@ -712,7 +712,7 @@ describe("runCommunityBatch ドリップ割当（#556）", () => {
 
   it("コメントの createdAt は単調増加する（post内）", async () => {
     const deps = buildDeps([community1]);
-    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+    const generate = vi.fn().mockResolvedValue({ text: validGenerationOutput });
     const slotNow = new Date("2026-06-15T09:00:00Z");
 
     const result = await runCommunityBatch({
@@ -739,7 +739,7 @@ describe("runCommunityBatch ドリップ割当（#556）", () => {
 
   it("バッチのコンテキスト構築（listByCommunity）が now フィルタで未解禁コメントを除外する", async () => {
     const deps = buildDeps([community1]);
-    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+    const generate = vi.fn().mockResolvedValue({ text: validGenerationOutput });
     const slotNow = new Date("2026-06-15T09:00:00Z");
 
     // listByCommunity のスパイを仕掛けて now が渡されているか確認
@@ -798,7 +798,7 @@ describe("runCommunityBatch 人気トピック還元 (#558)", () => {
 
   it("postRepo.listTopByCommunity が呼ばれる（人気トピック取得）", async () => {
     const deps = buildDeps([community1]);
-    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+    const generate = vi.fn().mockResolvedValue({ text: validGenerationOutput });
     const listTopSpy = vi.spyOn(deps.postRepo, "listTopByCommunity");
 
     await runCommunityBatch({ ...deps, generate });
@@ -823,7 +823,7 @@ describe("runCommunityBatch 人気トピック還元 (#558)", () => {
     let capturedPrompt = "";
     const captureGenerate = vi.fn().mockImplementation((prompt: string) => {
       capturedPrompt = prompt;
-      return Promise.resolve(validGenerationOutput);
+      return Promise.resolve({ text: validGenerationOutput });
     });
 
     await runCommunityBatch({ ...deps, generate: captureGenerate });
@@ -838,7 +838,7 @@ describe("runCommunityBatch 人気トピック還元 (#558)", () => {
     let capturedPrompt = "";
     const captureGenerate = vi.fn().mockImplementation((prompt: string) => {
       capturedPrompt = prompt;
-      return Promise.resolve(validGenerationOutput);
+      return Promise.resolve({ text: validGenerationOutput });
     });
 
     await runCommunityBatch({ ...deps, generate: captureGenerate });
@@ -904,7 +904,7 @@ describe("runCommunityBatch post/comment 件数揺らぎ（#557）", () => {
     let receivedPrompt = "";
     const generate = vi.fn().mockImplementation((prompt: string) => {
       receivedPrompt = prompt;
-      return Promise.resolve(validGenerationOutput);
+      return Promise.resolve({ text: validGenerationOutput });
     });
 
     await runCommunityBatch({
@@ -924,7 +924,7 @@ describe("runCommunityBatch post/comment 件数揺らぎ（#557）", () => {
 
   it("postRange / commentRange 未指定でも従来どおり生成・永続化される（後方互換）", async () => {
     const deps = buildDeps([community1]);
-    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+    const generate = vi.fn().mockResolvedValue({ text: validGenerationOutput });
 
     const result = await runCommunityBatch({ ...deps, generate });
 
@@ -938,7 +938,7 @@ describe("runCommunityBatch post/comment 件数揺らぎ（#557）", () => {
     let promptA = "";
     await runCommunityBatch({
       ...depsA,
-      generate: vi.fn().mockImplementation((p: string) => { promptA = p; return Promise.resolve(validGenerationOutput); }),
+      generate: vi.fn().mockImplementation((p: string) => { promptA = p; return Promise.resolve({ text: validGenerationOutput }); }),
       rng: () => 0,
       postRange: { min: 1, max: 5 },
       commentRange: { min: 1, max: 5 },
@@ -948,7 +948,7 @@ describe("runCommunityBatch post/comment 件数揺らぎ（#557）", () => {
     let promptB = "";
     await runCommunityBatch({
       ...depsB,
-      generate: vi.fn().mockImplementation((p: string) => { promptB = p; return Promise.resolve(validGenerationOutput); }),
+      generate: vi.fn().mockImplementation((p: string) => { promptB = p; return Promise.resolve({ text: validGenerationOutput }); }),
       rng: () => 0.9999,
       postRange: { min: 1, max: 5 },
       commentRange: { min: 1, max: 5 },
@@ -962,7 +962,7 @@ describe("runCommunityBatch post/comment 件数揺らぎ（#557）", () => {
     const deps = buildDeps([community1]);
     // postRange.min=3, max=3 のとき、プロンプトでは「3件」を指示するが、
     // AI が 2 件しか返しても（validGenerationOutput は 2 件）永続化される
-    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+    const generate = vi.fn().mockResolvedValue({ text: validGenerationOutput });
 
     const result = await runCommunityBatch({
       ...deps,
@@ -974,5 +974,147 @@ describe("runCommunityBatch post/comment 件数揺らぎ（#557）", () => {
     // AI が 2 件返しても永続化される（ハード制約にしない）
     expect(result.posts.length).toBe(2);
     expect(result.comments.length).toBe(2);
+  });
+});
+
+describe("runCommunityBatch トークン使用量記録 (#663)", () => {
+  beforeEach(() => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const buildDeps = (
+    communities: CommunityRecord[],
+    workerCommunityData: InMemoryWorkerCommunityData = { workers: [], links: [] },
+  ) => {
+    const communityRepo = createInMemoryCommunityRepository(communities);
+    const postRepo = createInMemoryPostRepository();
+    const commentRepo = createInMemoryCommentRepository();
+    const batchRunLogRepository = createInMemoryBatchRunLogRepository();
+    const workerCommunityRepo = createInMemoryWorkerCommunityRepository(workerCommunityData);
+    const voteRepo = createInMemoryVoteRepository();
+    const botWorkerProvider = (): Promise<readonly WorkerRecord[]> => Promise.resolve(botWorkers);
+    return {
+      communityRepo,
+      postRepo,
+      commentRepo,
+      batchRunLogRepository,
+      workerCommunityRepo,
+      voteRepo,
+      botWorkerProvider,
+      anthropicApiKey: "test-key",
+      rng: () => 0,
+    };
+  };
+
+  it("generate が usage を返したとき tokenUsageLogRepository.create が正しい引数で呼ばれる", async () => {
+    const deps = buildDeps([community1]);
+    const tokenUsageLogRepository = {
+      create: vi.fn().mockResolvedValue({
+        id: "log-1",
+        occurredAt: new Date(),
+        model: "claude-sonnet-4-6",
+        inputTokens: 100,
+        outputTokens: 200,
+        batchRunLogId: null,
+      }),
+      findRecent: vi.fn(),
+      summarize: vi.fn(),
+    };
+    const generate = vi.fn().mockResolvedValue({
+      text: validGenerationOutput,
+      inputTokens: 100,
+      outputTokens: 200,
+      model: "claude-sonnet-4-6",
+    });
+
+    await runCommunityBatch({ ...deps, generate, tokenUsageLogRepository });
+
+    expect(tokenUsageLogRepository.create).toHaveBeenCalledOnce();
+    expect(tokenUsageLogRepository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model: "claude-sonnet-4-6",
+        inputTokens: 100,
+        outputTokens: 200,
+      }),
+    );
+  });
+
+  it("tokenUsageLogRepository 未注入のとき create は呼ばれない", async () => {
+    const deps = buildDeps([community1]);
+    const tokenUsageLogRepository = {
+      create: vi.fn(),
+      findRecent: vi.fn(),
+      summarize: vi.fn(),
+    };
+    const generate = vi.fn().mockResolvedValue({
+      text: validGenerationOutput,
+      inputTokens: 100,
+      outputTokens: 200,
+      model: "claude-sonnet-4-6",
+    });
+
+    await runCommunityBatch({ ...deps, generate });
+
+    expect(tokenUsageLogRepository.create).not.toHaveBeenCalled();
+  });
+
+  it("generate が usage を持たない（inputTokens 未定義）とき create は呼ばれない", async () => {
+    const deps = buildDeps([community1]);
+    const tokenUsageLogRepository = {
+      create: vi.fn(),
+      findRecent: vi.fn(),
+      summarize: vi.fn(),
+    };
+    const generate = vi.fn().mockResolvedValue({
+      text: validGenerationOutput,
+    });
+
+    await runCommunityBatch({ ...deps, generate, tokenUsageLogRepository });
+
+    expect(tokenUsageLogRepository.create).not.toHaveBeenCalled();
+  });
+
+  it("API キー未設定のスキップ時は create が呼ばれない", async () => {
+    const deps = buildDeps([community1]);
+    const tokenUsageLogRepository = {
+      create: vi.fn(),
+      findRecent: vi.fn(),
+      summarize: vi.fn(),
+    };
+    const generate = vi.fn().mockResolvedValue({
+      text: validGenerationOutput,
+      inputTokens: 10,
+      outputTokens: 20,
+      model: "claude-sonnet-4-6",
+    });
+
+    await runCommunityBatch({ ...deps, generate, anthropicApiKey: undefined, tokenUsageLogRepository });
+
+    expect(tokenUsageLogRepository.create).not.toHaveBeenCalled();
+  });
+
+  it("community 0 件のスキップ時は create が呼ばれない", async () => {
+    const deps = buildDeps([]);
+    const tokenUsageLogRepository = {
+      create: vi.fn(),
+      findRecent: vi.fn(),
+      summarize: vi.fn(),
+    };
+    const generate = vi.fn().mockResolvedValue({
+      text: validGenerationOutput,
+      inputTokens: 10,
+      outputTokens: 20,
+      model: "claude-sonnet-4-6",
+    });
+
+    await runCommunityBatch({ ...deps, generate, tokenUsageLogRepository });
+
+    expect(tokenUsageLogRepository.create).not.toHaveBeenCalled();
   });
 });

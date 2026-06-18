@@ -54,7 +54,6 @@ async function main(): Promise<void> {
     { createPrismaCommunityRepository },
     { createPrismaPostRepository },
     { createPrismaCommentRepository },
-    { createPrismaVoteRepository },
     { createPrismaWorkerCommunityRepository },
     { createPrismaWorkerRepository },
     { createPrismaWorldStateRepository },
@@ -65,7 +64,6 @@ async function main(): Promise<void> {
     import("../persistence/prismaCommunityRepository.js"),
     import("../persistence/prismaPostRepository.js"),
     import("../persistence/prismaCommentRepository.js"),
-    import("../persistence/prismaVoteRepository.js"),
     import("../persistence/prismaWorkerCommunityRepository.js"),
     import("../persistence/prismaWorkerRepository.js"),
     import("../persistence/prismaWorldStateRepository.js"),
@@ -80,8 +78,6 @@ async function main(): Promise<void> {
       postRepo: createPrismaPostRepository(prisma),
       commentRepo: createPrismaCommentRepository(prisma),
       batchRunLogRepository: createPrismaBatchRunLogRepository(prisma),
-      // vote 重み付き 1 コミュニティ選定の重み算出に使う（#486 / ADR-0030）。
-      voteRepo: createPrismaVoteRepository(prisma),
       // community 別の登場ワーカーを DB から解決する（#489）。
       workerCommunityRepo: createPrismaWorkerCommunityRepository(prisma),
       // 紐づき 0 件 community のフォールバック先（全 Bot ワーカー）。

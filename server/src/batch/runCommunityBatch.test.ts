@@ -7,7 +7,6 @@ import {
   type CommunityRecord,
 } from "../persistence/communityRepository.js";
 import { createInMemoryPostRepository } from "../persistence/postRepository.js";
-import { createInMemoryVoteRepository } from "../persistence/voteRepository.js";
 import {
   createInMemoryWorkerCommunityRepository,
   type InMemoryWorkerCommunityData,
@@ -116,7 +115,6 @@ describe("runCommunityBatch (#306)", () => {
     const commentRepo = createInMemoryCommentRepository();
     const batchRunLogRepository = createInMemoryBatchRunLogRepository();
     const workerCommunityRepo = createInMemoryWorkerCommunityRepository(workerCommunityData);
-    const voteRepo = createInMemoryVoteRepository();
     const botWorkerProvider = (): Promise<readonly WorkerRecord[]> => Promise.resolve(botWorkers);
     return {
       communityRepo,
@@ -124,7 +122,6 @@ describe("runCommunityBatch (#306)", () => {
       commentRepo,
       batchRunLogRepository,
       workerCommunityRepo,
-      voteRepo,
       botWorkerProvider,
       anthropicApiKey: "test-key",
       rng: () => 0,
@@ -145,66 +142,46 @@ describe("runCommunityBatch (#306)", () => {
     expect(result.comments[1]?.postId).toBe(result.posts[0]?.id);
   });
 
-  it("複数コミュニティがあっても generate は最大 1 回だけ呼ばれる（1 コミュニティのみ選定）", async () => {
+  it("全コミュニティに対して generate が呼ばれる（#671）", async () => {
     const deps = buildDeps([community1, community2]);
     const generate = vi.fn().mockResolvedValue({ text: validGenerationOutput });
 
     await runCommunityBatch({ ...deps, generate });
 
-    expect(generate).toHaveBeenCalledTimes(1);
+    expect(generate).toHaveBeenCalledTimes(2);
+    const posts1 = await deps.postRepo.listByCommunity("community-1");
+    const posts2 = await deps.postRepo.listByCommunity("community-2");
+    expect(posts1.length).toBeGreaterThan(0);
+    expect(posts2.length).toBeGreaterThan(0);
   });
 
-  it("rng を固定すると決定的に選ばれたコミュニティのみ生成・永続化される", async () => {
-    const generate = vi.fn().mockResolvedValue({ text: validGenerationOutput });
-
-    const depsA = buildDeps([community1, community2]);
-    const resultA = await runCommunityBatch({ ...depsA, generate, rng: () => 0 });
-    expect(resultA.posts.every((p) => p.communityId === "community-1")).toBe(true);
-    expect(resultA.posts.length).toBeGreaterThan(0);
-
-    const depsB = buildDeps([community1, community2]);
-    const resultB = await runCommunityBatch({ ...depsB, generate, rng: () => 0.9 });
-    expect(resultB.posts.every((p) => p.communityId === "community-2")).toBe(true);
-    expect(resultB.posts.length).toBeGreaterThan(0);
-  });
-
-  it("vote の純スコアが高いコミュニティほど選ばれやすい（重み付き）", async () => {
+  it("あるコミュニティの生成失敗が他のコミュニティに伝播しない（#671）", async () => {
     const deps = buildDeps([community1, community2]);
-    const stubVoteRepo = {
-      ...deps.voteRepo,
-      netScoresByCommunitySince: () =>
-        Promise.resolve(new Map<string, number>([["community-2", 5]])),
-    };
-    const generate = vi.fn().mockResolvedValue({ text: validGenerationOutput });
-
-    const result = await runCommunityBatch({
-      ...deps,
-      voteRepo: stubVoteRepo,
-      generate,
-      rng: () => 0.5,
+    const generate = vi.fn().mockImplementation((prompt: string) => {
+      if (prompt.includes("テクノロジー")) {
+        return Promise.resolve({ text: "invalid JSON{" });
+      }
+      return Promise.resolve({ text: validGenerationOutput });
     });
 
-    expect(result.posts.every((p) => p.communityId === "community-2")).toBe(true);
-  });
+    const result = await runCommunityBatch({ ...deps, generate });
 
-  it("vote 0 の新規コミュニティも床 +1 により選定対象になる", async () => {
-    const deps = buildDeps([community1, community2]);
-    const stubVoteRepo = {
-      ...deps.voteRepo,
-      netScoresByCommunitySince: () =>
-        Promise.resolve(new Map<string, number>([["community-1", 10]])),
-    };
-    const generate = vi.fn().mockResolvedValue({ text: validGenerationOutput });
-
-    const result = await runCommunityBatch({
-      ...deps,
-      voteRepo: stubVoteRepo,
-      generate,
-      rng: () => 11.5 / 12,
-    });
-
-    expect(result.posts.every((p) => p.communityId === "community-2")).toBe(true);
+    expect(generate).toHaveBeenCalledTimes(2);
     expect(result.posts.length).toBeGreaterThan(0);
+    const posts1 = await deps.postRepo.listByCommunity("community-1");
+    const posts2 = await deps.postRepo.listByCommunity("community-2");
+    expect(posts1.length).toBe(0);
+    expect(posts2.length).toBeGreaterThan(0);
+  });
+
+  it("BatchRunLog が 1 コミュニティごとに記録される（#671）", async () => {
+    const deps = buildDeps([community1, community2]);
+    const generate = vi.fn().mockResolvedValue({ text: validGenerationOutput });
+    const createSpy = vi.spyOn(deps.batchRunLogRepository, "create");
+
+    await runCommunityBatch({ ...deps, generate });
+
+    expect(createSpy).toHaveBeenCalledTimes(2);
   });
 
   it("author が未知の workerId を含む出力はスキップされる（DB 取得 id 集合で検証）", async () => {
@@ -235,13 +212,13 @@ describe("runCommunityBatch (#306)", () => {
     expect(result.comments.length).toBe(0);
   });
 
-  it("選定したコミュニティの生成出力が JSON パース失敗のときは何も永続化しない", async () => {
+  it("全コミュニティの生成出力が JSON パース失敗のときは何も永続化しない（#671）", async () => {
     const deps = buildDeps([community1, community2]);
     const generate = vi.fn().mockResolvedValue({ text: "不正なJSON{" });
 
-    const result = await runCommunityBatch({ ...deps, generate, rng: () => 0 });
+    const result = await runCommunityBatch({ ...deps, generate });
 
-    expect(generate).toHaveBeenCalledTimes(1);
+    expect(generate).toHaveBeenCalledTimes(2);
     expect(result.posts.length).toBe(0);
     expect(result.comments.length).toBe(0);
   });
@@ -507,7 +484,6 @@ describe("runCommunityBatch worldState 登場ローテーション (#464)", () =
     const commentRepo = createInMemoryCommentRepository();
     const batchRunLogRepository = createInMemoryBatchRunLogRepository();
     const workerCommunityRepo = createInMemoryWorkerCommunityRepository(workerCommunityData);
-    const voteRepo = createInMemoryVoteRepository();
     const worldStateRepository = createInMemoryWorldStateRepository();
     const botWorkerProvider = (): Promise<readonly WorkerRecord[]> => Promise.resolve(botWorkers);
     return {
@@ -516,7 +492,6 @@ describe("runCommunityBatch worldState 登場ローテーション (#464)", () =
       commentRepo,
       batchRunLogRepository,
       workerCommunityRepo,
-      voteRepo,
       worldStateRepository,
       botWorkerProvider,
       anthropicApiKey: "test-key",
@@ -653,7 +628,6 @@ describe("runCommunityBatch ドリップ割当（#556）", () => {
     const commentRepo = createInMemoryCommentRepository();
     const batchRunLogRepository = createInMemoryBatchRunLogRepository();
     const workerCommunityRepo = createInMemoryWorkerCommunityRepository(workerCommunityData);
-    const voteRepo = createInMemoryVoteRepository();
     const botWorkerProvider = (): Promise<readonly WorkerRecord[]> => Promise.resolve(botWorkers);
     return {
       communityRepo,
@@ -661,7 +635,6 @@ describe("runCommunityBatch ドリップ割当（#556）", () => {
       commentRepo,
       batchRunLogRepository,
       workerCommunityRepo,
-      voteRepo,
       botWorkerProvider,
       anthropicApiKey: "test-key",
       rng: () => 0.5,
@@ -781,7 +754,6 @@ describe("runCommunityBatch 人気トピック還元 (#558)", () => {
     const commentRepo = createInMemoryCommentRepository();
     const batchRunLogRepository = createInMemoryBatchRunLogRepository();
     const workerCommunityRepo = createInMemoryWorkerCommunityRepository(workerCommunityData);
-    const voteRepo = createInMemoryVoteRepository();
     const botWorkerProvider = (): Promise<readonly WorkerRecord[]> => Promise.resolve(botWorkers);
     return {
       communityRepo,
@@ -789,7 +761,6 @@ describe("runCommunityBatch 人気トピック還元 (#558)", () => {
       commentRepo,
       batchRunLogRepository,
       workerCommunityRepo,
-      voteRepo,
       botWorkerProvider,
       anthropicApiKey: "test-key",
       rng: () => 0,
@@ -884,7 +855,6 @@ describe("runCommunityBatch post/comment 件数揺らぎ（#557）", () => {
     const commentRepo = createInMemoryCommentRepository();
     const batchRunLogRepository = createInMemoryBatchRunLogRepository();
     const workerCommunityRepo = createInMemoryWorkerCommunityRepository(workerCommunityData);
-    const voteRepo = createInMemoryVoteRepository();
     const botWorkerProvider = (): Promise<readonly WorkerRecord[]> => Promise.resolve(botWorkers);
     return {
       communityRepo,
@@ -892,7 +862,6 @@ describe("runCommunityBatch post/comment 件数揺らぎ（#557）", () => {
       commentRepo,
       batchRunLogRepository,
       workerCommunityRepo,
-      voteRepo,
       botWorkerProvider,
       anthropicApiKey: "test-key",
       rng: () => 0,
@@ -997,7 +966,6 @@ describe("runCommunityBatch トークン使用量記録 (#663)", () => {
     const commentRepo = createInMemoryCommentRepository();
     const batchRunLogRepository = createInMemoryBatchRunLogRepository();
     const workerCommunityRepo = createInMemoryWorkerCommunityRepository(workerCommunityData);
-    const voteRepo = createInMemoryVoteRepository();
     const botWorkerProvider = (): Promise<readonly WorkerRecord[]> => Promise.resolve(botWorkers);
     return {
       communityRepo,
@@ -1005,7 +973,6 @@ describe("runCommunityBatch トークン使用量記録 (#663)", () => {
       commentRepo,
       batchRunLogRepository,
       workerCommunityRepo,
-      voteRepo,
       botWorkerProvider,
       anthropicApiKey: "test-key",
       rng: () => 0,

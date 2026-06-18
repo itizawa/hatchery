@@ -31,7 +31,8 @@
             "format": "email"
           },
           "displayName": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 100
           },
           "role": {
             "type": "string",
@@ -41,7 +42,8 @@
             ]
           },
           "avatarUrl": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 2048
           }
         },
         "required": [
@@ -933,25 +935,29 @@
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "maxLength": 300
           },
           "description": {
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "maxLength": 500
           },
           "image": {
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "maxLength": 2048
           },
           "site_name": {
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "maxLength": 100
           }
         },
         "description": "OGP メタデータ（#515）"
@@ -2286,7 +2292,7 @@
             },
             "required": true,
             "name": "slug",
-            "in": "path"
+            "in": "query"
           }
         ],
         "responses": {

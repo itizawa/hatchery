@@ -535,3 +535,50 @@ describe("既存Post参照（#555）", () => {
     expect(result.prompt).toContain("テク話");
   });
 });
+
+describe("UUID誘導ラベル（#715）", () => {
+  const community = {
+    id: "c1", slug: "s", name: "N", description: "テスト",
+    generationInstruction: null, synopsis: null, lastSlotKey: null,
+    iconUrl: null, coverUrl: null, createdAt: new Date(),
+  };
+  const workers = [
+    { id: "550e8400-e29b-41d4-a716-446655440001", displayName: "haru" },
+    { id: "550e8400-e29b-41d4-a716-446655440002", displayName: "ken" },
+  ];
+
+  it("ワーカー一覧の ID ラベルに「author に指定するID（UUID）」が含まれる", () => {
+    const { prompt } = buildCommunityPrompt({ community, workers, recentLog: [] });
+    expect(prompt).toContain("author に指定するID（UUID）");
+  });
+
+  it("ワーカー一覧の名前ラベルに「名前（参考・author には使わない）」が含まれる", () => {
+    const { prompt } = buildCommunityPrompt({ community, workers, recentLog: [] });
+    expect(prompt).toContain("名前（参考・author には使わない）");
+  });
+
+  it("JSON 例示の author フィールドに「UUID（上記ワーカー一覧の「author に指定するID」から選択」が含まれる", () => {
+    const { prompt } = buildCommunityPrompt({ community, workers, recentLog: [] });
+    expect(prompt).toContain("UUID（上記ワーカー一覧の「author に指定するID」から選択");
+  });
+
+  it("注意事項セクションに UUID の文言が含まれる（author は UUID を使うべきという誘導）", () => {
+    const { prompt } = buildCommunityPrompt({ community, workers, recentLog: [] });
+    // 注意事項の author 指示に UUID が言及されていること
+    const authorNoteIdx = prompt.indexOf("author には必ず");
+    expect(authorNoteIdx).toBeGreaterThanOrEqual(0);
+    const afterAuthorNote = prompt.slice(authorNoteIdx, authorNoteIdx + 100);
+    expect(afterAuthorNote).toContain("UUID");
+  });
+
+  it("replies セクションの author フィールドも UUID 指定の表現になっている（recentPosts あり）", () => {
+    const { prompt } = buildCommunityPrompt({
+      community,
+      workers,
+      recentLog: [],
+      recentPosts: [{ ref: "ref-1", id: "post-uuid-1", title: "テスト投稿" }],
+    });
+    // replies の author も UUID から選択する指示が含まれること
+    expect(prompt).toContain("UUID（上記ワーカー一覧の「author に指定するID」から選択");
+  });
+});

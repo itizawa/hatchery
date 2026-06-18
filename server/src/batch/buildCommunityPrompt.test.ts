@@ -578,7 +578,9 @@ describe("UUID誘導ラベル（#715）", () => {
       recentLog: [],
       recentPosts: [{ ref: "ref-1", id: "post-uuid-1", title: "テスト投稿" }],
     });
-    // replies の author も UUID から選択する指示が含まれること
-    expect(prompt).toContain("UUID（上記ワーカー一覧の「author に指定するID」から選択");
+    const repliesIdx = prompt.indexOf('"replies"');
+    expect(repliesIdx).toBeGreaterThanOrEqual(0);
+    const repliesSection = prompt.slice(repliesIdx, repliesIdx + 300);
+    expect(repliesSection).toContain("UUID（上記ワーカー一覧の「author に指定するID」から選択");
   });
 });

@@ -17,7 +17,7 @@
 
 ## 3. 受け入れ条件（テストに落とせる粒度で箇条書き）
 
-1. `client/src/hooks/useExternalLink.test.tsx` を更新し、以下を検証すること
+1. `client/src/hooks/useExternalLink.test.tsx`（既存・ Issue #661 で作成済み）を更新し、以下を追加検証する
 2. `isExternalUrl` の正常系:
    - 外部 `https://` URL → `true`
    - 外部 `http://` URL → `true`
@@ -41,7 +41,7 @@
 ## 5. 影響範囲
 
 - 対象ワークスペース: client のみ
-- 更新ファイル: `client/src/hooks/useExternalLink.test.tsx`
+- 更新ファイル: `client/src/hooks/useExternalLink.test.tsx`（既存ファイルに `isExternalUrl` テストブロックを追記）
 
 ## 6. テスト計画
 

@@ -9,10 +9,9 @@ import {
 
 import type { BatchRunLogRepository } from "../persistence/batchRunLogRepository.js";
 import type { CommentRecord, CommentRepository } from "../persistence/commentRepository.js";
-import type { CommunityRepository } from "../persistence/communityRepository.js";
+import type { CommunityRecord, CommunityRepository } from "../persistence/communityRepository.js";
 import type { PostRecord, PostRepository } from "../persistence/postRepository.js";
 import type { TokenUsageLogRepository } from "../persistence/tokenUsageLogRepository.js";
-import type { VoteRepository } from "../persistence/voteRepository.js";
 import type { WorkerCommunityRepository } from "../persistence/workerCommunityRepository.js";
 import type { WorkerRecord } from "../persistence/workerRepository.js";
 import type { WorldStateRepository } from "../persistence/worldStateRepository.js";
@@ -25,7 +24,6 @@ import { fetchRecentContext } from "./fetchRecentContext.js";
 import { generateCountHints } from "./generateCountHints.js";
 import { extractErrorMessage, logBatchError, logBatchInfo } from "./logger.js";
 import { persistBatchOutput } from "./persistBatchOutput.js";
-import { selectOneCommunity } from "./selectTargetCommunity.js";
 
 /** プロンプトに載せる直近 post/comment の既定件数。 */
 const DEFAULT_RECENT_LIMIT = 30;
@@ -42,9 +40,6 @@ const MAX_RECENT_POSTS_FOR_REPLY = 5;
  * env.batchDripWindowMs から上書き可能（communityBatchIndex.ts で注入）。
  */
 const DEFAULT_DRIP_WINDOW_MS = 3 * 60 * 60 * 1000; // 3 時間
-
-/** vote 重みの集計対象期間（日数）。selectTargetCommunity.ts へ移設済み。後方互換のため re-export。 */
-export { VOTE_WEIGHT_WINDOW_DAYS } from "./selectTargetCommunity.js";
 
 /**
  * 人気トピック還元の集計対象期間（日数）（#558）。
@@ -75,11 +70,6 @@ export interface RunCommunityBatchDeps {
   communityRepo: CommunityRepository;
   postRepo: PostRepository;
   commentRepo: CommentRepository;
-  /**
-   * vote 集計（重み算出）用リポジトリ（#486 / ADR-0030）。
-   * 直近 VOTE_WEIGHT_WINDOW_DAYS 日の community 別純スコアで重み付き 1 コミュニティ選定を行う。
-   */
-  voteRepo: VoteRepository;
   /**
    * WorkerCommunity 経由で community 別の登場ワーカーを DB から解決する（#489）。
    * community ごとにこのリポジトリで紐づくワーカーを取得し、生成・author 検証に使う。
@@ -123,13 +113,11 @@ export interface RunCommunityBatchDeps {
   /** ANTHROPIC_API_KEY の env 値。DB に CLAUDE_API_KEY がないときのフォールバック（#419）。 */
   anthropicApiKey?: string;
   /**
-   * 重み付き 1 コミュニティ選定に使う乱数源（`[0, 1)`）。既定 `Math.random`（#486）。
-   * テストでは固定値を注入して選定を決定化する。
-   * countHints の生成にも同じ rng を流用する（#557）。
-   * ドリップ割当（assignDripTimestamps）にも同じ rng を流用する（#556）。
+   * 乱数源（`[0, 1)`）。既定 `Math.random`。
+   * countHints の生成・ドリップ割当に使う。
    */
   rng?: () => number;
-  /** vote 集計の基準「現在時刻」（省略時は実行時の `new Date()`）。テストで固定するため。 */
+  /** バッチの「現在時刻」（省略時は実行時の `new Date()`）。テストで固定するため。 */
   now?: Date;
   /**
    * 1 定時の post 数の範囲（#557）。省略時は件数誘導なし（後方互換）。
@@ -155,26 +143,215 @@ export interface RunCommunityBatchDeps {
  */
 export { generateSlotKey } from "@hatchery/common";
 
+/** 1 コミュニティの処理結果（内部型）。 */
+interface CommunityBatchResult {
+  posts: PostRecord[];
+  comments: CommentRecord[];
+  appearedWorkerIds: Set<string>;
+}
+
+/** 1 コミュニティを処理する（#671 / ADR-0033）。失敗時は例外を throw する。 */
+async function processCommunity({
+  community,
+  deps,
+  apiKey,
+  generate,
+  recentLimit,
+  slotKey,
+  rng,
+  now,
+  dripWindowMs,
+  currentWorkerStates,
+  botWorkersPromise,
+}: {
+  community: CommunityRecord;
+  deps: RunCommunityBatchDeps;
+  apiKey: string;
+  generate: ConversationGenerator;
+  recentLimit: number;
+  slotKey: string;
+  rng: () => number;
+  now: Date;
+  dripWindowMs: number;
+  currentWorkerStates: Record<string, WorkerState>;
+  botWorkersPromise: Promise<readonly WorkerRecord[]>;
+}): Promise<CommunityBatchResult> {
+  const worldStateRepo = deps.worldStateRepository;
+  const appearedWorkerIds = new Set<string>();
+
+  // community 別の登場ワーカーを DB から解決する（#489）。
+  const communityWorkers = await deps.workerCommunityRepo.listWorkersByCommunity(community.id);
+  const botWorkers = communityWorkers.length > 0 ? [] : await botWorkersPromise;
+  const resolvedWorkers = selectCommunityWorkers(communityWorkers, botWorkers);
+  if (resolvedWorkers.length === 0) {
+    logBatchInfo("community_batch.skipped_no_workers", { communityId: community.id });
+    return { posts: [], comments: [], appearedWorkerIds };
+  }
+
+  // 登場ローテーション（#464）: lastAppearedSlotKey の新旧で「最近登場していないワーカー」を優先して並べ替え・絞り込む。
+  const rotatedWorkers = worldStateRepo
+    ? (() => {
+        const count = deps.appearingWorkerCount ?? resolvedWorkers.length;
+        const orderedIds = selectRotatedWorkers(resolvedWorkers, currentWorkerStates, count);
+        const byId = new Map(resolvedWorkers.map((w) => [w.id, w]));
+        return orderedIds.flatMap((id) => {
+          const w = byId.get(id);
+          return w ? [w] : [];
+        });
+      })()
+    : resolvedWorkers;
+
+  const workers: readonly WorkerDef[] = rotatedWorkers.map((w) => ({
+    id: w.id,
+    displayName: w.displayName,
+    role: w.role,
+    personality: w.personality,
+    verbosity: w.verbosity,
+  }));
+  const workerIds = workers.map((w) => w.id);
+
+  // 直近 post/comment・人気トピックをコンテキストとして取得する
+  const { recentLog, recentPostsForReply, popularPosts } = await fetchRecentContext({
+    postRepo: deps.postRepo,
+    commentRepo: deps.commentRepo,
+    community,
+    recentLimit,
+    maxPostsForReply: MAX_RECENT_POSTS_FOR_REPLY,
+    now,
+    popularPostsWindowDays: POPULAR_POSTS_WINDOW_DAYS,
+    popularPostsMinScore: POPULAR_POSTS_MIN_SCORE,
+    popularPostsLimit: POPULAR_POSTS_LIMIT,
+  });
+
+  // post 数・コメント数のヒントを生成する（#557）。
+  const countHints =
+    deps.postRange && deps.commentRange
+      ? generateCountHints(deps.postRange, deps.commentRange, rng)
+      : undefined;
+
+  // プロンプト構築（お題は含めない・ADR-0020）
+  const { prompt, postRefMap } = buildCommunityPrompt({
+    community,
+    workers,
+    recentLog,
+    recentPosts: recentPostsForReply,
+    popularPosts,
+    countHints,
+  });
+
+  // AI 生成（1 コミュニティ = 1 API コール・ADR-0009）
+  const generationResult = await generate(prompt, apiKey);
+  const raw = generationResult.text;
+
+  // usage が取得できた場合に記録する（#663）
+  let usage: { model: string; inputTokens: number; outputTokens: number } | undefined;
+  if (
+    generationResult.model !== undefined &&
+    generationResult.inputTokens !== undefined &&
+    generationResult.outputTokens !== undefined
+  ) {
+    usage = {
+      model: generationResult.model,
+      inputTokens: generationResult.inputTokens,
+      outputTokens: generationResult.outputTokens,
+    };
+  }
+
+  // JSON パース（失敗時はエラーを throw して allSettled に吸収させる）
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    logBatchError("community_batch.json_parse_failed", "JSON parse failed", {
+      communityId: community.id,
+    });
+    throw new Error(`${community.id}: JSON パース失敗`);
+  }
+
+  // Zod スキーマ検証
+  const validated = GenerationOutputSchema.safeParse(parsed);
+  if (!validated.success) {
+    logBatchError("community_batch.schema_validation_failed", "schema validation failed", {
+      communityId: community.id,
+      issues: validated.error.format(),
+    });
+    throw new Error(`${community.id}: スキーマ検証失敗`);
+  }
+
+  const output = validated.data;
+
+  // author 検証（既知 workerId のみ許可・ADR-0020）+ reply の targetPostRef 検証（#555）
+  const knownPostRefs = postRefMap.size > 0 ? new Set(postRefMap.keys()) : undefined;
+  try {
+    validateGenerationOutput(output, workerIds, knownPostRefs);
+  } catch (err) {
+    logBatchError("community_batch.author_validation_failed", err, {
+      communityId: community.id,
+    });
+    throw new Error(`${community.id}: author 検証失敗`);
+  }
+
+  // post / comment / reply を永続化する
+  const persisted = await persistBatchOutput({
+    postRepo: deps.postRepo,
+    commentRepo: deps.commentRepo,
+    communityId: community.id,
+    output,
+    postRefMap,
+    slotKey,
+    commentSeqStart: 0,
+    now,
+    dripWindowMs,
+    rng,
+  });
+
+  // 生成・永続化に成功したので、この定時で登場したワーカーを記録する（#464）。
+  for (const post of output.posts) {
+    appearedWorkerIds.add(post.author);
+    for (const comment of post.comments) {
+      appearedWorkerIds.add(comment.author);
+    }
+  }
+  for (const reply of output.replies ?? []) {
+    appearedWorkerIds.add(reply.author);
+  }
+
+  // コミュニティごとに BatchRunLog と TokenUsageLog を記録する（#671 / ADR-0033）
+  const batchRunLog = await deps.batchRunLogRepository?.create({
+    status: "success",
+    messageCount: persisted.savedPosts.length + persisted.savedComments.length,
+    errorMessage: null,
+    errorCode: null,
+  });
+
+  if (deps.tokenUsageLogRepository && usage) {
+    await deps.tokenUsageLogRepository.create({
+      model: usage.model,
+      inputTokens: usage.inputTokens,
+      outputTokens: usage.outputTokens,
+      batchRunLogId: batchRunLog?.id ?? null,
+    });
+  }
+
+  return {
+    posts: persisted.savedPosts,
+    comments: persisted.savedComments,
+    appearedWorkerIds,
+  };
+}
+
 /**
- * community 単位の定時バッチ本体（#306 / #486 / ADR-0019 / ADR-0020 / ADR-0009 / ADR-0030）。
+ * community 単位の定時バッチ本体（#306 / #671 / ADR-0019 / ADR-0020 / ADR-0009 / ADR-0033）。
  *
- * **1 定時 = vote 重み付きランダムで 1 コミュニティだけを選び、そのコミュニティのみ生成する**（ADR-0030）。
- * これにより 1 定時の Claude API コールは常に最大 1 回でコミュニティ数に依存しない。
+ * **1 定時 = 全コミュニティを Promise.allSettled で並列処理**（ADR-0033、ADR-0030 を supersede）。
+ * 各コミュニティは独立して処理され、1 コミュニティの失敗は他のコミュニティに影響しない。
  *
- * 1. 全 community を取得し、直近 VOTE_WEIGHT_WINDOW_DAYS 日の community 別純 vote スコア（up−down）を集計
- * 2. `weight = max(0, 純vote) + 1`（cold start 床）で重みを作り、重み付きランダムで 1 community を選定
- * 3. 選ばれた community について:
- *    a. 直近 post/comment ログ（formatRecentLog）を組み立て
- *    b. community の description + worker 定義 + 直近ログでプロンプト構築
- *    c. 1 API コールで生成（{ topic, posts: [...] } の JSON）
- *    d. common の GenerationOutputSchema + validateGenerationOutput で検証
- *    e. 検証を通った post/comment を (community_id, slot_key, seq) 複合ユニーク制約で永続化
- *
- * エラーハンドリング:
- * - API キー未設定 → 何も生成せず空を返す（スキップ）。
- * - community 0 件 → 何も生成せず正常終了。
- * - 選定 community の JSON パース / author 検証失敗 → 永続化せず空を返す（その定時はスキップ）。
- * - score は生成出力に含まれていても無視する（永続化時に 0 固定・ADR-0019）。
+ * 1. 全 community を取得（0 件 → 空返し）
+ * 2. Promise.allSettled(communities.map(...)) で全コミュニティを並列処理
+ *    - 各コミュニティ: ワーカー解決 → プロンプト構築 → 1 API コール → 検証 → 永続化 → BatchRunLog
+ *    - 失敗コミュニティ: BatchRunLog(failure) を記録して空配列を返す
+ * 3. 全結果を集約して返す
+ * 4. WorldState を一度だけ upsert（全コミュニティで登場した worker を集約）
  */
 export async function runCommunityBatch(
   deps: RunCommunityBatchDeps,
@@ -194,186 +371,77 @@ export async function runCommunityBatch(
 
   const communities = await deps.communityRepo.list();
 
-  const savedPosts: PostRecord[] = [];
-  const savedComments: CommentRecord[] = [];
-  const errors: string[] = [];
-  let pendingUsage: { model: string; inputTokens: number; outputTokens: number } | undefined;
-
-  // 登場ローテーション（#464）: worldStateRepository があれば現在の workerStates を読み、
-  // 生成成功後に登場ワーカーの lastAppearedSlotKey を更新する。
-  const worldStateRepo = deps.worldStateRepository;
-  const currentWorldState = worldStateRepo ? await worldStateRepo.get() : null;
-  const currentWorkerStates: Record<string, WorkerState> = currentWorldState?.workerStates ?? {};
-  // 今回の定時で実際に登場した（プロンプト・検証に使った）ワーカー id を集める。
-  const appearedWorkerIds = new Set<string>();
-
-  // vote 重み付きランダムで 1 コミュニティを選ぶ（#486 / ADR-0030）。
-  const selected = await selectOneCommunity({ communities, voteRepo: deps.voteRepo, rng, now });
-  if (!selected) {
-    // community 0 件 → 何も生成せず正常終了（既存のスキップ挙動と整合）。
-    await deps.batchRunLogRepository?.create({
-      status: "success",
-      messageCount: 0,
-      errorMessage: null,
-      errorCode: null,
-    });
+  if (communities.length === 0) {
     return { posts: [], comments: [] };
   }
 
-  for (const community of [selected]) {
-    try {
-      // community 別の登場ワーカーを DB から解決する（#489）。
-      // WorkerCommunity で紐づくワーカー → 0 件なら全 Bot ワーカーへフォールバック。
-      const communityWorkers = await deps.workerCommunityRepo.listWorkersByCommunity(community.id);
-      const botWorkers =
-        communityWorkers.length > 0 ? [] : ((await deps.botWorkerProvider?.()) ?? []);
-      const resolvedWorkers = selectCommunityWorkers(communityWorkers, botWorkers);
-      // 登場ワーカーが 1 人もいない community は生成をスキップする（#489 AC3）。
-      if (resolvedWorkers.length === 0) {
-        logBatchInfo("community_batch.skipped_no_workers", { communityId: community.id });
-        continue;
-      }
-      // 登場ローテーション（#464）: lastAppearedSlotKey の新旧で「最近登場していないワーカー」を
-      // 優先して並べ替え・絞り込む。worldStateRepository 未注入時は全員を解決順のまま使う。
-      const rotatedWorkers = worldStateRepo
-        ? (() => {
-            const count = deps.appearingWorkerCount ?? resolvedWorkers.length;
-            const orderedIds = selectRotatedWorkers(resolvedWorkers, currentWorkerStates, count);
-            const byId = new Map(resolvedWorkers.map((w) => [w.id, w]));
-            return orderedIds.flatMap((id) => {
-              const w = byId.get(id);
-              return w ? [w] : [];
-            });
-          })()
-        : resolvedWorkers;
-      const workers: readonly WorkerDef[] = rotatedWorkers.map((w) => ({
-        id: w.id,
-        displayName: w.displayName,
-        role: w.role,
-        personality: w.personality,
-        verbosity: w.verbosity,
-      }));
-      const workerIds = workers.map((w) => w.id);
+  // 登場ローテーション（#464）: worldStateRepository があれば現在の workerStates を読み、
+  // 全コミュニティ処理完了後に登場ワーカーの lastAppearedSlotKey を一括 upsert する。
+  const worldStateRepo = deps.worldStateRepository;
+  const currentWorldState = worldStateRepo ? await worldStateRepo.get() : null;
+  const currentWorkerStates: Record<string, WorkerState> = currentWorldState?.workerStates ?? {};
 
-      // 直近 post/comment・人気トピックをコンテキストとして取得する
-      const { recentLog, recentPostsForReply, popularPosts } = await fetchRecentContext({
-        postRepo: deps.postRepo,
-        commentRepo: deps.commentRepo,
+  // botWorkerProvider を先に 1 回だけ呼び出し、並列処理で N 重呼び出しになるのを防ぐ（#671）。
+  const botWorkersPromise: Promise<readonly WorkerRecord[]> = deps.botWorkerProvider
+    ? deps.botWorkerProvider()
+    : Promise.resolve([]);
+
+  // 全コミュニティを並列処理する（#671 / ADR-0033）
+  const results = await Promise.allSettled(
+    communities.map((community) =>
+      processCommunity({
         community,
+        deps,
+        apiKey,
+        generate,
         recentLimit,
-        maxPostsForReply: MAX_RECENT_POSTS_FOR_REPLY,
-        now,
-        popularPostsWindowDays: POPULAR_POSTS_WINDOW_DAYS,
-        popularPostsMinScore: POPULAR_POSTS_MIN_SCORE,
-        popularPostsLimit: POPULAR_POSTS_LIMIT,
-      });
-
-      // post 数・コメント数のヒントを生成する（#557）。
-      // postRange / commentRange が注入されていれば rng で件数を決定し、countHints としてプロンプトに渡す。
-      const countHints =
-        deps.postRange && deps.commentRange
-          ? generateCountHints(deps.postRange, deps.commentRange, rng)
-          : undefined;
-
-      // プロンプト構築（お題は含めない・ADR-0020）
-      const { prompt, postRefMap } = buildCommunityPrompt({
-        community,
-        workers,
-        recentLog,
-        recentPosts: recentPostsForReply,
-        popularPosts,
-        countHints,
-      });
-
-      // AI 生成（1 コミュニティ = 1 API コール・ADR-0009）
-      const generationResult = await generate(prompt, apiKey);
-      const raw = generationResult.text;
-      // usage が取得できた場合は後で記録する（#663）
-      if (
-        generationResult.model !== undefined &&
-        generationResult.inputTokens !== undefined &&
-        generationResult.outputTokens !== undefined
-      ) {
-        pendingUsage = {
-          model: generationResult.model,
-          inputTokens: generationResult.inputTokens,
-          outputTokens: generationResult.outputTokens,
-        };
-      }
-
-      // JSON パース（失敗時はスキップ）
-      let parsed: unknown;
-      try {
-        parsed = JSON.parse(raw);
-      } catch {
-        logBatchError("community_batch.json_parse_failed", "JSON parse failed", {
-          communityId: community.id,
-        });
-        errors.push(`${community.id}: JSON パース失敗`);
-        continue;
-      }
-
-      // Zod スキーマ検証
-      const validated = GenerationOutputSchema.safeParse(parsed);
-      if (!validated.success) {
-        logBatchError("community_batch.schema_validation_failed", "schema validation failed", {
-          communityId: community.id,
-          issues: validated.error.format(),
-        });
-        errors.push(`${community.id}: スキーマ検証失敗`);
-        continue;
-      }
-
-      const output = validated.data;
-
-      // author 検証（既知 workerId のみ許可・ADR-0020）+ reply の targetPostRef 検証（#555）
-      const knownPostRefs = postRefMap.size > 0 ? new Set(postRefMap.keys()) : undefined;
-      try {
-        validateGenerationOutput(output, workerIds, knownPostRefs);
-      } catch (err) {
-        logBatchError("community_batch.author_validation_failed", err, {
-          communityId: community.id,
-        });
-        errors.push(`${community.id}: author 検証失敗`);
-        continue;
-      }
-
-      // post / comment / reply を永続化する
-      const persisted = await persistBatchOutput({
-        postRepo: deps.postRepo,
-        commentRepo: deps.commentRepo,
-        communityId: community.id,
-        output,
-        postRefMap,
         slotKey,
-        commentSeqStart: 0,
+        rng,
         now,
         dripWindowMs,
-        rng,
-      });
-      savedPosts.push(...persisted.savedPosts);
-      savedComments.push(...persisted.savedComments);
+        currentWorkerStates,
+        botWorkersPromise,
+      }),
+    ),
+  );
 
-      // 生成・永続化に成功したので、この定時で登場したワーカーを記録する（#464）。
-      // post / comment / reply の author として実際に発言したワーカーを登場扱いにする（author 検証済みの既知 id）。
-      for (const post of output.posts) {
-        appearedWorkerIds.add(post.author);
-        for (const comment of post.comments) {
-          appearedWorkerIds.add(comment.author);
-        }
+  const savedPosts: PostRecord[] = [];
+  const savedComments: CommentRecord[] = [];
+  const appearedWorkerIds = new Set<string>();
+
+  for (const [i, result] of results.entries()) {
+    // communities と results は同じ communities 配列から生成されるため長さが一致する。
+    const community = communities[i]!;
+    if (result.status === "fulfilled") {
+      savedPosts.push(...result.value.posts);
+      savedComments.push(...result.value.comments);
+      for (const id of result.value.appearedWorkerIds) {
+        appearedWorkerIds.add(id);
       }
-      for (const reply of output.replies ?? []) {
-        appearedWorkerIds.add(reply.author);
+    } else {
+      const message = extractErrorMessage(result.reason);
+      logBatchError("community_batch.community_failed", result.reason, {
+        communityId: community.id,
+      });
+      // 失敗コミュニティごとに BatchRunLog(failure) を記録する（#671 / ADR-0033）。
+      // DB エラーで throw してもループを継続する（他コミュニティのログ記録を失わない）。
+      try {
+        await deps.batchRunLogRepository?.create({
+          status: "failure",
+          messageCount: 0,
+          errorMessage: message,
+          errorCode: null,
+        });
+      } catch (logErr) {
+        logBatchError("community_batch.failure_log_write_failed", logErr, {
+          communityId: community.id,
+        });
       }
-    } catch (err) {
-      const message = extractErrorMessage(err);
-      logBatchError("community_batch.community_failed", err, { communityId: community.id });
-      errors.push(`${community.id}: ${message}`);
     }
   }
 
   // 登場ローテーション更新（#464）: 今回登場したワーカーの lastAppearedSlotKey を当該 slotKey に
-  // upsert する。worldStateRepository 未注入時・登場ワーカー 0（スキップ・生成失敗）時は更新しない。
+  // upsert する。worldStateRepository 未注入時・登場ワーカー 0 時は更新しない。
   if (worldStateRepo && appearedWorkerIds.size > 0) {
     const nextWorkerStates: Record<string, WorkerState> = { ...currentWorkerStates };
     for (const workerId of appearedWorkerIds) {
@@ -385,24 +453,6 @@ export async function runCommunityBatch(
     await worldStateRepo.upsert({
       summaryVersion: currentWorldState?.summaryVersion ?? 0,
       workerStates: nextWorkerStates,
-    });
-  }
-
-  // バッチ実行ログを保存し、ID をトークン使用量の紐づけに使う（#663）
-  const batchRunLog = await deps.batchRunLogRepository?.create({
-    status: errors.length > 0 ? "failure" : "success",
-    messageCount: savedPosts.length + savedComments.length,
-    errorMessage: errors.length > 0 ? errors.join("; ") : null,
-    errorCode: null,
-  });
-
-  // トークン使用量を記録（generate が usage を返した定時のみ・#663）
-  if (deps.tokenUsageLogRepository && pendingUsage) {
-    await deps.tokenUsageLogRepository.create({
-      model: pendingUsage.model,
-      inputTokens: pendingUsage.inputTokens,
-      outputTokens: pendingUsage.outputTokens,
-      batchRunLogId: batchRunLog?.id ?? null,
     });
   }
 

@@ -33,10 +33,10 @@ export type OgpUrlQuery = z.infer<typeof OgpUrlQuerySchema>;
  * すべてのフィールドは optional / nullable（OGP が存在しない場合は null）。
  */
 export const OgpMetaSchema = z.object({
-  title: z.string().nullable().optional(),
-  description: z.string().nullable().optional(),
-  image: z.string().nullable().optional(),
-  site_name: z.string().nullable().optional(),
+  title: z.string().max(300).nullable().optional(),
+  description: z.string().max(500).nullable().optional(),
+  image: z.string().max(OGP_URL_MAX_LENGTH).nullable().optional(),
+  site_name: z.string().max(100).nullable().optional(),
 });
 
 export type OgpMeta = z.infer<typeof OgpMetaSchema>;

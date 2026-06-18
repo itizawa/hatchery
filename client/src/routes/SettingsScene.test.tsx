@@ -71,13 +71,6 @@ describe("設定画面タブ URL 同期・アクセシビリティ（#67）", ()
     vi.spyOn(authApi, "fetchMe").mockResolvedValue({ id: "user1", displayName: "Alice", role: "admin" });
   });
 
-  it("?tab=api-token で開くと「API トークン設定」タブがアクティブになる", async () => {
-    renderApp("/admin?tab=api-token");
-
-    const apiTokenTab = await screen.findByRole("tab", { name: /API トークン設定/ });
-    expect(apiTokenTab).toHaveAttribute("aria-selected", "true");
-  });
-
   it("?tab= 無し（デフォルト）で開くと「ワーカー管理」タブがアクティブになる", async () => {
     renderApp("/admin");
 
@@ -90,9 +83,6 @@ describe("設定画面タブ URL 同期・アクセシビリティ（#67）", ()
 
     const usersTab = await screen.findByRole("tab", { name: /ワーカー管理/ });
     expect(usersTab).toHaveAttribute("aria-selected", "true");
-
-    const apiTokenTab = screen.getByRole("tab", { name: /API トークン設定/ });
-    expect(apiTokenTab).toHaveAttribute("aria-selected", "false");
   });
 
   it("各タブに id='settings-tab-{value}' が設定されている", async () => {
@@ -102,9 +92,9 @@ describe("設定画面タブ URL 同期・アクセシビリティ（#67）", ()
       "id",
       "settings-tab-users",
     );
-    expect(screen.getByRole("tab", { name: /API トークン設定/ })).toHaveAttribute(
+    expect(screen.getByRole("tab", { name: /バッチログ/ })).toHaveAttribute(
       "id",
-      "settings-tab-api-token",
+      "settings-tab-batch-logs",
     );
   });
 
@@ -115,142 +105,26 @@ describe("設定画面タブ URL 同期・アクセシビリティ（#67）", ()
 
     const tabpanels = screen.getAllByRole("tabpanel", { hidden: true });
     const usersPanel = tabpanels.find((p) => p.id === "settings-tabpanel-users");
-    const apiTokenPanel = tabpanels.find((p) => p.id === "settings-tabpanel-api-token");
 
     expect(usersPanel).toHaveAttribute("aria-labelledby", "settings-tab-users");
-    expect(apiTokenPanel).toHaveAttribute("aria-labelledby", "settings-tab-api-token");
   });
 
   it("タブクリックで URL の ?tab パラメータが更新される", async () => {
     const { router } = renderApp("/admin");
 
     await screen.findByRole("tab", { name: /ワーカー管理/ });
-    await userEvent.click(screen.getByRole("tab", { name: /API トークン設定/ }));
+    await userEvent.click(screen.getByRole("tab", { name: /バッチログ/ }));
 
     await waitFor(() => {
-      expect(router.state.location.searchStr).toContain("tab=api-token");
-    });
-  });
-});
-
-describe("APIキー入力欄 autocomplete 属性（#180）", () => {
-  beforeEach(() => {
-    vi.restoreAllMocks();
-    vi.spyOn(authApi, "fetchMe").mockResolvedValue({ id: "user1", displayName: "Alice", role: "admin" });
-    vi.spyOn(adminApi, "useAdminSettings").mockReturnValue({
-      data: [],
-    } as ReturnType<typeof adminApi.useAdminSettings>);
-  });
-
-  it("Claude API キー欄に autocomplete='off' が設定されている", async () => {
-    renderApp("/admin?tab=api-token", { id: "user1", displayName: "Alice", role: "admin" });
-    const apiKeyInput = await screen.findByLabelText(/Claude API キー/);
-    expect(apiKeyInput).toHaveAttribute("autocomplete", "off");
-  });
-});
-
-describe("API トークン設定フォーム（#417 useForm 移行）", () => {
-  beforeEach(() => {
-    vi.restoreAllMocks();
-    vi.spyOn(authApi, "fetchMe").mockResolvedValue({ id: "user1", displayName: "Alice", role: "admin" });
-    vi.spyOn(adminApi, "useAdminSettings").mockReturnValue({
-      data: [],
-    } as ReturnType<typeof adminApi.useAdminSettings>);
-  });
-
-  it("APIキーを入力して保存ボタンを押すと mutateAsync が呼ばれる", async () => {
-    const mutateAsync = vi.fn().mockResolvedValue(undefined);
-    vi.spyOn(adminApi, "useSaveAdminSetting").mockReturnValue({
-      mutateAsync,
-      isPending: false,
-    } as unknown as ReturnType<typeof adminApi.useSaveAdminSetting>);
-
-    renderApp("/admin?tab=api-token", { id: "user1", displayName: "Alice", role: "admin" });
-
-    const input = await screen.findByLabelText(/Claude API キー/);
-    await userEvent.type(input, "sk-ant-api03-test");
-    await userEvent.click(screen.getByRole("button", { name: /保存/ }));
-
-    await waitFor(() => {
-      expect(mutateAsync).toHaveBeenCalledWith({ key: "CLAUDE_API_KEY", value: "sk-ant-api03-test" });
+      expect(router.state.location.searchStr).toContain("tab=batch-logs");
     });
   });
 
-  it("保存成功後に入力フィールドがクリアされ成功地博れが表示される", async () => {
-    const mutateAsync = vi.fn().mockResolvedValue(undefined);
-    vi.spyOn(adminApi, "useSaveAdminSetting").mockReturnValue({
-      mutateAsync,
-      isPending: false,
-    } as unknown as ReturnType<typeof adminApi.useSaveAdminSetting>);
+  it("管理画面のタブに「API トークン設定」が存在しない（#662）", async () => {
+    renderApp("/admin");
 
-    renderApp("/admin?tab=api-token", { id: "user1", displayName: "Alice", role: "admin" });
-
-    const input = await screen.findByLabelText(/Claude API キー/);
-    await userEvent.type(input, "sk-ant-api03-test");
-    await userEvent.click(screen.getByRole("button", { name: /保存/ }));
-
-    await waitFor(() => {
-      expect(screen.getByText(/APIキーを保存しました/)).toBeInTheDocument();
-    });
-    expect(input).toHaveValue("");
-  });
-
-  it("保存失敗時にサーバから返るエラーメッセージが表示される（#476）", async () => {
-    const mutateAsync = vi.fn().mockRejectedValue(new Error("Forbidden: 権限がありません"));
-    vi.spyOn(adminApi, "useSaveAdminSetting").mockReturnValue({
-      mutateAsync,
-      isPending: false,
-      isError: true,
-      error: new Error("Forbidden: 権限がありません"),
-      reset: vi.fn(),
-    } as unknown as ReturnType<typeof adminApi.useSaveAdminSetting>);
-
-    renderApp("/admin?tab=api-token", { id: "user1", displayName: "Alice", role: "admin" });
-
-    const input = await screen.findByLabelText(/Claude API キー/);
-    await userEvent.type(input, "invalid-key");
-    await userEvent.click(screen.getByRole("button", { name: /保存/ }));
-
-    // 汎用文言ではなく、サーバが返した具体的なエラー内容を表示する
-    await waitFor(() => {
-      expect(screen.getByText(/Forbidden: 権限がありません/)).toBeInTheDocument();
-    });
-  });
-
-  it("mutation の isError=false ならエラーは表示されない（二重 state を持たず mutation 状態に従う・#476）", async () => {
-    // mutateAsync は reject するが mutation 状態は成功扱い（isError=false）。
-    // ローカル state での二重管理を廃したため、表示はあくまで mutation の isError に従う。
-    vi.spyOn(adminApi, "useSaveAdminSetting").mockReturnValue({
-      mutateAsync: vi.fn().mockResolvedValue(undefined),
-      isPending: false,
-      isError: false,
-      error: null,
-      reset: vi.fn(),
-    } as unknown as ReturnType<typeof adminApi.useSaveAdminSetting>);
-
-    renderApp("/admin?tab=api-token", { id: "user1", displayName: "Alice", role: "admin" });
-
-    const input = await screen.findByLabelText(/Claude API キー/);
-    await userEvent.type(input, "sk-ant-api03-ok");
-    await userEvent.click(screen.getByRole("button", { name: /保存/ }));
-
-    await waitFor(() => {
-      expect(screen.getByText(/APIキーを保存しました/)).toBeInTheDocument();
-    });
-    // エラー Snackbar の文言は出ない
-    expect(screen.queryByText(/失敗/)).not.toBeInTheDocument();
-  });
-
-  it("保存中は保存ボタンが disabled になる", async () => {
-    vi.spyOn(adminApi, "useSaveAdminSetting").mockReturnValue({
-      mutateAsync: vi.fn().mockResolvedValue(undefined),
-      isPending: true,
-    } as unknown as ReturnType<typeof adminApi.useSaveAdminSetting>);
-
-    renderApp("/admin?tab=api-token", { id: "user1", displayName: "Alice", role: "admin" });
-
-    const saveButton = await screen.findByRole("button", { name: /保存/ });
-    expect(saveButton).toBeDisabled();
+    await screen.findByRole("tab", { name: /ワーカー管理/ });
+    expect(screen.queryByRole("tab", { name: /API トークン設定/ })).not.toBeInTheDocument();
   });
 });
 

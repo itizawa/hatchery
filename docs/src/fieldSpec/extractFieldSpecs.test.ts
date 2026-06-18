@@ -3,7 +3,6 @@ import { z } from "zod";
 
 import {
   UpdateProfileSchema,
-  UpdateAppSettingSchema,
   AVATAR_URL_MAX_LENGTH,
 } from "@hatchery/common";
 
@@ -79,17 +78,17 @@ describe("extractFieldSpecs", () => {
 describe("FORM_SPECS（生成由来のフォーム項目レジストリ）", () => {
   const ids = FORM_SPECS.map((f) => f.id);
 
-  it("入力系スキーマを少なくとも含む（#455: LoginRequestSchema・招待系は廃止）", () => {
+  it("入力系スキーマを少なくとも含む（#455: LoginRequestSchema・招待系は廃止、#662: UpdateAppSettingSchema 廃止）", () => {
     for (const id of [
       "UpdateProfileSchema",
       "CreateCommunitySchema",
       "UpdateCommunitySchema",
       "CreateWorkerSchema",
       "UpdateWorkerSchema",
-      "UpdateAppSettingSchema",
     ]) {
       expect(ids).toContain(id);
     }
+    expect(ids).not.toContain("UpdateAppSettingSchema");
   });
 
   it("各フォームは 1 つ以上の項目を持ち、id が一意である", () => {
@@ -111,9 +110,5 @@ describe("FORM_SPECS（生成由来のフォーム項目レジストリ）", () 
     const expectedProfile = extractFieldSpecs(UpdateProfileSchema);
     const profile = FORM_SPECS.find((f) => f.id === "UpdateProfileSchema")!;
     expect(profile.fields).toEqual(expectedProfile);
-
-    const expectedAppSetting = extractFieldSpecs(UpdateAppSettingSchema);
-    const appSetting = FORM_SPECS.find((f) => f.id === "UpdateAppSettingSchema")!;
-    expect(appSetting.fields).toEqual(expectedAppSetting);
   });
 });

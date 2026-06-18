@@ -9,8 +9,7 @@ import {
 } from "@hatchery/common";
 import { Router } from "express";
 
-import { requireAdmin } from "../middleware/requireAdmin.js";
-import { requireAuth } from "../middleware/requireAuth.js";
+import { requireAdminAccess } from "../middleware/requireAdminAccess.js";
 import { validateBody } from "../middleware/validateBody.js";
 import type { WorkerRepository } from "../persistence/workerRepository.js";
 import { resultToResponse } from "../utils/resultToResponse.js";
@@ -36,8 +35,7 @@ export function createWorkersRouter(workerRepository: WorkerRepository): Router 
 
   router.patch(
     "/:id",
-    requireAuth,
-    requireAdmin,
+    requireAdminAccess,
     validateBody(UpdateWorkerSchema),
     (req, res, next) => {
       const { id } = req.params as { id: string };

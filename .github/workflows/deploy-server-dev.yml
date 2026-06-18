@@ -14,8 +14,8 @@ concurrency:
 env:
   REGION: ${{ secrets.GCP_REGION }}
   SERVICE_NAME: hatchery
-  REGISTRY: ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/hatchery
-  IMAGE: ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/hatchery/server:${{ github.sha }}
+  REGISTRY: ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/hatchery-dev
+  IMAGE: ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/hatchery-dev/server:${{ github.sha }}
 
 jobs:
   deploy:

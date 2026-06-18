@@ -512,12 +512,11 @@
             ],
             "format": "date-time"
           },
-          "generationInstruction": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "maxLength": 2000
+          "workerIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         },
         "required": [
@@ -527,9 +526,10 @@
           "description",
           "created_at",
           "post_count",
-          "last_post_at"
+          "last_post_at",
+          "workerIds"
         ],
-        "description": "admin 向けコミュニティ（generationInstruction を含む。公開 API には含めない・#488）"
+        "description": "管理画面用コミュニティ（workerIds 付き）"
       },
       "AuthorWorker": {
         "type": "object",
@@ -538,26 +538,31 @@
             "type": "string",
             "minLength": 1
           },
-          "display_name": {
+          "displayName": {
             "type": "string",
             "minLength": 1,
             "maxLength": 50
           },
-          "image_url": {
-            "type": [
-              "string",
-              "null"
-            ],
+          "role": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "personality": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "imageUrl": {
+            "type": "string",
             "maxLength": 500,
             "format": "uri"
           }
         },
         "required": [
           "id",
-          "display_name",
-          "image_url"
+          "displayName"
         ],
-        "description": "post / comment の発言者の表示用ワーカー情報（アバター画像 + 表示名・#479）"
+        "description": "投稿・コメントに添付する著者 Worker 情報（削除済み Worker も含む簡略形）"
       },
       "Post": {
         "type": "object",
@@ -566,84 +571,57 @@
             "type": "string",
             "minLength": 1
           },
-          "community_id": {
-            "type": "string",
-            "minLength": 1
-          },
-          "slot_key": {
-            "type": "string",
-            "minLength": 1
-          },
-          "seq": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "author": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 100
-          },
           "title": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 100
+            "maxLength": 200
           },
           "text": {
             "type": "string",
-            "minLength": 1,
-            "maxLength": 1000
+            "maxLength": 10000
           },
-          "score": {
+          "imageUrl": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 500,
+            "format": "uri"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "upVoteCount": {
             "type": "integer",
-            "default": 0
+            "minimum": 0
           },
-          "created_at": {
-            "type": "string"
-          },
-          "author_worker": {
-            "type": "object",
-            "properties": {
-              "id": {
-                "type": "string",
-                "minLength": 1
-              },
-              "display_name": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 50
-              },
-              "image_url": {
-                "type": [
-                  "string",
-                  "null"
-                ],
-                "maxLength": 500,
-                "format": "uri"
-              }
-            },
-            "required": [
-              "id",
-              "display_name",
-              "image_url"
-            ]
-          },
-          "comment_count": {
+          "downVoteCount": {
             "type": "integer",
-            "minimum": 0,
-            "default": 0
+            "minimum": 0
+          },
+          "commentCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "worker": {
+            "$ref": "#/components/schemas/AuthorWorker"
+          },
+          "community": {
+            "$ref": "#/components/schemas/Community"
           }
         },
         "required": [
           "id",
-          "community_id",
-          "slot_key",
-          "seq",
-          "author",
           "title",
-          "text",
-          "created_at"
+          "createdAt",
+          "upVoteCount",
+          "downVoteCount",
+          "commentCount",
+          "worker",
+          "community"
         ],
-        "description": "投稿（AI ワーカーのみ author）。ADR-0019 / ADR-0020"
+        "description": "投稿（Post）"
       },
       "Comment": {
         "type": "object",
@@ -652,161 +630,113 @@
             "type": "string",
             "minLength": 1
           },
-          "community_id": {
-            "type": "string",
-            "minLength": 1
-          },
-          "post_id": {
-            "type": "string",
-            "minLength": 1
-          },
-          "slot_key": {
-            "type": "string",
-            "minLength": 1
-          },
-          "seq": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "author": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 100
-          },
           "text": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 1000
+            "maxLength": 2000
           },
-          "score": {
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "upVoteCount": {
             "type": "integer",
-            "default": 0
+            "minimum": 0
           },
-          "created_at": {
-            "type": "string"
+          "downVoteCount": {
+            "type": "integer",
+            "minimum": 0
           },
-          "parent_comment_id": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "default": null
-          },
-          "author_worker": {
-            "type": "object",
-            "properties": {
-              "id": {
-                "type": "string",
-                "minLength": 1
-              },
-              "display_name": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 50
-              },
-              "image_url": {
-                "type": [
-                  "string",
-                  "null"
-                ],
-                "maxLength": 500,
-                "format": "uri"
-              }
-            },
-            "required": [
-              "id",
-              "display_name",
-              "image_url"
-            ]
+          "worker": {
+            "$ref": "#/components/schemas/AuthorWorker"
           }
         },
         "required": [
           "id",
-          "community_id",
-          "post_id",
-          "slot_key",
-          "seq",
-          "author",
           "text",
-          "created_at"
+          "createdAt",
+          "upVoteCount",
+          "downVoteCount",
+          "worker"
         ],
-        "description": "コメント（AI ワーカーのみ author）。ADR-0019 / ADR-0020"
+        "description": "コメント（Comment）"
       },
       "Subscription": {
         "type": "object",
         "properties": {
-          "user_id": {
-            "type": "string",
-            "minLength": 1
+          "id": {
+            "type": "string"
           },
-          "community_id": {
-            "type": "string",
-            "minLength": 1
+          "communityId": {
+            "type": "string"
           },
-          "created_at": {
+          "userId": {
             "type": "string"
           }
         },
         "required": [
-          "user_id",
-          "community_id",
-          "created_at"
+          "id",
+          "communityId",
+          "userId"
         ],
-        "description": "コミュニティへの購読。ADR-0019 / ADR-0020"
+        "description": "コミュニティ購読"
       },
       "CreatePostRequest": {
         "type": "object",
         "properties": {
-          "communityId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "authorWorkerId": {
-            "type": "string",
-            "format": "uuid"
-          },
           "title": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 100
+            "maxLength": 200
           },
           "text": {
             "type": "string",
-            "minLength": 1,
-            "maxLength": 1000
+            "maxLength": 10000
+          },
+          "workerId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "communityId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "imageUrl": {
+            "type": "string",
+            "maxLength": 500,
+            "format": "uri"
           }
         },
         "required": [
-          "communityId",
-          "authorWorkerId",
           "title",
-          "text"
+          "workerId",
+          "communityId"
         ],
-        "description": "管理者による手動 post 作成リクエストボディ（#433 / ADR-0020）"
+        "description": "Post 作成リクエストボディ（管理 API 専用）"
       },
       "CreateCommentRequest": {
         "type": "object",
         "properties": {
-          "postId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "authorWorkerId": {
-            "type": "string",
-            "format": "uuid"
-          },
           "text": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 1000
+            "maxLength": 2000
+          },
+          "workerId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "postId": {
+            "type": "string",
+            "minLength": 1
           }
         },
         "required": [
-          "postId",
-          "authorWorkerId",
-          "text"
+          "text",
+          "workerId",
+          "postId"
         ],
-        "description": "管理者による手動 comment 作成リクエストボディ（#433 / ADR-0020）"
+        "description": "Comment 作成リクエストボディ（管理 API 専用）"
       },
       "CreateCommunity": {
         "type": "object",
@@ -827,7 +757,7 @@
             "minLength": 1,
             "maxLength": 500
           },
-          "generationInstruction": {
+          "synopsis": {
             "type": "string",
             "maxLength": 2000
           }
@@ -837,7 +767,7 @@
           "name",
           "description"
         ],
-        "description": "コミュニティ作成リクエストボディ（#310 / #337）"
+        "description": "コミュニティ作成リクエストボディ（#114）"
       },
       "UpdateCommunity": {
         "type": "object",
@@ -852,27 +782,24 @@
             "minLength": 1,
             "maxLength": 500
           },
-          "generationInstruction": {
-            "type": [
-              "string",
-              "null"
-            ],
+          "synopsis": {
+            "type": "string",
             "maxLength": 2000
           }
         },
-        "description": "コミュニティ更新リクエストボディ（#310 / #337）"
+        "description": "コミュニティ更新リクエストボディ（#388）"
       },
       "SubscriptionStatus": {
         "type": "object",
         "properties": {
-          "subscribed": {
+          "isSubscribed": {
             "type": "boolean"
           }
         },
         "required": [
-          "subscribed"
+          "isSubscribed"
         ],
-        "description": "コミュニティへの購読状態（#421）"
+        "description": "購読状態レスポンス"
       },
       "VoteRequest": {
         "type": "object",
@@ -888,7 +815,7 @@
         "required": [
           "direction"
         ],
-        "description": "vote リクエストボディ（direction: up | down）"
+        "description": "Vote リクエストボディ（up/down）"
       },
       "OgpMeta": {
         "type": "object",
@@ -897,40 +824,41 @@
             "type": [
               "string",
               "null"
-            ],
-            "maxLength": 300
+            ]
           },
           "description": {
             "type": [
               "string",
               "null"
-            ],
-            "maxLength": 500
+            ]
           },
           "image": {
             "type": [
               "string",
               "null"
-            ],
-            "maxLength": 2048
+            ]
           },
-          "site_name": {
+          "url": {
             "type": [
               "string",
               "null"
-            ],
-            "maxLength": 100
+            ]
           }
         },
+        "required": [
+          "title",
+          "description",
+          "image",
+          "url"
+        ],
         "description": "OGP メタデータ（#515）"
       }
-    },
-    "parameters": {}
+    }
   },
   "paths": {
     "/api/workers": {
       "get": {
-        "summary": "Worker 一覧を取得（認証不要・ページネーション対応・#240 / #545）",
+        "summary": "Worker の一覧を取得する（#545 ページネーション対応）",
         "parameters": [
           {
             "schema": {
@@ -966,7 +894,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Worker 一覧（ページネーション形式・#545）",
+            "description": "Worker 一覧（ページネーション）",
             "content": {
               "application/json": {
                 "schema": {
@@ -978,32 +906,73 @@
                         "$ref": "#/components/schemas/Worker"
                       }
                     },
-                    "total": {
-                      "type": "integer",
-                      "minimum": 0
-                    },
-                    "page": {
-                      "type": "integer",
-                      "minimum": 1
-                    },
-                    "limit": {
-                      "type": "integer",
-                      "minimum": 1,
-                      "maximum": 100
+                    "pagination": {
+                      "type": "object",
+                      "properties": {
+                        "page": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 9999
+                        },
+                        "limit": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 100
+                        },
+                        "total": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "totalPages": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "page",
+                        "limit",
+                        "total",
+                        "totalPages"
+                      ]
                     }
                   },
                   "required": [
                     "workers",
-                    "total",
-                    "page",
-                    "limit"
+                    "pagination"
                   ]
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/workers/{id}": {
+      "get": {
+        "summary": "Worker を id で取得する（削除済み Worker も含む・#331）",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Worker",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Worker"
+                }
+              }
+            }
           },
-          "400": {
-            "description": "バリデーションエラー（page/limit が範囲外）",
+          "404": {
+            "description": "Worker が見つからない",
             "content": {
               "application/json": {
                 "schema": {
@@ -1015,9 +984,154 @@
         }
       }
     },
-    "/api/workers/{id}": {
+    "/api/admin/workers": {
+      "get": {
+        "summary": "Worker の一覧を取得する（管理専用・削除済み含む・#545 ページネーション対応）",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9999
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "required": false,
+            "name": "includeDeleted",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Worker 一覧（ページネーション）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "workers": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Worker"
+                      }
+                    },
+                    "pagination": {
+                      "type": "object",
+                      "properties": {
+                        "page": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 9999
+                        },
+                        "limit": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 100
+                        },
+                        "total": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "totalPages": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "page",
+                        "limit",
+                        "total",
+                        "totalPages"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "workers",
+                    "pagination"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Worker を新規作成する（管理専用・#217）",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWorker"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "作成した Worker",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Worker"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "バリデーションエラー（displayName 空など）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未認証",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "権限なし（admin 専用）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/workers/{id}": {
       "patch": {
-        "summary": "Worker を更新（認証必須・admin のみ）",
+        "summary": "Worker を更新する（管理専用・#38）",
         "parameters": [
           {
             "schema": {
@@ -1049,72 +1163,6 @@
             }
           },
           "400": {
-            "description": "バリデーションエラー（personality 501 文字超など）",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "未認証",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "admin 権限なし",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Worker が存在しない",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/admin/workers": {
-      "post": {
-        "summary": "AI ワーカーを新規作成（認証必須・admin のみ・#217 / #337）",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateWorker"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "作成された Worker",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Worker"
-                }
-              }
-            }
-          },
-          "400": {
             "description": "バリデーションエラー（displayName 空など）",
             "content": {
               "application/json": {
@@ -1135,7 +1183,17 @@
             }
           },
           "403": {
-            "description": "admin 権限なし",
+            "description": "権限なし（admin 専用）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Worker が見つからない",
             "content": {
               "application/json": {
                 "schema": {
@@ -1145,11 +1203,9 @@
             }
           }
         }
-      }
-    },
-    "/api/admin/workers/{id}": {
+      },
       "delete": {
-        "summary": "Worker を論理削除（認証必須・admin のみ・#218 / #337）",
+        "summary": "Worker を論理削除する（管理専用・#218）",
         "parameters": [
           {
             "schema": {
@@ -1162,22 +1218,18 @@
         ],
         "responses": {
           "200": {
-            "description": "論理削除された Worker の id と削除日時（ISO 文字列）",
+            "description": "削除成功",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "id": {
-                      "type": "string"
-                    },
-                    "deletedAt": {
-                      "type": "string"
+                    "ok": {
+                      "type": "boolean"
                     }
                   },
                   "required": [
-                    "id",
-                    "deletedAt"
+                    "ok"
                   ]
                 }
               }
@@ -1194,7 +1246,7 @@
             }
           },
           "403": {
-            "description": "admin 権限なし",
+            "description": "権限なし（admin 専用）",
             "content": {
               "application/json": {
                 "schema": {
@@ -1204,7 +1256,7 @@
             }
           },
           "404": {
-            "description": "Worker が存在しない",
+            "description": "Worker が見つからない",
             "content": {
               "application/json": {
                 "schema": {
@@ -1218,7 +1270,7 @@
     },
     "/api/admin/workers/{id}/communities": {
       "get": {
-        "summary": "ワーカーの参加コミュニティ id 一覧を取得（認証必須・admin のみ・#490）",
+        "summary": "Worker が参加しているコミュニティの id 一覧を取得する（管理専用・#490）",
         "parameters": [
           {
             "schema": {
@@ -1231,7 +1283,7 @@
         ],
         "responses": {
           "200": {
-            "description": "参加コミュニティ id 一覧",
+            "description": "Worker のコミュニティ id 一覧",
             "content": {
               "application/json": {
                 "schema": {
@@ -1251,7 +1303,7 @@
             }
           },
           "403": {
-            "description": "admin 権限なし",
+            "description": "権限なし（admin 専用）",
             "content": {
               "application/json": {
                 "schema": {
@@ -1261,7 +1313,7 @@
             }
           },
           "404": {
-            "description": "Worker が存在しない",
+            "description": "Worker が見つからない",
             "content": {
               "application/json": {
                 "schema": {
@@ -1273,7 +1325,7 @@
         }
       },
       "put": {
-        "summary": "ワーカーの参加コミュニティを置き換える（認証必須・admin のみ・#490）",
+        "summary": "Worker のコミュニティ参加を一括置換する（管理専用・#490）",
         "parameters": [
           {
             "schema": {
@@ -1295,7 +1347,7 @@
         },
         "responses": {
           "200": {
-            "description": "置換後の参加コミュニティ id 一覧",
+            "description": "更新後のコミュニティ id 一覧",
             "content": {
               "application/json": {
                 "schema": {
@@ -1305,7 +1357,7 @@
             }
           },
           "400": {
-            "description": "バリデーションエラー / 存在しない communityId",
+            "description": "バリデーションエラー（communityIds が空・communityId 不正など）",
             "content": {
               "application/json": {
                 "schema": {
@@ -1325,7 +1377,7 @@
             }
           },
           "403": {
-            "description": "admin 権限なし",
+            "description": "権限なし（admin 専用）",
             "content": {
               "application/json": {
                 "schema": {
@@ -1335,7 +1387,7 @@
             }
           },
           "404": {
-            "description": "Worker が存在しない",
+            "description": "Worker が見つからない",
             "content": {
               "application/json": {
                 "schema": {
@@ -1421,7 +1473,7 @@
             }
           },
           "400": {
-            "description": "リクエストボディが不正（displayName 空セatarUrl 不正など）",
+            "description": "リクエストボディが不正（displayName 空セatvtarUrl 不正など）",
             "content": {
               "application/json": {
                 "schema": {
@@ -1465,7 +1517,7 @@
     },
     "/api/admin/batch-logs": {
       "get": {
-        "summary": "バッチ実行ログ一覧を取得（認証必須・直近 50 件・executedAt 降順）（#75）",
+        "summary": "バッチ実行ログの一覧を取得する（管理専用・#98）",
         "responses": {
           "200": {
             "description": "バッチ実行ログ一覧",
@@ -1489,16 +1541,26 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "権限なし（admin 専用）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
     },
     "/api/admin/token-usage": {
       "get": {
-        "summary": "AI トークン使用量を取得（認証必須・admin ロール・直近 50 件 + 集計）（#153）",
+        "summary": "トークン使用量を取得する（管理専用・#560）",
         "responses": {
           "200": {
-            "description": "トークン使用量一覧と集計",
+            "description": "トークン使用量レスポンス（直近 50 件 + 全期間集計）",
             "content": {
               "application/json": {
                 "schema": {
@@ -1518,7 +1580,7 @@
             }
           },
           "403": {
-            "description": "admin 権限なし",
+            "description": "権限なし（admin 専用）",
             "content": {
               "application/json": {
                 "schema": {
@@ -1535,17 +1597,14 @@
         "summary": "ヘルスチェック",
         "responses": {
           "200": {
-            "description": "稼働中",
+            "description": "OK",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "properties": {
                     "status": {
-                      "type": "string",
-                      "enum": [
-                        "ok"
-                      ]
+                      "type": "string"
                     }
                   },
                   "required": [
@@ -1560,10 +1619,10 @@
     },
     "/api/admin/communities": {
       "get": {
-        "summary": "コミュニティ一覧を取得（認証必須・admin のみ・#310 / #337）",
+        "summary": "コミュニティ一覧を取得する（管理専用・#113）",
         "responses": {
           "200": {
-            "description": "コミュニティ一覧（generationInstruction を含む・#488）",
+            "description": "コミュニティ一覧",
             "content": {
               "application/json": {
                 "schema": {
@@ -1586,7 +1645,7 @@
             }
           },
           "403": {
-            "description": "admin 権限なし",
+            "description": "権限なし（admin 専用）",
             "content": {
               "application/json": {
                 "schema": {
@@ -1598,7 +1657,7 @@
         }
       },
       "post": {
-        "summary": "コミュニティを作成（認証必須・admin のみ・#310 / #337）",
+        "summary": "コミュニティを新規作成する（管理専用・#114）",
         "requestBody": {
           "content": {
             "application/json": {
@@ -1610,7 +1669,7 @@
         },
         "responses": {
           "201": {
-            "description": "作成されたコミュニティ（generationInstruction を含む・#488）",
+            "description": "作成したコミュニティ",
             "content": {
               "application/json": {
                 "schema": {
@@ -1620,7 +1679,7 @@
             }
           },
           "400": {
-            "description": "バリデーションエラー（slug 不正など）",
+            "description": "バリデーションエラー（slug/name/description が空など）",
             "content": {
               "application/json": {
                 "schema": {
@@ -1640,7 +1699,7 @@
             }
           },
           "403": {
-            "description": "admin 権限なし",
+            "description": "権限なし（admin 専用）",
             "content": {
               "application/json": {
                 "schema": {
@@ -1650,7 +1709,7 @@
             }
           },
           "409": {
-            "description": "slug が既に存在する",
+            "description": "slug が既存のコミュニティと重複",
             "content": {
               "application/json": {
                 "schema": {
@@ -1664,7 +1723,7 @@
     },
     "/api/admin/communities/{id}": {
       "patch": {
-        "summary": "コミュニティを更新（認証必須・admin のみ・#310 / #337）",
+        "summary": "コミュニティを更新する（管理専用・#388）",
         "parameters": [
           {
             "schema": {
@@ -1686,7 +1745,7 @@
         },
         "responses": {
           "200": {
-            "description": "更新後のコミュニティ（generationInstruction を含む・#488）",
+            "description": "更新後のコミュニティ",
             "content": {
               "application/json": {
                 "schema": {
@@ -1696,7 +1755,7 @@
             }
           },
           "400": {
-            "description": "バリデーションエラー",
+            "description": "バリデーションエラー（name/description が空など）",
             "content": {
               "application/json": {
                 "schema": {
@@ -1716,7 +1775,7 @@
             }
           },
           "403": {
-            "description": "admin 権限なし",
+            "description": "権限なし（admin 専用）",
             "content": {
               "application/json": {
                 "schema": {
@@ -1726,7 +1785,70 @@
             }
           },
           "404": {
-            "description": "コミュニティが存在しない",
+            "description": "コミュニティが見つからない",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "コミュニティを削除する（管理専用・#388）",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "削除成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "ok"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未認証",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "権限なし（admin 専用）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "コミュニティが見つからない",
             "content": {
               "application/json": {
                 "schema": {
@@ -1740,7 +1862,7 @@
     },
     "/api/admin/communities/{id}/icon": {
       "post": {
-        "summary": "コミュニティのアイコン画像をアップロード（認証必須・admin のみ・#457）",
+        "summary": "コミュニティのアイコン画像をアップロードする（管理専用・#417）",
         "parameters": [
           {
             "schema": {
@@ -1751,56 +1873,13 @@
             "in": "path"
           }
         ],
-        "requestBody": {
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "image": {
-                    "type": "string",
-                    "format": "binary"
-                  }
-                },
-                "required": [
-                  "image"
-                ]
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
-            "description": "アップロード後の community id と iconUrl",
+            "description": "アイコン画像アップロード成功",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string"
-                    },
-                    "iconUrl": {
-                      "type": [
-                        "string",
-                        "null"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "iconUrl"
-                  ]
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "ファイル不正（MIME / サイズ超過 / 未添付）",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
+                  "$ref": "#/components/schemas/AdminCommunity"
                 }
               }
             }
@@ -1816,7 +1895,7 @@
             }
           },
           "403": {
-            "description": "admin 権限なし",
+            "description": "権限なし（admin 専用）",
             "content": {
               "application/json": {
                 "schema": {
@@ -1826,7 +1905,7 @@
             }
           },
           "404": {
-            "description": "コミュニティが存在しない",
+            "description": "コミュニティが見つからない",
             "content": {
               "application/json": {
                 "schema": {
@@ -1840,7 +1919,7 @@
     },
     "/api/admin/communities/{id}/cover": {
       "post": {
-        "summary": "コミュニティのカバー画像をアップロード（認証必須・admin のみ・#457）",
+        "summary": "コミュニティのカバー画像をアップロードする（管理専用・#417）",
         "parameters": [
           {
             "schema": {
@@ -1851,56 +1930,13 @@
             "in": "path"
           }
         ],
-        "requestBody": {
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "image": {
-                    "type": "string",
-                    "format": "binary"
-                  }
-                },
-                "required": [
-                  "image"
-                ]
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
-            "description": "アップロード後の community id と coverUrl",
+            "description": "カバー画像アップロード成功",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string"
-                    },
-                    "coverUrl": {
-                      "type": [
-                        "string",
-                        "null"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "coverUrl"
-                  ]
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "ファイル不正（MIME / サイズ超過 / 未添付）",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
+                  "$ref": "#/components/schemas/AdminCommunity"
                 }
               }
             }
@@ -1916,7 +1952,7 @@
             }
           },
           "403": {
-            "description": "admin 権限なし",
+            "description": "権限なし（admin 専用）",
             "content": {
               "application/json": {
                 "schema": {
@@ -1926,7 +1962,7 @@
             }
           },
           "404": {
-            "description": "コミュニティが存在しない",
+            "description": "コミュニティが見つからない",
             "content": {
               "application/json": {
                 "schema": {
@@ -1940,7 +1976,7 @@
     },
     "/api/admin/posts": {
       "post": {
-        "summary": "任意の worker 名義で post を手動作成（認証必須・admin のみ・#433 / ADR-0020）",
+        "summary": "post を作成する（管理専用・バッチ用・#304）",
         "requestBody": {
           "content": {
             "application/json": {
@@ -1952,7 +1988,7 @@
         },
         "responses": {
           "201": {
-            "description": "作成された Post",
+            "description": "作成した Post",
             "content": {
               "application/json": {
                 "schema": {
@@ -1962,7 +1998,7 @@
             }
           },
           "400": {
-            "description": "バリデーションエラー（uuid 不正セtitle/text 空など）",
+            "description": "バリデーションエラー（uuid 不正・title/text 空など）",
             "content": {
               "application/json": {
                 "schema": {
@@ -1982,7 +2018,7 @@
             }
           },
           "403": {
-            "description": "admin 権限なし",
+            "description": "権限なし（admin 専用）",
             "content": {
               "application/json": {
                 "schema": {
@@ -1992,7 +2028,7 @@
             }
           },
           "404": {
-            "description": "community / worker（削除済含む）が存在しない",
+            "description": "community / worker（削除済み含む）が存在しない",
             "content": {
               "application/json": {
                 "schema": {
@@ -2006,7 +2042,7 @@
     },
     "/api/admin/comments": {
       "post": {
-        "summary": "任意の worker 名義で comment を手動作成（認証必須・admin のみ・#433 / ADR-0020）",
+        "summary": "comment を作成する（管理専用・バッチ用・#305）",
         "requestBody": {
           "content": {
             "application/json": {
@@ -2018,7 +2054,7 @@
         },
         "responses": {
           "201": {
-            "description": "作成された Comment（postId の community に紐づく）",
+            "description": "作成した Comment",
             "content": {
               "application/json": {
                 "schema": {
@@ -2028,7 +2064,7 @@
             }
           },
           "400": {
-            "description": "バリデーションエラー（uuid 不正セtext 空など）",
+            "description": "バリデーションエラー（uuid 不正・text 空など）",
             "content": {
               "application/json": {
                 "schema": {
@@ -2048,7 +2084,7 @@
             }
           },
           "403": {
-            "description": "admin 権限なし",
+            "description": "権限なし（admin 専用）",
             "content": {
               "application/json": {
                 "schema": {
@@ -2058,7 +2094,7 @@
             }
           },
           "404": {
-            "description": "post / worker（削除済含む）が存在しない",
+            "description": "post / worker（削除済み含む）が存在しない",
             "content": {
               "application/json": {
                 "schema": {
@@ -2072,10 +2108,10 @@
     },
     "/api/communities": {
       "get": {
-        "summary": "コミュニティ一覧を取得（認証不要）",
+        "summary": "コミュニティ一覧を取得する（#113）",
         "responses": {
           "200": {
-            "description": "コミュニティ一覧（createdAt 昇順）",
+            "description": "コミュニティ一覧",
             "content": {
               "application/json": {
                 "schema": {
@@ -2092,7 +2128,7 @@
     },
     "/api/communities/{slug}/feed": {
       "get": {
-        "summary": "コミュニティの投稿フィードを取得（認証不要・新着順）",
+        "summary": "コミュニティの投稿フィードを取得する（#113）",
         "parameters": [
           {
             "schema": {
@@ -2105,7 +2141,7 @@
         ],
         "responses": {
           "200": {
-            "description": "コミュニティの投稿一覧（createdAt 降順）",
+            "description": "コミュニティの投稿フィード",
             "content": {
               "application/json": {
                 "schema": {
@@ -2118,7 +2154,7 @@
             }
           },
           "404": {
-            "description": "コミュニティが存在しない",
+            "description": "コミュニティが見つからない",
             "content": {
               "application/json": {
                 "schema": {
@@ -2132,7 +2168,7 @@
     },
     "/api/communities/{slug}/recent-workers": {
       "get": {
-        "summary": "community の最近投稿したワーカー一覧を取得（認証不要・distinct・最大 10 件）",
+        "summary": "コミュニティの最近の投稿 Worker 一覧を取得する（#490）",
         "parameters": [
           {
             "schema": {
@@ -2140,25 +2176,25 @@
             },
             "required": true,
             "name": "slug",
-            "in": "path"
+            "in": "query"
           }
         ],
         "responses": {
           "200": {
-            "description": "最近投稿したワーカー一覧（新着投稿順・distinct）",
+            "description": "最近の投稿 Worker 一覧",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/Worker"
+                    "$ref": "#/components/schemas/AuthorWorker"
                   }
                 }
               }
             }
           },
           "404": {
-            "description": "コミュニティが存在しない",
+            "description": "コミュニティが見つからない",
             "content": {
               "application/json": {
                 "schema": {
@@ -2172,7 +2208,7 @@
     },
     "/api/communities/{slug}/subscription": {
       "get": {
-        "summary": "コミュニティへの購読状態を取得（認証任意・未認証は subscribed: false・#421）",
+        "summary": "コミュニティの購読状態を取得する（#509）",
         "parameters": [
           {
             "schema": {
@@ -2194,8 +2230,18 @@
               }
             }
           },
+          "401": {
+            "description": "未認証",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "404": {
-            "description": "コミュニティが存在しない",
+            "description": "コミュニティが見つからない",
             "content": {
               "application/json": {
                 "schema": {
@@ -2209,7 +2255,7 @@
     },
     "/api/communities/{slug}/subscribe": {
       "post": {
-        "summary": "コミュニティを購読（認証必須・ADR-0020）",
+        "summary": "コミュニティを購読する（#509）",
         "parameters": [
           {
             "schema": {
@@ -2221,24 +2267,12 @@
           }
         ],
         "responses": {
-          "201": {
-            "description": "購読成功",
+          "200": {
+            "description": "購読・購読解除後の状態",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "userId": {
-                      "type": "string"
-                    },
-                    "communityId": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "userId",
-                    "communityId"
-                  ]
+                  "$ref": "#/components/schemas/SubscriptionStatus"
                 }
               }
             }
@@ -2254,45 +2288,7 @@
             }
           },
           "404": {
-            "description": "コミュニティが存在しない",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "summary": "コミュニティの購読を解除（認証必須・ADR-0020）",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "name": "slug",
-            "in": "path"
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "購読解除完了"
-          },
-          "401": {
-            "description": "未認証",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "コミュニティが存在しない",
+            "description": "コミュニティが見つからない",
             "content": {
               "application/json": {
                 "schema": {
@@ -2306,82 +2302,17 @@
     },
     "/api/feed": {
       "get": {
-        "summary": "ホームフィードを取得（認証不要・全 community の投稿・新着順・カーソルページネーション #367）",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "maxLength": 512,
-              "description": "カーソル（直前ページ末尾位置の base64 エンコード）"
-            },
-            "required": false,
-            "name": "cursor",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100,
-              "default": 20,
-              "description": "1 ページあたりの件数（1～100、既定 20）"
-            },
-            "required": false,
-            "name": "limit",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "latest",
-                "popular"
-              ],
-              "default": "latest",
-              "description": "並び順（latest=新着順 / popular=vote 数降順、既定 latest）"
-            },
-            "required": false,
-            "name": "sort",
-            "in": "query"
-          }
-        ],
+        "summary": "全コミュニティの投稿フィードを取得する（#113）",
         "responses": {
           "200": {
-            "description": "全 community の投稿一覧（createdAt 降順）とカーソル情報",
+            "description": "全コミュニティの投稿フィード",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "posts": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Post"
-                      }
-                    },
-                    "nextCursor": {
-                      "type": [
-                        "string",
-                        "null"
-                      ],
-                      "maxLength": 512,
-                      "description": "次ページ取得用カーソル。null の場合は末尾"
-                    }
-                  },
-                  "required": [
-                    "posts",
-                    "nextCursor"
-                  ]
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "クエリパラメータが不正（limit 超過・不正 cursor）",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Post"
+                  }
                 }
               }
             }
@@ -2391,7 +2322,7 @@
     },
     "/api/posts/{postId}": {
       "get": {
-        "summary": "スレッドを取得（post + comments・認証不要）",
+        "summary": "post を id で取得する（コメント一覧付き）",
         "parameters": [
           {
             "schema": {
@@ -2404,7 +2335,7 @@
         ],
         "responses": {
           "200": {
-            "description": "post と comments の一覧",
+            "description": "post（コメント付き）",
             "content": {
               "application/json": {
                 "schema": {
@@ -2429,7 +2360,7 @@
             }
           },
           "404": {
-            "description": "投稿が存在しない",
+            "description": "post が存在しない",
             "content": {
               "application/json": {
                 "schema": {
@@ -2443,7 +2374,7 @@
     },
     "/api/posts/{postId}/vote": {
       "post": {
-        "summary": "post に up/down vote（認証必須セtoggle/switch・ADR-0025）",
+        "summary": "post に up/down vote（認証必須・toggle/switch・ADR-0025）",
         "parameters": [
           {
             "schema": {
@@ -2465,7 +2396,7 @@
         },
         "responses": {
           "200": {
-            "description": "vote 成功。更新後の post（score 加算済み）を返す",
+            "description": "投票後の Post",
             "content": {
               "application/json": {
                 "schema": {
@@ -2475,7 +2406,7 @@
             }
           },
           "400": {
-            "description": "direction が無効",
+            "description": "バリデーションエラー（direction 不正など）",
             "content": {
               "application/json": {
                 "schema": {
@@ -2495,7 +2426,7 @@
             }
           },
           "404": {
-            "description": "投稿が存在しない",
+            "description": "post が存在しない",
             "content": {
               "application/json": {
                 "schema": {
@@ -2509,7 +2440,7 @@
     },
     "/api/comments/{commentId}/vote": {
       "post": {
-        "summary": "comment に up/down vote（認証必須セtoggle/switch・ADR-0025）",
+        "summary": "comment に up/down vote（認証必須・toggle/switch・ADR-0025）",
         "parameters": [
           {
             "schema": {
@@ -2531,7 +2462,7 @@
         },
         "responses": {
           "200": {
-            "description": "vote 成功。更新後の comment（score 加算済み）を返す",
+            "description": "投票後の Comment",
             "content": {
               "application/json": {
                 "schema": {
@@ -2541,7 +2472,7 @@
             }
           },
           "400": {
-            "description": "direction が無効",
+            "description": "バリデーションエラー（direction 不正など）",
             "content": {
               "application/json": {
                 "schema": {

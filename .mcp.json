@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "hatchery-admin": {
+      "command": "node",
+      "args": ["./mcp/dist/index.js"],
+      "env": {
+        "HATCHERY_API_BASE_URL": "",
+        "HATCHERY_ADMIN_TOKEN": ""
+      }
+    }
+  }
+}

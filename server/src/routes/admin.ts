@@ -12,8 +12,7 @@ import {
 import { randomUUID } from "crypto";
 import { Router } from "express";
 
-import { requireAdmin } from "../middleware/requireAdmin.js";
-import { requireAuth } from "../middleware/requireAuth.js";
+import { requireAdminAccess } from "../middleware/requireAdminAccess.js";
 import { validateBody } from "../middleware/validateBody.js";
 import { toAdminCommunityResponse } from "./communityResponse.js";
 import type { AppSettingRepository } from "../persistence/appSettingRepository.js";
@@ -48,7 +47,7 @@ export function createAdminRouter(
 ): Router {
   const router = Router();
 
-  router.use(requireAuth, requireAdmin);
+  router.use(requireAdminAccess);
 
   router.get("/settings", async (_req, res, next) => {
     try {

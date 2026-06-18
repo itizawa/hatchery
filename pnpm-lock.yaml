@@ -230,6 +230,15 @@ importers:
         specifier: ^6.0.3
         version: 6.4.2(@types/node@22.19.19)(jiti@2.7.0)(tsx@4.22.3)(yaml@2.9.0)
 
+  mcp:
+    dependencies:
+      '@modelcontextprotocol/sdk':
+        specifier: ^1.29.0
+        version: 1.29.0(zod@3.25.76)
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
+
   server:
     dependencies:
       '@anthropic-ai/claude-agent-sdk':

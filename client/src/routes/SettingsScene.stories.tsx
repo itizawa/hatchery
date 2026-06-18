@@ -23,11 +23,6 @@ export const UsersTab: Story = {
   render: () => renderWithRouter("/admin?tab=users"),
 };
 
-/** 管理画面（API トークン設定タブ）: admin ログイン済み。 */
-export const ApiTokenTab: Story = {
-  render: () => renderWithRouter("/admin?tab=api-token"),
-};
-
 /** 管理画面（バッチログタブ）: admin ログイン済み。 */
 export const BatchLogsTab: Story = {
   render: () => renderWithRouter("/admin?tab=batch-logs"),

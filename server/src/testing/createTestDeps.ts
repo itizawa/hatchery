@@ -1,5 +1,4 @@
 import type { AppDeps } from "../app.js";
-import { createInMemoryAppSettingRepository } from "../persistence/appSettingRepository.js";
 import { createInMemoryBatchRunLogRepository } from "../persistence/batchRunLogRepository.js";
 import { createInMemoryCommentRepository } from "../persistence/commentRepository.js";
 import { createInMemoryCommunityRepository } from "../persistence/communityRepository.js";
@@ -22,7 +21,6 @@ export function createTestDeps(overrides?: TestDepsOverrides): AppDeps {
     userRepository: defaultUserRepo,
     workerRepository: createInMemoryWorkerRepository(),
     workerCommunityRepository: createInMemoryWorkerCommunityRepository(),
-    appSettingRepository: createInMemoryAppSettingRepository(),
     batchRunLogRepository: createInMemoryBatchRunLogRepository(),
     tokenUsageLogRepository: createInMemoryTokenUsageLogRepository(),
     communityRepository: createInMemoryCommunityRepository(),

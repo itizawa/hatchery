@@ -11,7 +11,6 @@ import { createRateLimiter } from "./middleware/rateLimiter.js";
 import { createRequestLogger } from "./middleware/requestLogger.js";
 import { createJsonBodyParser, createRequestTimeout } from "./middleware/requestLimits.js";
 import { createSecureHeaders } from "./middleware/secureHeaders.js";
-import type { AppSettingRepository } from "./persistence/appSettingRepository.js";
 import type { BatchRunLogRepository } from "./persistence/batchRunLogRepository.js";
 import type { CommunityRepository } from "./persistence/communityRepository.js";
 import type { CommentRepository } from "./persistence/commentRepository.js";
@@ -79,7 +78,6 @@ export interface AppDeps {
   userRepository: UserRepository;
   workerRepository: WorkerRepository;
   workerCommunityRepository: WorkerCommunityRepository;
-  appSettingRepository: AppSettingRepository;
   batchRunLogRepository: BatchRunLogRepository;
   tokenUsageLogRepository: TokenUsageLogRepository;
   communityRepository: CommunityRepository;
@@ -192,7 +190,6 @@ export function createApp(deps: AppDeps): Express {
     "/api/admin",
     noStoreCache,
     createAdminRouter(
-      deps.appSettingRepository,
       deps.workerRepository,
       communityRepo,
       postRepo,

@@ -1,20 +1,16 @@
 import request from "supertest";
-import { beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { createApp } from "../app.js";
-import { createInMemoryAppSettingRepository } from "../persistence/appSettingRepository.js";
 import { createInMemoryWorkerRepository } from "../persistence/workerRepository.js";
 import { createTestUserRepository } from "../persistence/userRepository.js";
 import { createTestDeps } from "../testing/createTestDeps.js";
-import { getApiKey } from "./admin.js";
-import { encrypt } from "../utils/crypto.js";
 
-async function makeApp(appSettingRepo = createInMemoryAppSettingRepository(), role: "admin" | "member" = "admin", workerRepository = createInMemoryWorkerRepository()) {
+async function makeApp(role: "admin" | "member" = "admin", workerRepository = createInMemoryWorkerRepository()) {
   const userRepo = await createTestUserRepository(role);
   return createApp(
-    await createTestDeps({
+    createTestDeps({
       userRepository: userRepo,
-      appSettingRepository: appSettingRepo,
       workerRepository,
     }),
   );
@@ -26,106 +22,21 @@ async function loginAgent(app: ReturnType<typeof createApp>) {
   return agent;
 }
 
-describe("GET /api/admin/settings", () => {
-  it("未認証の場合は 401 を返す", async () => {
-    const app = await makeApp();
-    const res = await request(app).get("/api/admin/settings");
-    expect(res.status).toBe(401);
-  });
-
-  it("admin ユーザーは 200 と設定一覧を返す（設定未登録時は空配列）", async () => {
+describe("GET /api/admin/settings は廃止され 404 を返す (#662)", () => {
+  it("管理者でも /api/admin/settings は 404 を返す", async () => {
     const app = await makeApp();
     const agent = await loginAgent(app);
     const res = await agent.get("/api/admin/settings");
-    expect(res.status).toBe(200);
-    expect(Array.isArray(res.body)).toBe(true);
-  });
-
-  it("member ユーザーは 403 を返す (#136)", async () => {
-    const app = await makeApp(createInMemoryAppSettingRepository(), "member");
-    const agent = await loginAgent(app);
-    const res = await agent.get("/api/admin/settings");
-    expect(res.status).toBe(403);
-  });
-
-  it("CLAUDE_API_KEY が設定済みの場合はマスク表示で返す", async () => {
-    const appSettingRepo = createInMemoryAppSettingRepository([
-      { key: "CLAUDE_API_KEY", value: "not-encrypted", updatedAt: new Date() },
-    ]);
-    const app = await makeApp(appSettingRepo);
-    const agent = await loginAgent(app);
-    const res = await agent.get("/api/admin/settings");
-    expect(res.status).toBe(200);
-    const claudeKey = (res.body as Array<{ key: string; maskedValue: string | null }>).find(
-      (s) => s.key === "CLAUDE_API_KEY",
-    );
-    expect(claudeKey).toBeDefined();
+    expect(res.status).toBe(404);
   });
 });
 
-describe("PATCH /api/admin/settings", () => {
-  let app: ReturnType<typeof createApp>;
-
-  beforeEach(async () => {
-    app = await makeApp();
-  });
-
-  it("未認証の場合は 401 を返す", async () => {
-    const res = await request(app)
-      .patch("/api/admin/settings")
-      .send({ key: "CLAUDE_API_KEY", value: "sk-ant-test" });
-    expect(res.status).toBe(401);
-  });
-
-  it("member ユーザーは 403 を返す (#136)", async () => {
-    const memberApp = await makeApp(createInMemoryAppSettingRepository(), "member");
-    const memberAgent = await loginAgent(memberApp);
-    const res = await memberAgent.patch("/api/admin/settings").send({ key: "CLAUDE_API_KEY", value: "sk-ant-test" });
-    expect(res.status).toBe(403);
-  });
-
-  it("key が空の場合は 400 を返す", async () => {
+describe("PATCH /api/admin/settings は廃止され 404 を返す (#662)", () => {
+  it("管理者でも /api/admin/settings への PATCH は 404 を返す", async () => {
+    const app = await makeApp();
     const agent = await loginAgent(app);
-    const res = await agent.patch("/api/admin/settings").send({ key: "", value: "sk-ant-test" });
-    expect(res.status).toBe(400);
-  });
-
-  it("CLAUDE_API_KEY を設定すると 200 とマスク表示の設定を返す", async () => {
-    const agent = await loginAgent(app);
-    const res = await agent
-      .patch("/api/admin/settings")
-      .send({ key: "CLAUDE_API_KEY", value: "sk-ant-api03-test-key" });
-    expect(res.status).toBe(200);
-    expect(res.body).toMatchObject({
-      key: "CLAUDE_API_KEY",
-      maskedValue: expect.stringMatching(/\*{4}$/),
-    });
-  });
-
-  it("value が空文字列でも 200 を返す（キーのリセット）", async () => {
-    const agent = await loginAgent(app);
-    const res = await agent.patch("/api/admin/settings").send({ key: "CLAUDE_API_KEY", value: "" });
-    expect(res.status).toBe(200);
-  });
-});
-
-describe("getApiKey", () => {
-  it("DB 未設定・anthropicApiKey 未指定の場合は undefined を返す", async () => {
-    const repo = createInMemoryAppSettingRepository();
-    expect(await getApiKey(repo)).toBeUndefined();
-  });
-
-  it("DB に設定済みの場合は復号した値を返す", async () => {
-    const plaintext = "sk-ant-api03-test-key";
-    const repo = createInMemoryAppSettingRepository([
-      { key: "CLAUDE_API_KEY", value: encrypt(plaintext), updatedAt: new Date() },
-    ]);
-    expect(await getApiKey(repo)).toBe(plaintext);
-  });
-
-  it("DB 未設定・anthropicApiKey 指定の場合は引数の値を返す", async () => {
-    const repo = createInMemoryAppSettingRepository();
-    expect(await getApiKey(repo, "sk-ant-env-key")).toBe("sk-ant-env-key");
+    const res = await agent.patch("/api/admin/settings").send({ key: "CLAUDE_API_KEY", value: "sk-ant-test" });
+    expect(res.status).toBe(404);
   });
 });
 
@@ -137,7 +48,7 @@ describe("DELETE /api/admin/workers/:id (#218)", () => {
     ]);
     return {
       app: createApp(
-        await createTestDeps({
+        createTestDeps({
           userRepository: userRepo,
           workerRepository: workerRepo,
         }),
@@ -192,7 +103,7 @@ describe("POST /api/admin/workers (#217)", () => {
   });
 
   it("member ロールの場合は 403 を返す", async () => {
-    const app = await makeApp(createInMemoryAppSettingRepository(), "member");
+    const app = await makeApp("member");
     const agent = await loginAgent(app);
     const res = await agent.post("/api/admin/workers").send({ displayName: "新社員" });
     expect(res.status).toBe(403);
@@ -248,3 +159,4 @@ describe("POST /api/admin/workers (#217)", () => {
     expect(res.status).toBe(400);
   });
 });
+

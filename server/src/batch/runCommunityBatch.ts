@@ -7,7 +7,6 @@ import {
   type WorkerState,
 } from "@hatchery/common";
 
-import type { AppSettingRepository } from "../persistence/appSettingRepository.js";
 import type { BatchRunLogRepository } from "../persistence/batchRunLogRepository.js";
 import type { CommentRecord, CommentRepository } from "../persistence/commentRepository.js";
 import type { CommunityRepository } from "../persistence/communityRepository.js";
@@ -16,8 +15,6 @@ import type { VoteRepository } from "../persistence/voteRepository.js";
 import type { WorkerCommunityRepository } from "../persistence/workerCommunityRepository.js";
 import type { WorkerRecord } from "../persistence/workerRepository.js";
 import type { WorldStateRepository } from "../persistence/worldStateRepository.js";
-import { getApiKey } from "../utils/apiKey.js";
-
 import {
   generateConversationWithClaude,
   type ConversationGenerator,
@@ -77,7 +74,6 @@ export interface RunCommunityBatchDeps {
   communityRepo: CommunityRepository;
   postRepo: PostRepository;
   commentRepo: CommentRepository;
-  appSettingRepo: AppSettingRepository;
   /**
    * vote 集計（重み算出）用リポジトリ（#486 / ADR-0030）。
    * 直近 VOTE_WEIGHT_WINDOW_DAYS 日の community 別純スコアで重み付き 1 コミュニティ選定を行う。
@@ -176,7 +172,7 @@ export { generateSlotKey } from "@hatchery/common";
 export async function runCommunityBatch(
   deps: RunCommunityBatchDeps,
 ): Promise<RunCommunityBatchResult> {
-  const apiKey = await getApiKey(deps.appSettingRepo, deps.anthropicApiKey);
+  const apiKey = deps.anthropicApiKey;
   if (!apiKey) {
     logBatchInfo("community_batch.skipped_no_api_key");
     return { posts: [], comments: [] };

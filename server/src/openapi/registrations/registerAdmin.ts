@@ -1,62 +1,17 @@
 import type { OpenAPIRegistry } from "@asteasolutions/zod-to-openapi";
 import {
-  AppSettingResponseSchema,
   BatchRunLogSchema,
   TokenUsageLogSchema,
-  UpdateAppSettingSchema,
 } from "@hatchery/common";
 import { z } from "zod";
 
 import type { RegistryContext } from "./shared.js";
 
 /**
- * 管理画面 API（#52）・バッチ実行ログ（#75）・トークン使用量ログ（#153）の OpenAPI 登録（#535）。
+ * 管理画面 API・バッチ実行ログ（#75）・トークン使用量ログ（#153）の OpenAPI 登録（#535）。
  */
 export function registerAdmin(registry: OpenAPIRegistry, ctx: RegistryContext): void {
   const { errorJson } = ctx;
-
-  // 管理画面 API（#52）。認証必須。
-  const AppSettingResponseComponent = registry.register(
-    "AppSettingResponse",
-    AppSettingResponseSchema.openapi({
-      description: "アプリ設定エントリ（API キーはマスク表示）",
-    }),
-  );
-
-  const UpdateAppSettingComponent = registry.register(
-    "UpdateAppSetting",
-    UpdateAppSettingSchema.openapi({ description: "設定更新リクエストボディ（key / value）" }),
-  );
-
-  registry.registerPath({
-    method: "get",
-    path: "/api/admin/settings",
-    summary: "アプリ設定一覧を取得（認証必須・#52）",
-    responses: {
-      200: {
-        description: "設定一覧（API キーはマスク表示）",
-        content: { "application/json": { schema: z.array(AppSettingResponseComponent) } },
-      },
-      401: { description: "未認証", ...errorJson },
-    },
-  });
-
-  registry.registerPath({
-    method: "patch",
-    path: "/api/admin/settings",
-    summary: "アプリ設定を更新（認証必須・#52）",
-    request: {
-      body: { content: { "application/json": { schema: UpdateAppSettingComponent } } },
-    },
-    responses: {
-      200: {
-        description: "更新後の設定（API キーはマスク表示）",
-        content: { "application/json": { schema: AppSettingResponseComponent } },
-      },
-      400: { description: "リクエストボディが不正（key 空など）", ...errorJson },
-      401: { description: "未認証", ...errorJson },
-    },
-  });
 
   // バッチ実行ログ（#75）。認証必須。
   const BatchRunLogComponent = registry.register(

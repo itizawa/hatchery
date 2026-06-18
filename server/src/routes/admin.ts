@@ -6,7 +6,6 @@ import {
   CreatePostRequestSchema,
   CreateWorkerSchema,
   NotFoundError,
-  UpdateAppSettingSchema,
   UpdateCommunitySchema,
 } from "@hatchery/common";
 import { randomUUID } from "crypto";
@@ -15,31 +14,12 @@ import { Router } from "express";
 import { requireAdminAccess } from "../middleware/requireAdminAccess.js";
 import { validateBody } from "../middleware/validateBody.js";
 import { toAdminCommunityResponse } from "./communityResponse.js";
-import type { AppSettingRepository } from "../persistence/appSettingRepository.js";
 import type { CommentRepository } from "../persistence/commentRepository.js";
 import type { CommunityRepository } from "../persistence/communityRepository.js";
 import type { PostRepository } from "../persistence/postRepository.js";
 import type { WorkerRepository } from "../persistence/workerRepository.js";
-import { decrypt, encrypt, maskApiKey } from "../utils/crypto.js";
-import { getApiKey } from "../utils/apiKey.js";
-
-const MASKED_KEYS = new Set(["CLAUDE_API_KEY"]);
-
-function toResponse(key: string, encryptedValue: string) {
-  let rawValue = "";
-  if (encryptedValue) {
-    try {
-      rawValue = decrypt(encryptedValue);
-    } catch {
-      return { key, maskedValue: "****" };
-    }
-  }
-  const maskedValue = MASKED_KEYS.has(key) ? maskApiKey(rawValue) : rawValue || null;
-  return { key, maskedValue };
-}
 
 export function createAdminRouter(
-  appSettingRepository: AppSettingRepository,
   workerRepository: WorkerRepository,
   communityRepository: CommunityRepository,
   postRepository: PostRepository,
@@ -48,30 +28,6 @@ export function createAdminRouter(
   const router = Router();
 
   router.use(requireAdminAccess);
-
-  router.get("/settings", async (_req, res, next) => {
-    try {
-      const settings = await appSettingRepository.findAll();
-      res.json(settings.map((s) => toResponse(s.key, s.value)));
-    } catch (err) {
-      next(err);
-    }
-  });
-
-  router.patch(
-    "/settings",
-    validateBody(UpdateAppSettingSchema),
-    async (req, res, next) => {
-      try {
-        const { key, value } = req.body as { key: string; value: string };
-        const encrypted = value ? encrypt(value) : "";
-        const setting = await appSettingRepository.upsert(key, encrypted);
-        res.json(toResponse(setting.key, setting.value));
-      } catch (err) {
-        next(err);
-      }
-    },
-  );
 
   router.delete("/workers/:id", async (req, res, next) => {
     try {
@@ -238,5 +194,3 @@ export function createAdminRouter(
 
   return router;
 }
-
-export { getApiKey };

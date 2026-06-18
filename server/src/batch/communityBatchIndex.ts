@@ -50,7 +50,6 @@ async function main(): Promise<void> {
 
   const [
     { prisma },
-    { createPrismaAppSettingRepository },
     { createPrismaBatchRunLogRepository },
     { createPrismaCommunityRepository },
     { createPrismaPostRepository },
@@ -61,7 +60,6 @@ async function main(): Promise<void> {
     { createPrismaWorldStateRepository },
   ] = await Promise.all([
     import("../persistence/prismaClient.js"),
-    import("../persistence/prismaAppSettingRepository.js"),
     import("../persistence/prismaBatchRunLogRepository.js"),
     import("../persistence/prismaCommunityRepository.js"),
     import("../persistence/prismaPostRepository.js"),
@@ -79,7 +77,6 @@ async function main(): Promise<void> {
       communityRepo: createPrismaCommunityRepository(prisma),
       postRepo: createPrismaPostRepository(prisma),
       commentRepo: createPrismaCommentRepository(prisma),
-      appSettingRepo: createPrismaAppSettingRepository(prisma),
       batchRunLogRepository: createPrismaBatchRunLogRepository(prisma),
       // vote 重み付き 1 コミュニティ選定の重み算出に使う（#486 / ADR-0030）。
       voteRepo: createPrismaVoteRepository(prisma),

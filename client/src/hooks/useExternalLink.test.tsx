@@ -1,20 +1,57 @@
 /**
- * useExternalLink フックのテスト（Issue #661）
+ * useExternalLink フックのテスト（Issue #661 / Issue #717）
  *
  * 受け入れ条件:
  * - 外部リンククリックでモーダルが開くこと（AC8）
  * - 「続行」で window.open が対象 URL で呼ばれること（AC3, AC8）
  * - 「キャンセル」で遷移しないこと（AC4, AC8）
- * - 「今後表示しない」永続化後はモーダルを挟まず遷移すること（AC5, AC8）
+ * - 「今後表示しない」永続化後はモーダルを挙まず遷移すること（AC5, AC8）
  * - 内部リンクが対象外であること（AC7, AC8）
+ * - isExternalUrl の各ケースを純粋関数として直接ユニットテスト（Issue #717）
  */
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ExternalLinkProvider, useExternalLink } from "./useExternalLink";
+import { ExternalLinkProvider, isExternalUrl, useExternalLink } from "./useExternalLink";
 
 const STORAGE_KEY = "hatchery:external-link:skip-warning";
+
+describe("isExternalUrl (#717)", () => {
+  // jsdom 環境では window.location.origin は "http://localhost" になる
+
+  it("外部 https URL → true", () => {
+    expect(isExternalUrl("https://example.com")).toBe(true);
+  });
+
+  it("外部 http URL → true", () => {
+    expect(isExternalUrl("http://example.com/path")).toBe(true);
+  });
+
+  it("相対パス /path → false", () => {
+    expect(isExternalUrl("/path")).toBe(false);
+  });
+
+  it("相対パス ./relative → false", () => {
+    expect(isExternalUrl("./relative")).toBe(false);
+  });
+
+  it("同一オリジン URL → false", () => {
+    expect(isExternalUrl(`${window.location.origin}/some/path`)).toBe(false);
+  });
+
+  it("非 http(s) スキーム ftp:// → false", () => {
+    expect(isExternalUrl("ftp://example.com")).toBe(false);
+  });
+
+  it("非 http(s) スキーム mailto: → false", () => {
+    expect(isExternalUrl("mailto:user@example.com")).toBe(false);
+  });
+
+  it("不正 URL（解析エラー） → false", () => {
+    expect(isExternalUrl("not-a-url")).toBe(false);
+  });
+});
 
 /** Node.js 26 の実験的 localStorage は --localstorage-file 未指定で undefined になるため
  * テスト用のインメモリ実装で置き換える。jsdom の Storage API と同等の動作をする。 */

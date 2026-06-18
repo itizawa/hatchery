@@ -77,3 +77,45 @@ describe("OgpMetaSchema (#515)", () => {
     expect(result.success).toBe(true);
   });
 });
+
+describe("OgpMetaSchema .max() バリデーション (#713)", () => {
+  it("title が 300 文字ちょうどは有効", () => {
+    const result = OgpMetaSchema.safeParse({ title: "a".repeat(300) });
+    expect(result.success).toBe(true);
+  });
+
+  it("title が 301 文字は reject する", () => {
+    const result = OgpMetaSchema.safeParse({ title: "a".repeat(301) });
+    expect(result.success).toBe(false);
+  });
+
+  it("description が 500 文字ちょうどは有効", () => {
+    const result = OgpMetaSchema.safeParse({ description: "a".repeat(500) });
+    expect(result.success).toBe(true);
+  });
+
+  it("description が 501 文字は reject する", () => {
+    const result = OgpMetaSchema.safeParse({ description: "a".repeat(501) });
+    expect(result.success).toBe(false);
+  });
+
+  it("image が 2048 文字ちょうどは有効", () => {
+    const result = OgpMetaSchema.safeParse({ image: "a".repeat(2048) });
+    expect(result.success).toBe(true);
+  });
+
+  it("image が 2049 文字は reject する", () => {
+    const result = OgpMetaSchema.safeParse({ image: "a".repeat(2049) });
+    expect(result.success).toBe(false);
+  });
+
+  it("site_name が 100 文字ちょうどは有効", () => {
+    const result = OgpMetaSchema.safeParse({ site_name: "a".repeat(100) });
+    expect(result.success).toBe(true);
+  });
+
+  it("site_name が 101 文字は reject する", () => {
+    const result = OgpMetaSchema.safeParse({ site_name: "a".repeat(101) });
+    expect(result.success).toBe(false);
+  });
+});

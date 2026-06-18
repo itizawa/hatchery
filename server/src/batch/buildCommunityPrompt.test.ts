@@ -399,6 +399,62 @@ describe("generationInstruction フォールバック（#488）", () => {
   });
 });
 
+describe("重複回避指示（#526）", () => {
+  const baseCommunity = {
+    id: "community-1",
+    slug: "technology",
+    name: "テクノロジー",
+    description: "テクノロジーとプログラミングの話題を楽しむコミュニティ。",
+    generationInstruction: null,
+    synopsis: null,
+    lastSlotKey: null,
+    iconUrl: null,
+    coverUrl: null,
+    createdAt: new Date("2026-01-01"),
+  };
+  const workers = [
+    { id: "haru", displayName: "haru", role: "ムードメーカー", personality: "明るく前向き" },
+    { id: "ken", displayName: "ken", role: "ベテラン", personality: "落ち着いた物知り" },
+  ];
+
+  it("recentLog があるとき重複回避の指示がプロンプトに含まれる (#526)", () => {
+    const { prompt } = buildCommunityPrompt({
+      community: baseCommunity,
+      workers,
+      recentLog: ["[technology] haru: TypeScript の新機能について", "[technology] ken: LLM の進歩が速い"],
+    });
+    expect(prompt).toContain("重複しない");
+  });
+
+  it("recentLog が空のとき重複回避の指示はプロンプトに含まれない (#526)", () => {
+    const { prompt } = buildCommunityPrompt({
+      community: baseCommunity,
+      workers,
+      recentLog: [],
+    });
+    expect(prompt).toBeTruthy();
+    expect(prompt).toContain("テクノロジーとプログラミングの話題を楽しむコミュニティ。");
+    expect(prompt).not.toContain("重複しない");
+  });
+
+  it("重複回避指示は直近ログ内容より後・JSON 出力指示より前に置かれる (#526)", () => {
+    const { prompt } = buildCommunityPrompt({
+      community: baseCommunity,
+      workers,
+      recentLog: ["[technology] haru: Rust を学んでみた"],
+    });
+    const recentLogContentIdx = prompt.indexOf("[technology] haru: Rust を学んでみた");
+    const avoidDuplicateIdx = prompt.indexOf("重複しない");
+    const outputFormatIdx = prompt.indexOf("以下のJSON形式のみで出力してください");
+
+    expect(recentLogContentIdx).toBeGreaterThanOrEqual(0);
+    expect(avoidDuplicateIdx).toBeGreaterThanOrEqual(0);
+    expect(outputFormatIdx).toBeGreaterThanOrEqual(0);
+    expect(recentLogContentIdx).toBeLessThan(avoidDuplicateIdx);
+    expect(avoidDuplicateIdx).toBeLessThan(outputFormatIdx);
+  });
+});
+
 describe("既存Post参照（#555）", () => {
   const workers = [{ id: "haru", displayName: "haru" }];
   const baseCommunity = {
@@ -477,5 +533,54 @@ describe("既存Post参照（#555）", () => {
     expect(typeof result.prompt).toBe("string");
     expect(result.prompt.length).toBeGreaterThan(0);
     expect(result.prompt).toContain("テク話");
+  });
+});
+
+describe("UUID誘導ラベル（#715）", () => {
+  const community = {
+    id: "c1", slug: "s", name: "N", description: "テスト",
+    generationInstruction: null, synopsis: null, lastSlotKey: null,
+    iconUrl: null, coverUrl: null, createdAt: new Date(),
+  };
+  const workers = [
+    { id: "550e8400-e29b-41d4-a716-446655440001", displayName: "haru" },
+    { id: "550e8400-e29b-41d4-a716-446655440002", displayName: "ken" },
+  ];
+
+  it("ワーカー一覧の ID ラベルに「author に指定するID（UUID）」が含まれる", () => {
+    const { prompt } = buildCommunityPrompt({ community, workers, recentLog: [] });
+    expect(prompt).toContain("author に指定するID（UUID）");
+  });
+
+  it("ワーカー一覧の名前ラベルに「名前（参考・author には使わない）」が含まれる", () => {
+    const { prompt } = buildCommunityPrompt({ community, workers, recentLog: [] });
+    expect(prompt).toContain("名前（参考・author には使わない）");
+  });
+
+  it("JSON 例示の author フィールドに「UUID（上記ワーカー一覧の「author に指定するID」から選択」が含まれる", () => {
+    const { prompt } = buildCommunityPrompt({ community, workers, recentLog: [] });
+    expect(prompt).toContain("UUID（上記ワーカー一覧の「author に指定するID」から選択");
+  });
+
+  it("注意事項セクションに UUID の文言が含まれる（author は UUID を使うべきという誘導）", () => {
+    const { prompt } = buildCommunityPrompt({ community, workers, recentLog: [] });
+    // 注意事項の author 指示に UUID が言及されていること
+    const authorNoteIdx = prompt.indexOf("author には必ず");
+    expect(authorNoteIdx).toBeGreaterThanOrEqual(0);
+    const afterAuthorNote = prompt.slice(authorNoteIdx, authorNoteIdx + 100);
+    expect(afterAuthorNote).toContain("UUID");
+  });
+
+  it("replies セクションの author フィールドも UUID 指定の表現になっている（recentPosts あり）", () => {
+    const { prompt } = buildCommunityPrompt({
+      community,
+      workers,
+      recentLog: [],
+      recentPosts: [{ ref: "ref-1", id: "post-uuid-1", title: "テスト投稿" }],
+    });
+    const repliesIdx = prompt.indexOf('"replies"');
+    expect(repliesIdx).toBeGreaterThanOrEqual(0);
+    const repliesSection = prompt.slice(repliesIdx, repliesIdx + 300);
+    expect(repliesSection).toContain("UUID（上記ワーカー一覧の「author に指定するID」から選択");
   });
 });

@@ -3,7 +3,9 @@ import {
   CreateWorkerSchema,
   SetWorkerCommunitiesSchema,
   UpdateWorkerSchema,
+  WORKER_PAGINATION_LIMIT_MAX,
   WorkerCommunityIdsSchema,
+  WorkerListQuerySchema,
 } from "@hatchery/common";
 import { z } from "zod";
 
@@ -26,15 +28,33 @@ export function registerWorkers(registry: OpenAPIRegistry, ctx: RegistryContext)
     CreateWorkerSchema.openapi({ description: "Worker 作成リクエストボディ（#217 / #337）" }),
   );
 
+  const WorkerListQueryComponent = registry.register(
+    "WorkerListQuery",
+    WorkerListQuerySchema.openapi({ description: "Worker 一覧取得のクエリパラメータ（ページネーション・#545）" }),
+  );
+
   registry.registerPath({
     method: "get",
     path: "/api/workers",
-    summary: "Worker 一覧を取得（認証不要・#240）",
+    summary: "Worker 一覧を取得（認証不要・ページネーション対応・#240 / #545）",
+    request: {
+      query: WorkerListQueryComponent,
+    },
     responses: {
       200: {
-        description: "Worker 一覧（#331: Worker は AI 投稿者のみ）",
-        content: { "application/json": { schema: z.array(WorkerComponent) } },
+        description: "Worker 一覧（ページネーション形式・#545）",
+        content: {
+          "application/json": {
+            schema: z.object({
+              workers: z.array(WorkerComponent),
+              total: z.number().int().min(0),
+              page: z.number().int().min(1),
+              limit: z.number().int().min(1).max(WORKER_PAGINATION_LIMIT_MAX),
+            }),
+          },
+        },
       },
+      400: { description: "バリデーションエラー（page/limit が範囲外）", ...errorJson },
     },
   });
 

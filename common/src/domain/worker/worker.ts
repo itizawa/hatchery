@@ -50,6 +50,28 @@ export const CreateWorkerSchema = z.object({
 
 export type CreateWorkerInput = z.infer<typeof CreateWorkerSchema>;
 
+/** ページネーションの 1 ページあたり件数の上限（#545）。 */
+export const WORKER_PAGINATION_LIMIT_MAX = 100;
+
+/** GET /api/workers のクエリパラメータスキーマ（#545）。 */
+export const WorkerListQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).max(9999).optional(),
+  limit: z.coerce.number().int().min(1).max(WORKER_PAGINATION_LIMIT_MAX).optional(),
+  includeDeleted: z.coerce.boolean().optional(),
+});
+
+export type WorkerListQuery = z.infer<typeof WorkerListQuerySchema>;
+
+/** GET /api/workers のレスポンススキーマ（ページネーション対応・#545）。 */
+export const WorkerListResponseSchema = z.object({
+  workers: z.array(WorkerSchema),
+  total: z.number().int().min(0),
+  page: z.number().int().min(1),
+  limit: z.number().int().min(1),
+});
+
+export type WorkerListResponse = z.infer<typeof WorkerListResponseSchema>;
+
 export const DEFAULT_WORKERS: readonly Worker[] = [
   { id: "haru", displayName: "haru", role: "ムードメーカー" },
   { id: "ken", displayName: "ken", role: "ベテラン" },

@@ -1,8 +1,7 @@
 import { BadRequestError, NotFoundError, SetWorkerCommunitiesSchema } from "@hatchery/common";
 import { Router } from "express";
 
-import { requireAdmin } from "../middleware/requireAdmin.js";
-import { requireAuth } from "../middleware/requireAuth.js";
+import { requireAdminAccess } from "../middleware/requireAdminAccess.js";
 import { validateBody } from "../middleware/validateBody.js";
 import type { CommunityRepository } from "../persistence/communityRepository.js";
 import type { WorkerRepository } from "../persistence/workerRepository.js";
@@ -22,7 +21,7 @@ export function createAdminWorkerCommunitiesRouter(
 ): Router {
   const router = Router();
 
-  router.use(requireAuth, requireAdmin);
+  router.use(requireAdminAccess);
 
   router.get("/workers/:id/communities", async (req, res, next) => {
     try {

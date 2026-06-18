@@ -23,7 +23,11 @@ function jsonResponse(status: number, body?: unknown): Response {
 
 /** fetch をスタブして GET /api/workers の応答を制御する。 */
 function stubWorkers(status: number, workers?: Worker[]) {
-  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(status, workers)));
+  const body =
+    workers !== undefined
+      ? { workers, total: workers.length, page: 1, limit: 10 }
+      : undefined;
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(status, body)));
 }
 
 /** 解決しない fetch をスタブして Suspense fallback を表示し続けさせる。 */

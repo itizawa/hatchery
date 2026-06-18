@@ -1,4 +1,6 @@
 export { default as Alert } from "@mui/material/Alert";
+export { default as Fab } from "@mui/material/Fab";
+export { default as Fade } from "@mui/material/Fade";
 export { default as Divider } from "@mui/material/Divider";
 export { default as ListItemIcon } from "@mui/material/ListItemIcon";
 export { default as Avatar } from "@mui/material/Avatar";
@@ -41,6 +43,7 @@ export { default as TableBody } from "@mui/material/TableBody";
 export { default as TableCell } from "@mui/material/TableCell";
 export { default as TableContainer } from "@mui/material/TableContainer";
 export { default as TableHead } from "@mui/material/TableHead";
+export { default as TablePagination } from "@mui/material/TablePagination";
 export { default as TableRow } from "@mui/material/TableRow";
 export { default as Tabs } from "@mui/material/Tabs";
 export { default as TextField } from "@mui/material/TextField";

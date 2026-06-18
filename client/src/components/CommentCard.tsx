@@ -78,25 +78,21 @@ export const CommentCard = ({
           pl: depth > 0 ? 1 : 0,
         }}
       >
-        <Box sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}>
-          <Box sx={{ pt: 0.25 }}>
-            <VoteControl
-              score={comment.score}
-              onVote={onVote}
-              currentVote={currentVote}
-              disabled={voteDisabled}
-            />
-          </Box>
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Box
-              sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5, flexWrap: "wrap" }}
-            >
-              <AuthorByline author={comment.author} authorWorker={comment.author_worker} />
-              <PostedTime createdAt={comment.created_at} />
-            </Box>
-            <MarkdownContent content={comment.text} variant="body2" />
-            {firstUrl && <OgpCard url={firstUrl} />}
-          </Box>
+        <Box
+          sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5, flexWrap: "wrap" }}
+        >
+          <AuthorByline author={comment.author} authorWorker={comment.author_worker} />
+          <PostedTime createdAt={comment.created_at} />
+        </Box>
+        <MarkdownContent content={comment.text} variant="body2" />
+        {firstUrl && <OgpCard url={firstUrl} />}
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 0.5 }}>
+          <VoteControl
+            score={comment.score}
+            onVote={onVote}
+            currentVote={currentVote}
+            disabled={voteDisabled}
+          />
         </Box>
       </Box>
 

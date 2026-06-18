@@ -48,6 +48,12 @@ export interface WorkerRepository {
   updateImageUrl(id: string, imageUrl: string): Promise<WorkerRecord | null>;
   /** 新しい Worker を作成して返す（#217）。 */
   create(input: CreateWorkerInput): Promise<WorkerRecord>;
+  /** Worker をページネーションで取得する（#545）。includeDeleted=true で論理削除済も含む。 */
+  listBotWorkersPaginated(
+    page: number,
+    limit: number,
+    includeDeleted?: boolean,
+  ): Promise<{ workers: WorkerRecord[]; total: number }>;
 }
 
 export function createInMemoryWorkerRepository(
@@ -147,6 +153,17 @@ export function createInMemoryWorkerRepository(
       };
       workers.push(record);
       return Promise.resolve({ ...record });
+    },
+
+    listBotWorkersPaginated(
+      page: number,
+      limit: number,
+      includeDeleted = false,
+    ): Promise<{ workers: WorkerRecord[]; total: number }> {
+      const filtered = includeDeleted ? workers : workers.filter((w) => w.deletedAt === null);
+      const total = filtered.length;
+      const sliced = filtered.slice((page - 1) * limit, page * limit);
+      return Promise.resolve({ workers: sliced.map((w) => ({ ...w })), total });
     },
   };
 }

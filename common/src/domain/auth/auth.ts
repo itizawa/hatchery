@@ -14,11 +14,11 @@ export type UserRole = z.infer<typeof UserRoleSchema>;
 export const AuthUserSchema = z.object({
   id: z.string(),
   email: z.string().email().max(EMAIL_MAX_LENGTH),
-  displayName: z.string(),
+  displayName: z.string().max(DISPLAY_NAME_MAX_LENGTH),
   // #136: 権限ロール（必須）。
   role: UserRoleSchema,
   // #51: プロフィール画像 URL（任意）。
-  avatarUrl: z.string().optional(),
+  avatarUrl: z.string().max(AVATAR_URL_MAX_LENGTH).optional(),
 });
 
 export type AuthUser = z.infer<typeof AuthUserSchema>;

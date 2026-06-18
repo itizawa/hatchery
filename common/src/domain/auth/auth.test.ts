@@ -104,6 +104,50 @@ describe("AuthUserSchema (#455 Google-only auth)", () => {
   });
 });
 
+describe("AuthUserSchema .max() バリデーション (#714)", () => {
+  it("displayName が DISPLAY_NAME_MAX_LENGTH 文字ちょうどは有効", () => {
+    const result = AuthUserSchema.safeParse({
+      id: "u1",
+      email: "a@b.com",
+      displayName: "a".repeat(DISPLAY_NAME_MAX_LENGTH),
+      role: "member",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("displayName が DISPLAY_NAME_MAX_LENGTH + 1 文字は reject する", () => {
+    const result = AuthUserSchema.safeParse({
+      id: "u1",
+      email: "a@b.com",
+      displayName: "a".repeat(DISPLAY_NAME_MAX_LENGTH + 1),
+      role: "member",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it(`avatarUrl が AVATAR_URL_MAX_LENGTH 文字ちょうどは有効`, () => {
+    const result = AuthUserSchema.safeParse({
+      id: "u1",
+      email: "a@b.com",
+      displayName: "Alice",
+      role: "member",
+      avatarUrl: "a".repeat(AVATAR_URL_MAX_LENGTH),
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it(`avatarUrl が AVATAR_URL_MAX_LENGTH + 1 文字は reject する`, () => {
+    const result = AuthUserSchema.safeParse({
+      id: "u1",
+      email: "a@b.com",
+      displayName: "Alice",
+      role: "member",
+      avatarUrl: "a".repeat(AVATAR_URL_MAX_LENGTH + 1),
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
 describe("LoginRequestSchema の廃止 (#455)", () => {
   it("LoginRequestSchema は common から export されていない", async () => {
     const authModule = await import("./auth.js");

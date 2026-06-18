@@ -35,7 +35,7 @@ export type OgpUrlQuery = z.infer<typeof OgpUrlQuerySchema>;
 export const OgpMetaSchema = z.object({
   title: z.string().max(300).nullable().optional(),
   description: z.string().max(500).nullable().optional(),
-  image: z.string().max(2048).nullable().optional(),
+  image: z.string().max(OGP_URL_MAX_LENGTH).nullable().optional(),
   site_name: z.string().max(100).nullable().optional(),
 });
 

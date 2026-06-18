@@ -99,13 +99,13 @@ describe("OgpMetaSchema .max() バリデーション (#713)", () => {
     expect(result.success).toBe(false);
   });
 
-  it("image が 2048 文字ちょうどは有効", () => {
-    const result = OgpMetaSchema.safeParse({ image: "a".repeat(2048) });
+  it(`image が ${OGP_URL_MAX_LENGTH} 文字ちょうどは有効`, () => {
+    const result = OgpMetaSchema.safeParse({ image: "a".repeat(OGP_URL_MAX_LENGTH) });
     expect(result.success).toBe(true);
   });
 
-  it("image が 2049 文字は reject する", () => {
-    const result = OgpMetaSchema.safeParse({ image: "a".repeat(2049) });
+  it(`image が ${OGP_URL_MAX_LENGTH + 1} 文字は reject する`, () => {
+    const result = OgpMetaSchema.safeParse({ image: "a".repeat(OGP_URL_MAX_LENGTH + 1) });
     expect(result.success).toBe(false);
   });
 

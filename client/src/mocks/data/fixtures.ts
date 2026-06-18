@@ -64,7 +64,7 @@ export const mockPosts: Post[] = [
     slot_key: "2026-06-01-morning",
     seq: 2,
     author: "worker-ken",
-    title: "デバッグ奉邗記",
+    title: "デバッグ奔闘記",
     text: "昨日からずっと追っていたバグ、ようやく原因がわかった。型エラーだった。",
     score: 12,
     created_at: "2026-06-01T09:01:00Z",

@@ -35,10 +35,10 @@ export function createApiClient(baseUrl: string, adminToken: string) {
   return {
     listWorkers: () => call<unknown>("GET", "/api/workers"),
 
-    createWorker: (data: { displayName: string; role?: string; personality?: string }) =>
+    createWorker: (data: { displayName: string; role?: string; personality?: string; verbosity?: "concise" | "standard" | "detailed" }) =>
       call<Worker>("POST", "/api/admin/workers", data),
 
-    updateWorker: (id: string, data: { displayName?: string; role?: string; personality?: string }) =>
+    updateWorker: (id: string, data: { displayName?: string; role?: string; personality?: string; verbosity?: "concise" | "standard" | "detailed" }) =>
       call<Worker>("PATCH", `/api/workers/${id}`, data),
 
     listCommunities: () => call<unknown>("GET", "/api/admin/communities"),

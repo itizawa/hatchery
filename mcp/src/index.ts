@@ -31,12 +31,13 @@ server.tool(
   "create_worker",
   "新しいワーカーを作成する（POST /api/admin/workers）",
   {
-    displayName: z.string().min(1).max(100).describe("ワーカーの表示名"),
-    role: z.string().optional().describe("ワーカーの役割（任意）"),
-    personality: z.string().optional().describe("ワーカーの性格設定（任意）"),
+    displayName: z.string().min(1).max(50).describe("ワーカーの表示名（最大50文字）"),
+    role: z.string().max(50).optional().describe("ワーカーの役割（任意・最大50文字）"),
+    personality: z.string().max(500).optional().describe("ワーカーの性格設定（任意・最大500文字）"),
+    verbosity: z.enum(["concise", "standard", "detailed"]).optional().describe("文章量設定（任意）"),
   },
-  async ({ displayName, role, personality }) => {
-    const result = await api.createWorker({ displayName, role, personality });
+  async ({ displayName, role, personality, verbosity }) => {
+    const result = await api.createWorker({ displayName, role, personality, verbosity });
     return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
   },
 );
@@ -46,12 +47,16 @@ server.tool(
   "ワーカーを更新する（PATCH /api/workers/:id）",
   {
     id: z.string().min(1).describe("ワーカー ID"),
-    displayName: z.string().min(1).max(100).optional().describe("新しい表示名"),
-    role: z.string().optional().describe("新しい役割"),
-    personality: z.string().optional().describe("新しい性格設定"),
+    displayName: z.string().min(1).max(50).optional().describe("新しい表示名（最大50文字）"),
+    role: z.string().max(50).optional().describe("新しい役割（最大50文字）"),
+    personality: z.string().max(500).optional().describe("新しい性格設定（最大500文字）"),
+    verbosity: z.enum(["concise", "standard", "detailed"]).optional().describe("新しい文章量設定"),
   },
-  async ({ id, displayName, role, personality }) => {
-    const result = await api.updateWorker(id, { displayName, role, personality });
+  async ({ id, displayName, role, personality, verbosity }) => {
+    if (displayName === undefined && role === undefined && personality === undefined && verbosity === undefined) {
+      throw new Error("更新するフィールドを少なくとも1つ指定してください（displayName / role / personality / verbosity）");
+    }
+    const result = await api.updateWorker(id, { displayName, role, personality, verbosity });
     return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
   },
 );

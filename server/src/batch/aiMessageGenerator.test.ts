@@ -69,22 +69,39 @@ describe("aiMessageGenerator (#401)", () => {
       expect(console.log).not.toHaveBeenCalled();
     });
 
-    it("stop_reason が 'max_tokens' でもスローせずテキストを返す", async () => {
+    it("stop_reason が 'max_tokens' でもスローせず text を返す", async () => {
       const truncatedText = '{"topic":"test","po';
       mockCreate.mockResolvedValue(makeMessage("max_tokens", truncatedText));
 
       const result = await generateConversationWithClaude("test prompt", "api-key");
 
-      expect(result).toBe(truncatedText);
+      expect(result.text).toBe(truncatedText);
     });
 
-    it("生成されたテキストを返す", async () => {
+    it("生成されたテキストを result.text で返す", async () => {
       const expected = '{"topic":"test","posts":[]}';
       mockCreate.mockResolvedValue(makeMessage("end_turn", expected));
 
       const result = await generateConversationWithClaude("test prompt", "api-key");
 
-      expect(result).toBe(expected);
+      expect(result.text).toBe(expected);
+    });
+
+    it("message.usage から inputTokens / outputTokens を返す (#663)", async () => {
+      mockCreate.mockResolvedValue(makeMessage("end_turn", '{"topic":"t","posts":[]}'));
+
+      const result = await generateConversationWithClaude("test prompt", "api-key");
+
+      expect(result.inputTokens).toBe(10);
+      expect(result.outputTokens).toBe(20);
+    });
+
+    it("使用モデルを result.model で返す (#663)", async () => {
+      mockCreate.mockResolvedValue(makeMessage("end_turn", '{"topic":"t","posts":[]}'));
+
+      const result = await generateConversationWithClaude("test prompt", "api-key");
+
+      expect(result.model).toBe("claude-sonnet-4-6");
     });
   });
 
@@ -123,14 +140,25 @@ describe("aiMessageGenerator (#401)", () => {
       expect(callArgs.max_tokens).toBeGreaterThanOrEqual(4096);
     });
 
-    it("生成テキストを返す", async () => {
+    it("生成テキストを result.text で返す", async () => {
       const expected = '{"topic":"t","posts":[]}';
       mockCreate.mockResolvedValue(makeMessage("end_turn", expected));
 
       const generate = createClaudeConversationGenerator("claude-haiku-4-5");
       const result = await generate("p", "api-key");
 
-      expect(result).toBe(expected);
+      expect(result.text).toBe(expected);
+    });
+
+    it("createClaudeConversationGenerator の結果も usage を返す (#663)", async () => {
+      mockCreate.mockResolvedValue(makeMessage("end_turn", '{"topic":"t","posts":[]}'));
+
+      const generate = createClaudeConversationGenerator("claude-haiku-4-5");
+      const result = await generate("p", "api-key");
+
+      expect(result.inputTokens).toBe(10);
+      expect(result.outputTokens).toBe(20);
+      expect(result.model).toBe("claude-sonnet-4-6");
     });
   });
 
@@ -144,7 +172,7 @@ describe("aiMessageGenerator (#401)", () => {
       results?: Array<{
         custom_id: string;
         result:
-          | { type: "succeeded"; message: { content: Array<{ type: string; text?: string }> } }
+          | { type: "succeeded"; message: { content: Array<{ type: string; text?: string }>; usage?: { input_tokens: number; output_tokens: number }; model?: string } }
           | { type: "errored"; error: { type: string } };
       }>;
     }) => {
@@ -188,13 +216,13 @@ describe("aiMessageGenerator (#401)", () => {
         sleep,
         customId: "community-1",
       });
-      const text = await generate("prompt", "api-key");
+      const result = await generate("prompt", "api-key");
 
       expect(create).toHaveBeenCalledTimes(1);
       // ended になるまでポーリングする（in_progress を 1 回挟む）
       expect(retrieve.mock.calls.length).toBeGreaterThanOrEqual(2);
       expect(results).toHaveBeenCalledTimes(1);
-      expect(text).toBe(expectedText);
+      expect(result.text).toBe(expectedText);
     });
 
     it("create に渡す custom_id・model・prompt が反映される", async () => {
@@ -238,9 +266,9 @@ describe("aiMessageGenerator (#401)", () => {
         sleep: () => Promise.resolve(),
         customId: "community-1",
       });
-      const text = await generate("prompt", "api-key");
+      const result = await generate("prompt", "api-key");
 
-      expect(text).toBe("");
+      expect(result.text).toBe("");
     });
 
     it("errored 結果のときは空文字を返す", async () => {
@@ -255,9 +283,38 @@ describe("aiMessageGenerator (#401)", () => {
         sleep: () => Promise.resolve(),
         customId: "community-1",
       });
-      const text = await generate("prompt", "api-key");
+      const result = await generate("prompt", "api-key");
 
-      expect(text).toBe("");
+      expect(result.text).toBe("");
+    });
+
+    it("succeeded 結果に usage があれば inputTokens / outputTokens / model を返す (#663)", async () => {
+      const { client } = buildBatchClient({
+        results: [
+          {
+            custom_id: "community-1",
+            result: {
+              type: "succeeded",
+              message: {
+                content: [{ type: "text", text: expectedText }],
+                usage: { input_tokens: 30, output_tokens: 40 },
+                model: "claude-haiku-4-5",
+              },
+            },
+          },
+        ],
+      });
+
+      const generate = createBatchConversationGenerator({
+        createClient: () => client,
+        sleep: () => Promise.resolve(),
+        customId: "community-1",
+      });
+      const result = await generate("prompt", "api-key");
+
+      expect(result.inputTokens).toBe(30);
+      expect(result.outputTokens).toBe(40);
+      expect(result.model).toBe("claude-haiku-4-5");
     });
   });
 });

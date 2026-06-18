@@ -74,7 +74,7 @@ describe("communityBatchIndex (#383)", () => {
   /** スタブ依存一式（DB・Anthropic SDK に実アクセスしない） */
   const buildCliDeps = (
     communities: CommunityRecord[],
-    generate: (prompt: string, apiKey: string) => Promise<string>,
+    generate: (prompt: string, apiKey: string) => Promise<{ text: string }>,
   ): CommunityBatchCliDeps & { disconnect: ReturnType<typeof vi.fn> } => {
     const disconnect = vi.fn().mockResolvedValue(undefined);
     return {
@@ -98,7 +98,7 @@ describe("communityBatchIndex (#383)", () => {
   };
 
   it("複数 community があっても 1 定時 = 1 コミュニティのみ生成される（#486）", async () => {
-    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+    const generate = vi.fn().mockResolvedValue({ text: validGenerationOutput });
     // rng=0 → community1 が選定される。
     const cliDeps = buildCliDeps([community1, community2], generate);
 
@@ -133,7 +133,7 @@ describe("communityBatchIndex (#383)", () => {
   });
 
   it("正常終了時に disconnect が 1 回呼ばれる", async () => {
-    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+    const generate = vi.fn().mockResolvedValue({ text: validGenerationOutput });
     const cliDeps = buildCliDeps([community1], generate);
 
     await runCommunityBatchCli(cliDeps);

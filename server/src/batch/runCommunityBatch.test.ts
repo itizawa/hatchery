@@ -1041,6 +1041,7 @@ describe("runCommunityBatch トークン使用量記録 (#663)", () => {
         model: "claude-sonnet-4-6",
         inputTokens: 100,
         outputTokens: 200,
+        batchRunLogId: expect.any(String),
       }),
     );
   });

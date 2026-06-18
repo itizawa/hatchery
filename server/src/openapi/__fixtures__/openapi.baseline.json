@@ -2292,7 +2292,7 @@
             },
             "required": true,
             "name": "slug",
-            "in": "query"
+            "in": "path"
           }
         ],
         "responses": {

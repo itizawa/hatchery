@@ -21,9 +21,16 @@ function jsonResponse(status: number, body?: unknown): Response {
   });
 }
 
-/** fetch をスタブして GET /api/workers の応答を制御する。 */
+/**
+ * fetch をスタブして GET /api/workers の応答を制御する。
+ * #545 でレスポンスは { workers, total, page, limit } 形式になったため、
+ * 配列が渡された場合はページネーション形式にラップする。
+ */
 function stubWorkers(status: number, workers?: Worker[]) {
-  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(status, workers)));
+  const body = Array.isArray(workers)
+    ? { workers, total: workers.length, page: 1, limit: 10 }
+    : workers;
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(status, body)));
 }
 
 /** 解決しない fetch をスタブして Suspense fallback を表示し続けさせる。 */

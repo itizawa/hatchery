@@ -141,7 +141,8 @@ describe("GET /api/workers（Bot Worker 一覧 / #240）", () => {
   });
 
   // #331: ADR-0020 後処理。Worker は AI 投稿者のみとなり isBot フィルタを撤廃した（全 Worker を返す）。
-  it("全 Worker を配列で返す（#331・isBot フィルタ撤廃）", async () => {
+  // #545: サーバーサイドページネーション化により応答は { workers, total, page, limit } 形式。
+  it("全 Worker を { workers, total } 形式で返す（#331・isBot フィルタ撤廃 / #545）", async () => {
     const { app } = await buildApp(
       createInMemoryWorkerRepository([
         { id: "bot1", displayName: "BotA", role: null, personality: null, imageUrl: null },
@@ -150,19 +151,21 @@ describe("GET /api/workers（Bot Worker 一覧 / #240）", () => {
     );
     const res = await request(app).get("/api/workers");
     expect(res.status).toBe(200);
-    expect(Array.isArray(res.body)).toBe(true);
-    expect(res.body.map((w: { id: string }) => w.id).sort()).toEqual(["bot1", "bot2"]);
-    expect(res.body.every((w: object) => !("isBot" in w))).toBe(true);
+    expect(Array.isArray(res.body.workers)).toBe(true);
+    expect(res.body.total).toBe(2);
+    expect(res.body.workers.map((w: { id: string }) => w.id).sort()).toEqual(["bot1", "bot2"]);
+    expect(res.body.workers.every((w: object) => !("isBot" in w))).toBe(true);
   });
 
-  it("Bot が存在しない場合は空配列を返す", async () => {
+  it("Bot が存在しない場合は空の workers と total=0 を返す（#545）", async () => {
     const { app } = await buildApp(createInMemoryWorkerRepository([]));
     const res = await request(app).get("/api/workers");
     expect(res.status).toBe(200);
-    expect(res.body).toEqual([]);
+    expect(res.body.workers).toEqual([]);
+    expect(res.body.total).toBe(0);
   });
 
-  it("論理削除済み Bot は通常一覧に含まれない（#218）", async () => {
+  it("論理削除済み Bot は通常一覧に含まれない（#218 / #545）", async () => {
     const { app } = await buildApp(
       createInMemoryWorkerRepository([
         { id: "bot1", displayName: "BotA", role: null, personality: null, deletedAt: new Date() },
@@ -170,10 +173,11 @@ describe("GET /api/workers（Bot Worker 一覧 / #240）", () => {
     );
     const res = await request(app).get("/api/workers");
     expect(res.status).toBe(200);
-    expect(res.body).toEqual([]);
+    expect(res.body.workers).toEqual([]);
+    expect(res.body.total).toBe(0);
   });
 
-  it("includeDeleted=true を指定すると論理削除済み Bot も含まれる（#218）", async () => {
+  it("includeDeleted=true を指定すると論理削除済み Bot も含まれる（#218 / #545）", async () => {
     const { app } = await buildApp(
       createInMemoryWorkerRepository([
         { id: "bot1", displayName: "ActiveBot", role: null, personality: null },
@@ -182,6 +186,7 @@ describe("GET /api/workers（Bot Worker 一覧 / #240）", () => {
     );
     const res = await request(app).get("/api/workers?includeDeleted=true");
     expect(res.status).toBe(200);
-    expect(res.body.map((w: { id: string }) => w.id).sort()).toEqual(["bot1", "bot2"]);
+    expect(res.body.workers.map((w: { id: string }) => w.id).sort()).toEqual(["bot1", "bot2"]);
+    expect(res.body.total).toBe(2);
   });
 });

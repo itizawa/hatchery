@@ -73,7 +73,13 @@ describe("useBotWorkers (GET /api/workers, useSuspenseQuery)", () => {
   });
 
   it("200 のとき Worker 配列を data として解決する（data は undefined を取らない）", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(200, [mockWorker])));
+    // #545: GET /api/workers はページネーション形式 { workers, total, page, limit } を返す。
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        jsonResponse(200, { workers: [mockWorker], total: 1, page: 1, limit: 100 }),
+      ),
+    );
     const { wrapper } = createSuspenseWrapper();
     const { result } = renderHook(() => useBotWorkers(), { wrapper });
 

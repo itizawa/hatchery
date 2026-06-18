@@ -150,10 +150,7 @@ interface CommunityBatchResult {
   appearedWorkerIds: Set<string>;
 }
 
-/**
- * 1 コミュニティを処理する内部関数（#671 / ADR-0033）。
- * 成功時は CommunityBatchResult を返す。失敗時は例外を throw する。
- */
+/** 1 コミュニティを処理する（#671 / ADR-0033）。失敗時は例外を throw する。 */
 async function processCommunity({
   community,
   deps,
@@ -165,6 +162,7 @@ async function processCommunity({
   now,
   dripWindowMs,
   currentWorkerStates,
+  botWorkersPromise,
 }: {
   community: CommunityRecord;
   deps: RunCommunityBatchDeps;
@@ -176,14 +174,14 @@ async function processCommunity({
   now: Date;
   dripWindowMs: number;
   currentWorkerStates: Record<string, WorkerState>;
+  botWorkersPromise: Promise<readonly WorkerRecord[]>;
 }): Promise<CommunityBatchResult> {
   const worldStateRepo = deps.worldStateRepository;
   const appearedWorkerIds = new Set<string>();
 
   // community 別の登場ワーカーを DB から解決する（#489）。
   const communityWorkers = await deps.workerCommunityRepo.listWorkersByCommunity(community.id);
-  const botWorkers =
-    communityWorkers.length > 0 ? [] : ((await deps.botWorkerProvider?.()) ?? []);
+  const botWorkers = communityWorkers.length > 0 ? [] : await botWorkersPromise;
   const resolvedWorkers = selectCommunityWorkers(communityWorkers, botWorkers);
   if (resolvedWorkers.length === 0) {
     logBatchInfo("community_batch.skipped_no_workers", { communityId: community.id });
@@ -383,6 +381,11 @@ export async function runCommunityBatch(
   const currentWorldState = worldStateRepo ? await worldStateRepo.get() : null;
   const currentWorkerStates: Record<string, WorkerState> = currentWorldState?.workerStates ?? {};
 
+  // botWorkerProvider を先に 1 回だけ呼び出し、並列処理で N 重呼び出しになるのを防ぐ（#671）。
+  const botWorkersPromise: Promise<readonly WorkerRecord[]> = deps.botWorkerProvider
+    ? deps.botWorkerProvider()
+    : Promise.resolve([]);
+
   // 全コミュニティを並列処理する（#671 / ADR-0033）
   const results = await Promise.allSettled(
     communities.map((community) =>
@@ -397,6 +400,7 @@ export async function runCommunityBatch(
         now,
         dripWindowMs,
         currentWorkerStates,
+        botWorkersPromise,
       }),
     ),
   );
@@ -419,13 +423,20 @@ export async function runCommunityBatch(
       logBatchError("community_batch.community_failed", result.reason, {
         communityId: community.id,
       });
-      // 失敗コミュニティごとに BatchRunLog(failure) を記録する（#671 / ADR-0033）
-      await deps.batchRunLogRepository?.create({
-        status: "failure",
-        messageCount: 0,
-        errorMessage: message,
-        errorCode: null,
-      });
+      // 失敗コミュニティごとに BatchRunLog(failure) を記録する（#671 / ADR-0033）。
+      // DB エラーで throw してもループを継続する（他コミュニティのログ記録を失わない）。
+      try {
+        await deps.batchRunLogRepository?.create({
+          status: "failure",
+          messageCount: 0,
+          errorMessage: message,
+          errorCode: null,
+        });
+      } catch (logErr) {
+        logBatchError("community_batch.failure_log_write_failed", logErr, {
+          communityId: community.id,
+        });
+      }
     }
   }
 

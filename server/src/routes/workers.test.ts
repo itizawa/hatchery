@@ -150,16 +150,16 @@ describe("GET /api/workers（Bot Worker 一覧 / #240）", () => {
     );
     const res = await request(app).get("/api/workers");
     expect(res.status).toBe(200);
-    expect(Array.isArray(res.body)).toBe(true);
-    expect(res.body.map((w: { id: string }) => w.id).sort()).toEqual(["bot1", "bot2"]);
-    expect(res.body.every((w: object) => !("isBot" in w))).toBe(true);
+    expect(Array.isArray(res.body.workers)).toBe(true);
+    expect(res.body.workers.map((w: { id: string }) => w.id).sort()).toEqual(["bot1", "bot2"]);
+    expect(res.body.workers.every((w: object) => !("isBot" in w))).toBe(true);
   });
 
   it("Bot が存在しない場合は空配列を返す", async () => {
     const { app } = await buildApp(createInMemoryWorkerRepository([]));
     const res = await request(app).get("/api/workers");
     expect(res.status).toBe(200);
-    expect(res.body).toEqual([]);
+    expect(res.body.workers).toEqual([]);
   });
 
   it("論理削除済み Bot は通常一覧に含まれない（#218）", async () => {
@@ -170,7 +170,7 @@ describe("GET /api/workers（Bot Worker 一覧 / #240）", () => {
     );
     const res = await request(app).get("/api/workers");
     expect(res.status).toBe(200);
-    expect(res.body).toEqual([]);
+    expect(res.body.workers).toEqual([]);
   });
 
   it("includeDeleted=true を指定すると論理削除済み Bot も含まれる（#218）", async () => {
@@ -182,6 +182,6 @@ describe("GET /api/workers（Bot Worker 一覧 / #240）", () => {
     );
     const res = await request(app).get("/api/workers?includeDeleted=true");
     expect(res.status).toBe(200);
-    expect(res.body.map((w: { id: string }) => w.id).sort()).toEqual(["bot1", "bot2"]);
+    expect(res.body.workers.map((w: { id: string }) => w.id).sort()).toEqual(["bot1", "bot2"]);
   });
 });

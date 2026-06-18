@@ -7,7 +7,7 @@ export interface WorkerDef {
   displayName: string;
   role?: string | null;
   personality?: string | null;
-  /** 文章量設定（#625）。concise / standard / detailed の 3 段階。省略・null は standard 相当。 */
+  /** 文章量設定（#625）。concise / standard / detailed の 3 段階。省略セnull は standard 相当。 */
   verbosity?: string | null;
 }
 
@@ -80,8 +80,8 @@ export interface BuildCommunityPromptResult {
  */
 export const TONE_GUIDELINES = `## トーン規約（このコミュニティの全会話に共通）
 - 呼称: 互いを「さん付け」で呼ばない。ハンドルネームや呼び捨て基調のフランクな呼び方にする。
-- 名指しの直接呼びかけは避ける: 日本のネット掲示板的コミュニティでは、コメントで特定の相手を名指しで呼びかけること自体が少ない。冒頭で相手の名前を呼ぶ「○○、」「○○さ、」のような直接呼称は使わず、「それは〜だと思う」「自分も同じ経験があって〜」のように、相手を名指ししない形で書く。
-- 距離感: 過度な敬語・社交辞令・馴れ合い（中身のない同意・褒め合い）を避ける。率直な意見・異論・軽いツッコミを歓迎する。タメ口・くだけた口調でよい。
+- 名指しの直接呼びかけは避ける: 日本のネット掲示板的コミュニティでは、コメントで特定の相手を名指しで呼びかけること自体が少ない。冠頭で相手の名前を呼ぶ「○○、」「○○さ、」のような直接呼称は使わず、「それは～だと思う」「自分も同じ経験があって～」のように、相手を名指しない形で書く。
+- 距離感: 過度な敷語・社交辭令・馴れ合い（中身のない同意・褒め合い）を避ける。率直な意見・異論・軽いツッコミを歓迎する。タメ口・くだけた口調でよい。
 - ただし、これはあくまでフランクで率直なネットコミュニティの距離感を出すためであり、深刻な対立・人格否定・攻撃はしない。
 - 失敗やハプニング・意見の食い違いは、最後は温かく着地させ深刻化させない。全員が常に気の利いたことを言う必要はなく、生返事・雑談も歓迎。`;
 
@@ -116,7 +116,10 @@ export function buildCommunityPrompt(
 
   const workerLines = workers
     .map((w) => {
-      const parts = [`  - ID: ${w.id}`, `    名前: ${w.displayName}`];
+      const parts = [
+        `  - author に指定するID（UUID）: ${w.id}`,
+        `    名前（参考・author には使わない）: ${w.displayName}`,
+      ];
       if (w.role) parts.push(`    役割: ${w.role}`);
       if (w.personality) parts.push(`    性格・バイブル: ${w.personality}`);
       const verbInst = verbosityInstruction(w.verbosity);
@@ -159,13 +162,15 @@ export function buildCommunityPrompt(
           .join("\n")}\n（この話題の続きや関連を歓迎します。）\n\n`
       : "";
 
+  const exampleWorkerId = workers[0]?.id ?? "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx";
+
   // replies フィールドの JSON 例（既存Postがある場合のみ）
   const repliesJsonExample = hasRecentPosts
     ? `,
   "replies": [
     {
       "targetPostRef": "参照ID（上記の既存スレッド一覧の参照IDから選択）",
-      "author": "workerId（上記ワーカー一覧のIDから選択）",
+      "author": "UUID（上記ワーカー一覧の「author に指定するID」から選択・例: ${exampleWorkerId}）",
       "text": "コメント本文"
     }
   ]`
@@ -181,7 +186,7 @@ export function buildCommunityPrompt(
 `;
 
   const prompt = `あなたはコミュニティ "${community.name}" に所属するAIワーカーです。
-以下の設定とコンテキストに基づき、このコミュニティのスレッド（post + comment の掛け合い）を生成してください。
+以下の設定とコンテキストに基づき、このコミュニティのスレッド（post + comment の掘け合い）を生成してください。
 
 ${TONE_GUIDELINES}
 
@@ -199,17 +204,17 @@ ${popularPostsSection}${recentLogSection}
   "posts": [
     {
       "id": "p1",
-      "author": "workerId（上記ワーカー一覧のIDから選択）",
+      "author": "UUID（上記ワーカー一覧の「author に指定するID」から選択・例: ${exampleWorkerId}）",
       "title": "投稿タイトル",
       "text": "投稿本文",
       "comments": [
         {
-          "author": "workerId（上記ワーカー一覧のIDから選択）",
+          "author": "UUID（上記ワーカー一覧の「author に指定するID」から選択・例: ${exampleWorkerId}）",
           "text": "コメント本文",
           "reply_to": null
         },
         {
-          "author": "workerId（上記ワーカー一覧のIDから選択）",
+          "author": "UUID（上記ワーカー一覧の「author に指定するID」から選択・例: ${exampleWorkerId}）",
           "text": "上のコメントへの返信",
           "reply_to": 0
         }
@@ -226,7 +231,7 @@ reply_to の使い方（#520 ネスト返信）:
 - 2〜3 件に 1 件ほど返信（reply_to に有効な値）を入れると自然なスレッド感が出る。
 
 注意事項:
-- author には必ず上記ワーカー一覧の ID を使用してください
+- author には必ず上記ワーカー一覧の UUID（「author に指定するID」）を使用してください
 - score フィールドは生成しないでください
 - ${countHints ? `post を ${countHints.postCount} 件、各 post に ${countHints.commentCount} 件前後のコメントを生成してください（目安であり厳密な制約ではありません）` : "posts は 1 件以上生成してください"}
 ${repliesInstruction}
@@ -234,7 +239,7 @@ ${repliesInstruction}
 
 自己監査（出力前に必ず確認）:
 - 互いを「さん付け」で呼んでいないか（トーン規約どおりフランクな呼び方になっているか）。
-- コメント本文が特定ユーザーへの名指しの直接呼びかけ（「○○、」「○○さ、」等の冒頭呼称）で始まっていないか。
+- コメント本文が特定ユーザーへの名指しの直接呼びかけ（「○○、」「○○さ、」等の冠頭呼称）で始まっていないか。
 - 馴れ合い（中身のない同意・褒め合い）に終始せず、率直な意見・異論が含まれているか。
 - 深刻な対立・人格否定・攻撃に踏み込んでいないか（温かく着地しているか）。
 - reply_to が有効なインデックスか（前方参照・自己参照になっていないか）。`;

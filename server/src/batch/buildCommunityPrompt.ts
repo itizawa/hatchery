@@ -116,7 +116,10 @@ export function buildCommunityPrompt(
 
   const workerLines = workers
     .map((w) => {
-      const parts = [`  - ID: ${w.id}`, `    名前: ${w.displayName}`];
+      const parts = [
+        `  - author に指定するID（UUID）: ${w.id}`,
+        `    名前（参考・author には使わない）: ${w.displayName}`,
+      ];
       if (w.role) parts.push(`    役割: ${w.role}`);
       if (w.personality) parts.push(`    性格・バイブル: ${w.personality}`);
       const verbInst = verbosityInstruction(w.verbosity);
@@ -159,13 +162,15 @@ export function buildCommunityPrompt(
           .join("\n")}\n（この話題の続きや関連を歓迎します。）\n\n`
       : "";
 
+  const exampleWorkerId = workers[0]?.id ?? "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx";
+
   // replies フィールドの JSON 例（既存Postがある場合のみ）
   const repliesJsonExample = hasRecentPosts
     ? `,
   "replies": [
     {
       "targetPostRef": "参照ID（上記の既存スレッド一覧の参照IDから選択）",
-      "author": "workerId（上記ワーカー一覧のIDから選択）",
+      "author": "UUID（上記ワーカー一覧の「author に指定するID」から選択・例: ${exampleWorkerId}）",
       "text": "コメント本文"
     }
   ]`
@@ -199,17 +204,17 @@ ${popularPostsSection}${recentLogSection}
   "posts": [
     {
       "id": "p1",
-      "author": "workerId（上記ワーカー一覧のIDから選択）",
+      "author": "UUID（上記ワーカー一覧の「author に指定するID」から選択・例: ${exampleWorkerId}）",
       "title": "投稿タイトル",
       "text": "投稿本文",
       "comments": [
         {
-          "author": "workerId（上記ワーカー一覧のIDから選択）",
+          "author": "UUID（上記ワーカー一覧の「author に指定するID」から選択・例: ${exampleWorkerId}）",
           "text": "コメント本文",
           "reply_to": null
         },
         {
-          "author": "workerId（上記ワーカー一覧のIDから選択）",
+          "author": "UUID（上記ワーカー一覧の「author に指定するID」から選択・例: ${exampleWorkerId}）",
           "text": "上のコメントへの返信",
           "reply_to": 0
         }
@@ -226,7 +231,7 @@ reply_to の使い方（#520 ネスト返信）:
 - 2〜3 件に 1 件ほど返信（reply_to に有効な値）を入れると自然なスレッド感が出る。
 
 注意事項:
-- author には必ず上記ワーカー一覧の ID を使用してください
+- author には必ず上記ワーカー一覧の UUID（「author に指定するID」）を使用してください
 - score フィールドは生成しないでください
 - ${countHints ? `post を ${countHints.postCount} 件、各 post に ${countHints.commentCount} 件前後のコメントを生成してください（目安であり厳密な制約ではありません）` : "posts は 1 件以上生成してください"}
 ${repliesInstruction}

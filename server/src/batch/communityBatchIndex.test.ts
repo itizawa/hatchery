@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createInMemoryAppSettingRepository } from "../persistence/appSettingRepository.js";
 import { createInMemoryBatchRunLogRepository } from "../persistence/batchRunLogRepository.js";
 import { createInMemoryCommentRepository } from "../persistence/commentRepository.js";
 import {
@@ -83,7 +82,6 @@ describe("communityBatchIndex (#383)", () => {
         communityRepo: createInMemoryCommunityRepository(communities),
         postRepo: createInMemoryPostRepository(),
         commentRepo: createInMemoryCommentRepository(),
-        appSettingRepo: createInMemoryAppSettingRepository(),
         batchRunLogRepository: createInMemoryBatchRunLogRepository(),
         // vote 0（純スコアなし）→ 全コミュニティ床 +1（weight=1）の均等選定。
         voteRepo: createInMemoryVoteRepository(),

@@ -4,9 +4,6 @@ vi.mock("@prisma/client", () => ({
   PrismaClient: vi.fn(),
 }));
 
-vi.mock("../persistence/prismaAppSettingRepository.js", () => ({
-  createPrismaAppSettingRepository: vi.fn(() => ({})),
-}));
 vi.mock("../persistence/prismaBatchRunLogRepository.js", () => ({
   createPrismaBatchRunLogRepository: vi.fn(() => ({})),
 }));

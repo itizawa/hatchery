@@ -31,14 +31,14 @@ function createWrapper() {
   };
 }
 
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
 // #110: admin の HTTP 呼び出しを openApiClient（生成型・ baseUrl 解決）経由に統一する。
 // 生の相対 fetch だとクロスオリジン配信（#78）で baseUrl が前置されず壊れるため、
 // fetch に Request オブジェクト（絶対 URL）が渡ること＝openApiClient 経由であることを検証する。
 describe("admin API（openApiClient 経由・絶対 URL）", () => {
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
-
   it("fetchSettings は openApiClient 経由で /admin/settings を GET する", async () => {
     const settings = [{ key: "OPENAI_API_KEY", value: "***", updatedAt: "2026-01-01T00:00:00Z" }];
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, settings));
@@ -77,10 +77,6 @@ describe("admin API（openApiClient 経由・絶対 URL）", () => {
 });
 
 describe("useCreateAdminWorker (POST /api/admin/workers)", () => {
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
-
   it("成功後に ADMIN_WORKERS_QUERY_KEY と BOT_WORKERS_QUERY_KEY を invalidate する", async () => {
     const newWorker = {
       id: "worker-1",
@@ -122,10 +118,6 @@ describe("useCreateAdminWorker (POST /api/admin/workers)", () => {
 });
 
 describe("useDeleteWorker (DELETE /api/admin/workers/:id)", () => {
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
-
   it("成功後に ADMIN_WORKERS_QUERY_KEY と BOT_WORKERS_QUERY_KEY を invalidate する", async () => {
     const deleted = { id: "worker-1", deletedAt: "2026-06-18T00:00:00.000Z" };
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(200, deleted)));

@@ -27,7 +27,11 @@ function jsonResponse(status: number, body?: unknown): Response {
 
 /** fetch をスタブして GET /api/workers の応答を制御する。 */
 function stubWorkers(status: number, workers?: Worker[]) {
-  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(status, workers)));
+  const body =
+    status >= 200 && status < 300 && workers !== undefined
+      ? { workers, total: workers.length, page: 1, limit: 20 }
+      : (workers as unknown);
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(status, body)));
 }
 
 /** 解決しない fetch をスタブして Suspense fallback を表示し続けさせる。 */
@@ -87,7 +91,7 @@ describe("AdminWorkerTab（useSuspenseQuery + QueryBoundary）", () => {
     expect(screen.getAllByRole("row")).toHaveLength(1);
   });
 
-  it("各行に画像アップロード導線（WorkerImageUpload）が表示される", async () => {
+  it("各行に画像アップロード導綫（WorkerImageUpload）が表示される", async () => {
     stubWorkers(200, [
       { id: "haru", displayName: "haru", role: "ムードメーカー" },
       { id: "ken", displayName: "ken", role: "ベテラン" },

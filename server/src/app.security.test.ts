@@ -109,7 +109,7 @@ describe("buildSessionCookieOptions（別ドメイン配信のクロスサイト
       httpOnly: true,
       sameSite: "none",
       secure: true,
-      maxAge: 24 * 60 * 60 * 1000,
+      maxAge: 2_592_000_000, // 30 日（#757）
     });
   });
 
@@ -118,7 +118,7 @@ describe("buildSessionCookieOptions（別ドメイン配信のクロスサイト
       httpOnly: true,
       sameSite: "lax",
       secure: false,
-      maxAge: 24 * 60 * 60 * 1000,
+      maxAge: 2_592_000_000, // 30 日（#757）
     });
   });
 });

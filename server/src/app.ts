@@ -65,12 +65,15 @@ const DEFAULT_SECURITY: Required<SecurityOptions> = {
   cacheStaleWhileRevalidateSeconds: CACHE_DEFAULTS.staleWhileRevalidateSeconds,
 };
 
+/** セッション cookie の有効期限（30 日）（#757）。 */
+export const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+
 export function buildSessionCookieOptions(crossSiteCookie: boolean) {
   return {
     httpOnly: true,
     sameSite: crossSiteCookie ? ("none" as const) : ("lax" as const),
     secure: crossSiteCookie,
-    maxAge: 24 * 60 * 60 * 1000,
+    maxAge: SESSION_MAX_AGE_MS,
   };
 }
 

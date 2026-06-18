@@ -74,13 +74,6 @@ model WorkerCommunity {
   @@map("worker_communities")
 }
 
-/// アプリ設定のキーバリューストア（#52）。API キーや各種設定値を格納する。値は暗号化して保存。
-model AppSetting {
-  key       String   @id
-  value     String
-  updatedAt DateTime @updatedAt
-}
-
 /// バッチ実行ログ（#75）。定時バッチの成功・失敗を記録する。
 model BatchRunLog {
   id           String            @id @default(uuid(7))

@@ -1,7 +1,6 @@
 import type { PrismaClient } from "@prisma/client";
 
 import type { AppDeps } from "../app.js";
-import { createPrismaAppSettingRepository } from "../persistence/prismaAppSettingRepository.js";
 import { createPrismaBatchRunLogRepository } from "../persistence/prismaBatchRunLogRepository.js";
 import { createPrismaWorkerRepository } from "../persistence/prismaWorkerRepository.js";
 import { createPrismaWorkerCommunityRepository } from "../persistence/prismaWorkerCommunityRepository.js";
@@ -33,7 +32,6 @@ export function createPrismaDeps(prisma: PrismaClient, gcsBucketName?: string): 
     userRepository: createPrismaUserRepository(prisma),
     workerRepository: createPrismaWorkerRepository(prisma),
     workerCommunityRepository: createPrismaWorkerCommunityRepository(prisma),
-    appSettingRepository: createPrismaAppSettingRepository(prisma),
     batchRunLogRepository: createPrismaBatchRunLogRepository(prisma),
     tokenUsageLogRepository: createPrismaTokenUsageLogRepository(prisma),
     communityRepository: createPrismaCommunityRepository(prisma),

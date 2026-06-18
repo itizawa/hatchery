@@ -250,44 +250,6 @@
         ],
         "description": "プロフィール更新リクエストボディ（#51）"
       },
-      "AppSettingResponse": {
-        "type": "object",
-        "properties": {
-          "key": {
-            "type": "string"
-          },
-          "maskedValue": {
-            "type": [
-              "string",
-              "null"
-            ]
-          }
-        },
-        "required": [
-          "key",
-          "maskedValue"
-        ],
-        "description": "アプリ設定エントリ（API キーはマスク表示）"
-      },
-      "UpdateAppSetting": {
-        "type": "object",
-        "properties": {
-          "key": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 100
-          },
-          "value": {
-            "type": "string",
-            "maxLength": 1000
-          }
-        },
-        "required": [
-          "key",
-          "value"
-        ],
-        "description": "設定更新リクエストボディ（key / value）"
-      },
       "BatchRunLog": {
         "type": "object",
         "properties": {
@@ -1459,7 +1421,7 @@
             }
           },
           "400": {
-            "description": "リクエストボディが不正（displayName 空セatvtarUrl 不正など）",
+            "description": "リクエストボディが不正（displayName 空セatarUrl 不正など）",
             "content": {
               "application/json": {
                 "schema": {
@@ -1497,80 +1459,6 @@
         "responses": {
           "302": {
             "description": "認証成功: フロントエンドの / へリダイレクト。認証失敗: /login へリダイレクト"
-          }
-        }
-      }
-    },
-    "/api/admin/settings": {
-      "get": {
-        "summary": "アプリ設定一覧を取得（認証必須・#52）",
-        "responses": {
-          "200": {
-            "description": "設定一覧（API キーはマスク表示）",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/AppSettingResponse"
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "未認証",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      },
-      "patch": {
-        "summary": "アプリ設定を更新（認証必須・#52）",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateAppSetting"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "更新後の設定（API キーはマスク表示）",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AppSettingResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "リクエストボディが不正（key 空など）",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "未認証",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
           }
         }
       }
@@ -2074,7 +1962,7 @@
             }
           },
           "400": {
-            "description": "バリデーションエラー（uuid 不正・title/text 空など）",
+            "description": "バリデーションエラー（uuid 不正セtitle/text 空など）",
             "content": {
               "application/json": {
                 "schema": {
@@ -2104,7 +1992,7 @@
             }
           },
           "404": {
-            "description": "community / worker（削除済み含む）が存在しない",
+            "description": "community / worker（削除済含む）が存在しない",
             "content": {
               "application/json": {
                 "schema": {
@@ -2140,7 +2028,7 @@
             }
           },
           "400": {
-            "description": "バリデーションエラー（uuid 不正・text 空など）",
+            "description": "バリデーションエラー（uuid 不正セtext 空など）",
             "content": {
               "application/json": {
                 "schema": {
@@ -2170,7 +2058,7 @@
             }
           },
           "404": {
-            "description": "post / worker（削除済み含む）が存在しない",
+            "description": "post / worker（削除済含む）が存在しない",
             "content": {
               "application/json": {
                 "schema": {
@@ -2555,7 +2443,7 @@
     },
     "/api/posts/{postId}/vote": {
       "post": {
-        "summary": "post に up/down vote（認証必須・toggle/switch・ADR-0025）",
+        "summary": "post に up/down vote（認証必須セtoggle/switch・ADR-0025）",
         "parameters": [
           {
             "schema": {
@@ -2621,7 +2509,7 @@
     },
     "/api/comments/{commentId}/vote": {
       "post": {
-        "summary": "comment に up/down vote（認証必須・toggle/switch・ADR-0025）",
+        "summary": "comment に up/down vote（認証必須セtoggle/switch・ADR-0025）",
         "parameters": [
           {
             "schema": {

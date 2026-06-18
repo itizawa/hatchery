@@ -10,7 +10,7 @@ import { useExternalLink } from "../hooks/useExternalLink.js";
 import { TextWithLinks } from "./TextWithLinks.js";
 
 afterEach(() => {
-  vi.restoreAllMocks();
+  vi.resetAllMocks();
 });
 
 describe("TextWithLinks", () => {
@@ -32,17 +32,16 @@ describe("TextWithLinks", () => {
       const link = screen.getByRole("link");
       expect(link).toBeInTheDocument();
       expect(link).toHaveAttribute("href", "https://example.com");
-      expect(link.textContent).toBe("https://example.com");
+      expect(link).toHaveTextContent("https://example.com");
     });
 
-    it("URL の末尾に日本語句読点（。）が続く場合、句読点は URL から切り離される", () => {
+    it("URL の末尾に日本語句読点（。）がスペース区切りで続く場合、句読点は URL から切り離される", () => {
       vi.mocked(useExternalLink).mockReturnValue({ openExternalLink: vi.fn() });
 
-      // \S+ は空白で止まるため、空白の前に句読点が来るケースで除去が効く
       render(<TextWithLinks text="詳細は https://example.com。 参照してください" />);
       const link = screen.getByRole("link");
       expect(link).toHaveAttribute("href", "https://example.com");
-      expect(link.textContent).toBe("https://example.com");
+      expect(link).toHaveTextContent("https://example.com");
     });
 
     it("リンクをクリックすると openExternalLink が href と共に呼ばれる", async () => {

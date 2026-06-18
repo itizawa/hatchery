@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createInMemoryAppSettingRepository } from "../persistence/appSettingRepository.js";
 import { createInMemoryBatchRunLogRepository } from "../persistence/batchRunLogRepository.js";
 import { createInMemoryCommentRepository } from "../persistence/commentRepository.js";
 import {
@@ -115,7 +114,6 @@ describe("runCommunityBatch (#306)", () => {
     const communityRepo = createInMemoryCommunityRepository(communities);
     const postRepo = createInMemoryPostRepository();
     const commentRepo = createInMemoryCommentRepository();
-    const appSettingRepo = createInMemoryAppSettingRepository();
     const batchRunLogRepository = createInMemoryBatchRunLogRepository();
     const workerCommunityRepo = createInMemoryWorkerCommunityRepository(workerCommunityData);
     const voteRepo = createInMemoryVoteRepository();
@@ -124,7 +122,6 @@ describe("runCommunityBatch (#306)", () => {
       communityRepo,
       postRepo,
       commentRepo,
-      appSettingRepo,
       batchRunLogRepository,
       workerCommunityRepo,
       voteRepo,
@@ -508,7 +505,6 @@ describe("runCommunityBatch worldState 登場ローテーション (#464)", () =
     const communityRepo = createInMemoryCommunityRepository(communities);
     const postRepo = createInMemoryPostRepository();
     const commentRepo = createInMemoryCommentRepository();
-    const appSettingRepo = createInMemoryAppSettingRepository();
     const batchRunLogRepository = createInMemoryBatchRunLogRepository();
     const workerCommunityRepo = createInMemoryWorkerCommunityRepository(workerCommunityData);
     const voteRepo = createInMemoryVoteRepository();
@@ -518,7 +514,6 @@ describe("runCommunityBatch worldState 登場ローテーション (#464)", () =
       communityRepo,
       postRepo,
       commentRepo,
-      appSettingRepo,
       batchRunLogRepository,
       workerCommunityRepo,
       voteRepo,
@@ -656,7 +651,6 @@ describe("runCommunityBatch ドリップ割当（#556）", () => {
     const communityRepo = createInMemoryCommunityRepository(communities);
     const postRepo = createInMemoryPostRepository();
     const commentRepo = createInMemoryCommentRepository();
-    const appSettingRepo = createInMemoryAppSettingRepository();
     const batchRunLogRepository = createInMemoryBatchRunLogRepository();
     const workerCommunityRepo = createInMemoryWorkerCommunityRepository(workerCommunityData);
     const voteRepo = createInMemoryVoteRepository();
@@ -665,7 +659,6 @@ describe("runCommunityBatch ドリップ割当（#556）", () => {
       communityRepo,
       postRepo,
       commentRepo,
-      appSettingRepo,
       batchRunLogRepository,
       workerCommunityRepo,
       voteRepo,
@@ -786,7 +779,6 @@ describe("runCommunityBatch 人気トピック還元 (#558)", () => {
     const communityRepo = createInMemoryCommunityRepository(communities);
     const postRepo = createInMemoryPostRepository();
     const commentRepo = createInMemoryCommentRepository();
-    const appSettingRepo = createInMemoryAppSettingRepository();
     const batchRunLogRepository = createInMemoryBatchRunLogRepository();
     const workerCommunityRepo = createInMemoryWorkerCommunityRepository(workerCommunityData);
     const voteRepo = createInMemoryVoteRepository();
@@ -795,7 +787,6 @@ describe("runCommunityBatch 人気トピック還元 (#558)", () => {
       communityRepo,
       postRepo,
       commentRepo,
-      appSettingRepo,
       batchRunLogRepository,
       workerCommunityRepo,
       voteRepo,
@@ -891,7 +882,6 @@ describe("runCommunityBatch post/comment 件数揺らぎ（#557）", () => {
     const communityRepo = createInMemoryCommunityRepository(communities);
     const postRepo = createInMemoryPostRepository();
     const commentRepo = createInMemoryCommentRepository();
-    const appSettingRepo = createInMemoryAppSettingRepository();
     const batchRunLogRepository = createInMemoryBatchRunLogRepository();
     const workerCommunityRepo = createInMemoryWorkerCommunityRepository(workerCommunityData);
     const voteRepo = createInMemoryVoteRepository();
@@ -900,7 +890,6 @@ describe("runCommunityBatch post/comment 件数揺らぎ（#557）", () => {
       communityRepo,
       postRepo,
       commentRepo,
-      appSettingRepo,
       batchRunLogRepository,
       workerCommunityRepo,
       voteRepo,

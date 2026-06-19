@@ -95,8 +95,8 @@ describe("権限 (受け入れ条件 #3)", () => {
   });
 });
 
-describe("バージョン抽出とタグ作成 (受け入れ条件 #2, #4)", () => {
-  it("vX.Y.Z 形式のバージョン抽出ロジックを持つ", () => {
+describe("バージョン抜出とタグ作成 (受け入れ条件 #2, #4)", () => {
+  it("vX.Y.Z 形式のバージョン抜出ロジックを持つ", () => {
     const run = allRun(loadWorkflow());
     expect(run).toMatch(/v\[0-9\]/);
   });
@@ -119,7 +119,7 @@ describe("バージョン抽出とタグ作成 (受け入れ条件 #2, #4)", () 
 });
 
 describe("冪等性 (受け入れ条件 #5)", () => {
-  it("バージョン抽出失敗時に正常終了（exit 0）でスキップする", () => {
+  it("バージョン抜出失敗時に正常終了（exit 0）でスキップする", () => {
     const run = allRun(loadWorkflow());
     expect(run).toMatch(/exit\s+0/);
   });
@@ -140,5 +140,12 @@ describe("PR を作成・マージしない (ゲート1, 受け入れ条件 #6)"
   it("gh pr merge を呼ばない", () => {
     const run = allRun(loadWorkflow());
     expect(run).not.toMatch(/gh\s+pr\s+merge\b/);
+  });
+});
+
+describe("pnpm バナー抑制 (受け入れ条件 #4)", () => {
+  it("release-notes の pnpm 実行に --silent フラグが含まれる（stdout バナー混入防止）", () => {
+    const run = allRun(loadWorkflow());
+    expect(run).toMatch(/pnpm\s+(?:--silent|-s)\b[^#]*release-notes/s);
   });
 });

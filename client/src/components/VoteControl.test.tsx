@@ -70,4 +70,20 @@ describe("VoteControl", () => {
     expect(screen.queryByText(/down/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/累積/i)).not.toBeInTheDocument();
   });
+
+  describe("Chip レンダリング（#747）", () => {
+    it("up vote ボタンは Chip（button 要素・MuiChip-root）としてレンダリングされる", () => {
+      const { container } = render(<VoteControl score={0} onVote={vi.fn()} />);
+      const upEl = container.querySelector('[aria-label="up vote"]');
+      expect(upEl?.tagName).toBe("BUTTON");
+      expect(upEl?.classList.contains("MuiChip-root")).toBe(true);
+    });
+
+    it("down vote ボタンは Chip（button 要素・MuiChip-root）としてレンダリングされる", () => {
+      const { container } = render(<VoteControl score={0} onVote={vi.fn()} />);
+      const downEl = container.querySelector('[aria-label="down vote"]');
+      expect(downEl?.tagName).toBe("BUTTON");
+      expect(downEl?.classList.contains("MuiChip-root")).toBe(true);
+    });
+  });
 });

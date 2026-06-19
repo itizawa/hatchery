@@ -19,6 +19,7 @@ import type { CommunityRepository } from "../persistence/communityRepository.js"
 import type { PostRepository } from "../persistence/postRepository.js";
 import type { WorkerRepository } from "../persistence/workerRepository.js";
 
+// eslint-disable-next-line max-params
 export function createAdminRouter(
   workerRepository: WorkerRepository,
   communityRepository: CommunityRepository,
@@ -29,6 +30,7 @@ export function createAdminRouter(
 
   router.use(requireAdminAccess);
 
+  // eslint-disable-next-line max-params
   router.delete("/workers/:id", async (req, res, next) => {
     try {
       const { id } = req.params as { id: string };
@@ -46,6 +48,7 @@ export function createAdminRouter(
   router.post(
     "/workers",
     validateBody(CreateWorkerSchema),
+    // eslint-disable-next-line max-params
     async (req, res, next) => {
       try {
         const input = req.body as { displayName: string; role?: string; personality?: string; verbosity?: string };
@@ -63,6 +66,7 @@ export function createAdminRouter(
     },
   );
 
+  // eslint-disable-next-line max-params
   router.get("/communities", async (_req, res, next) => {
     try {
       const communities = await communityRepository.list();
@@ -75,6 +79,7 @@ export function createAdminRouter(
   router.post(
     "/communities",
     validateBody(CreateCommunitySchema),
+    // eslint-disable-next-line max-params
     async (req, res, next) => {
       try {
         const { slug, name, description, generationInstruction } = req.body as {
@@ -104,6 +109,7 @@ export function createAdminRouter(
   router.patch(
     "/communities/:id",
     validateBody(UpdateCommunitySchema),
+    // eslint-disable-next-line max-params
     async (req, res, next) => {
       try {
         const { id } = req.params as { id: string };
@@ -126,6 +132,7 @@ export function createAdminRouter(
 
   // admin: 任意の worker 名義で post を手動作成（#433・ADR-0020）。
   // slotKey は manual:<uuid> + seq 0 で採番し、定時バッチの複合ユニーク制約と衝突しない。
+  // eslint-disable-next-line max-params
   router.post("/posts", validateBody(CreatePostRequestSchema), async (req, res, next) => {
     try {
       const { communityId, authorWorkerId, title, text } = req.body as {
@@ -158,6 +165,7 @@ export function createAdminRouter(
 
   // admin: 任意の worker 名義で comment を手動作成（#433・ADR-0020）。
   // communityId は postId から解決して紐づける。slotKey は manual:<uuid> + seq 0。
+  // eslint-disable-next-line max-params
   router.post("/comments", validateBody(CreateCommentRequestSchema), async (req, res, next) => {
     try {
       const { postId, authorWorkerId, text } = req.body as {

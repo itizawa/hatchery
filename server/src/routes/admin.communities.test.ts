@@ -14,6 +14,7 @@ import { createInMemoryCommunityRepository } from "../persistence/communityRepos
 import { createTestUserRepository } from "../persistence/userRepository.js";
 import { createTestDeps } from "../testing/createTestDeps.js";
 
+// eslint-disable-next-line max-params
 async function makeApp(
   communityRepo = createInMemoryCommunityRepository(),
   role: "admin" | "member" = "admin",

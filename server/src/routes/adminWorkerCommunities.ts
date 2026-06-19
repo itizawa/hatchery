@@ -14,6 +14,7 @@ import type { WorkerCommunityRepository } from "../persistence/workerCommunityRe
  *
  * admin 権限必須（requireAuth + requireAdmin）。リクエスト検証は common の Zod スキーマで行う（ADR-0006）。
  */
+// eslint-disable-next-line max-params
 export function createAdminWorkerCommunitiesRouter(
   workerRepository: WorkerRepository,
   workerCommunityRepository: WorkerCommunityRepository,
@@ -23,6 +24,7 @@ export function createAdminWorkerCommunitiesRouter(
 
   router.use(requireAdminAccess);
 
+  // eslint-disable-next-line max-params
   router.get("/workers/:id/communities", async (req, res, next) => {
     try {
       const { id } = req.params as { id: string };
@@ -41,6 +43,7 @@ export function createAdminWorkerCommunitiesRouter(
   router.put(
     "/workers/:id/communities",
     validateBody(SetWorkerCommunitiesSchema),
+    // eslint-disable-next-line max-params
     async (req, res, next) => {
       try {
         const { id } = req.params as { id: string };
@@ -57,6 +60,7 @@ export function createAdminWorkerCommunitiesRouter(
         const found = await Promise.all(
           uniqueIds.map((communityId) => communityRepository.findById(communityId)),
         );
+        // eslint-disable-next-line max-params
         const missing = uniqueIds.filter((_, i) => found[i] == null);
         if (missing.length > 0) {
           next(new BadRequestError(`InvalidCommunityId: ${missing.join(", ")}`));

@@ -38,29 +38,28 @@ export function createPrismaViewRepository(prisma: PrismaClient): ViewRepository
     ): Promise<{ newCount: number }> {
       if (commentIds.length === 0) return { newCount: 0 };
       return prisma.$transaction(async (tx) => {
-        const result = await tx.pageView.createMany({
+        // createMany の前に既存行を取得しておき、新規挿入分だけを正確に特定する。
+        // createMany 後の findMany は既存行も含むため over-count を引き起こす（#665）。
+        const preExisting = await tx.pageView.findMany({
+          where: { commentId: { in: commentIds }, sessionId },
+          select: { commentId: true },
+        });
+        const preExistingIds = new Set(
+          preExisting.map((r) => r.commentId).filter((id): id is string => id !== null),
+        );
+
+        await tx.pageView.createMany({
           data: commentIds.map((commentId) => ({ commentId, sessionId, userId })),
           skipDuplicates: true,
         });
-        const newCount = result.count;
+
+        const newCommentIds = commentIds.filter((id) => !preExistingIds.has(id));
+        const newCount = newCommentIds.length;
         if (newCount > 0) {
-          // 実際に新規挿入されたコメントを特定して viewCount を +1 する。
-          // skipDuplicates 後に実際に挿入された行を確定するため、既存のものと diff する。
-          const inserted = await tx.pageView.findMany({
-            where: { commentId: { in: commentIds }, sessionId },
-            select: { commentId: true },
-          });
-          const insertedIds = inserted
-            .map((r) => r.commentId)
-            .filter((id): id is string => id !== null);
-          // 全て新規の場合は commentIds 全件、一部既存の場合は新規分のみ。
-          // ただし「新規分の id」を特定するのに findMany は全件返すため、
-          // count 分だけ increment すれば整合する（同一トランザクション内で競合は起きない）。
           await tx.comment.updateMany({
-            where: { id: { in: insertedIds } },
+            where: { id: { in: newCommentIds } },
             data: { viewCount: { increment: 1 } },
           });
-          void insertedIds;
         }
         return { newCount };
       });

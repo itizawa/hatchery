@@ -39,8 +39,8 @@ function sendJsonBeacon(url: string, body: unknown): void {
   const blob = new Blob([json], { type: "application/json" });
 
   if (typeof navigator !== "undefined" && "sendBeacon" in navigator) {
-    navigator.sendBeacon(url, blob);
-    return;
+    // sendBeacon が false を返す（バジェット超過等）場合は fetch にフォールバックする。
+    if (navigator.sendBeacon(url, blob)) return;
   }
 
   // フォールバック: keepalive fetch（ページアンロード時にも完結する）

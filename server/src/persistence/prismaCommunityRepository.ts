@@ -65,6 +65,7 @@ export function createPrismaCommunityRepository(prisma: PrismaClient): Community
       return toRecord(row);
     },
 
+    // eslint-disable-next-line max-params
     async update(id: string, input: UpdateCommunityRecordInput): Promise<CommunityRecord | null> {
       try {
         const row = await prisma.community.update({

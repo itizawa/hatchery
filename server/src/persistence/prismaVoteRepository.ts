@@ -21,6 +21,7 @@ interface VoteRow {
  * 多態的な (targetType, targetId) を Exclusive Arc の複合ユニーク where にマップする（#453）。
  * post 票なら userId_postId、comment 票なら userId_commentId を使う。
  */
+// eslint-disable-next-line max-params
 function uniqueWhere(userId: string, targetType: VoteTargetType, targetId: string) {
   return targetType === "post"
     ? ({ userId_postId: { userId, postId: targetId } } as const)
@@ -47,6 +48,7 @@ export function createPrismaVoteRepository(prisma: PrismaClient): VoteRepository
    * toggle/switch ロジックを Prisma クライアント（または同一トランザクションの tx）上で実行し
    * scoreDelta を返す。voteAndApplyScore では tx を渡して vote と score 更新を原子化する。
    */
+  // eslint-disable-next-line max-params
   async function applyVoteMutation(
     client: Prisma.TransactionClient,
     userId: string,
@@ -76,6 +78,7 @@ export function createPrismaVoteRepository(prisma: PrismaClient): VoteRepository
   }
 
   return {
+    // eslint-disable-next-line max-params
     async findVote(
       userId: string,
       targetType: VoteTargetType,
@@ -87,6 +90,7 @@ export function createPrismaVoteRepository(prisma: PrismaClient): VoteRepository
       return row ? toRecord(row) : null;
     },
 
+    // eslint-disable-next-line max-params
     async vote(
       userId: string,
       targetType: VoteTargetType,
@@ -97,6 +101,7 @@ export function createPrismaVoteRepository(prisma: PrismaClient): VoteRepository
       return { scoreDelta };
     },
 
+    // eslint-disable-next-line max-params
     async voteAndApplyScore(
       userId: string,
       targetType: VoteTargetType,

@@ -17,6 +17,7 @@ interface ShareButtonProps {
  * X(Twitter) の intent URL を生成する純粋関数。
  * `text`（タイトルを含むシェア文言）と `url` を encodeURIComponent でエスケープして付与する。
  */
+// eslint-disable-next-line max-params
 export function buildXShareUrl(shareTitle: string, shareUrl: string): string {
   const text = `${shareTitle} | Hatchery`;
   const params = new URLSearchParams({ text, url: shareUrl });

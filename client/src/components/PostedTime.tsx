@@ -18,7 +18,7 @@ export const PostedTime = ({ createdAt }: PostedTimeProps): ReactElement | null 
   const target = new Date(createdAt);
   if (Number.isNaN(target.getTime())) return null;
 
-  const label = formatRelativeTime(target, new Date());
+  const label = formatRelativeTime({ target, now: new Date() });
   if (label === "") return null;
 
   return (

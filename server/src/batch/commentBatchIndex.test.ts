@@ -57,7 +57,9 @@ describe("commentBatchIndex (#673)", () => {
 
   const buildCliDeps = (
     communities: CommunityRecord[],
+    // eslint-disable-next-line max-params
     generate: (prompt: string, apiKey: string) => Promise<{ text: string }>,
+  // eslint-disable-next-line max-params
   ): CommentBatchCliDeps & { disconnect: ReturnType<typeof vi.fn> } => {
     const postRepo = createInMemoryPostRepository();
     const disconnect = vi.fn().mockResolvedValue(undefined);

@@ -48,10 +48,12 @@ export async function fetchRecentContext({
       text: c.text,
       createdAt: c.createdAt,
     })),
+  // eslint-disable-next-line max-params
   ].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
 
-  const recentLog = formatRecentLog(allEntries, recentLimit);
+  const recentLog = formatRecentLog({ entries: allEntries, n: recentLimit });
 
+  // eslint-disable-next-line max-params
   const recentPostsForReply = recentPosts.slice(0, maxPostsForReply).map((p, i) => ({
     ref: `ref-${i + 1}`,
     id: p.id,

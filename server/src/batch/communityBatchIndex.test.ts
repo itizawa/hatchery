@@ -73,7 +73,9 @@ describe("communityBatchIndex (#383)", () => {
   /** スタブ依存一式（DB・Anthropic SDK に実アクセスしない） */
   const buildCliDeps = (
     communities: CommunityRecord[],
+    // eslint-disable-next-line max-params
     generate: (prompt: string, apiKey: string) => Promise<{ text: string }>,
+  // eslint-disable-next-line max-params
   ): CommunityBatchCliDeps & { disconnect: ReturnType<typeof vi.fn> } => {
     const disconnect = vi.fn().mockResolvedValue(undefined);
     return {

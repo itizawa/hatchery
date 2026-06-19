@@ -200,10 +200,13 @@
         "properties": {
           "worker_id": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "maxLength": 36
           },
           "display_name": {
-            "type": "string"
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
           },
           "view_count": {
             "type": "integer",
@@ -926,7 +929,8 @@
             "type": "array",
             "items": {
               "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "maxLength": 256
             },
             "maxItems": 100
           }
@@ -1512,7 +1516,7 @@
             }
           },
           "400": {
-            "description": "リクエストボディが不正（displayName 空せatvtarUrl 不正など）",
+            "description": "リクエストボディが不正（displayName 空セatvtarUrl 不正など）",
             "content": {
               "application/json": {
                 "schema": {

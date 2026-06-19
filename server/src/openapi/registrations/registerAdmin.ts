@@ -10,6 +10,7 @@ import type { RegistryContext } from "./shared.js";
 /**
  * 管理画面 API・バッチ実行ログ（#75）・トークン使用量ログ（#153）の OpenAPI 登録（#535）。
  */
+// eslint-disable-next-line max-params
 export function registerAdmin(registry: OpenAPIRegistry, ctx: RegistryContext): void {
   const { errorJson } = ctx;
 

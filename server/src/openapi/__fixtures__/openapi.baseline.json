@@ -195,6 +195,32 @@
         },
         "description": "Worker 一覧取得のクエリパラメータ（ページネーション・#545）"
       },
+      "WorkerRankingItem": {
+        "type": "object",
+        "properties": {
+          "worker_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "view_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "vote_net_score": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "worker_id",
+          "display_name",
+          "view_count",
+          "vote_net_score"
+        ],
+        "description": "ワーカーランキング項目（閲覧数・純 vote スコア・#665）"
+      },
       "WorkerCommunityIds": {
         "type": "object",
         "properties": {
@@ -874,6 +900,43 @@
         ],
         "description": "コミュニティへの購読状態（#421）"
       },
+      "PostViewRequest": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "sessionId"
+        ],
+        "description": "post 閲覧ビーコン リクエストボディ（#665）"
+      },
+      "CommentViewsRequest": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "commentIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "maxItems": 100
+          }
+        },
+        "required": [
+          "sessionId",
+          "commentIds"
+        ],
+        "description": "コメント閲覧ビーコン バッチリクエストボディ（#665）"
+      },
       "VoteRequest": {
         "type": "object",
         "properties": {
@@ -928,6 +991,34 @@
     "parameters": {}
   },
   "paths": {
+    "/api/workers/ranking": {
+      "get": {
+        "summary": "ワーカーランキングを取得（認証不要・直近 7 日・#665 / ADR-0032）",
+        "responses": {
+          "200": {
+            "description": "ワーカーランキング一覧",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "workers": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/WorkerRankingItem"
+                      }
+                    }
+                  },
+                  "required": [
+                    "workers"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/workers": {
       "get": {
         "summary": "Worker 一覧を取得（認証不要・ページネーション対応・#240 / #545）",
@@ -1421,7 +1512,7 @@
             }
           },
           "400": {
-            "description": "リクエストボディが不正（displayName 空セatvtarUrl 不正など）",
+            "description": "リクエストボディが不正（displayName 空せatvtarUrl 不正など）",
             "content": {
               "application/json": {
                 "schema": {
@@ -2427,6 +2518,84 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "投稿が存在しない",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/posts/{postId}/view": {
+      "post": {
+        "summary": "post 閲覧ビーコンを送信（認証不要・ゲスト対応・#665 / ADR-0032）",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "postId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostViewRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "受理（非同期処理）"
+          },
+          "404": {
+            "description": "投稿が存在しない",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/posts/{postId}/comment-views": {
+      "post": {
+        "summary": "コメント閲覧ビーコンをバッチ送信（認証不要・ゲスト対応・#665 / ADR-0032）",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "postId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommentViewsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "受理（非同期処理）"
           },
           "404": {
             "description": "投稿が存在しない",

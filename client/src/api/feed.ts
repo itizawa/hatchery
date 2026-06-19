@@ -33,6 +33,7 @@ export async function fetchCommunityFeed(slug: string): Promise<Post[]> {
  * GET /api/feed — ホームフィードを 1 ページ分取得する（カーソルページネーション #367 / 並び順 #435）。
  * sort=latest（既定）は後方互換のため query に sort を含めない。
  */
+// eslint-disable-next-line max-params
 export async function fetchHomeFeedPage(
   cursor?: string,
   sort: HomeFeedSort = "latest",

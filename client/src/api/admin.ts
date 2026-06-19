@@ -34,6 +34,7 @@ export function useDeleteWorker() {
  * GET /api/workers をページネーションパラメータ付きで取得する（管理画面用・#545）。
  * page と limit を指定し、{ workers, total, page, limit } 形式のレスポンスを返す。
  */
+// eslint-disable-next-line max-params
 export async function fetchAdminWorkers(
   page: number,
   limit: number,

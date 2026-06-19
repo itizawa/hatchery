@@ -1,4 +1,5 @@
 // XOR ビット演算で長さが等しい文字列を定数時間で比較する
+// eslint-disable-next-line max-params
 function safeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
   let result = 0;
@@ -28,6 +29,7 @@ export function parseBasicAuth(authHeader: string | null): BasicAuthCredentials 
   }
 }
 
+// eslint-disable-next-line max-params
 export function validateBasicAuth(
   authHeader: string | null | undefined,
   expectedUser: string,

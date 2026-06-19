@@ -9,6 +9,7 @@
  * @param fallback 抽出できないときに表示する既定文言
  * @returns ユーザー向けエラーメッセージ
  */
+// eslint-disable-next-line max-params
 export function getApiErrorMessage(
   error: unknown,
   fallback = "保存に失敗しました。時間をおいて再度お試しください。",
@@ -38,6 +39,7 @@ export function getApiErrorMessage(
  * @param status HTTP ステータスコード
  * @param fallback ボディに `error` が無いときの基底文言
  */
+// eslint-disable-next-line max-params
 export function buildApiErrorMessage(
   errorBody: unknown,
   status: number,

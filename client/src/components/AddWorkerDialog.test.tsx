@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AddWorkerDialog } from "./AddWorkerDialog";
 
+// eslint-disable-next-line max-params
 function jsonResponse(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -13,6 +14,7 @@ function jsonResponse(status: number, body: unknown): Response {
   });
 }
 
+// eslint-disable-next-line max-params
 function stubFetch(createStatus: number, createBody: unknown) {
   vi.stubGlobal(
     "fetch",

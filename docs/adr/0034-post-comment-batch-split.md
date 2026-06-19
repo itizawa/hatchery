@@ -73,5 +73,42 @@ gcloud scheduler jobs create http post-batch-job \
   - #673 が完了するまで移行期間があり、communityBatchIndex が post+comment 両方を生成し続ける。
   - Cloud Scheduler ジョブが増加する（post 用 + comment 用）。
 - フォローアップが必要なこと:
-  - #673: comment バッチの分離・直近 3 日 post への vote 重みコメント付与
   - #673 完了後: communityBatchIndex の retire と Cloud Scheduler への post/comment 各ジョブ登録
+
+---
+
+## #673 完了時点の追記: comment バッチの設計判断
+
+### CommentBatchOutputSchema
+
+comment バッチの AI 出力は「既存 post への comment 追加」なので、`GenerationOutputSchema`（posts.min(1)）は使えない。新しいスキーマを common に追加した:
+
+```typescript
+CommentBatchPostOutputSchema = z.object({
+  ref: z.string().min(1).max(50),  // "ref-1" → 既存 post ID
+  comments: z.array(GenerationOutputCommentSchema),
+});
+CommentBatchOutputSchema = z.object({
+  topic: z.string().min(1).max(200),
+  posts: z.array(CommentBatchPostOutputSchema).min(1),
+});
+```
+
+`posts[i].ref` が postRefMap 経由で実際の postId に変換される。
+
+### vote 重みコメント数計算
+
+`calcCommentCount(score)` = `clamp(1 + round(0.5 × max(0, score)), 1, 5)` で計算。
+vote 0 でも最低 1 件、vote 8 以上で max 5 件。
+
+### 古い post の活性化
+
+確率 `p=0.1` で直近3日超の post を1件追加する。候補は score >= 0 の post を score 降順で上位 20 件に絞り、その中からランダムに1件選ぶ。
+
+### comment バッチのドリップ窓
+
+`DEFAULT_COMMENT_DRIP_WINDOW_MS = 3h`。バッチ実行時刻から 3h 以内に comment の createdAt を散らし、reveal フィルタにより徐々に解禁される。
+
+### communityBatchIndex の扱い
+
+コードを残す（後方互換）。Cloud Scheduler からの登録を外すのはインフラ担当。`@deprecated` コメントを追加して意図を明示。

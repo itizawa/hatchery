@@ -1,3 +1,6 @@
+/**
+ * @deprecated #673 完了後は postBatchIndex + commentBatchIndex に移行。Cloud Scheduler から外した後にコードを削除する（ADR-0034）。
+ */
 import { pathToFileURL } from "node:url";
 
 import { loadEnv } from "../config/env.js";

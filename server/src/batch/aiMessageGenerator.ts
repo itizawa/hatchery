@@ -5,7 +5,7 @@ import { DEFAULT_BATCH_MODEL, type BatchModel } from "../config/env.js";
 import { logBatchError, logBatchInfo } from "./logger.js";
 
 /**
- * ConversationGenerator の戈り値型（#663）。
+ * ConversationGenerator の戻り値型（#663）。
  * text は生成テキスト、inputTokens / outputTokens / model は Claude API の使用量情報。
  * usage が取得できない場合（スタブ等）は undefined になり、呼び出し側が記録をスキップする。
  */

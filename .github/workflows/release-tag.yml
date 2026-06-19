@@ -30,11 +30,11 @@ jobs:
         run: |
           set -euo pipefail
 
-          # PR タイトルから vX.Y.Z 形式のバージョンを抜出する。
+          # PR タイトルから vX.Y.Z 形式のバージョンを抽出する。
           version=$(echo "$PR_TITLE" | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)
 
           if [ -z "$version" ]; then
-            echo "PR タイトルからバージョン(vX.Y.Z)を抜出できませんでした。スキップします。タイトル: ${PR_TITLE}"
+            echo "PR タイトルからバージョン(vX.Y.Z)を抽出できませんでした。スキップします。タイトル: ${PR_TITLE}"
             exit 0
           fi
 
@@ -51,7 +51,7 @@ jobs:
           if [ -n "$prev_tag" ]; then
             commit_range="${prev_tag}..${MERGE_SHA}"
           else
-            # 前タグ無しの場合はマージコミットの㇂1親コミット（main側前回）を基点にして
+            # 前タグ無しの場合はマージコミットの第1親コミット（main側前回）を基点にして
             # このリリース分のコミットのみを表示する。
             commit_range="${MERGE_SHA}^1..${MERGE_SHA}"
           fi
@@ -84,7 +84,7 @@ jobs:
           } >> "$GITHUB_ENV"
 
       # AI リリースノート生成に必要な Node.js・pnpm を他ワークフローと同じ方法でセットアップする。
-      # タグ・ Release 作成ステップと分けることで、セットアップ失敗がリリース作成に影響しない。
+      # タグ・Release 作成ステップと分けることで、セットアップ失敗がリリース作成に影響しない。
       - name: Setup pnpm
         continue-on-error: true
         uses: pnpm/action-setup@v6

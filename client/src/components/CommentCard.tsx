@@ -62,11 +62,30 @@ export const CommentCard = ({
           sx={{
             position: "absolute",
             left: `${indentLeft - 8}px`,
-            top: 0,
+            top: "30px",
             bottom: 0,
             width: "2px",
             bgcolor: CONNECTOR_COLOR,
             borderRadius: "1px",
+          }}
+        />
+      )}
+
+      {/* L 字コネクター（#746）: アバター中心まで伸びる曲線で親スレッドと接続。 */}
+      {depth > 0 && (
+        <Box
+          data-testid="comment-l-connector"
+          aria-hidden="true"
+          sx={{
+            position: "absolute",
+            left: `${indentLeft - 8}px`,
+            top: 0,
+            height: "18px",
+            width: "16px",
+            borderLeft: "2px solid",
+            borderBottom: "2px solid",
+            borderColor: CONNECTOR_COLOR,
+            borderRadius: "0 0 0 4px",
           }}
         />
       )}

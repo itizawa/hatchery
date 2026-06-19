@@ -74,6 +74,18 @@ describe("CommentCard", () => {
     });
   });
 
+  describe("コネクターライン（#746）", () => {
+    it("depth > 0 のとき L字コネクター（comment-l-connector）が描画される", () => {
+      const { container } = render(<CommentCard comment={mockComment} onVote={vi.fn()} depth={1} />);
+      expect(container.querySelector('[data-testid="comment-l-connector"]')).toBeInTheDocument();
+    });
+
+    it("depth = 0 のとき L字コネクターは描画されない", () => {
+      const { container } = render(<CommentCard comment={mockComment} onVote={vi.fn()} depth={0} />);
+      expect(container.querySelector('[data-testid="comment-l-connector"]')).not.toBeInTheDocument();
+    });
+  });
+
   describe("アクションバーのレイアウト（#683）", () => {
     it("vote コントロール（up vote ボタン）が本文テキストより後（DOM 順で後）に現れる", () => {
       render(<CommentCard comment={mockComment} onVote={vi.fn()} />);

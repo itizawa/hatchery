@@ -1,5 +1,5 @@
 import type { OpenAPIRegistry } from "@asteasolutions/zod-to-openapi";
-import { VoteRequestSchema } from "@hatchery/common";
+import { CommentViewsRequestSchema, PostViewRequestSchema, VoteRequestSchema } from "@hatchery/common";
 import { z } from "zod";
 
 import { type RegistryContext, commentIdParam, postIdParam } from "./shared.js";
@@ -35,6 +35,46 @@ export function registerPosts(registry: OpenAPIRegistry, ctx: RegistryContext): 
           },
         },
       },
+      404: { description: "投稿が存在しない", ...errorJson },
+    },
+  });
+
+  // post 閲覧ビーコン（認証不要・ゲスト対応・#665 / ADR-0032）
+  const PostViewRequestComponent = registry.register(
+    "PostViewRequest",
+    PostViewRequestSchema.openapi({ description: "post 閲覧ビーコン リクエストボディ（#665）" }),
+  );
+
+  registry.registerPath({
+    method: "post",
+    path: "/api/posts/{postId}/view",
+    summary: "post 閲覧ビーコンを送信（認証不要・ゲスト対応・#665 / ADR-0032）",
+    request: {
+      params: z.object({ postId: postIdParam }),
+      body: { content: { "application/json": { schema: PostViewRequestComponent } } },
+    },
+    responses: {
+      202: { description: "受理（非同期処理）" },
+      404: { description: "投稿が存在しない", ...errorJson },
+    },
+  });
+
+  // コメント閲覧ビーコン（認証不要・バッチ送信・#665 / ADR-0032）
+  const CommentViewsRequestComponent = registry.register(
+    "CommentViewsRequest",
+    CommentViewsRequestSchema.openapi({ description: "コメント閲覧ビーコン バッチリクエストボディ（#665）" }),
+  );
+
+  registry.registerPath({
+    method: "post",
+    path: "/api/posts/{postId}/comment-views",
+    summary: "コメント閲覧ビーコンをバッチ送信（認証不要・ゲスト対応・#665 / ADR-0032）",
+    request: {
+      params: z.object({ postId: postIdParam }),
+      body: { content: { "application/json": { schema: CommentViewsRequestComponent } } },
+    },
+    responses: {
+      202: { description: "受理（非同期処理）" },
       404: { description: "投稿が存在しない", ...errorJson },
     },
   });

@@ -66,6 +66,14 @@ export interface VoteRepository {
    * @returns communityId → 純スコア合計の Map。集計対象が無い community はキーを持たない。
    */
   netScoresByCommunitySince(since: Date): Promise<Map<string, number>>;
+  /**
+   * 直近の vote から worker（post/comment の author）別の純スコアを集計する（#665 / ADR-0032）。
+   * ランキング画面の vote net score 表示に使う。
+   *
+   * @param since この日時以降（`createdAt >= since`）の vote のみ集計する。
+   * @returns workerId → 純スコア合計の Map。集計対象が無い worker はキーを持たない。
+   */
+  netScoresByWorkerSince(since: Date): Promise<Map<string, number>>;
 }
 
 /**
@@ -179,6 +187,10 @@ export function createInMemoryVoteRepository(
         scores.set(communityId, (scores.get(communityId) ?? 0) + delta);
       }
       return Promise.resolve(scores);
+    },
+
+    netScoresByWorkerSince(): Promise<Map<string, number>> {
+      return Promise.resolve(new Map<string, number>());
     },
   };
 }

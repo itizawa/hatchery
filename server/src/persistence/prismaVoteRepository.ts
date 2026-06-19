@@ -124,6 +124,31 @@ export function createPrismaVoteRepository(prisma: PrismaClient): VoteRepository
       });
     },
 
+    async netScoresByWorkerSince(since: Date): Promise<Map<string, number>> {
+      // vote を Post / Comment 経由で author（workerId）に解決し worker 単位で集計する（#665 / ADR-0032）。
+      const rows = await prisma.$queryRaw<{ author: string; netScore: bigint }[]>(Prisma.sql`
+        SELECT "author", SUM(CASE WHEN "direction" = 'up' THEN 1 ELSE -1 END) AS "netScore"
+        FROM (
+          SELECT p."author" AS "author", v."direction" AS "direction"
+          FROM "Vote" v
+          JOIN "Post" p ON p."id" = v."postId"
+          WHERE v."postId" IS NOT NULL AND v."createdAt" >= ${since}
+          UNION ALL
+          SELECT c."author" AS "author", v."direction" AS "direction"
+          FROM "Vote" v
+          JOIN "Comment" c ON c."id" = v."commentId"
+          WHERE v."commentId" IS NOT NULL AND v."createdAt" >= ${since}
+        ) AS resolved
+        GROUP BY "author"
+      `);
+
+      const scores = new Map<string, number>();
+      for (const row of rows) {
+        scores.set(row.author, Number(row.netScore));
+      }
+      return scores;
+    },
+
     async netScoresByCommunitySince(since: Date): Promise<Map<string, number>> {
       // #453: postId / commentId の本物 FK 経由で community に解決し、
       // up を +1 / down を -1 として community 単位に集計する（#486 / ADR-0030）。

@@ -20,14 +20,12 @@ export type ConversationGeneratorResult = {
  * チャンネル会話を生成する関数（#53）。プロンプトと API キーを受け、生成結果を返す。
  * テストではスタブを注入し、本番は Claude を使う（依存注入パターン）。
  */
-// eslint-disable-next-line max-params
 export type ConversationGenerator = (
   prompt: string,
   apiKey: string,
 ) => Promise<ConversationGeneratorResult>;
 
 /** チャンネルのあらすじを生成する関数（#53）。 */
-// eslint-disable-next-line max-params
 export type SummaryGenerator = (prompt: string, apiKey: string) => Promise<string>;
 
 /**
@@ -49,13 +47,17 @@ const CONVERSATION_MAX_TOKENS = 8192;
 const SUMMARY_MAX_TOKENS = 512;
 
 /** Claude にプロンプトを投げ、テキストと usage を返す共通処理（#663）。 */
-// eslint-disable-next-line max-params
-async function callClaudeText(
-  client: Anthropic,
-  prompt: string,
-  model: string,
-  maxTokens: number,
-): Promise<ConversationGeneratorResult> {
+async function callClaudeText({
+  client,
+  prompt,
+  model,
+  maxTokens,
+}: {
+  client: Anthropic;
+  prompt: string;
+  model: string;
+  maxTokens: number;
+}): Promise<ConversationGeneratorResult> {
   const message = await client.messages.create({
     model,
     max_tokens: maxTokens,
@@ -89,7 +91,7 @@ function extractFirstText(content: readonly Anthropic.Messages.ContentBlock[]): 
 export function createClaudeConversationGenerator(model: BatchModel): ConversationGenerator {
   // eslint-disable-next-line max-params
   return (prompt, apiKey) =>
-    callClaudeText(new Anthropic({ apiKey }), prompt, model, CONVERSATION_MAX_TOKENS);
+    callClaudeText({ client: new Anthropic({ apiKey }), prompt, model, maxTokens: CONVERSATION_MAX_TOKENS });
 }
 
 /** Claude で会話 JSON を生成する既定実装（既定モデル sonnet-4-6・#53 / #389）。 */
@@ -99,12 +101,12 @@ export const generateConversationWithClaude: ConversationGenerator =
 /** Claude であらすじを生成する既定実装（#53）。 */
 // eslint-disable-next-line max-params
 export const generateSummaryWithClaude: SummaryGenerator = async (prompt, apiKey) => {
-  const result = await callClaudeText(
-    new Anthropic({ apiKey }),
+  const result = await callClaudeText({
+    client: new Anthropic({ apiKey }),
     prompt,
-    SUMMARY_MODEL,
-    SUMMARY_MAX_TOKENS,
-  );
+    model: SUMMARY_MODEL,
+    maxTokens: SUMMARY_MAX_TOKENS,
+  });
   return result.text;
 };
 

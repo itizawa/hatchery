@@ -198,8 +198,10 @@ describe("PostCard", () => {
     it.each([
       ["up vote", /up vote/i],
       ["down vote", /down vote/i],
-    // eslint-disable-next-line max-params
-    ] as const)("有効時の %s クリックで stopPropagation と preventDefault の両方が呼ばれる", (_label, namePattern) => {
+    ] as const)(
+      "有効時の %s クリックで stopPropagation と preventDefault の両方が呼ばれる",
+      // eslint-disable-next-line max-params
+      (_label, namePattern) => {
       render(<PostCard post={mockPost} onVote={vi.fn()} voteStopPropagation={true} />);
 
       const event = new MouseEvent("click", { bubbles: true, cancelable: true });

@@ -108,6 +108,16 @@ export interface PostRepository {
     communityId: string,
     params: { since: Date; minScore: number; limit: number },
   ): Promise<PostRecord[]>;
+  /**
+   * community 内で createdAt >= since の post を createdAt 降順で返す（#673 comment バッチ）。
+   * limit 省略時は 100 件。
+   */
+  listRecentByCommunity(communityId: string, since: Date, limit?: number): Promise<PostRecord[]>;
+  /**
+   * community 内で createdAt < before かつ score >= 0 の post を score 降順で最大 limit 件返す（#673 古い post 活性化）。
+   * limit 省略時は 20 件。
+   */
+  listOldByCommunity(communityId: string, before: Date, limit?: number): Promise<PostRecord[]>;
 }
 
 function cloneRecord(r: PostRecord): PostRecord {
@@ -376,6 +386,34 @@ export function createInMemoryPostRepository(): PostRepository {
             r.communityId === communityId &&
             r.score >= minScore &&
             r.createdAt.getTime() >= since.getTime(),
+        )
+        .sort((a, b) => {
+          if (a.score !== b.score) return b.score - a.score;
+          return b.createdAt.getTime() - a.createdAt.getTime();
+        })
+        .slice(0, limit)
+        .map(cloneRecord);
+      return Promise.resolve(result);
+    },
+
+    listRecentByCommunity(communityId: string, since: Date, limit = 100): Promise<PostRecord[]> {
+      const result = records
+        .filter(
+          (r) => r.communityId === communityId && r.createdAt.getTime() >= since.getTime(),
+        )
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+        .slice(0, limit)
+        .map(cloneRecord);
+      return Promise.resolve(result);
+    },
+
+    listOldByCommunity(communityId: string, before: Date, limit = 20): Promise<PostRecord[]> {
+      const result = records
+        .filter(
+          (r) =>
+            r.communityId === communityId &&
+            r.createdAt.getTime() < before.getTime() &&
+            r.score >= 0,
         )
         .sort((a, b) => {
           if (a.score !== b.score) return b.score - a.score;

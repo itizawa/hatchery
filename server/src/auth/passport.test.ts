@@ -19,7 +19,9 @@ function buildUser(overrides: Partial<User> = {}): User {
 }
 
 type SerializeRunner = {
+  // eslint-disable-next-line max-params
   serializeUser(user: AuthUser, done: (err: unknown, id?: unknown) => void): void;
+  // eslint-disable-next-line max-params
   deserializeUser(id: string, done: (err: unknown, user?: AuthUser | false) => void): void;
 };
 

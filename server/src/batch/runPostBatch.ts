@@ -145,6 +145,10 @@ async function processCommunitePosts({
     commentRepo: deps.commentRepo ?? {
       listByCommunity: async () => [],
       createMany: async () => [],
+      listByPost: async () => [],
+      findById: async () => null,
+      countByPostIds: async () => new Map(),
+      addScore: async () => null,
     },
     community,
     recentLimit,

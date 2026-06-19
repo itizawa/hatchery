@@ -24,7 +24,7 @@ export interface RecentEntry {
  *
  * ADR-0019: Post/Comment モデルへの移行に対応（旧 Message 型からの更新）。
  */
-export const formatRecentLog = (entries: readonly RecentEntry[], n: number): string[] => {
+export const formatRecentLog = ({ entries, n }: { entries: readonly RecentEntry[]; n: number }): string[] => {
   if (n <= 0) return [];
   const start = Math.max(0, entries.length - n);
   return entries.slice(start).map((entry) => {

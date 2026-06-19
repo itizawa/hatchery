@@ -37,6 +37,7 @@ export default tseslint.config(
       },
     },
     rules: {
+      "max-params": ["error", { "max": 1 }],
       "import/no-restricted-paths": [
         "error",
         {

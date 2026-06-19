@@ -13,19 +13,25 @@ import type { Worker } from "../domain/worker/index.js";
  * - 同点（同じ最終登場）は入力順を保つ安定ソートで、同入力に対し決定的。
  * - 入力（workers / lastAppearedBySlot）は破壊しない。
  */
-export const selectAppearingMembers = (
-  workers: readonly Worker[],
-  count: number,
-  lastAppearedBySlot: Readonly<Record<string, number>>,
-): string[] => {
+export const selectAppearingMembers = ({
+  workers,
+  count,
+  lastAppearedBySlot,
+}: {
+  workers: readonly Worker[];
+  count: number;
+  lastAppearedBySlot: Readonly<Record<string, number>>;
+}): string[] => {
   if (count <= 0) return [];
 
   // 未登場は最優先（-Infinity）。小さいほど優先。同点は入力 index で安定化。
   const ranked = workers
+    // eslint-disable-next-line max-params
     .map((worker, index) => {
       const last = lastAppearedBySlot[worker.id];
       return { id: worker.id, priority: last ?? Number.NEGATIVE_INFINITY, index };
     })
+    // eslint-disable-next-line max-params
     .sort((a, b) => a.priority - b.priority || a.index - b.index);
 
   return ranked.slice(0, count).map((entry) => entry.id);

@@ -39,7 +39,7 @@ export type ReleaseNotesSummary = z.infer<typeof ReleaseNotesSummarySchema>;
  * @param version バージョン文字列（例: "v1.3.0"）
  * @param commitLines コミット行の配列（例: ["- feat: ... (abc1234)", ...]）
  */
-export function buildReleaseNotesPrompt(version: string, commitLines: string[]): string {
+export function buildReleaseNotesPrompt({ version, commitLines }: { version: string; commitLines: string[] }): string {
   const commitSection =
     commitLines.length > 0
       ? commitLines.join("\n")

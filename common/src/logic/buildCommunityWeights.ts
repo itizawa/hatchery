@@ -21,10 +21,13 @@ import type { CommunityWeight } from "./selectWeightedCommunity.js";
  * @param netScores community ID → 純 vote スコア のマップ。エントリがない場合は 0 扱い。
  * @returns 各コミュニティの CommunityWeight 配列（communityIds と同順）。
  */
-export function buildCommunityWeights(
-  communityIds: readonly string[],
-  netScores: ReadonlyMap<string, number>,
-): CommunityWeight[] {
+export function buildCommunityWeights({
+  communityIds,
+  netScores,
+}: {
+  communityIds: readonly string[];
+  netScores: ReadonlyMap<string, number>;
+}): CommunityWeight[] {
   return communityIds.map((communityId) => ({
     communityId,
     // cold start 床: weight = max(0, 純vote) + 1。

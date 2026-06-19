@@ -35,6 +35,7 @@ export interface ViewRepository {
  * viewedAt を id に解決する関数（インメモリ実装用）。
  * targetType と targetId から author（workerId）を返す。解決できない場合は null。
  */
+// eslint-disable-next-line max-params
 export type ResolveViewAuthor = (
   targetType: ViewTargetType,
   targetId: string,
@@ -47,6 +48,7 @@ export type ResolveViewAuthor = (
  *   省略時は全ターゲットが解決不能（閲覧数集計は常に空）になる。
  * @param clock `viewedAt` に使う現在時刻供給関数（テストで固定するため）。既定は `() => new Date()`。
  */
+// eslint-disable-next-line max-params
 export function createInMemoryViewRepository(
   resolveAuthor?: ResolveViewAuthor,
   clock: () => Date = () => new Date(),
@@ -61,14 +63,17 @@ export function createInMemoryViewRepository(
   }
   const records: ViewRecord[] = [];
 
+  // eslint-disable-next-line max-params
   function postKey(postId: string, sessionId: string): string {
     return `post:${postId}:${sessionId}`;
   }
+  // eslint-disable-next-line max-params
   function commentKey(commentId: string, sessionId: string): string {
     return `comment:${commentId}:${sessionId}`;
   }
 
   return {
+    // eslint-disable-next-line max-params
     recordPostView(
       postId: string,
       sessionId: string,
@@ -80,6 +85,7 @@ export function createInMemoryViewRepository(
       return Promise.resolve({ isNew: true });
     },
 
+    // eslint-disable-next-line max-params
     recordCommentViews(
       commentIds: string[],
       sessionId: string,

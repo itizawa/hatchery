@@ -77,6 +77,7 @@ export function createInMemoryCommunityRepository(
     },
 
     list(): Promise<CommunityRecord[]> {
+      // eslint-disable-next-line max-params
       const sorted = [...records].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
       return Promise.resolve(sorted.map(cloneRecord));
     },
@@ -98,6 +99,7 @@ export function createInMemoryCommunityRepository(
       return Promise.resolve(cloneRecord(record));
     },
 
+    // eslint-disable-next-line max-params
     update(id: string, input: UpdateCommunityRecordInput): Promise<CommunityRecord | null> {
       const record = records.find((r) => r.id === id);
       if (!record) return Promise.resolve(null);

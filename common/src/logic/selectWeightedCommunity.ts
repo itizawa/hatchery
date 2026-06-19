@@ -29,13 +29,17 @@ export interface CommunityWeight {
  * - 累積和とちょうど一致する境界値は次のコミュニティ（半開区間 `[累積前, 累積後)`）に割り当てる。
  * - 入力配列は破壊しない。
  */
-export const selectWeightedCommunity = (
-  communities: readonly CommunityWeight[],
-  rng: () => number = Math.random,
-): string | null => {
+export const selectWeightedCommunity = ({
+  communities,
+  rng = Math.random,
+}: {
+  communities: readonly CommunityWeight[];
+  rng?: () => number;
+}): string | null => {
   if (communities.length === 0) return null;
 
   // 負の重みは 0 に丸めて扱う（呼び出し側で床 +1 済みの想定だが防御的に）。
+  // eslint-disable-next-line max-params
   const total = communities.reduce((sum, c) => sum + Math.max(0, c.weight), 0);
 
   // 全 weight 0（total <= 0）なら先頭を決定的に返す。

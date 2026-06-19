@@ -10,11 +10,15 @@ export interface CalcPostedAtOffsetsOptions {
  * AI メッセージの `postedAt` 値を計算する純粋関数（#183）。
  * baseTime を起点に、baseDelayMs 後から intervalMs 間隔で count 件の Date を返す。
  */
-export const calcPostedAtOffsets = (
-  baseTime: Date,
-  count: number,
-  options?: CalcPostedAtOffsetsOptions,
-): Date[] => {
+export const calcPostedAtOffsets = ({
+  baseTime,
+  count,
+  options,
+}: {
+  baseTime: Date;
+  count: number;
+  options?: CalcPostedAtOffsetsOptions;
+}): Date[] => {
   if (count <= 0) return [];
 
   const baseDelayMs = options?.baseDelayMs ?? 60_000;
@@ -23,6 +27,7 @@ export const calcPostedAtOffsets = (
 
   return Array.from(
     { length: count },
+    // eslint-disable-next-line max-params
     (_, i) => new Date(baseMs + baseDelayMs + i * intervalMs),
   );
 };

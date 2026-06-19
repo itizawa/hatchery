@@ -17,6 +17,7 @@ export function createJsonBodyParser(limit: string): RequestHandler {
  * 遅いリクエストでコネクションが占有され続けるのを防ぐ。
  */
 export function createRequestTimeout(ms: number): RequestHandler {
+  // eslint-disable-next-line max-params
   return (_req, res, next) => {
     const timer = setTimeout(() => {
       if (!res.headersSent) {

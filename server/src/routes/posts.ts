@@ -20,6 +20,7 @@ import { toCommentResponse, toPostResponse } from "./postResponse.js";
  * - 閲覧ビーコン（/view・/comment-views）は認証不要（ゲスト対応・#665）
  * - #479: スレッドの post / 各 comment に発言者の表示用ワーカー情報（author_worker）を付与する。
  */
+// eslint-disable-next-line max-params
 export function createPostsRouter(
   postRepo: PostRepository,
   commentRepo: CommentRepository,
@@ -30,6 +31,7 @@ export function createPostsRouter(
   const router = Router();
 
   // スレッド取得（post + comments・認証不要）
+  // eslint-disable-next-line max-params
   router.get("/posts/:postId", (req, res, next) => {
     const { postId } = req.params as { postId: string };
     postRepo
@@ -57,6 +59,7 @@ export function createPostsRouter(
   });
 
   // post 閲覧ビーコン（認証不要・ゲスト対応・#665 / ADR-0032）
+  // eslint-disable-next-line max-params
   router.post("/posts/:postId/view", validateBody(PostViewRequestSchema), (req, res, next) => {
     const { postId } = req.params as { postId: string };
     const { sessionId } = req.body as { sessionId: string };
@@ -78,6 +81,7 @@ export function createPostsRouter(
   router.post(
     "/posts/:postId/comment-views",
     validateBody(CommentViewsRequestSchema),
+    // eslint-disable-next-line max-params
     (req, res, next) => {
       const { postId } = req.params as { postId: string };
       const { sessionId, commentIds } = req.body as { sessionId: string; commentIds: string[] };
@@ -101,6 +105,7 @@ export function createPostsRouter(
     "/posts/:postId/vote",
     requireAuth,
     validateBody(VoteRequestSchema),
+    // eslint-disable-next-line max-params
     (req, res, next) => {
       const { postId } = req.params as { postId: string };
       const userId = getAuthUser(req).id;
@@ -131,6 +136,7 @@ export function createPostsRouter(
     "/comments/:commentId/vote",
     requireAuth,
     validateBody(VoteRequestSchema),
+    // eslint-disable-next-line max-params
     (req, res, next) => {
       const { commentId } = req.params as { commentId: string };
       const userId = getAuthUser(req).id;

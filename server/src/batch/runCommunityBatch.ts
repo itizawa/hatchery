@@ -182,7 +182,7 @@ async function processCommunity({
   // community 別の登場ワーカーを DB から解決する（#489）。
   const communityWorkers = await deps.workerCommunityRepo.listWorkersByCommunity(community.id);
   const botWorkers = communityWorkers.length > 0 ? [] : await botWorkersPromise;
-  const resolvedWorkers = selectCommunityWorkers(communityWorkers, botWorkers);
+  const resolvedWorkers = selectCommunityWorkers({ communityWorkers, allBotWorkers: botWorkers });
   if (resolvedWorkers.length === 0) {
     logBatchInfo("community_batch.skipped_no_workers", { communityId: community.id });
     return { posts: [], comments: [], appearedWorkerIds };
@@ -192,7 +192,7 @@ async function processCommunity({
   const rotatedWorkers = worldStateRepo
     ? (() => {
         const count = deps.appearingWorkerCount ?? resolvedWorkers.length;
-        const orderedIds = selectRotatedWorkers(resolvedWorkers, currentWorkerStates, count);
+        const orderedIds = selectRotatedWorkers({ workers: resolvedWorkers, workerStates: currentWorkerStates, count });
         const byId = new Map(resolvedWorkers.map((w) => [w.id, w]));
         return orderedIds.flatMap((id) => {
           const w = byId.get(id);
@@ -283,7 +283,7 @@ async function processCommunity({
   // author 検証（既知 workerId のみ許可・ADR-0020）+ reply の targetPostRef 検証（#555）
   const knownPostRefs = postRefMap.size > 0 ? new Set(postRefMap.keys()) : undefined;
   try {
-    validateGenerationOutput(output, workerIds, knownPostRefs);
+    validateGenerationOutput({ output, knownWorkerIds: workerIds, knownPostRefs });
   } catch (err) {
     logBatchError("community_batch.author_validation_failed", err, {
       communityId: community.id,

@@ -44,6 +44,7 @@ export function createPrismaWorkerCommunityRepository(
       return rows.map((row) => row.communityId);
     },
 
+    // eslint-disable-next-line max-params
     async setWorkerCommunities(
       workerId: string,
       communityIds: readonly string[],

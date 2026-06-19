@@ -6,6 +6,7 @@ import { createInMemoryWorkerRepository } from "../persistence/workerRepository.
 import { createTestUserRepository } from "../persistence/userRepository.js";
 import { createTestDeps } from "../testing/createTestDeps.js";
 
+// eslint-disable-next-line max-params
 async function makeApp(role: "admin" | "member" = "admin", workerRepository = createInMemoryWorkerRepository()) {
   const userRepo = await createTestUserRepository(role);
   return createApp(
@@ -159,4 +160,3 @@ describe("POST /api/admin/workers (#217)", () => {
     expect(res.status).toBe(400);
   });
 });
-

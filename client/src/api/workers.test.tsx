@@ -11,6 +11,7 @@ import {
   useUploadWorkerImage,
 } from "./workers.js";
 
+// eslint-disable-next-line max-params
 function jsonResponse(status: number, body?: unknown): Response {
   return new Response(body === undefined ? null : JSON.stringify(body), {
     status,

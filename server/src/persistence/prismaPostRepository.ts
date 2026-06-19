@@ -41,6 +41,7 @@ function toRecord(row: {
 /** PostRepository の Prisma / PostgreSQL 実装（ADR-0019 / #305）。 */
 export function createPrismaPostRepository(prisma: PrismaClient): PostRepository {
   return {
+    // eslint-disable-next-line max-params
     async createMany(communityId: string, inputs: PostCreateInput[]): Promise<PostRecord[]> {
       const rows = await prisma.$transaction(
         inputs.map((input) =>
@@ -69,6 +70,7 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
       return rows.map(toRecord);
     },
 
+    // eslint-disable-next-line max-params
     async listByCommunity(communityId: string, limit = 50, options?: RevealFilterOptions): Promise<PostRecord[]> {
       const now = options?.now;
       const rows = await prisma.post.findMany({
@@ -88,6 +90,7 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
       return row ? toRecord(row) : null;
     },
 
+    // eslint-disable-next-line max-params
     async addScore(id: string, delta: number): Promise<PostRecord | null> {
       try {
         const row = await prisma.post.update({
@@ -100,6 +103,7 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
       }
     },
 
+    // eslint-disable-next-line max-params
     async listLatest(limit = 50, options?: RevealFilterOptions): Promise<PostRecord[]> {
       const now = options?.now;
       const rows = await prisma.post.findMany({
@@ -113,6 +117,7 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
       return rows.map(toRecord);
     },
 
+    // eslint-disable-next-line max-params
     async listLatestPaged(
       cursor?: string,
       limit = 20,
@@ -154,6 +159,7 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
       return { posts: posts.map(toRecord), nextCursor };
     },
 
+    // eslint-disable-next-line max-params
     async listPopularPaged(
       cursor?: string,
       limit = 20,
@@ -219,6 +225,7 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
       return statsMap;
     },
 
+    // eslint-disable-next-line max-params
     async listTopByCommunity(
       communityId: string,
       params: { since: Date; minScore: number; limit: number },
@@ -236,6 +243,7 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
       return rows.map(toRecord);
     },
 
+    // eslint-disable-next-line max-params
     async listRecentByCommunity(communityId: string, since: Date, limit = 100): Promise<PostRecord[]> {
       const rows = await prisma.post.findMany({
         where: {
@@ -248,6 +256,7 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
       return rows.map(toRecord);
     },
 
+    // eslint-disable-next-line max-params
     async listOldByCommunity(communityId: string, before: Date, limit = 20): Promise<PostRecord[]> {
       const rows = await prisma.post.findMany({
         where: {

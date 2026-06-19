@@ -5,6 +5,7 @@ import type { SubscriptionRepository } from "./subscriptionRepository.js";
 /** SubscriptionRepository の Prisma / PostgreSQL 実装（ADR-0019 / #305）。 */
 export function createPrismaSubscriptionRepository(prisma: PrismaClient): SubscriptionRepository {
   return {
+    // eslint-disable-next-line max-params
     async add(userId: string, communityId: string): Promise<void> {
       await prisma.subscription.upsert({
         where: { userId_communityId: { userId, communityId } },
@@ -13,6 +14,7 @@ export function createPrismaSubscriptionRepository(prisma: PrismaClient): Subscr
       });
     },
 
+    // eslint-disable-next-line max-params
     async remove(userId: string, communityId: string): Promise<void> {
       try {
         await prisma.subscription.delete({
@@ -34,6 +36,7 @@ export function createPrismaSubscriptionRepository(prisma: PrismaClient): Subscr
       return rows.map((r) => r.communityId);
     },
 
+    // eslint-disable-next-line max-params
     async hasSubscription(userId: string, communityId: string): Promise<boolean> {
       const row = await prisma.subscription.findUnique({
         where: { userId_communityId: { userId, communityId } },

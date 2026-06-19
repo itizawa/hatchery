@@ -121,6 +121,21 @@ common: Zod スキーマ → server: zod-to-openapi で openapi.json 生成 → 
 - 純粋なバックエンド/リファクタ等で**ユーザー可視の振る舞いが変わらない**場合は更新不要（その旨を PR に一言残す）。
 - ユーザー可視の振る舞いを変えたのに usecases を更新していない PR は、**レビューで指摘対象**とする。
 
+## 関数引数規約（#720）
+
+**関数の引数が 2 個以上になる場合は、必ずオブジェクト引数（名前付き引数）パターンに統一すること**。ESLint `max-params: 1` ルールで強制している。
+
+```ts
+// NG: 位置引数
+function foo(a: string, b: number) { ... }
+
+// OK: オブジェクト引数
+function foo({ a, b }: { a: string; b: number }) { ... }
+```
+
+- **例外（`eslint-disable-next-line max-params` で許容）**: Express ミドルウェア `(req, res, next)`・エラーハンドラー `(err, req, res, next)`・配列コールバック `.map((item, index) => ...)` / `.sort((a, b) => ...)` / `.reduce((acc, v) => ...)` 等、外部 I/F 都合で位置引数が避けられないパターン。
+- 違反（位置引数 2 個以上・disable コメントなし）はレビューで指摘対象とする。
+
 ## ADR の追加・更新
 
 技術的な決定は `docs/adr/NNNN-kebab-case-title.md`（連番 4 桁）に MADR 風フォーマットで 1 ファイル 1 決定で残す。新規は `docs/adr/template.md` をコピーし、`docs/adr/README.md` の一覧表に行を追加する。

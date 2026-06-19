@@ -13,13 +13,13 @@ export interface Community {
   generationInstruction?: string | null;
 }
 
-export function createApiClient(baseUrl: string, adminToken: string) {
+export function createApiClient({ baseUrl, adminToken }: { baseUrl: string; adminToken: string }) {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     Authorization: `Bearer ${adminToken}`,
   };
 
-  async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
+  async function call<T>({ method, path, body }: { method: string; path: string; body?: unknown }): Promise<T> {
     const response = await fetch(`${baseUrl}${path}`, {
       method,
       headers,
@@ -33,31 +33,29 @@ export function createApiClient(baseUrl: string, adminToken: string) {
   }
 
   return {
-    listWorkers: () => call<unknown>("GET", "/api/workers"),
+    listWorkers: () => call<unknown>({ method: "GET", path: "/api/workers" }),
 
     createWorker: (data: { displayName: string; role?: string; personality?: string; verbosity?: "concise" | "standard" | "detailed" }) =>
-      call<Worker>("POST", "/api/admin/workers", data),
+      call<Worker>({ method: "POST", path: "/api/admin/workers", body: data }),
 
-    updateWorker: (id: string, data: { displayName?: string; role?: string; personality?: string; verbosity?: "concise" | "standard" | "detailed" }) =>
-      call<Worker>("PATCH", `/api/workers/${id}`, data),
+    updateWorker: ({ id, data }: { id: string; data: { displayName?: string; role?: string; personality?: string; verbosity?: "concise" | "standard" | "detailed" } }) =>
+      call<Worker>({ method: "PATCH", path: `/api/workers/${id}`, body: data }),
 
-    listCommunities: () => call<unknown>("GET", "/api/admin/communities"),
+    listCommunities: () => call<unknown>({ method: "GET", path: "/api/admin/communities" }),
 
     createCommunity: (data: {
       slug: string;
       name: string;
       description: string;
       generationInstruction?: string;
-    }) => call<Community>("POST", "/api/admin/communities", data),
+    }) => call<Community>({ method: "POST", path: "/api/admin/communities", body: data }),
 
-    updateCommunity: (
-      id: string,
-      data: { name?: string; description?: string; generationInstruction?: string | null },
-    ) => call<Community>("PATCH", `/api/admin/communities/${id}`, data),
+    updateCommunity: ({ id, data }: {
+      id: string;
+      data: { name?: string; description?: string; generationInstruction?: string | null };
+    }) => call<Community>({ method: "PATCH", path: `/api/admin/communities/${id}`, body: data }),
 
-    assignWorkerToCommunity: (workerId: string, communityIds: string[]) =>
-      call<{ communityIds: string[] }>("PUT", `/api/admin/workers/${workerId}/communities`, {
-        communityIds,
-      }),
+    assignWorkerToCommunity: ({ workerId, communityIds }: { workerId: string; communityIds: string[] }) =>
+      call<{ communityIds: string[] }>({ method: "PUT", path: `/api/admin/workers/${workerId}/communities`, body: { communityIds } }),
   };
 }

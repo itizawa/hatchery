@@ -35,7 +35,9 @@ export function createInMemoryTokenUsageLogRepository(): TokenUsageLogRepository
     findRecent(limit: number): Promise<TokenUsageLog[]> {
       return Promise.resolve(
         [...logs]
+          // eslint-disable-next-line max-params
           .map((log, index) => ({ log, index }))
+          // eslint-disable-next-line max-params
           .sort((a, b) => {
             const diff = b.log.occurredAt.getTime() - a.log.occurredAt.getTime();
             return diff !== 0 ? diff : b.index - a.index;
@@ -46,7 +48,9 @@ export function createInMemoryTokenUsageLogRepository(): TokenUsageLogRepository
     },
 
     summarize(): Promise<TokenUsageSummary> {
+      // eslint-disable-next-line max-params
       const totalInputTokens = logs.reduce((sum, l) => sum + l.inputTokens, 0);
+      // eslint-disable-next-line max-params
       const totalOutputTokens = logs.reduce((sum, l) => sum + l.outputTokens, 0);
       return Promise.resolve({
         totalInputTokens,

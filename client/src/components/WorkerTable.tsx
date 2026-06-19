@@ -79,7 +79,8 @@ export const WorkerTable = ({
           </TableHead>
           <TableBody>
             {isLoading
-              ? Array.from({ length: SKELETON_ROW_COUNT }, (_, i) => (
+              ? // eslint-disable-next-line max-params
+                Array.from({ length: SKELETON_ROW_COUNT }, (_, i) => (
                   <TableRow key={i}>
                     <TableCell>
                       <Skeleton

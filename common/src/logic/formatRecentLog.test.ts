@@ -8,6 +8,7 @@ import { formatRecentLog } from "./formatRecentLog.js";
  * 旧: Message { createdEmployeeId, channel, text }
  * 新: RecentEntry { community_id, author, text, title? }
  */
+// eslint-disable-next-line max-params
 const entry = (author: string, community_id: string, text: string): RecentEntry => ({
   author,
   community_id,
@@ -23,27 +24,27 @@ const sample: RecentEntry[] = [
 
 describe("formatRecentLog (B-1)", () => {
   it("n 件超のときは末尾 n 件のみを整形する", () => {
-    expect(formatRecentLog(sample, 2)).toEqual(["[shigoto] mei: 3つめ", "[shigoto] haru: 4つめ"]);
+    expect(formatRecentLog({ entries: sample, n: 2 })).toEqual(["[shigoto] mei: 3つめ", "[shigoto] haru: 4つめ"]);
   });
 
   it("各発言を [community_id] author: text 形式に整形する", () => {
-    expect(formatRecentLog([entry("haru", "zatsudan", "やあ")], 5)).toEqual([
+    expect(formatRecentLog({ entries: [entry("haru", "zatsudan", "やあ")], n: 5 })).toEqual([
       "[zatsudan] haru: やあ",
     ]);
   });
 
   it("entries.length <= n のときは全件返す", () => {
-    expect(formatRecentLog(sample, 10)).toHaveLength(4);
-    expect(formatRecentLog(sample, 4)).toHaveLength(4);
+    expect(formatRecentLog({ entries: sample, n: 10 })).toHaveLength(4);
+    expect(formatRecentLog({ entries: sample, n: 4 })).toHaveLength(4);
   });
 
   it("n = 0 のときは空配列を返す", () => {
-    expect(formatRecentLog(sample, 0)).toEqual([]);
+    expect(formatRecentLog({ entries: sample, n: 0 })).toEqual([]);
   });
 
   it("元配列を破壊しない", () => {
     const input = [...sample];
-    formatRecentLog(input, 2);
+    formatRecentLog({ entries: input, n: 2 });
     expect(input).toHaveLength(4);
     expect(input).toEqual(sample);
   });

@@ -14,6 +14,7 @@ import type { AdminCommunity } from "../api/communities.js";
 import { WorkerCommunitiesSelect } from "./WorkerCommunitiesSelect.js";
 
 /** テスト用の AdminCommunity を最小フィールドで組む。 */
+// eslint-disable-next-line max-params
 function makeCommunity(id: string, name: string, slug = id): AdminCommunity {
   return {
     id,
@@ -87,6 +88,7 @@ describe("WorkerCommunitiesSelect（#531）", () => {
 
   it("(d) WORKER_COMMUNITIES_MAX 到達後は新規選択しても上限件数に丸められ、余分 id は含まれない", () => {
     // MAX 件すべてを選択済みにし、さらに 1 件余分な選択肢を用意する。
+    // eslint-disable-next-line max-params
     const maxSelected = Array.from({ length: WORKER_COMMUNITIES_MAX }, (_, i) =>
       makeCommunity(`c${i}`, `community-${i}`),
     );

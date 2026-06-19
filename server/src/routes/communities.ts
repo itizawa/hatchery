@@ -21,6 +21,7 @@ const RECENT_WORKERS_LIMIT = 10;
  * - 一覧・フィードは認証不要（公共コミュニティ）
  * - 購読・購読解除は認証必須（up vote と購読のみ・ADR-0020）
  */
+// eslint-disable-next-line max-params
 export function createCommunitiesRouter(
   communityRepo: CommunityRepository,
   postRepo: PostRepository,
@@ -33,6 +34,7 @@ export function createCommunitiesRouter(
   // community 一覧（認証不要・公共コミュニティ）
   // CommunityRecord（camelCase）を OpenAPI 契約（snake_case created_at）に整形して返す（#477）
   // post_count / last_post_at を活気指標として付与する（N+1 回避・#527）
+  // eslint-disable-next-line max-params
   router.get("/", (_req, res, next) => {
     Promise.all([communityRepo.list(), postRepo.getStatsByCommunity()])
       .then(([communities, statsMap]) =>
@@ -42,6 +44,7 @@ export function createCommunitiesRouter(
   });
 
   // community フィード（新着順・認証不要・#479 で author_worker を付与）
+  // eslint-disable-next-line max-params
   router.get("/:slug/feed", (req, res, next) => {
     const { slug } = req.params as { slug: string };
     // reveal フィルタ（#556）: createdAt <= now のもののみ公開する。
@@ -63,6 +66,7 @@ export function createCommunitiesRouter(
   });
 
   // community に最近投稿したワーカー一覧（認証不要・#207）
+  // eslint-disable-next-line max-params
   router.get("/:slug/recent-workers", (req, res, next) => {
     const { slug } = req.params as { slug: string };
     // reveal フィルタ（#556）: createdAt <= now の post の author のみ対象にする。
@@ -96,6 +100,7 @@ export function createCommunitiesRouter(
   // 購読状態取得（認証任意・未認証は subscribed: false を返す・#421）
   // ユーザー個別データを返すため、未認証時でも公開（共有）キャッシュには載せない（#559 AC3）。
   // ルータ全体の publicCache が未認証 GET に付ける public ヘッダをここで private, no-store に上書きする。
+  // eslint-disable-next-line max-params
   router.get("/:slug/subscription", (req, res, next) => {
     res.setHeader("Cache-Control", buildPrivateCacheControl());
     const { slug } = req.params as { slug: string };
@@ -116,6 +121,7 @@ export function createCommunitiesRouter(
   });
 
   // community 購読（認証必須・ADR-0020）
+  // eslint-disable-next-line max-params
   router.post("/:slug/subscribe", requireAuth, (req, res, next) => {
     const { slug } = req.params as { slug: string };
     const userId = getAuthUser(req).id;
@@ -134,6 +140,7 @@ export function createCommunitiesRouter(
   });
 
   // community 購読解除（認証必須・ADR-0020）
+  // eslint-disable-next-line max-params
   router.delete("/:slug/subscribe", requireAuth, (req, res, next) => {
     const { slug } = req.params as { slug: string };
     const userId = getAuthUser(req).id;

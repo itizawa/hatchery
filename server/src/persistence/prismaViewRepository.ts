@@ -10,6 +10,7 @@ import type { ViewRepository } from "./viewRepository.js";
  */
 export function createPrismaViewRepository(prisma: PrismaClient): ViewRepository {
   return {
+    // eslint-disable-next-line max-params
     async recordPostView(
       postId: string,
       sessionId: string,
@@ -31,6 +32,7 @@ export function createPrismaViewRepository(prisma: PrismaClient): ViewRepository
       });
     },
 
+    // eslint-disable-next-line max-params
     async recordCommentViews(
       commentIds: string[],
       sessionId: string,

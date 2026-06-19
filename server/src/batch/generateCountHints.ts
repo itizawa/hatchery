@@ -17,6 +17,7 @@ export interface CountHints {
  * @param rng 乱数源 `[0, 1)`。テストでは固定値を渡して決定化できる。
  * @returns min 以上 max 以下の整数
  */
+// eslint-disable-next-line max-params
 export function pickInRange(min: number, max: number, rng: () => number): number {
   // [0, 1) を [min, max] の整数に写す: floor((max - min + 1) * rng) + min
   // rng = 0 → min, rng → 1 のとき → max
@@ -33,6 +34,7 @@ export function pickInRange(min: number, max: number, rng: () => number): number
  * @param commentRange 各 post のコメント数の範囲
  * @param rng 乱数源 `[0, 1)`
  */
+// eslint-disable-next-line max-params
 export function generateCountHints(
   postRange: { min: number; max: number },
   commentRange: { min: number; max: number },

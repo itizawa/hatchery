@@ -109,6 +109,7 @@ describe("runCommunityBatch (#306)", () => {
   const buildDeps = (
     communities: CommunityRecord[],
     workerCommunityData: InMemoryWorkerCommunityData = { workers: [], links: [] },
+  // eslint-disable-next-line max-params
   ) => {
     const communityRepo = createInMemoryCommunityRepository(communities);
     const postRepo = createInMemoryPostRepository();
@@ -478,6 +479,7 @@ describe("runCommunityBatch worldState 登場ローテーション (#464)", () =
   const buildDeps = (
     communities: CommunityRecord[],
     workerCommunityData: InMemoryWorkerCommunityData = { workers: [], links: [] },
+  // eslint-disable-next-line max-params
   ) => {
     const communityRepo = createInMemoryCommunityRepository(communities);
     const postRepo = createInMemoryPostRepository();
@@ -622,6 +624,7 @@ describe("runCommunityBatch ドリップ割当（#556）", () => {
   const buildDeps = (
     communities: CommunityRecord[],
     workerCommunityData: InMemoryWorkerCommunityData = { workers: [], links: [] },
+  // eslint-disable-next-line max-params
   ) => {
     const communityRepo = createInMemoryCommunityRepository(communities);
     const postRepo = createInMemoryPostRepository();
@@ -748,6 +751,7 @@ describe("runCommunityBatch 人気トピック還元 (#558)", () => {
   const buildDeps = (
     communities: CommunityRecord[],
     workerCommunityData: InMemoryWorkerCommunityData = { workers: [], links: [] },
+  // eslint-disable-next-line max-params
   ) => {
     const communityRepo = createInMemoryCommunityRepository(communities);
     const postRepo = createInMemoryPostRepository();
@@ -849,6 +853,7 @@ describe("runCommunityBatch post/comment 件数揺らぎ（#557）", () => {
   const buildDeps = (
     communities: CommunityRecord[],
     workerCommunityData: InMemoryWorkerCommunityData = { workers: [], links: [] },
+  // eslint-disable-next-line max-params
   ) => {
     const communityRepo = createInMemoryCommunityRepository(communities);
     const postRepo = createInMemoryPostRepository();
@@ -960,6 +965,7 @@ describe("runCommunityBatch トークン使用量記録 (#663)", () => {
   const buildDeps = (
     communities: CommunityRecord[],
     workerCommunityData: InMemoryWorkerCommunityData = { workers: [], links: [] },
+  // eslint-disable-next-line max-params
   ) => {
     const communityRepo = createInMemoryCommunityRepository(communities);
     const postRepo = createInMemoryPostRepository();

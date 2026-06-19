@@ -118,19 +118,24 @@ const PostThreadSidebar = ({ communityId }: { communityId: string }): ReactEleme
  * depth に応じてコネクター線 + インデントが付く。
  * commentRef ラッパー div で IntersectionObserver による閉覧計測を行う（#665）。
  */
-function renderCommentTree(
-  nodes: CommentTreeNode[],
-  commentMap: Map<string, Comment>,
-  onVote: (commentId: string, direction: VoteDirection) => void,
-  commentRef: (commentId: string) => (el: HTMLElement | null) => void,
-): ReactElement[] {
+function renderCommentTree({
+  nodes,
+  commentMap,
+  onVote,
+  commentRef,
+}: {
+  nodes: CommentTreeNode[];
+  commentMap: Map<string, Comment>;
+  onVote: (commentId: string, direction: VoteDirection) => void;
+  commentRef: (commentId: string) => (el: HTMLElement | null) => void;
+}): ReactElement[] {
   return nodes.flatMap((node) => {
     const comment = commentMap.get(node.id);
     if (!comment) return [];
 
     const childElements =
       node.children.length > 0
-        ? renderCommentTree(node.children, commentMap, onVote, commentRef)
+        ? renderCommentTree({ nodes: node.children, commentMap, onVote, commentRef })
         : null;
 
     return [
@@ -219,12 +224,13 @@ export const PostThreadScene = (): ReactElement => {
               <Typography variant="subtitle2" sx={{ mb: 1, color: "text.secondary" }}>
                 コメント {comments.length} 件
               </Typography>
-              {renderCommentTree(
-                commentTree,
+              {renderCommentTree({
+                nodes: commentTree,
                 commentMap,
-                (commentId, direction) => guardVote(() => voteComment({ commentId, direction })),
+                // eslint-disable-next-line max-params
+                onVote: (commentId, direction) => guardVote(() => voteComment({ commentId, direction })),
                 commentRef,
-              )}
+              })}
             </Box>
           )}
 

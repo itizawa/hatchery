@@ -35,6 +35,7 @@ describe("WorkerCommunityIdsSchema（#490）", () => {
   });
 
   it(`配列サイズが ${WORKER_COMMUNITIES_MAX} を超えると parse 失敗する`, () => {
+    // eslint-disable-next-line max-params
     const tooMany = Array.from({ length: WORKER_COMMUNITIES_MAX + 1 }, (_, i) => `c${i}`);
     expect(
       WorkerCommunityIdsSchema.safeParse({ communityIds: tooMany }).success,
@@ -42,6 +43,7 @@ describe("WorkerCommunityIdsSchema（#490）", () => {
   });
 
   it(`配列サイズが上限ちょうど（${WORKER_COMMUNITIES_MAX}）は受理する`, () => {
+    // eslint-disable-next-line max-params
     const max = Array.from({ length: WORKER_COMMUNITIES_MAX }, (_, i) => `c${i}`);
     expect(WorkerCommunityIdsSchema.safeParse({ communityIds: max }).success).toBe(true);
   });

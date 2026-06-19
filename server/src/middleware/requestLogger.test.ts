@@ -8,6 +8,7 @@ function appWith(logLines: string[]) {
   const app = express();
   const stream = { write: (msg: string) => logLines.push(msg.trim()) };
   app.use(createRequestLogger(stream));
+  // eslint-disable-next-line max-params
   app.get("/health", (_req, res) => res.json({ ok: true }));
   return app;
 }
@@ -28,6 +29,7 @@ describe("createRequestLogger", () => {
     const app = express();
     const stream = { write: (msg: string) => lines.push(msg.trim()) };
     app.use(createRequestLogger(stream));
+    // eslint-disable-next-line max-params
     app.use((_req, res) => res.status(404).json({ error: "NotFound" }));
     await request(app).get("/not-found");
     expect(lines.length).toBeGreaterThan(0);
@@ -48,6 +50,7 @@ describe("createRequestLogger", () => {
       const stream = { write: (msg: string) => lines.push(msg.trim()) };
       const app = express();
       app.use(createRequestLogger(stream));
+      // eslint-disable-next-line max-params
       app.get("/health", (_req, res) => res.json({ ok: true }));
       await request(app).get("/health");
       expect(lines.length).toBeGreaterThan(0);
@@ -67,6 +70,7 @@ describe("createRequestLogger", () => {
     it("no-op になり next が呼ばれる（コンソール出力なし）", async () => {
       const app = express();
       app.use(createRequestLogger());
+      // eslint-disable-next-line max-params
       app.get("/health", (_req, res) => res.json({ ok: true }));
       const res = await request(app).get("/health");
       expect(res.status).toBe(200);

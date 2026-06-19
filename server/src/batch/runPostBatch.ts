@@ -111,7 +111,7 @@ async function processCommunitePosts({
   // community 別の登場ワーカーを DB から解決する。
   const communityWorkers = await deps.workerCommunityRepo.listWorkersByCommunity(community.id);
   const botWorkers = communityWorkers.length > 0 ? [] : await botWorkersPromise;
-  const resolvedWorkers = selectCommunityWorkers(communityWorkers, botWorkers);
+  const resolvedWorkers = selectCommunityWorkers({ communityWorkers, allBotWorkers: botWorkers });
   if (resolvedWorkers.length === 0) {
     logBatchInfo("post_batch.skipped_no_workers", { communityId: community.id });
     return { posts: [], appearedWorkerIds };
@@ -121,7 +121,7 @@ async function processCommunitePosts({
   const rotatedWorkers = worldStateRepo
     ? (() => {
         const count = deps.appearingWorkerCount ?? resolvedWorkers.length;
-        const orderedIds = selectRotatedWorkers(resolvedWorkers, currentWorkerStates, count);
+        const orderedIds = selectRotatedWorkers({ workers: resolvedWorkers, workerStates: currentWorkerStates, count });
         const byId = new Map(resolvedWorkers.map((w) => [w.id, w]));
         return orderedIds.flatMap((id) => {
           const w = byId.get(id);
@@ -213,7 +213,7 @@ async function processCommunitePosts({
 
   // author 検証（既知 workerId のみ許可）。
   try {
-    validateGenerationOutput(output, workerIds);
+    validateGenerationOutput({ output, knownWorkerIds: workerIds });
   } catch (err) {
     logBatchError("post_batch.author_validation_failed", err, {
       communityId: community.id,
@@ -230,6 +230,7 @@ async function processCommunitePosts({
     rng,
   });
 
+  // eslint-disable-next-line max-params
   const postInputs = output.posts.map((post, idx) => ({
     slotKey,
     seq: idx,

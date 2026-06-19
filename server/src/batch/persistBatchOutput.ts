@@ -39,6 +39,7 @@ export async function persistBatchOutput({
   // Post 作成（createdAt は now + 軽いオフセット）
   const postCount = output.posts.length;
   const postStaggerMs = postCount > 1 ? Math.floor(dripWindowMs / (postCount * 10)) : 0;
+  // eslint-disable-next-line max-params
   const postInputs = output.posts.map((post, postIdx) => ({
     slotKey,
     seq: postIdx,
@@ -51,6 +52,7 @@ export async function persistBatchOutput({
   savedPosts.push(...createdPosts);
 
   // Comment 作成（2-pass: 1st pass で全コメント作成 → 2nd pass で reply_to を解決）
+  // eslint-disable-next-line max-params
   const totalCommentCount = output.posts.reduce((sum, p) => sum + p.comments.length, 0);
   const dripTimestamps = assignDripTimestamps({
     slotAt: now,

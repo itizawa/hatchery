@@ -16,6 +16,7 @@ import { createAppRouter } from "../router.js";
  * スパイできるが、useAuth() 内部の queryFn は同モジュール内ローカル参照のため届かない。
  * QueryClient への事前シードで useAuth() の戻り値も制御する。
  */
+// eslint-disable-next-line max-params
 function renderApp(
   initialPath: string,
   authUser?: { id: string; displayName: string; role: "admin" | "member" } | null,
@@ -135,6 +136,7 @@ describe("設定画面タブ URL 同期・アクセシビリティ（#67）", ()
  * （認証は fetchMe スパイで通すため、fetch スタブは各タブのデータ取得にのみ効く）
  */
 describe("管理画面タブの Suspense / QueryBoundary（#463）", () => {
+  // eslint-disable-next-line max-params
   function jsonResponse(status: number, body?: unknown): Response {
     return new Response(body === undefined ? null : JSON.stringify(body), {
       status,

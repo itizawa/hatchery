@@ -48,11 +48,13 @@ describe("CommentViewsRequestSchema", () => {
   });
 
   it(`commentIds が ${COMMENT_IDS_MAX_COUNT} 要素を超えると reject する`, () => {
+    // eslint-disable-next-line max-params
     const ids = Array.from({ length: COMMENT_IDS_MAX_COUNT + 1 }, (_, i) => `comment-${i}`);
     expect(CommentViewsRequestSchema.safeParse({ sessionId: "sess", commentIds: ids }).success).toBe(false);
   });
 
   it(`commentIds が ${COMMENT_IDS_MAX_COUNT} 要素ちょうどなら accept する`, () => {
+    // eslint-disable-next-line max-params
     const ids = Array.from({ length: COMMENT_IDS_MAX_COUNT }, (_, i) => `comment-${i}`);
     expect(CommentViewsRequestSchema.safeParse({ sessionId: "sess", commentIds: ids }).success).toBe(true);
   });

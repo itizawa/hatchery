@@ -57,6 +57,7 @@ export function createInMemoryWorkerCommunityRepository(
       return Promise.resolve(result);
     },
 
+    // eslint-disable-next-line max-params
     setWorkerCommunities(
       workerId: string,
       communityIds: readonly string[],

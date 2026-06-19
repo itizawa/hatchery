@@ -47,12 +47,17 @@ const CONVERSATION_MAX_TOKENS = 8192;
 const SUMMARY_MAX_TOKENS = 512;
 
 /** Claude にプロンプトを投げ、テキストと usage を返す共通処理（#663）。 */
-async function callClaudeText(
-  client: Anthropic,
-  prompt: string,
-  model: string,
-  maxTokens: number,
-): Promise<ConversationGeneratorResult> {
+async function callClaudeText({
+  client,
+  prompt,
+  model,
+  maxTokens,
+}: {
+  client: Anthropic;
+  prompt: string;
+  model: string;
+  maxTokens: number;
+}): Promise<ConversationGeneratorResult> {
   const message = await client.messages.create({
     model,
     max_tokens: maxTokens,
@@ -84,8 +89,9 @@ function extractFirstText(content: readonly Anthropic.Messages.ContentBlock[]): 
  * モデルを env から切替可能にするため、ハードコード定数ではなくファクトリで受ける。
  */
 export function createClaudeConversationGenerator(model: BatchModel): ConversationGenerator {
+  // eslint-disable-next-line max-params
   return (prompt, apiKey) =>
-    callClaudeText(new Anthropic({ apiKey }), prompt, model, CONVERSATION_MAX_TOKENS);
+    callClaudeText({ client: new Anthropic({ apiKey }), prompt, model, maxTokens: CONVERSATION_MAX_TOKENS });
 }
 
 /** Claude で会話 JSON を生成する既定実装（既定モデル sonnet-4-6・#53 / #389）。 */
@@ -93,13 +99,14 @@ export const generateConversationWithClaude: ConversationGenerator =
   createClaudeConversationGenerator(DEFAULT_BATCH_MODEL);
 
 /** Claude であらすじを生成する既定実装（#53）。 */
+// eslint-disable-next-line max-params
 export const generateSummaryWithClaude: SummaryGenerator = async (prompt, apiKey) => {
-  const result = await callClaudeText(
-    new Anthropic({ apiKey }),
+  const result = await callClaudeText({
+    client: new Anthropic({ apiKey }),
     prompt,
-    SUMMARY_MODEL,
-    SUMMARY_MAX_TOKENS,
-  );
+    model: SUMMARY_MODEL,
+    maxTokens: SUMMARY_MAX_TOKENS,
+  });
   return result.text;
 };
 
@@ -164,6 +171,7 @@ export function createBatchConversationGenerator(
   const pollIntervalMs = deps.pollIntervalMs ?? 60_000;
   const maxPolls = deps.maxPolls ?? 60;
 
+  // eslint-disable-next-line max-params
   return async (prompt, apiKey): Promise<ConversationGeneratorResult> => {
     const client = createClient(apiKey);
 

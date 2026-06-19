@@ -21,6 +21,7 @@ function appThrowing(thrower: RequestHandler): Express {
 describe("errorHandler", () => {
   it("NotFoundError は 404 と error メッセージを返す", async () => {
     const res = await request(
+      // eslint-disable-next-line max-params
       appThrowing((_req, _res, next) => {
         next(new NotFoundError("ChannelNotFound"));
       }),
@@ -31,6 +32,7 @@ describe("errorHandler", () => {
 
   it("BadRequestError は 400 と error メッセージを返す", async () => {
     const res = await request(
+      // eslint-disable-next-line max-params
       appThrowing((_req, _res, next) => {
         next(new BadRequestError("EmployeeNotLinked"));
       }),
@@ -41,6 +43,7 @@ describe("errorHandler", () => {
 
   it("UnauthorizedError は 401 と error メッセージを返す", async () => {
     const res = await request(
+      // eslint-disable-next-line max-params
       appThrowing((_req, _res, next) => {
         next(new UnauthorizedError("Unauthorized"));
       }),
@@ -51,6 +54,7 @@ describe("errorHandler", () => {
 
   it("ForbiddenError は 403 と error メッセージを返す", async () => {
     const res = await request(
+      // eslint-disable-next-line max-params
       appThrowing((_req, _res, next) => {
         next(new ForbiddenError("Forbidden"));
       }),
@@ -61,6 +65,7 @@ describe("errorHandler", () => {
 
   it("status 413 を持つエラーは 413 PayloadTooLarge に変換する", async () => {
     const res = await request(
+      // eslint-disable-next-line max-params
       appThrowing((_req, _res, next) => {
         const err = Object.assign(new Error("too large"), {
           status: 413,
@@ -75,6 +80,7 @@ describe("errorHandler", () => {
 
   it("その他のエラーは 500 InternalServerError を返す", async () => {
     const res = await request(
+      // eslint-disable-next-line max-params
       appThrowing((_req, _res, next) => {
         next(new Error("boom"));
       }),
@@ -87,6 +93,7 @@ describe("errorHandler", () => {
     // タイムアウト 503 送出後に遅延ハンドラが next(err) するケースの再現。
     // headersSent ガードにより 200 のまま（500 で上書きしない）であることを確認。
     const res = await request(
+      // eslint-disable-next-line max-params
       appThrowing((_req, res, next) => {
         res.status(200).json({ ok: true });
         next(new Error("late error after response"));

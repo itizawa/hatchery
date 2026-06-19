@@ -64,6 +64,7 @@ function oldDate(daysAgo = 5): Date {
 }
 
 /** comment バッチ用の有効な生成出力 */
+// eslint-disable-next-line max-params
 function makeCommentOutput(ref = "ref-1", authorId = "worker-bot-1") {
   return JSON.stringify({
     topic: "テストトピック",

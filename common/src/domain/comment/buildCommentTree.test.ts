@@ -86,6 +86,7 @@ describe("buildCommentTree", () => {
     // 両方がトップレベルか、一方が他方の子になるか（実装依存）
     // とにかく有限個のノードを返すことを確認
     const countNodes = (nodes: CommentTreeNode[]): number =>
+      // eslint-disable-next-line max-params
       nodes.reduce((acc, n) => acc + 1 + countNodes(n.children), 0);
     expect(countNodes(tree)).toBe(2);
   });

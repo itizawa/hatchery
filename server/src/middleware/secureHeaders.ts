@@ -14,6 +14,7 @@ export interface SecureHeadersOptions {
  */
 export function createSecureHeaders(options: SecureHeadersOptions = {}): RequestHandler {
   const headers = buildSecurityHeaders(options.enableHsts ?? false);
+  // eslint-disable-next-line max-params
   return (_req, res, next) => {
     // 技術スタックの露出を避ける（Express の既定ヘッダ）。
     res.removeHeader("X-Powered-By");

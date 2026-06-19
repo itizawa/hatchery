@@ -39,6 +39,7 @@ export function createPrismaUserRepository(prisma: PrismaClient): UserRepository
       return mapRow(row);
     },
 
+    // eslint-disable-next-line max-params
     async updateProfile(
       id: string,
       data: { displayName: string; avatarUrl?: string },

@@ -402,6 +402,7 @@ describe("GET /api/communities/:slug/recent-workers", () => {
   it("RECENT_WORKERS_LIMIT を超える distinct author は先頭 10 件までに制限する（#478）", async () => {
     const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
     const postRepo = createInMemoryPostRepository();
+    // eslint-disable-next-line max-params
     const workers = Array.from({ length: 12 }, (_, i) => ({
       id: `worker-${i}`,
       displayName: `name-${i}`,
@@ -409,6 +410,7 @@ describe("GET /api/communities/:slug/recent-workers", () => {
     const workerRepo = createInMemoryWorkerRepository(workers);
     await postRepo.createMany(
       "community-1",
+      // eslint-disable-next-line max-params
       workers.map((w, i) => ({
         slotKey: "slot-1",
         seq: i,

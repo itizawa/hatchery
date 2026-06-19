@@ -11,6 +11,7 @@ import type { StreamOptions } from "morgan";
  */
 export function createRequestLogger(stream?: StreamOptions): RequestHandler {
   if (process.env.NODE_ENV === "test" && !stream) {
+    // eslint-disable-next-line max-params
     return (_req, _res, next) => next();
   }
   const format = process.env.NODE_ENV === "production" ? "combined" : "dev";

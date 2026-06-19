@@ -56,7 +56,9 @@ describe("postBatchIndex (#672)", () => {
 
   const buildCliDeps = (
     communities: CommunityRecord[],
+    // eslint-disable-next-line max-params
     generate: (prompt: string, apiKey: string) => Promise<{ text: string }>,
+  // eslint-disable-next-line max-params
   ): PostBatchCliDeps & { disconnect: ReturnType<typeof vi.fn> } => {
     const disconnect = vi.fn().mockResolvedValue(undefined);
     return {

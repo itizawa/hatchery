@@ -7,6 +7,7 @@ import { fetchOgp, useOgp } from "./ogp.js";
 
 const NULL_OGP_META = { title: null, description: null, image: null, site_name: null };
 
+// eslint-disable-next-line max-params
 function jsonResponse(status: number, body?: unknown): Response {
   return new Response(body === undefined ? null : JSON.stringify(body), {
     status,

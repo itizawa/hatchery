@@ -112,6 +112,7 @@ export async function createCommunity(input: CreateCommunityInput): Promise<Admi
 }
 
 /** PATCH /api/admin/communities/:id — コミュニティを更新する（admin のみ）。 */
+// eslint-disable-next-line max-params
 export async function updateCommunity(
   id: string,
   input: UpdateCommunityInput,
@@ -162,6 +163,7 @@ export function useUpdateCommunity() {
  * openapi-fetch は multipart/form-data 非対応のため worker 同様 fetch を直接呼ぶ。
  * baseUrl は clientEnv.apiBaseUrl（クロスオリジン配信 #78）→ window.location.origin の順で解決。
  */
+// eslint-disable-next-line max-params
 export async function uploadCommunityImage(
   communityId: string,
   kind: CommunityImageKind,

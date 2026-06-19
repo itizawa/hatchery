@@ -27,12 +27,12 @@ export async function selectOneCommunity({
   const since = new Date(now.getTime() - VOTE_WEIGHT_WINDOW_DAYS * 24 * 60 * 60 * 1000);
   const netScores = await voteRepo.netScoresByCommunitySince(since);
 
-  const weights: CommunityWeight[] = buildCommunityWeights(
-    communities.map((c) => c.id),
+  const weights: CommunityWeight[] = buildCommunityWeights({
+    communityIds: communities.map((c) => c.id),
     netScores,
-  );
+  });
 
-  const selectedId = selectWeightedCommunity(weights, rng);
+  const selectedId = selectWeightedCommunity({ communities: weights, rng });
   if (selectedId === null) return null;
   return communities.find((c) => c.id === selectedId) ?? null;
 }

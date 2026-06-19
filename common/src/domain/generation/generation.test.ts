@@ -193,7 +193,7 @@ describe("validateGenerationOutput", () => {
   };
 
   it("既知の workerId のみ含む場合は検証を通る", () => {
-    expect(() => validateGenerationOutput(validOutput, knownWorkerIds)).not.toThrow();
+    expect(() => validateGenerationOutput({ output: validOutput, knownWorkerIds })).not.toThrow();
   });
 
   it("post の author が未知の workerId の場合はエラーを投げる", () => {
@@ -206,7 +206,7 @@ describe("validateGenerationOutput", () => {
         },
       ],
     };
-    expect(() => validateGenerationOutput(invalidOutput, knownWorkerIds)).toThrow();
+    expect(() => validateGenerationOutput({ output: invalidOutput, knownWorkerIds })).toThrow();
   });
 
   it("comment の author が未知の workerId の場合はエラーを投げる", () => {
@@ -219,7 +219,7 @@ describe("validateGenerationOutput", () => {
         },
       ],
     };
-    expect(() => validateGenerationOutput(invalidOutput, knownWorkerIds)).toThrow();
+    expect(() => validateGenerationOutput({ output: invalidOutput, knownWorkerIds })).toThrow();
   });
 
   it("指定外の worker のみを許可する worker リストに対して reject する", () => {
@@ -233,7 +233,7 @@ describe("validateGenerationOutput", () => {
         },
       ],
     };
-    expect(() => validateGenerationOutput(outputWithKen, restrictedWorkerIds)).toThrow();
+    expect(() => validateGenerationOutput({ output: outputWithKen, knownWorkerIds: restrictedWorkerIds })).toThrow();
   });
 
   it("人間のユーザーが author として現れると reject する（ADR-0020）", () => {
@@ -246,7 +246,7 @@ describe("validateGenerationOutput", () => {
         },
       ],
     };
-    expect(() => validateGenerationOutput(outputWithHuman, knownWorkerIds)).toThrow();
+    expect(() => validateGenerationOutput({ output: outputWithHuman, knownWorkerIds })).toThrow();
   });
 
   // replies 検証（#555）
@@ -257,7 +257,7 @@ describe("validateGenerationOutput", () => {
     };
     const knownPostRefs = new Set(["ref-1"]);
     expect(() =>
-      validateGenerationOutput(outputWithReplies, knownWorkerIds, knownPostRefs),
+      validateGenerationOutput({ output: outputWithReplies, knownWorkerIds, knownPostRefs }),
     ).not.toThrow();
   });
 
@@ -268,7 +268,7 @@ describe("validateGenerationOutput", () => {
     };
     const knownPostRefs = new Set(["ref-1"]);
     expect(() =>
-      validateGenerationOutput(outputWithReplies, knownWorkerIds, knownPostRefs),
+      validateGenerationOutput({ output: outputWithReplies, knownWorkerIds, knownPostRefs }),
     ).toThrow();
   });
 
@@ -279,18 +279,18 @@ describe("validateGenerationOutput", () => {
     };
     const knownPostRefs = new Set(["ref-1", "ref-2"]);
     expect(() =>
-      validateGenerationOutput(outputWithReplies, knownWorkerIds, knownPostRefs),
+      validateGenerationOutput({ output: outputWithReplies, knownWorkerIds, knownPostRefs }),
     ).toThrow();
   });
 
   it("knownPostRefs を渡さなくても replies が空なら通る（#555・後方互換）", () => {
     // replies フィールドがない・または空の場合は knownPostRefs なしでも通る
-    expect(() => validateGenerationOutput(validOutput, knownWorkerIds)).not.toThrow();
+    expect(() => validateGenerationOutput({ output: validOutput, knownWorkerIds })).not.toThrow();
   });
 
   it("replies が空配列なら knownPostRefs なしでも通る（#555）", () => {
     const outputWithEmptyReplies = { ...validOutput, replies: [] };
-    expect(() => validateGenerationOutput(outputWithEmptyReplies, knownWorkerIds)).not.toThrow();
+    expect(() => validateGenerationOutput({ output: outputWithEmptyReplies, knownWorkerIds })).not.toThrow();
   });
 
   it("replies に targetPostRef が含まれるとき knownPostRefs なしでも通る（#555・knownPostRefs省略時は検証スキップ）", () => {
@@ -299,6 +299,6 @@ describe("validateGenerationOutput", () => {
       ...validOutput,
       replies: [{ targetPostRef: "ref-anything", author: "worker-haru", text: "こんにちは" }],
     };
-    expect(() => validateGenerationOutput(outputWithReplies, knownWorkerIds)).not.toThrow();
+    expect(() => validateGenerationOutput({ output: outputWithReplies, knownWorkerIds })).not.toThrow();
   });
 });

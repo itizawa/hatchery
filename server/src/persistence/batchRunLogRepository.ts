@@ -26,7 +26,9 @@ export function createInMemoryBatchRunLogRepository(): BatchRunLogRepository {
     findRecent(limit: number): Promise<BatchRunLog[]> {
       return Promise.resolve(
         [...logs]
+          // eslint-disable-next-line max-params
           .map((log, index) => ({ log, index }))
+          // eslint-disable-next-line max-params
           .sort((a, b) => {
             const diff = b.log.executedAt.getTime() - a.log.executedAt.getTime();
             return diff !== 0 ? diff : b.index - a.index;

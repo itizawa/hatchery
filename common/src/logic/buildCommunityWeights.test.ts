@@ -6,7 +6,7 @@ describe("buildCommunityWeights", () => {
   it("net スコアのない community は cold start 床 +1 の重みを返す", () => {
     const communityIds = ["c1", "c2"];
     const netScores = new Map<string, number>();
-    const weights = buildCommunityWeights(communityIds, netScores);
+    const weights = buildCommunityWeights({ communityIds, netScores });
     expect(weights).toEqual([
       { communityId: "c1", weight: 1 },
       { communityId: "c2", weight: 1 },
@@ -16,21 +16,21 @@ describe("buildCommunityWeights", () => {
   it("正の net スコアは max(0, score) + 1 を重みにする", () => {
     const communityIds = ["c1"];
     const netScores = new Map([["c1", 5]]);
-    const weights = buildCommunityWeights(communityIds, netScores);
+    const weights = buildCommunityWeights({ communityIds, netScores });
     expect(weights).toEqual([{ communityId: "c1", weight: 6 }]);
   });
 
   it("負の net スコアは 0 に丸めて床 +1 の重みにする", () => {
     const communityIds = ["c1"];
     const netScores = new Map([["c1", -10]]);
-    const weights = buildCommunityWeights(communityIds, netScores);
+    const weights = buildCommunityWeights({ communityIds, netScores });
     expect(weights).toEqual([{ communityId: "c1", weight: 1 }]);
   });
 
   it("0 の net スコアは床 +1 の重みにする", () => {
     const communityIds = ["c1"];
     const netScores = new Map([["c1", 0]]);
-    const weights = buildCommunityWeights(communityIds, netScores);
+    const weights = buildCommunityWeights({ communityIds, netScores });
     expect(weights).toEqual([{ communityId: "c1", weight: 1 }]);
   });
 
@@ -41,7 +41,7 @@ describe("buildCommunityWeights", () => {
       ["c2", -3],
       // c3 はスコアなし
     ]);
-    const weights = buildCommunityWeights(communityIds, netScores);
+    const weights = buildCommunityWeights({ communityIds, netScores });
     expect(weights).toEqual([
       { communityId: "c1", weight: 11 },
       { communityId: "c2", weight: 1 },
@@ -51,7 +51,7 @@ describe("buildCommunityWeights", () => {
 
   it("communityIds が空のときは空配列を返す", () => {
     const netScores = new Map<string, number>();
-    const weights = buildCommunityWeights([], netScores);
+    const weights = buildCommunityWeights({ communityIds: [], netScores });
     expect(weights).toEqual([]);
   });
 
@@ -59,7 +59,7 @@ describe("buildCommunityWeights", () => {
     const communityIds = ["c1", "c2"];
     const netScores = new Map([["c1", 3]]);
     const original = [...communityIds];
-    buildCommunityWeights(communityIds, netScores);
+    buildCommunityWeights({ communityIds, netScores });
     expect(communityIds).toEqual(original);
   });
 });

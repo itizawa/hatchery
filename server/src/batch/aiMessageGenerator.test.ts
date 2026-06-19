@@ -12,6 +12,7 @@ import {
 
 const MockedAnthropic = vi.mocked(Anthropic);
 
+// eslint-disable-next-line max-params
 const makeMessage = (stopReason: string, text = "{}") => ({
   id: "msg_test",
   type: "message",

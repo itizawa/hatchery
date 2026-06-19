@@ -14,6 +14,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { RootLayout } from "./RootLayout.js";
 
+// eslint-disable-next-line max-params
 function jsonResponse(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -31,6 +32,7 @@ const COMMUNITIES_DATA = [
   },
 ];
 
+// eslint-disable-next-line max-params
 function stubFetch(isLoggedIn: boolean, role: "member" | "admin" = "member") {
   const user = isLoggedIn ? { id: "user1", displayName: "Alice", role } : undefined;
   vi.stubGlobal(

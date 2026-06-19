@@ -8,6 +8,7 @@ import { createJsonBodyParser, createRequestTimeout } from "./requestLimits.js";
 function appWithBodyParser(limit: string): Express {
   const app = express();
   app.use(createJsonBodyParser(limit));
+  // eslint-disable-next-line max-params
   app.post("/t", (req, res) => {
     res.status(200).json(req.body);
   });
@@ -15,9 +16,11 @@ function appWithBodyParser(limit: string): Express {
   return app;
 }
 
+// eslint-disable-next-line max-params
 function appWithTimeout(ms: number, handlerDelayMs: number): Express {
   const app = express();
   app.use(createRequestTimeout(ms));
+  // eslint-disable-next-line max-params
   app.get("/t", (_req, res) => {
     setTimeout(() => {
       if (!res.headersSent) res.status(200).json({ ok: true });

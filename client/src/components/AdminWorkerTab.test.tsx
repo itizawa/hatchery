@@ -18,6 +18,7 @@ vi.mock("../api/workers.js", async () => {
   };
 });
 
+// eslint-disable-next-line max-params
 function jsonResponse(status: number, body?: unknown): Response {
   return new Response(body === undefined ? null : JSON.stringify(body), {
     status,
@@ -26,6 +27,7 @@ function jsonResponse(status: number, body?: unknown): Response {
 }
 
 /** fetch をスタブして GET /api/workers の応答を制御する。 */
+// eslint-disable-next-line max-params
 function stubWorkers(status: number, workers?: Worker[]) {
   const body =
     status >= 200 && status < 300 && workers !== undefined

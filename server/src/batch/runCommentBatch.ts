@@ -80,7 +80,7 @@ async function processCommunityComments({
   // community 別の登場ワーカーを解決する。
   const communityWorkers = await deps.workerCommunityRepo.listWorkersByCommunity(community.id);
   const botWorkers = communityWorkers.length > 0 ? [] : await botWorkersPromise;
-  const resolvedWorkers = selectCommunityWorkers(communityWorkers, botWorkers);
+  const resolvedWorkers = selectCommunityWorkers({ communityWorkers, allBotWorkers: botWorkers });
   if (resolvedWorkers.length === 0) {
     logBatchInfo("comment_batch.skipped_no_workers", { communityId: community.id });
     return [];
@@ -113,6 +113,7 @@ async function processCommunityComments({
   }
 
   // 各 post のコメント数を vote スコアから計算し、TargetPostForComment を構築する。
+  // eslint-disable-next-line max-params
   const targetPosts: TargetPostForComment[] = allTargetPosts.map((post, idx) => ({
     ref: `ref-${idx + 1}`,
     id: post.id,
@@ -185,6 +186,7 @@ async function processCommunityComments({
   }
 
   // コメントに drip タイムスタンプを割り当てて永続化する。
+  // eslint-disable-next-line max-params
   const totalCommentCount = output.posts.reduce((sum, p) => sum + p.comments.length, 0);
   const dripTimestamps = assignDripTimestamps({
     slotAt: now,

@@ -16,6 +16,7 @@ import { type RegistryContext, workerPathIdParam } from "./shared.js";
  * Worker CRUD（#38 / #329）と admin worker 作成・削除（#217 / #218 / #337）、
  * ワーカーの参加コミュニティ編集（#490）の OpenAPI 登録（#535）。
  */
+// eslint-disable-next-line max-params
 export function registerWorkers(registry: OpenAPIRegistry, ctx: RegistryContext): void {
   const { errorJson, WorkerComponent } = ctx;
 

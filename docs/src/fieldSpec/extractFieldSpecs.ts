@@ -102,7 +102,7 @@ function extractConstraints(schema: ZodTypeAny): FieldConstraints {
 }
 
 /** 単一フィールドのスキーマから FieldSpec を組み立てる。 */
-function toFieldSpec(name: string, schema: ZodTypeAny): FieldSpec {
+function toFieldSpec({ name, schema }: { name: string; schema: ZodTypeAny }): FieldSpec {
   const base = unwrap(schema);
   const spec: FieldSpec = {
     name,
@@ -127,6 +127,6 @@ function toFieldSpec(name: string, schema: ZodTypeAny): FieldSpec {
 export function extractFieldSpecs(schema: ZodObject<ZodRawShape>): FieldSpec[] {
   const shape = schema.shape;
   return Object.entries(shape).map(([name, field]) =>
-    toFieldSpec(name, field as ZodTypeAny),
+    toFieldSpec({ name, schema: field as ZodTypeAny }),
   );
 }

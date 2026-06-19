@@ -66,6 +66,7 @@ describe("startMessageBatchScheduler — 1 日数回の定時実行（#32）", (
   it("既定では DEFAULT_BATCH_HOURS の回数だけジョブを登録する", () => {
     const scheduled: Array<{ hour: number; minute: number }> = [];
     const fake: SchedulerPort = {
+      // eslint-disable-next-line max-params
       scheduleDaily(hour, minute) {
         scheduled.push({ hour, minute });
         return () => {};
@@ -90,6 +91,7 @@ describe("startMessageBatchScheduler — 1 日数回の定時実行（#32）", (
   it("登録ハンドラを発火するとジョブが実行される（モック可能）", async () => {
     let handler: (() => void) | undefined;
     const fake: SchedulerPort = {
+      // eslint-disable-next-line max-params
       scheduleDaily(_hour, _minute, h) {
         handler = h;
         return () => {};

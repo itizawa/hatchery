@@ -26,6 +26,7 @@ import {
  * このモジュールは Post / Comment component を register し、後続の feed / posts モジュールが
  * 参照できるよう {@link RegistryContext} に代入する（分割前と同じ登録順序を保つため）。
  */
+// eslint-disable-next-line max-params
 export function registerCommunities(registry: OpenAPIRegistry, ctx: RegistryContext): void {
   const { errorJson, WorkerComponent } = ctx;
 

@@ -11,6 +11,7 @@ import { validateBody } from "../middleware/validateBody.js";
 import type { UserRepository } from "../persistence/userRepository.js";
 
 // #455: Google-only auth。dev-login は NODE_ENV !== 'production' のときのみ登録。
+// eslint-disable-next-line max-params
 export function createAuthRouter(
   passportInstance: PassportInstance,
   userRepository: UserRepository,
@@ -23,6 +24,7 @@ export function createAuthRouter(
   const router = Router();
   const frontendOrigin = frontendBaseUrl.replace(/\/$/, "");
 
+  // eslint-disable-next-line max-params
   router.post("/logout", (req, res, next) => {
     req.logout((err) => {
       if (err) return next(err);
@@ -30,10 +32,12 @@ export function createAuthRouter(
     });
   });
 
+  // eslint-disable-next-line max-params
   router.get("/me", requireAuth, (req, res) => {
     res.status(200).json(req.user);
   });
 
+  // eslint-disable-next-line max-params
   router.patch("/me", requireAuth, validateBody(UpdateProfileSchema), async (req, res, next) => {
     try {
       const userId = getAuthUser(req).id;
@@ -55,6 +59,7 @@ export function createAuthRouter(
       passportInstance.authenticate("google", {
         failureRedirect: `${frontendOrigin}/login`,
       }) as RequestHandler,
+      // eslint-disable-next-line max-params
       (_req, res) => {
         res.redirect(`${frontendOrigin}/`);
       },
@@ -63,6 +68,7 @@ export function createAuthRouter(
 
   // 開発専用バイパスログイン。本番環境では登録しない（#455）。
   if (nodeEnv !== "production") {
+    // eslint-disable-next-line max-params
     router.post("/dev-login", async (req, res, next) => {
       try {
         const devUser = await userRepository.findByGoogleId("dev-google-id");

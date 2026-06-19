@@ -37,6 +37,7 @@ export function resolveBatchHours(envValue?: string): number[] {
  * now（ローカル時刻基準）から、次に hour:minute が訪れるまでの ms を返す。
  * 当日の同時刻ちょうど・過去なら翌日分を返す（常に正）。
  */
+// eslint-disable-next-line max-params
 export function msUntilNext(hour: number, minute: number, now: Date = new Date()): number {
   const next = new Date(now);
   next.setHours(hour, minute, 0, 0);
@@ -65,6 +66,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 /** setTimeout ベースの既定スケジューラ。発火後に翌日分を再登録して日次運用する。 */
 export function createSystemScheduler(): SchedulerPort {
   return {
+    // eslint-disable-next-line max-params
     scheduleDaily(hour: number, minute: number, handler: () => void): () => void {
       let timer: ReturnType<typeof setTimeout>;
       let cancelled = false;
@@ -104,6 +106,7 @@ export interface StartSchedulerOptions {
  * 各定時ごとにジョブを登録し、全ジョブを解除する cancel 関数を返す。
  * run の失敗はプロセスを落とさずログに留める（次回の定時は継続させる）。
  */
+// eslint-disable-next-line max-params
 export function startMessageBatchScheduler(
   run: () => Promise<unknown>,
   options: StartSchedulerOptions = {},

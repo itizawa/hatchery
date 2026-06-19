@@ -11,6 +11,7 @@ export interface ProxyEnv {
  * 転送先 Cloud Run の URL を組み立てる。リクエストの pathname（/api/...）と query を
  * そのまま API オリジンに付け替える。末尾スラッシュの重複は除去する。
  */
+// eslint-disable-next-line max-params
 export function buildTargetUrl(apiBaseUrl: string, requestUrl: string): string {
   const origin = apiBaseUrl.replace(/\/+$/, "");
   const incoming = new URL(requestUrl);
@@ -22,6 +23,7 @@ export function buildTargetUrl(apiBaseUrl: string, requestUrl: string): string {
  * 未設定/空なら fallback（dev の Cloud Run 既定オリジン）を返す。
  * 同一オリジンへフォールバックすると自己ループするため、必ず具体的なオリジンを返す。
  */
+// eslint-disable-next-line max-params
 export function resolveApiOrigin(env: ProxyEnv, fallback: string): string {
   const configured = env.API_BASE_URL?.trim();
   return (configured || fallback).replace(/\/+$/, "");

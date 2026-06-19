@@ -6,6 +6,7 @@ import { createInMemoryBatchRunLogRepository } from "../persistence/batchRunLogR
 import { createTestUserRepository } from "../persistence/userRepository.js";
 import { createTestDeps } from "../testing/createTestDeps.js";
 
+// eslint-disable-next-line max-params
 async function makeApp(
   logRepo = createInMemoryBatchRunLogRepository(),
   role: "admin" | "member" = "admin",

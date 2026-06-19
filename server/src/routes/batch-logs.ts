@@ -8,6 +8,7 @@ export function createBatchLogsRouter(batchRunLogRepository: BatchRunLogReposito
   const router = Router();
 
   // #136: /admin/batch-logs は admin ロール必須。requireAuth → requireAdmin の順で適用する。
+  // eslint-disable-next-line max-params
   router.get("/", requireAuth, requireAdmin, async (_req, res, next) => {
     try {
       const logs = await batchRunLogRepository.findRecent(50);

@@ -13,6 +13,7 @@ import {
   useUnsubscribe,
 } from "../api/communities.js";
 import type { Comment } from "../api/communities.js";
+import { usePostViewBeacon, useCommentImpressions } from "../api/views.js";
 import { useAuth } from "../api/auth.js";
 import { PostCard } from "../components/PostCard.js";
 import { CommentCard } from "../components/CommentCard.js";
@@ -52,7 +53,7 @@ const SidebarSkeletonColumn = (): ReactElement => (
 );
 
 /**
- * 投稿スレッド左カラム上部のコミュニティパンくずリンク。
+ * 投稿スレッド左カラム上部のコミュニティパンくずりリンク。
  * usePublicCommunities は Suspense クエリのため QueryBoundary で包んで使う。
  * コミュニティが特定できない場合は null を返す。
  */
@@ -115,11 +116,13 @@ const PostThreadSidebar = ({ communityId }: { communityId: string }): ReactEleme
 /**
  * コメントのツリーノードを再帰的に CommentCard としてレンダリングする（#520）。
  * depth に応じてコネクター線 + インデントが付く。
+ * commentRef ラッパー div で IntersectionObserver による閉覧計測を行う（#665）。
  */
 function renderCommentTree(
   nodes: CommentTreeNode[],
   commentMap: Map<string, Comment>,
   onVote: (commentId: string, direction: VoteDirection) => void,
+  commentRef: (commentId: string) => (el: HTMLElement | null) => void,
 ): ReactElement[] {
   return nodes.flatMap((node) => {
     const comment = commentMap.get(node.id);
@@ -127,17 +130,18 @@ function renderCommentTree(
 
     const childElements =
       node.children.length > 0
-        ? renderCommentTree(node.children, commentMap, onVote)
+        ? renderCommentTree(node.children, commentMap, onVote, commentRef)
         : null;
 
     return [
-      <CommentCard
-        key={comment.id}
-        comment={comment}
-        onVote={(direction: VoteDirection) => onVote(comment.id, direction)}
-        depth={node.depth}
-        children={childElements && childElements.length > 0 ? <>{childElements}</> : null}
-      />,
+      <div key={comment.id} ref={commentRef(comment.id)}>
+        <CommentCard
+          comment={comment}
+          onVote={(direction: VoteDirection) => onVote(comment.id, direction)}
+          depth={node.depth}
+          children={childElements && childElements.length > 0 ? <>{childElements}</> : null}
+        />
+      </div>,
     ];
   });
 }
@@ -161,6 +165,10 @@ export const PostThreadScene = (): ReactElement => {
   const { mutate: votePost } = useVotePost();
   const { mutate: voteComment } = useVoteComment(id);
   const { guardVote, promptOpen, closePrompt } = useGuestVoteGuard();
+
+  // 閉覧計測（#665 / ADR-0032）
+  usePostViewBeacon(id);
+  const { commentRef } = useCommentImpressions(id);
 
   const { post, comments } = data;
   const postUrl = `${window.location.origin}/posts/${post.id}`;
@@ -211,8 +219,11 @@ export const PostThreadScene = (): ReactElement => {
               <Typography variant="subtitle2" sx={{ mb: 1, color: "text.secondary" }}>
                 コメント {comments.length} 件
               </Typography>
-              {renderCommentTree(commentTree, commentMap, (commentId, direction) =>
-                guardVote(() => voteComment({ commentId, direction })),
+              {renderCommentTree(
+                commentTree,
+                commentMap,
+                (commentId, direction) => guardVote(() => voteComment({ commentId, direction })),
+                commentRef,
               )}
             </Box>
           )}

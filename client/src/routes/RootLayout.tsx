@@ -12,6 +12,7 @@ import {
 import { isAdmin } from "@hatchery/common";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import DescriptionIcon from "@mui/icons-material/Description";
+import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import HomeIcon from "@mui/icons-material/Home";
 import PrivacyTipIcon from "@mui/icons-material/PrivacyTip";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
@@ -48,6 +49,7 @@ const SidebarGlobalNav = (): ReactElement => {
   const { pathname } = useLocation();
   const isHomeActive = pathname === "/";
   const isPopularActive = pathname === "/popular";
+  const isRankingActive = pathname === "/ranking";
 
   return (
     <List dense>
@@ -77,6 +79,20 @@ const SidebarGlobalNav = (): ReactElement => {
             <TrendingUpIcon fontSize="small" />
           </ListItemIcon>
           <ListItemText primary="人気" />
+        </ListItemButton>
+      </ListItem>
+      <ListItem disablePadding>
+        <ListItemButton
+          component={RouterLink}
+          to="/ranking"
+          selected={isRankingActive}
+          aria-current={isRankingActive ? "page" : undefined}
+          sx={navItemSx}
+        >
+          <ListItemIcon sx={SIDEBAR_ICON_SX}>
+            <EmojiEventsIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="ランキング" />
         </ListItemButton>
       </ListItem>
     </List>

@@ -71,7 +71,7 @@ export const CommentCard = ({
         />
       )}
 
-      {/* L 字コネクター（#746）: アバター中心まで伸びる曲線で親スレッドと接続。 */}
+      {/* L 字コネクター（#746）: アバター底辺（30px）まで左偈線を引き、縦線と纙目なく接続する。 */}
       {depth > 0 && (
         <Box
           data-testid="comment-l-connector"
@@ -80,7 +80,7 @@ export const CommentCard = ({
             position: "absolute",
             left: `${indentLeft - 8}px`,
             top: 0,
-            height: "18px",
+            height: "30px",
             width: "16px",
             borderLeft: "2px solid",
             borderBottom: "2px solid",

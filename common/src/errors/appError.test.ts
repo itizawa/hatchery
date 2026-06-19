@@ -11,17 +11,17 @@ import {
 
 describe("AppError", () => {
   it("statusCode と message を持つ", () => {
-    const err = new AppError(418, "I'm a teapot");
+    const err = new AppError({ statusCode: 418, message: "I'm a teapot" });
     expect(err.statusCode).toBe(418);
     expect(err.message).toBe("I'm a teapot");
   });
 
   it("Error のサブクラスである", () => {
-    expect(new AppError(500, "fail")).toBeInstanceOf(Error);
+    expect(new AppError({ statusCode: 500, message: "fail" })).toBeInstanceOf(Error);
   });
 
   it("name が AppError になる", () => {
-    expect(new AppError(500, "fail").name).toBe("AppError");
+    expect(new AppError({ statusCode: 500, message: "fail" }).name).toBe("AppError");
   });
 });
 

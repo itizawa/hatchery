@@ -28,19 +28,25 @@ import type { WorkerState } from "./worldState.js";
  * @param count 選ぶ最大人数。
  * @returns 登場させるワーカーの id 配列（ローテーション順）。
  */
-export function selectRotatedWorkers<W extends { id: string }>(
-  workers: readonly W[],
-  workerStates: Readonly<Record<string, WorkerState>>,
-  count: number,
-): string[] {
+export function selectRotatedWorkers<W extends { id: string }>({
+  workers,
+  workerStates,
+  count,
+}: {
+  workers: readonly W[];
+  workerStates: Readonly<Record<string, WorkerState>>;
+  count: number;
+}): string[] {
   if (count <= 0) return [];
 
   const ranked = workers
+    // eslint-disable-next-line max-params
     .map((worker, index) => ({
       id: worker.id,
       lastAppearedSlotKey: workerStates[worker.id]?.lastAppearedSlotKey,
       index,
     }))
+    // eslint-disable-next-line max-params
     .sort((a, b) => {
       const aKey = a.lastAppearedSlotKey;
       const bKey = b.lastAppearedSlotKey;

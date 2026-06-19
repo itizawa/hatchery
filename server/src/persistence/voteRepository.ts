@@ -81,6 +81,7 @@ export interface VoteRepository {
  * インメモリ実装の `netScoresByCommunitySince` で targetId を community に紐づけるために使う。
  * 解決できない（存在しない）ターゲットは null を返す。
  */
+// eslint-disable-next-line max-params
 export type ResolveCommunityId = (
   targetType: VoteTargetType,
   targetId: string,
@@ -93,6 +94,7 @@ export type ResolveCommunityId = (
  *   省略時は全ターゲットが解決不能（純スコア集計は常に空）になる。
  * @param clock `createdAt` に使う現在時刻供給関数（テストで固定するため）。既定は `() => new Date()`。
  */
+// eslint-disable-next-line max-params
 export function createInMemoryVoteRepository(
   resolveCommunityId?: ResolveCommunityId,
   clock: () => Date = () => new Date(),
@@ -100,6 +102,7 @@ export function createInMemoryVoteRepository(
   const records: VoteRecord[] = [];
   let seq = 0;
 
+  // eslint-disable-next-line max-params
   function findRecord(
     userId: string,
     targetType: VoteTargetType,
@@ -113,6 +116,7 @@ export function createInMemoryVoteRepository(
   }
 
   /** toggle/switch ロジックで records を変異させ scoreDelta を返す（vote と voteAndApplyScore で共有）。 */
+  // eslint-disable-next-line max-params
   function applyVoteMutation(
     userId: string,
     targetType: VoteTargetType,
@@ -147,6 +151,7 @@ export function createInMemoryVoteRepository(
   }
 
   return {
+    // eslint-disable-next-line max-params
     findVote(
       userId: string,
       targetType: VoteTargetType,
@@ -155,6 +160,7 @@ export function createInMemoryVoteRepository(
       return Promise.resolve(findRecord(userId, targetType, targetId));
     },
 
+    // eslint-disable-next-line max-params
     vote(
       userId: string,
       targetType: VoteTargetType,
@@ -165,6 +171,7 @@ export function createInMemoryVoteRepository(
       return Promise.resolve({ scoreDelta });
     },
 
+    // eslint-disable-next-line max-params
     async voteAndApplyScore(
       userId: string,
       targetType: VoteTargetType,

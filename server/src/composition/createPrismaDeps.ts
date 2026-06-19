@@ -10,6 +10,7 @@ import { createPrismaCommunityRepository } from "../persistence/prismaCommunityR
 import { createPrismaPostRepository } from "../persistence/prismaPostRepository.js";
 import { createPrismaCommentRepository } from "../persistence/prismaCommentRepository.js";
 import { createPrismaSubscriptionRepository } from "../persistence/prismaSubscriptionRepository.js";
+import { createPrismaViewRepository } from "../persistence/prismaViewRepository.js";
 import { createPrismaVoteRepository } from "../persistence/prismaVoteRepository.js";
 import { createPrismaWorldStateRepository } from "../persistence/prismaWorldStateRepository.js";
 import { GcsStorageService, InMemoryStorageService } from "../services/storageService.js";
@@ -38,6 +39,7 @@ export function createPrismaDeps(prisma: PrismaClient, gcsBucketName?: string): 
     postRepository: createPrismaPostRepository(prisma),
     commentRepository: createPrismaCommentRepository(prisma),
     subscriptionRepository: createPrismaSubscriptionRepository(prisma),
+    viewRepository: createPrismaViewRepository(prisma),
     voteRepository: createPrismaVoteRepository(prisma),
     worldStateRepository: createPrismaWorldStateRepository(prisma),
     storageService,

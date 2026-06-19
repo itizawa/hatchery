@@ -5,6 +5,7 @@ import { createApp } from "../app.js";
 import { createInMemoryCommentRepository } from "../persistence/commentRepository.js";
 import { createInMemoryPostRepository } from "../persistence/postRepository.js";
 import { createInMemoryVoteRepository } from "../persistence/voteRepository.js";
+import { createInMemoryViewRepository } from "../persistence/viewRepository.js";
 import { createInMemoryWorkerRepository } from "../persistence/workerRepository.js";
 import { createTestDeps } from "../testing/createTestDeps.js";
 
@@ -312,5 +313,107 @@ describe("POST /api/comments/:commentId/vote", () => {
     const res = await request(app).post(`/api/comments/${comment.id}/vote`).send({ direction: "down" }).set("Cookie", cookie);
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({ score: 0 });
+  });
+});
+
+describe("POST /api/posts/:postId/view（閲覧ビーコン・#665）", () => {
+  it("有効なリクエストで 202 を返す（認証不要）", async () => {
+    const postRepo = createInMemoryPostRepository();
+    const viewRepo = createInMemoryViewRepository();
+    const [post] = await postRepo.createMany("community-1", [
+      { slotKey: "2026-06-10T09:00", seq: 0, author: "w1", title: "T", text: "B" },
+    ]);
+    const deps = await createTestDeps({ postRepository: postRepo, viewRepository: viewRepo });
+    const app = createApp(deps);
+
+    const res = await request(app)
+      .post(`/api/posts/${post.id}/view`)
+      .send({ sessionId: "sess-abc" });
+    expect(res.status).toBe(202);
+  });
+
+  it("sessionId が欠落すると 400 を返す", async () => {
+    const postRepo = createInMemoryPostRepository();
+    const [post] = await postRepo.createMany("community-1", [
+      { slotKey: "2026-06-10T09:00", seq: 0, author: "w1", title: "T", text: "B" },
+    ]);
+    const deps = await createTestDeps({ postRepository: postRepo });
+    const app = createApp(deps);
+
+    const res = await request(app).post(`/api/posts/${post.id}/view`).send({});
+    expect(res.status).toBe(400);
+  });
+
+  it("存在しない postId には 404 を返す", async () => {
+    const deps = await createTestDeps();
+    const app = createApp(deps);
+
+    const res = await request(app)
+      .post("/api/posts/non-existent/view")
+      .send({ sessionId: "sess-abc" });
+    expect(res.status).toBe(404);
+  });
+});
+
+describe("POST /api/posts/:postId/comment-views（コメント閲覧ビーコン・#665）", () => {
+  it("有効なリクエストで 202 を返す（認証不要）", async () => {
+    const postRepo = createInMemoryPostRepository();
+    const commentRepo = createInMemoryCommentRepository();
+    const viewRepo = createInMemoryViewRepository();
+    const [post] = await postRepo.createMany("community-1", [
+      { slotKey: "2026-06-10T09:00", seq: 0, author: "w1", title: "T", text: "B" },
+    ]);
+    const [comment] = await commentRepo.createMany("community-1", [
+      { postId: post.id, slotKey: "2026-06-10T09:00", seq: 0, author: "w2", text: "C" },
+    ]);
+    const deps = await createTestDeps({
+      postRepository: postRepo,
+      commentRepository: commentRepo,
+      viewRepository: viewRepo,
+    });
+    const app = createApp(deps);
+
+    const res = await request(app)
+      .post(`/api/posts/${post.id}/comment-views`)
+      .send({ sessionId: "sess-abc", commentIds: [comment.id] });
+    expect(res.status).toBe(202);
+  });
+
+  it("sessionId が欠落すると 400 を返す", async () => {
+    const postRepo = createInMemoryPostRepository();
+    const [post] = await postRepo.createMany("community-1", [
+      { slotKey: "2026-06-10T09:00", seq: 0, author: "w1", title: "T", text: "B" },
+    ]);
+    const deps = await createTestDeps({ postRepository: postRepo });
+    const app = createApp(deps);
+
+    const res = await request(app)
+      .post(`/api/posts/${post.id}/comment-views`)
+      .send({ commentIds: ["c1"] });
+    expect(res.status).toBe(400);
+  });
+
+  it("commentIds が空配列でも 202 を返す（no-op）", async () => {
+    const postRepo = createInMemoryPostRepository();
+    const [post] = await postRepo.createMany("community-1", [
+      { slotKey: "2026-06-10T09:00", seq: 0, author: "w1", title: "T", text: "B" },
+    ]);
+    const deps = await createTestDeps({ postRepository: postRepo });
+    const app = createApp(deps);
+
+    const res = await request(app)
+      .post(`/api/posts/${post.id}/comment-views`)
+      .send({ sessionId: "sess-abc", commentIds: [] });
+    expect(res.status).toBe(202);
+  });
+
+  it("存在しない postId には 404 を返す", async () => {
+    const deps = await createTestDeps();
+    const app = createApp(deps);
+
+    const res = await request(app)
+      .post("/api/posts/non-existent/comment-views")
+      .send({ sessionId: "sess-abc", commentIds: [] });
+    expect(res.status).toBe(404);
   });
 });

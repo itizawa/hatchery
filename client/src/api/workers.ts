@@ -1,11 +1,12 @@
-import type { Worker } from "@hatchery/common";
+import type { Worker, WorkerRankingItem } from "@hatchery/common";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 
 import { clientEnv } from "../config/env.js";
-import { openApiClient } from "./client.js";
+import { openApiClient, unwrap } from "./client.js";
 import { buildApiErrorMessage } from "./errors.js";
 
 export const BOT_WORKERS_QUERY_KEY = ["workers", "bots"] as const;
+export const WORKER_RANKING_QUERY_KEY = ["workers", "ranking"] as const;
 
 /**
  * GET /api/workers を openapi-fetch 経由で取得するフック（ADR-0006）。
@@ -97,5 +98,22 @@ export function useUploadWorkerImage() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: BOT_WORKERS_QUERY_KEY });
     },
+  });
+}
+
+/**
+ * GET /api/workers/ranking — ワーカーランキングを取得するフック（#665 / ADR-0032）。
+ * 直近 7 日の閲覧数 + 純 vote スコアを worker 単位で集計した一覧を返す。
+ * useSuspenseQuery で Suspense 化し、ローディング/エラーは QueryBoundary に委譲する。
+ */
+export function useWorkerRanking() {
+  return useSuspenseQuery({
+    queryKey: WORKER_RANKING_QUERY_KEY,
+    queryFn: async (): Promise<WorkerRankingItem[]> => {
+      const result = await openApiClient.GET("/api/workers/ranking");
+      const data = unwrap(result, "GET /api/workers/ranking");
+      return (data.workers ?? []) as WorkerRankingItem[];
+    },
+    staleTime: 60_000,
   });
 }

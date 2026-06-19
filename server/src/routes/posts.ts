@@ -1,4 +1,4 @@
-import { NotFoundError, VoteRequestSchema } from "@hatchery/common";
+import { CommentViewsRequestSchema, NotFoundError, PostViewRequestSchema, VoteRequestSchema } from "@hatchery/common";
 import { Router } from "express";
 
 import { getAuthUser } from "../middleware/getAuthUser.js";
@@ -6,6 +6,7 @@ import { requireAuth } from "../middleware/requireAuth.js";
 import { validateBody } from "../middleware/validateBody.js";
 import type { CommentRepository } from "../persistence/commentRepository.js";
 import type { PostRepository } from "../persistence/postRepository.js";
+import type { ViewRepository } from "../persistence/viewRepository.js";
 import type { VoteRepository } from "../persistence/voteRepository.js";
 import type { WorkerRepository } from "../persistence/workerRepository.js";
 import { buildAuthorWorkerEnricher } from "./authorWorker.js";
@@ -13,15 +14,17 @@ import { toCommentResponse, toPostResponse } from "./postResponse.js";
 
 /**
  * /api/posts・/api/comments ルータ。
- * スレッド（post + comments）の取得、up/down vote を担う。ADR-0019 / ADR-0025。
+ * スレッド（post + comments）の取得、up/down vote、閲覧ビーコンを担う。ADR-0019 / ADR-0025 / ADR-0032。
  * - 読み取りは認証不要
  * - vote は認証必須（ADR-0025: up/down 両対応、toggle/switch）
+ * - 閲覧ビーコン（/view・/comment-views）は認証不要（ゲスト対応・#665）
  * - #479: スレッドの post / 各 comment に発言者の表示用ワーカー情報（author_worker）を付与する。
  */
 export function createPostsRouter(
   postRepo: PostRepository,
   commentRepo: CommentRepository,
   voteRepo: VoteRepository,
+  viewRepo: ViewRepository,
   workerRepo: WorkerRepository,
 ): Router {
   const router = Router();
@@ -52,6 +55,46 @@ export function createPostsRouter(
       })
       .catch(next);
   });
+
+  // post 閲覧ビーコン（認証不要・ゲスト対応・#665 / ADR-0032）
+  router.post("/posts/:postId/view", validateBody(PostViewRequestSchema), (req, res, next) => {
+    const { postId } = req.params as { postId: string };
+    const { sessionId } = req.body as { sessionId: string };
+    const userId = (req.user as { id?: string } | undefined)?.id ?? null;
+
+    postRepo
+      .findById(postId)
+      .then((post) => {
+        if (!post) throw new NotFoundError("PostNotFound");
+        return viewRepo.recordPostView(postId, sessionId, userId);
+      })
+      .then(() => {
+        res.status(202).end();
+      })
+      .catch(next);
+  });
+
+  // コメント閲覧ビーコン（認証不要・バッチ送信・#665 / ADR-0032）
+  router.post(
+    "/posts/:postId/comment-views",
+    validateBody(CommentViewsRequestSchema),
+    (req, res, next) => {
+      const { postId } = req.params as { postId: string };
+      const { sessionId, commentIds } = req.body as { sessionId: string; commentIds: string[] };
+      const userId = (req.user as { id?: string } | undefined)?.id ?? null;
+
+      postRepo
+        .findById(postId)
+        .then((post) => {
+          if (!post) throw new NotFoundError("PostNotFound");
+          return viewRepo.recordCommentViews(commentIds, sessionId, userId);
+        })
+        .then(() => {
+          res.status(202).end();
+        })
+        .catch(next);
+    },
+  );
 
   // post への vote（認証必須・toggle/switch・ADR-0025）
   router.post(

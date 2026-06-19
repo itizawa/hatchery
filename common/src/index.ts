@@ -12,6 +12,7 @@ export * from "./domain/comment/index.js";
 export * from "./domain/subscription/index.js";
 export * from "./domain/worldState/index.js";
 export * from "./domain/generation/index.js";
+export * from "./domain/view/index.js";
 
 // ── 共通ドメイン ───────────────────────────────────────
 export * from "./domain/batchRunLog/index.js";

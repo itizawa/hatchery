@@ -118,9 +118,11 @@ const PostThreadSidebar = ({ communityId }: { communityId: string }): ReactEleme
  * depth に応じてコネクター線 + インデントが付く。
  * commentRef ラッパー div で IntersectionObserver による閉覧計測を行う（#665）。
  */
+// eslint-disable-next-line max-params
 function renderCommentTree(
   nodes: CommentTreeNode[],
   commentMap: Map<string, Comment>,
+  // eslint-disable-next-line max-params
   onVote: (commentId: string, direction: VoteDirection) => void,
   commentRef: (commentId: string) => (el: HTMLElement | null) => void,
 ): ReactElement[] {
@@ -222,6 +224,7 @@ export const PostThreadScene = (): ReactElement => {
               {renderCommentTree(
                 commentTree,
                 commentMap,
+                // eslint-disable-next-line max-params
                 (commentId, direction) => guardVote(() => voteComment({ commentId, direction })),
                 commentRef,
               )}

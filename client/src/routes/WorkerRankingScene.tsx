@@ -79,6 +79,7 @@ const RankingContent = (): ReactElement => {
           </TableRow>
         </TableHead>
         <TableBody>
+          {/* eslint-disable-next-line max-params */}
           {workers.map((item, idx) => (
             <RankingRow key={item.worker_id} item={item} rank={idx + 1} />
           ))}

@@ -20,6 +20,7 @@ import { type SettingsTabValue } from "./settingsTabValues.js";
  * @param Inner - タブ本体（QueryBoundary の子として使う）
  * @param skeleton - ローディング中に表示する Skeleton（各タブ固有の形状を渡す）
  */
+// eslint-disable-next-line max-params
 export function withSettingsTabPanel<P extends object>(
   Inner: ComponentType<P>,
   skeleton: ReactNode,
@@ -36,6 +37,7 @@ export function withSettingsTabPanel<P extends object>(
 /** タブ内のローディング表示（スケルトン行）。data-testid で各タブを識別する。 */
 const TabSkeleton = ({ testId }: { testId: string }): ReactElement => (
   <Box>
+    {/* eslint-disable-next-line max-params */}
     {Array.from({ length: 3 }, (_, i) => (
       <Skeleton key={i} variant="text" height={32} data-testid={testId} sx={{ my: 0.5 }} />
     ))}
@@ -184,6 +186,7 @@ export const SettingsScene = (): ReactElement => {
   const navigate = useNavigate({ from: "/admin" });
   const active: SettingsTabValue = tab;
 
+  // eslint-disable-next-line max-params
   const handleTabChange = (_: SyntheticEvent, value: SettingsTabValue) => {
     void navigate({ search: (prev) => ({ ...prev, tab: value }) });
   };

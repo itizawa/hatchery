@@ -15,7 +15,7 @@ if (!BASE_URL || !ADMIN_TOKEN) {
   process.exit(1);
 }
 
-const api = createApiClient(BASE_URL, ADMIN_TOKEN);
+const api = createApiClient({ baseUrl: BASE_URL, adminToken: ADMIN_TOKEN });
 
 const server = new McpServer({
   name: "hatchery-admin",
@@ -56,7 +56,7 @@ server.tool(
     if (displayName === undefined && role === undefined && personality === undefined && verbosity === undefined) {
       throw new Error("更新するフィールドを少なくとも1つ指定してください（displayName / role / personality / verbosity）");
     }
-    const result = await api.updateWorker(id, { displayName, role, personality, verbosity });
+    const result = await api.updateWorker({ id, data: { displayName, role, personality, verbosity } });
     return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
   },
 );
@@ -105,7 +105,7 @@ server.tool(
       .describe("会話生成の追加指示（null で削除）"),
   },
   async ({ id, name, description, generationInstruction }) => {
-    const result = await api.updateCommunity(id, { name, description, generationInstruction });
+    const result = await api.updateCommunity({ id, data: { name, description, generationInstruction } });
     return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
   },
 );
@@ -118,7 +118,7 @@ server.tool(
     communityIds: z.array(z.string()).describe("所属させるコミュニティ ID の配列"),
   },
   async ({ workerId, communityIds }) => {
-    const result = await api.assignWorkerToCommunity(workerId, communityIds);
+    const result = await api.assignWorkerToCommunity({ workerId, communityIds });
     return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
   },
 );

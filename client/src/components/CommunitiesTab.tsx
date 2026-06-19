@@ -263,6 +263,7 @@ function CommunityListPanel(): ReactElement {
 function CommunityListSkeleton(): ReactElement {
   return (
     <Box>
+      {/* eslint-disable-next-line max-params */}
       {Array.from({ length: 3 }, (_, i) => (
         <Skeleton
           key={i}

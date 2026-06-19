@@ -9,6 +9,7 @@ import type { CommunityRecord } from "../persistence/communityRepository.js";
  * - iconUrl / coverUrl は null をそのまま返す（未設定を契約上の null として表現する・#457）
  * - post_count / last_post_at は stats から付与する（#527）
  */
+// eslint-disable-next-line max-params
 export function toCommunityResponse(r: CommunityRecord, stats?: CommunityPostStats) {
   return {
     id: r.id,

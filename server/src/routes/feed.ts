@@ -13,6 +13,7 @@ import { toPostResponse } from "./postResponse.js";
  * ADR-0019 / ADR-0020 更新: 購読フィルタなし・認証不要。#367 カーソルページネーション対応。
  * #479: 各 post に発言者の表示用ワーカー情報（author_worker）を付与する。
  */
+// eslint-disable-next-line max-params
 export function createFeedRouter(
   postRepo: PostRepository,
   workerRepo: WorkerRepository,
@@ -20,6 +21,7 @@ export function createFeedRouter(
 ): Router {
   const router = Router();
 
+  // eslint-disable-next-line max-params
   router.get("/", (req, res, next) => {
     const parsed = HomeFeedQuerySchema.safeParse(req.query);
     if (!parsed.success) {

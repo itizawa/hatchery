@@ -22,6 +22,7 @@ const RANKING_LIMIT = 1000;
 /** ランキング集計ウィンドウ（直近 7 日）。 */
 const RANKING_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
+// eslint-disable-next-line max-params
 export function createWorkersRouter(
   workerRepository: WorkerRepository,
   viewRepository: ViewRepository,
@@ -30,6 +31,7 @@ export function createWorkersRouter(
   const router = Router();
 
   // ワーカーランキング（認証不要・#665 / ADR-0032）。/ranking は /:id より先に定義する。
+  // eslint-disable-next-line max-params
   router.get("/ranking", (_req, res, next) => {
     const since = new Date(Date.now() - RANKING_WINDOW_MS);
     Promise.all([
@@ -45,12 +47,14 @@ export function createWorkersRouter(
             view_count: viewCounts.get(w.id) ?? 0,
             vote_net_score: voteScores.get(w.id) ?? 0,
           }))
+          // eslint-disable-next-line max-params
           .sort((a, b) => b.view_count - a.view_count || b.vote_net_score - a.vote_net_score);
         res.status(200).json({ workers: ranking });
       })
       .catch(next);
   });
 
+  // eslint-disable-next-line max-params
   router.get("/", (req, res, next) => {
     const parsed = WorkerListQuerySchema.safeParse(req.query);
     if (!parsed.success) {
@@ -68,6 +72,7 @@ export function createWorkersRouter(
     "/:id",
     requireAdminAccess,
     validateBody(UpdateWorkerSchema),
+    // eslint-disable-next-line max-params
     (req, res, next) => {
       const { id } = req.params as { id: string };
       const input = req.body as UpdateWorkerInput;

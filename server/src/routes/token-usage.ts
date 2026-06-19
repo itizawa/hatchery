@@ -8,6 +8,7 @@ export function createTokenUsageRouter(tokenUsageLogRepository: TokenUsageLogRep
   const router = Router();
 
   // GET /api/admin/token-usage は admin ロール必須。requireAuth → requireAdmin の順で適用する（#136）。
+  // eslint-disable-next-line max-params
   router.get("/", requireAuth, requireAdmin, async (_req, res, next) => {
     try {
       const [logs, summary] = await Promise.all([

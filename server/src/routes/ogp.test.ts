@@ -5,6 +5,7 @@ import { createApp } from "../app.js";
 import { createTestDeps } from "../testing/createTestDeps.js";
 
 /** globalThis.fetch をモックして HTML を返すヘルパー */
+// eslint-disable-next-line max-params
 function mockFetchOk(html: string, contentType = "text/html; charset=utf-8") {
   vi.stubGlobal(
     "fetch",

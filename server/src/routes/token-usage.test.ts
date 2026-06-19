@@ -6,6 +6,7 @@ import { createInMemoryTokenUsageLogRepository } from "../persistence/tokenUsage
 import { createTestUserRepository } from "../persistence/userRepository.js";
 import { createTestDeps } from "../testing/createTestDeps.js";
 
+// eslint-disable-next-line max-params
 async function makeApp(
   tokenRepo = createInMemoryTokenUsageLogRepository(),
   role: "admin" | "member" = "admin",

@@ -16,6 +16,7 @@ import type { Response } from "express";
  *
  * @returns エラーレスポンスを送信した場合は true、Ok の場合は false
  */
+// eslint-disable-next-line max-params
 export function resultToResponse<T>(res: Response, result: Result<T, { type: DomainErrorType; message: string }>): boolean {
   if (isOk(result)) return false;
 

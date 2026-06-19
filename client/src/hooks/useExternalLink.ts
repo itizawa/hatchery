@@ -13,6 +13,7 @@ function storageGet(key: string): string | null {
   return window.localStorage?.getItem(key) ?? null;
 }
 
+// eslint-disable-next-line max-params
 function storageSet(key: string, value: string): void {
   window.localStorage?.setItem(key, value);
 }

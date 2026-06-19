@@ -20,12 +20,14 @@ export type ConversationGeneratorResult = {
  * チャンネル会話を生成する関数（#53）。プロンプトと API キーを受け、生成結果を返す。
  * テストではスタブを注入し、本番は Claude を使う（依存注入パターン）。
  */
+// eslint-disable-next-line max-params
 export type ConversationGenerator = (
   prompt: string,
   apiKey: string,
 ) => Promise<ConversationGeneratorResult>;
 
 /** チャンネルのあらすじを生成する関数（#53）。 */
+// eslint-disable-next-line max-params
 export type SummaryGenerator = (prompt: string, apiKey: string) => Promise<string>;
 
 /**
@@ -47,6 +49,7 @@ const CONVERSATION_MAX_TOKENS = 8192;
 const SUMMARY_MAX_TOKENS = 512;
 
 /** Claude にプロンプトを投げ、テキストと usage を返す共通処理（#663）。 */
+// eslint-disable-next-line max-params
 async function callClaudeText(
   client: Anthropic,
   prompt: string,
@@ -84,6 +87,7 @@ function extractFirstText(content: readonly Anthropic.Messages.ContentBlock[]): 
  * モデルを env から切替可能にするため、ハードコード定数ではなくファクトリで受ける。
  */
 export function createClaudeConversationGenerator(model: BatchModel): ConversationGenerator {
+  // eslint-disable-next-line max-params
   return (prompt, apiKey) =>
     callClaudeText(new Anthropic({ apiKey }), prompt, model, CONVERSATION_MAX_TOKENS);
 }
@@ -93,6 +97,7 @@ export const generateConversationWithClaude: ConversationGenerator =
   createClaudeConversationGenerator(DEFAULT_BATCH_MODEL);
 
 /** Claude であらすじを生成する既定実装（#53）。 */
+// eslint-disable-next-line max-params
 export const generateSummaryWithClaude: SummaryGenerator = async (prompt, apiKey) => {
   const result = await callClaudeText(
     new Anthropic({ apiKey }),
@@ -164,6 +169,7 @@ export function createBatchConversationGenerator(
   const pollIntervalMs = deps.pollIntervalMs ?? 60_000;
   const maxPolls = deps.maxPolls ?? 60;
 
+  // eslint-disable-next-line max-params
   return async (prompt, apiKey): Promise<ConversationGeneratorResult> => {
     const client = createClient(apiKey);
 

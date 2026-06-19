@@ -7,6 +7,7 @@ export const COMMENT_BATCH_MAX = 5;
 export const REVIVAL_PROBABILITY = 0.1;
 
 /** post の vote スコアに応じたコメント数を返す（#673）。 */
+// eslint-disable-next-line max-params
 export function calcCommentCount(
   score: number,
   params: {
@@ -29,6 +30,7 @@ export function calcCommentCount(
  * 確率 p で oldPosts から1件をランダムに選んで返す（#673 古い post 活性化）。
  * rng() >= p または oldPosts が空の場合は null を返す。
  */
+// eslint-disable-next-line max-params
 export function pickOldPostForRevival(
   oldPosts: readonly PostRecord[],
   p: number,

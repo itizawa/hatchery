@@ -126,6 +126,7 @@ function renderCommentTree({
 }: {
   nodes: CommentTreeNode[];
   commentMap: Map<string, Comment>;
+  // eslint-disable-next-line max-params
   onVote: (commentId: string, direction: VoteDirection) => void;
   commentRef: (commentId: string) => (el: HTMLElement | null) => void;
 }): ReactElement[] {
@@ -153,14 +154,14 @@ function renderCommentTree({
 
 /**
  * 投稿スレッド（/posts/$postId）。
- * Reddit 風 2 カラムレイアウト（左: post 本文 + コメント / 右: コミュニティ詳細 sticky サイドバー）。
+ * Reddit 顲1 2 カラムレイアウト（左: post 本文 + コメント / 右: コミュニティ詳細 sticky サイドバー）。
  * ADR-0019 / ADR-0025 / Issue #390。
  * 投稿欄・コメント入力欄は置かない（ユーザーは書けない・ADR-0020）。
  * #462: usePostThread は Suspense 化（ローディングは router の QueryBoundary が post-thread-skeleton を表示、
  * エラーは ErrorBoundary フォールバック）。所属コミュニティ取得（usePublicCommunities）は右サイドバーの
  * 局所 QueryBoundary に委譲し、post 本文は先に描画する。
- * #481: ゲストの post / comment vote 押下は guardVote で握りつぶさずログイン誘導する。
- * #520: コメントを buildCommentTree でツリー化し Reddit 風コネクター線表示する。
+ * #481: ゲストの post / comment vote 押下は guardVote で搖りつぶさずログイン誤導する。
+ * #520: コメントを buildCommentTree でツリー化し Reddit 顲1コネクター線表示する。
  */
 export const PostThreadScene = (): ReactElement => {
   const { postId } = useParams({ strict: false });

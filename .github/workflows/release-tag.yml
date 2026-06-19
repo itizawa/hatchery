@@ -30,11 +30,11 @@ jobs:
         run: |
           set -euo pipefail
 
-          # PR タイトルから vX.Y.Z 形式のバージョンを抽出する。
+          # PR タイトルから vX.Y.Z 形式のバージョンを抜出する。
           version=$(echo "$PR_TITLE" | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)
 
           if [ -z "$version" ]; then
-            echo "PR タイトルからバージョン(vX.Y.Z)を抽出できませんでした。スキップします。タイトル: ${PR_TITLE}"
+            echo "PR タイトルからバージョン(vX.Y.Z)を抜出できませんでした。スキップします。タイトル: ${PR_TITLE}"
             exit 0
           fi
 
@@ -51,7 +51,7 @@ jobs:
           if [ -n "$prev_tag" ]; then
             commit_range="${prev_tag}..${MERGE_SHA}"
           else
-            # 前タグ無しの場合はマージコミットの第1親コミット（main側前回）を基点にして
+            # 前タグ無しの場合はマージコミットの㇂1親コミット（main側前回）を基点にして
             # このリリース分のコミットのみを表示する。
             commit_range="${MERGE_SHA}^1..${MERGE_SHA}"
           fi
@@ -84,7 +84,7 @@ jobs:
           } >> "$GITHUB_ENV"
 
       # AI リリースノート生成に必要な Node.js・pnpm を他ワークフローと同じ方法でセットアップする。
-      # タグ・Release 作成ステップと分けることで、セットアップ失敗がリリース作成に影響しない。
+      # タグ・ Release 作成ステップと分けることで、セットアップ失敗がリリース作成に影響しない。
       - name: Setup pnpm
         continue-on-error: true
         uses: pnpm/action-setup@v6
@@ -127,10 +127,11 @@ jobs:
           # mapfile で改行区切りの COMMIT_LINES を配列化する。
           mapfile -t commit_args <<< "${COMMIT_LINES:-}"
 
-          # AI リリースノートを生成して stdout のみを受け取る（stderr は分離してログに流す）。
-          # pnpm のスクリプト実行ヘッダーや tsx のログが stderr に出るため 2>&1 は使わない。
+          # AI リリースノートを生成して stdout のみを受け取る。
+          # pnpm --silent でスクリプト実行バナー（> pkg@ver script /path 等）の stdout 出力を抑制する。
+          # バナーが混入すると GitHub Markdown で blockquote として描画されるため必須（#735）。
           # 生成に失敗した場合は exit 1 となり continue-on-error が拾う。
-          ai_notes=$(pnpm --filter @hatchery/server release-notes \
+          ai_notes=$(pnpm --silent --filter @hatchery/server release-notes \
             --version "${RELEASE_VERSION}" \
             --commits "${commit_args[@]+"${commit_args[@]}"}") || {
             echo "AI リリースノートの生成に失敗しました。コミット羅列ノートを保持します。"

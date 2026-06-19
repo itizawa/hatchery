@@ -5,7 +5,7 @@ import { DEFAULT_BATCH_MODEL, type BatchModel } from "../config/env.js";
 import { logBatchError, logBatchInfo } from "./logger.js";
 
 /**
- * ConversationGenerator の戻り値型（#663）。
+ * ConversationGenerator の戈り値型（#663）。
  * text は生成テキスト、inputTokens / outputTokens / model は Claude API の使用量情報。
  * usage が取得できない場合（スタブ等）は undefined になり、呼び出し側が記録をスキップする。
  */
@@ -20,12 +20,14 @@ export type ConversationGeneratorResult = {
  * チャンネル会話を生成する関数（#53）。プロンプトと API キーを受け、生成結果を返す。
  * テストではスタブを注入し、本番は Claude を使う（依存注入パターン）。
  */
+// eslint-disable-next-line max-params
 export type ConversationGenerator = (
   prompt: string,
   apiKey: string,
 ) => Promise<ConversationGeneratorResult>;
 
 /** チャンネルのあらすじを生成する関数（#53）。 */
+// eslint-disable-next-line max-params
 export type SummaryGenerator = (prompt: string, apiKey: string) => Promise<string>;
 
 /**

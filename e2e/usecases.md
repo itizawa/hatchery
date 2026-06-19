@@ -28,3 +28,4 @@
 | account | アカウント設定・プロフィール編集（`/account`） | [account/usecases.md](account/usecases.md) | UC-ACCOUNT-01〇04 |
 | legal | 利用規約・プライバシーポリシー（`/terms`・`/privacy`） | [legal/usecases.md](legal/usecases.md) | UC-LEGAL-01〇04 |
 | not-found | 未マッチ URL のグローバル 404 画面（`NotFoundScene`） | [not-found/usecases.md](not-found/usecases.md) | UC-404-01〜02 |
+| ranking | ワーカーランキング画面（`/ranking`）・閲覧数 + 純 vote スコア表示・空状態（#665） | [ranking/usecases.md](ranking/usecases.md) | UC-RANK-01〜03 |

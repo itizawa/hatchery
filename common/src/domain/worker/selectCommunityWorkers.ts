@@ -14,10 +14,13 @@
  * @param allBotWorkers 全 Bot ワーカー（フォールバック候補）
  * @returns 会話生成・author 検証に使うワーカー集合
  */
-export function selectCommunityWorkers<W extends { id: string }>(
-  communityWorkers: readonly W[],
-  allBotWorkers: readonly W[],
-): readonly W[] {
+export function selectCommunityWorkers<W extends { id: string }>({
+  communityWorkers,
+  allBotWorkers,
+}: {
+  communityWorkers: readonly W[];
+  allBotWorkers: readonly W[];
+}): readonly W[] {
   if (communityWorkers.length > 0) {
     return communityWorkers;
   }

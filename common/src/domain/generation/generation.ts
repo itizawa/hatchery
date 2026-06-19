@@ -102,11 +102,15 @@ export type CommentBatchOutput = z.infer<typeof CommentBatchOutputSchema>;
  * @param knownPostRefs プロンプトに提示した既存Post参照ID集合（省略時は targetPostRef 検証をスキップ）
  * @throws Error author が knownWorkerIds に含まれない場合、または targetPostRef が knownPostRefs に含まれない場合
  */
-export const validateGenerationOutput = (
-  output: GenerationOutput,
-  knownWorkerIds: readonly string[],
-  knownPostRefs?: ReadonlySet<string> | readonly string[],
-): void => {
+export const validateGenerationOutput = ({
+  output,
+  knownWorkerIds,
+  knownPostRefs,
+}: {
+  output: GenerationOutput;
+  knownWorkerIds: readonly string[];
+  knownPostRefs?: ReadonlySet<string> | readonly string[];
+}): void => {
   const known = new Set(knownWorkerIds);
 
   for (const post of output.posts) {

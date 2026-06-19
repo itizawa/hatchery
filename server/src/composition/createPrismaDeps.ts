@@ -24,6 +24,7 @@ import { GcsStorageService, InMemoryStorageService } from "../services/storageSe
  * DI コンテナは使わず手動 DI のまま（ADR-0012）。
  * common への DI 基盤の漏洩なし（ADR-0001 / ADR-0005）。
  */
+// eslint-disable-next-line max-params
 export function createPrismaDeps(prisma: PrismaClient, gcsBucketName?: string): Omit<AppDeps, "security" | "sessionStore"> {
   const storageService = gcsBucketName
     ? new GcsStorageService(gcsBucketName)

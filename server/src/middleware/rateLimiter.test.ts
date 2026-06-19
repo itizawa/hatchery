@@ -7,6 +7,7 @@ import { createRateLimiter } from "./rateLimiter.js";
 function appWithLimiter(options: { windowMs: number; max: number }): Express {
   const app = express();
   app.use(createRateLimiter(options));
+  // eslint-disable-next-line max-params
   app.get("/t", (_req, res) => {
     res.status(200).json({ ok: true });
   });

@@ -6,6 +6,7 @@ import { createNoStoreCache, createPublicCache } from "./cacheControl.js";
 
 /** 認証済みを模す簡易ミドルウェア。req.isAuthenticated()/req.user を立てる。 */
 function fakeAuth(): express.RequestHandler {
+  // eslint-disable-next-line max-params
   return (req, _res, next) => {
     (req as unknown as { isAuthenticated: () => boolean }).isAuthenticated = () => true;
     (req as unknown as { user: { id: string } }).user = { id: "u1" };
@@ -17,6 +18,7 @@ describe("createPublicCache（#559 AC2/AC4/AC6）", () => {
   it("未認証 GET には public, s-maxage, stale-while-revalidate を付与する", async () => {
     const app = express();
     app.use(createPublicCache());
+    // eslint-disable-next-line max-params
     app.get("/x", (_req, res) => res.json({ ok: true }));
     const res = await request(app).get("/x");
     expect(res.headers["cache-control"]).toBe(
@@ -27,6 +29,7 @@ describe("createPublicCache（#559 AC2/AC4/AC6）", () => {
   it("付与する秒数を上書きできる（env 上書き反映・AC1/AC5）", async () => {
     const app = express();
     app.use(createPublicCache({ sMaxageSeconds: 120, staleWhileRevalidateSeconds: 600 }));
+    // eslint-disable-next-line max-params
     app.get("/x", (_req, res) => res.json({ ok: true }));
     const res = await request(app).get("/x");
     expect(res.headers["cache-control"]).toBe(
@@ -38,6 +41,7 @@ describe("createPublicCache（#559 AC2/AC4/AC6）", () => {
     const app = express();
     app.use(fakeAuth());
     app.use(createPublicCache());
+    // eslint-disable-next-line max-params
     app.get("/x", (_req, res) => res.json({ ok: true }));
     const res = await request(app).get("/x");
     expect(res.headers["cache-control"]).toBe("private, no-store");
@@ -47,6 +51,7 @@ describe("createPublicCache（#559 AC2/AC4/AC6）", () => {
   it("非 GET（POST）には public を付けない（AC6）", async () => {
     const app = express();
     app.use(createPublicCache());
+    // eslint-disable-next-line max-params
     app.post("/x", (_req, res) => res.json({ ok: true }));
     const res = await request(app).post("/x");
     expect(res.headers["cache-control"]).toBe("private, no-store");
@@ -56,6 +61,7 @@ describe("createPublicCache（#559 AC2/AC4/AC6）", () => {
   it("Vary: Cookie を付け Cookie 有無でキャッシュを分離させる", async () => {
     const app = express();
     app.use(createPublicCache());
+    // eslint-disable-next-line max-params
     app.get("/x", (_req, res) => res.json({ ok: true }));
     const res = await request(app).get("/x");
     expect(res.headers["vary"]).toContain("Cookie");
@@ -66,6 +72,7 @@ describe("createNoStoreCache（#559 AC3）", () => {
   it("常に private, no-store を付与し public/s-maxage を含めない", async () => {
     const app = express();
     app.use(createNoStoreCache());
+    // eslint-disable-next-line max-params
     app.get("/x", (_req, res) => res.json({ ok: true }));
     const res = await request(app).get("/x");
     expect(res.headers["cache-control"]).toBe("private, no-store");

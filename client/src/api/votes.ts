@@ -16,6 +16,7 @@ export type { VoteDirection };
 /**
  * POST /api/posts/{postId}/vote — post に up/down vote する（ADR-0025）。
  */
+// eslint-disable-next-line max-params
 export async function votePost(postId: string, direction: VoteDirection): Promise<Post> {
   const { data, response } = await openApiClient.POST("/api/posts/{postId}/vote", {
     params: { path: { postId } },
@@ -30,6 +31,7 @@ export async function votePost(postId: string, direction: VoteDirection): Promis
 /**
  * POST /api/comments/{commentId}/vote — comment に up/down vote する（ADR-0025）。
  */
+// eslint-disable-next-line max-params
 export async function voteComment(commentId: string, direction: VoteDirection): Promise<Comment> {
   const { data, response } = await openApiClient.POST("/api/comments/{commentId}/vote", {
     params: { path: { commentId } },
@@ -63,11 +65,13 @@ export function useVotePost(communitySlug?: string) {
       }
       return { previous, postId };
     },
+    // eslint-disable-next-line max-params
     onError: (_err, { postId }, context) => {
       if (context?.previous) {
         queryClient.setQueryData(postThreadQueryKey(postId), context.previous);
       }
     },
+    // eslint-disable-next-line max-params
     onSettled: (_data, _err, { postId }) => {
       void queryClient.invalidateQueries({ queryKey: postThreadQueryKey(postId) });
       if (communitySlug) {
@@ -112,6 +116,7 @@ export function useVoteComment(postId: string) {
       }
       return { previous, commentId };
     },
+    // eslint-disable-next-line max-params
     onError: (_err, _vars, context) => {
       if (context?.previous) {
         queryClient.setQueryData(postThreadQueryKey(postId), context.previous);

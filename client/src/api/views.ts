@@ -34,6 +34,7 @@ function getOrCreateSessionId(): string {
  * sendBeacon でエンドポイントに JSON を送信する。
  * sendBeacon が使えない環境では fetch(keepalive) にフォールバックする。
  */
+// eslint-disable-next-line max-params
 function sendJsonBeacon(url: string, body: unknown): void {
   const json = JSON.stringify(body);
   const blob = new Blob([json], { type: "application/json" });
@@ -104,6 +105,7 @@ function hasCommentBeenViewed(commentId: string): boolean {
  * コメント閲覧ビーコンをバッチ送信する（#665 / ADR-0032）。
  * sessionStorage で既送済みのコメントを除外する。
  */
+// eslint-disable-next-line max-params
 export function sendCommentViewsBeacon(postId: string, commentIds: string[]): void {
   const unseen = commentIds.filter((id) => !hasCommentBeenViewed(id));
   if (unseen.length === 0) return;

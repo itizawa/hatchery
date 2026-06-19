@@ -126,6 +126,7 @@ function renderCommentTree({
 }: {
   nodes: CommentTreeNode[];
   commentMap: Map<string, Comment>;
+  // eslint-disable-next-line max-params
   onVote: (commentId: string, direction: VoteDirection) => void;
   commentRef: (commentId: string) => (el: HTMLElement | null) => void;
 }): ReactElement[] {

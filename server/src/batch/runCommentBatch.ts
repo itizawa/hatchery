@@ -204,7 +204,8 @@ async function processCommunityComments({
 
     // 1st pass: parentCommentId=null で全コメントを作成。
     const commentInputs = postOutput.comments.map((comment) => {
-      const createdAt = dripTimestamps[dripIdx++] ?? new Date(now.getTime() + dripIdx * 1000);
+      const createdAt = dripTimestamps[dripIdx] ?? new Date(now.getTime() + dripIdx * 1000);
+      dripIdx++;
       return {
         postId: targetPostId,
         slotKey,

@@ -1384,6 +1384,7 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/SetWorkerCommunities"
+                }
               }
             }
           }

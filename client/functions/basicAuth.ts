@@ -1,6 +1,5 @@
 // XOR ビット演算で長さが等しい文字列を定数時間で比較する
-// eslint-disable-next-line max-params
-function safeEqual(a: string, b: string): boolean {
+function safeEqual({ a, b }: { a: string; b: string }): boolean {
   if (a.length !== b.length) return false;
   let result = 0;
   for (let i = 0; i < a.length; i++) {
@@ -29,16 +28,19 @@ export function parseBasicAuth(authHeader: string | null): BasicAuthCredentials 
   }
 }
 
-// eslint-disable-next-line max-params
-export function validateBasicAuth(
-  authHeader: string | null | undefined,
-  expectedUser: string,
-  expectedPassword: string,
-): boolean {
+export function validateBasicAuth({
+  authHeader,
+  expectedUser,
+  expectedPassword,
+}: {
+  authHeader: string | null | undefined;
+  expectedUser: string;
+  expectedPassword: string;
+}): boolean {
   const credentials = parseBasicAuth(authHeader ?? null);
   if (!credentials) return false;
   // 両方を先に評価して && 短絡評価によるタイミング差を防ぐ
-  const userOk = safeEqual(credentials.user, expectedUser);
-  const passOk = safeEqual(credentials.password, expectedPassword);
+  const userOk = safeEqual({ a: credentials.user, b: expectedUser });
+  const passOk = safeEqual({ a: credentials.password, b: expectedPassword });
   return userOk && passOk;
 }

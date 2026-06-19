@@ -17,8 +17,7 @@ interface ShareButtonProps {
  * X(Twitter) の intent URL を生成する純粋関数。
  * `text`（タイトルを含むシェア文言）と `url` を encodeURIComponent でエスケープして付与する。
  */
-// eslint-disable-next-line max-params
-export function buildXShareUrl(shareTitle: string, shareUrl: string): string {
+export function buildXShareUrl({ shareTitle, shareUrl }: { shareTitle: string; shareUrl: string }): string {
   const text = `${shareTitle} | Hatchery`;
   const params = new URLSearchParams({ text, url: shareUrl });
   return `https://twitter.com/intent/tweet?${params.toString()}`;
@@ -77,7 +76,7 @@ export const ShareButton = ({ shareUrl, shareTitle }: ShareButtonProps): ReactEl
         <MenuItem
           onClick={() => {
             handleClose();
-            openExternalLink(buildXShareUrl(shareTitle, shareUrl));
+            openExternalLink(buildXShareUrl({ shareTitle, shareUrl }));
           }}
         >
           <ListItemIcon>

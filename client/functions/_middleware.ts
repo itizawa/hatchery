@@ -34,7 +34,7 @@ export const onRequest = async (context: PagesContext): Promise<Response> => {
 
   const authHeader = request.headers.get("Authorization");
 
-  if (!validateBasicAuth(authHeader, user, password)) {
+  if (!validateBasicAuth({ authHeader, expectedUser: user, expectedPassword: password })) {
     return new Response("Unauthorized", {
       status: 401,
       headers: {

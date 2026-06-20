@@ -27,15 +27,14 @@ describe("formatRelativeTime", () => {
     expect(formatRelativeTime({ target: new Date("2026-06-13T13:00:00Z"), now })).toBe("23時間前");
   });
 
-  it("24時間以上7日未満は『N日前』（端数切り捨て）", () => {
-    expect(formatRelativeTime({ target: new Date("2026-06-13T12:00:00Z"), now })).toBe("1日前");
-    expect(formatRelativeTime({ target: new Date("2026-06-08T12:00:00Z"), now })).toBe("6日前");
-    // 6日23時間前 → 6日前
-    expect(formatRelativeTime({ target: new Date("2026-06-07T13:00:00Z"), now })).toBe("6日前");
-  });
-
-  it("7日以上は『YYYY/M/D』の絶対日付", () => {
+  it("24時間以上は『N日前』ではなく絶対日付『YYYY/M/D』を返す", () => {
+    // ちょうど24時間前
+    expect(formatRelativeTime({ target: new Date("2026-06-13T12:00:00Z"), now })).toBe("2026/6/13");
+    // 数日前
+    expect(formatRelativeTime({ target: new Date("2026-06-08T12:00:00Z"), now })).toBe("2026/6/8");
+    // 1週間以上前（旧7日閾値を超えるケース）
     expect(formatRelativeTime({ target: new Date("2026-06-07T12:00:00Z"), now })).toBe("2026/6/7");
+    // 遠い過去
     expect(formatRelativeTime({ target: new Date("2025-12-25T03:00:00Z"), now })).toBe("2025/12/25");
   });
 

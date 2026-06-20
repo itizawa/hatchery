@@ -337,3 +337,7 @@ test.todo(
 test.todo(
   "UC-POST-16: 返信コメントに Reddit 風 L 字コネクターが表示される（#746）",
 );
+
+test.todo(
+  "UC-POST-17: vote ミューテーション進行中は vote ボタンが disabled になる（#748）",
+);

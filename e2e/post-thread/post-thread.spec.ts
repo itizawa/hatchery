@@ -339,5 +339,5 @@ test.todo(
 );
 
 test.todo(
-  "UC-POST-17: vote ミューテーション進行中は vote ボタンが disabled になる（#748）",
+  "UC-POST-18: vote ミューテーション進行中は vote ボタンが disabled になる（#748）",
 );

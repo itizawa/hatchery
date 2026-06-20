@@ -31,23 +31,17 @@ export async function fetchExternalFeed({
   maxArticles?: number;
   timeoutMs?: number;
 }): Promise<FeedArticle[]> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
-
-    let response: Response;
-    try {
-      response = await fetcher(feedUrl, { signal: controller.signal });
-    } finally {
-      clearTimeout(timer);
-    }
-
+    const response = await fetcher(feedUrl, { signal: controller.signal });
     if (!response.ok) return [];
-
     const xml = await response.text();
     return parseXml({ xml, maxArticles });
   } catch {
     return [];
+  } finally {
+    clearTimeout(timer);
   }
 }
 

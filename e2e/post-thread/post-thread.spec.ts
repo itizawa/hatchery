@@ -341,3 +341,7 @@ test.todo(
 test.todo(
   "UC-POST-18: vote ミューテーション進行中は vote ボタンが disabled になる（#748）",
 );
+
+test.todo(
+  "UC-POST-19: 返信を持つコメントのアバター下にスレッドコネクターが表示される（#796）",
+);

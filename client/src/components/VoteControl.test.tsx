@@ -71,6 +71,22 @@ describe("VoteControl", () => {
     expect(screen.queryByText(/累積/i)).not.toBeInTheDocument();
   });
 
+  describe("ツールチップ", () => {
+    it("up vote ボタンに『高評価』ツールチップが付く", async () => {
+      const user = userEvent.setup();
+      render(<VoteControl score={0} onVote={vi.fn()} />);
+      await user.hover(screen.getByRole("button", { name: /up vote/i }));
+      expect(await screen.findByRole("tooltip", { name: "高評価" })).toBeInTheDocument();
+    });
+
+    it("down vote ボタンに『低評価』ツールチップが付く", async () => {
+      const user = userEvent.setup();
+      render(<VoteControl score={0} onVote={vi.fn()} />);
+      await user.hover(screen.getByRole("button", { name: /down vote/i }));
+      expect(await screen.findByRole("tooltip", { name: "低評価" })).toBeInTheDocument();
+    });
+  });
+
   describe("pill コンテナ レンダリング", () => {
     it("up vote ボタンは IconButton（button 要素・MuiIconButton-root）としてレンダリングされる", () => {
       const { container } = render(<VoteControl score={0} onVote={vi.fn()} />);

@@ -50,7 +50,7 @@ export function CommunityFormFields({ form }: CommunityFormFieldsProps): ReactEl
             value={field.state.value ?? ""}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => field.handleChange(e.target.value)}
             onBlur={field.handleBlur}
-            inputProps={{ maxLength: COMMUNITY_NAME_MAX_LENGTH }}
+            slotProps={{ htmlInput: { maxLength: COMMUNITY_NAME_MAX_LENGTH } }}
             error={field.state.meta.errors.length > 0}
             helperText={field.state.meta.errors[0] ?? ""}
           />
@@ -72,7 +72,7 @@ export function CommunityFormFields({ form }: CommunityFormFieldsProps): ReactEl
             value={field.state.value ?? ""}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => field.handleChange(e.target.value)}
             onBlur={field.handleBlur}
-            inputProps={{ maxLength: COMMUNITY_DESCRIPTION_MAX_LENGTH }}
+            slotProps={{ htmlInput: { maxLength: COMMUNITY_DESCRIPTION_MAX_LENGTH } }}
             error={field.state.meta.errors.length > 0}
             helperText={field.state.meta.errors[0] ?? `最大 ${COMMUNITY_DESCRIPTION_MAX_LENGTH} 文字`}
           />
@@ -88,7 +88,7 @@ export function CommunityFormFields({ form }: CommunityFormFieldsProps): ReactEl
             value={field.state.value ?? ""}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => field.handleChange(e.target.value)}
             onBlur={field.handleBlur}
-            inputProps={{ maxLength: COMMUNITY_GENERATION_INSTRUCTION_MAX_LENGTH }}
+            slotProps={{ htmlInput: { maxLength: COMMUNITY_GENERATION_INSTRUCTION_MAX_LENGTH } }}
             helperText={`最大 ${COMMUNITY_GENERATION_INSTRUCTION_MAX_LENGTH} 文字（省略時は概要を使用）`}
           />
         )}

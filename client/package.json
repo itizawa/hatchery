@@ -20,11 +20,11 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "@emotion/react": "^11.13.5",
-    "@emotion/styled": "^11.13.5",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
     "@hatchery/common": "workspace:*",
-    "@mui/icons-material": "^6.5.0",
-    "@mui/material": "^6.1.10",
+    "@mui/icons-material": "^9.1.1",
+    "@mui/material": "^9.1.1",
     "@tanstack/react-form": "^1.33.0",
     "@tanstack/react-query": "^5.62.7",
     "@tanstack/react-router": "^1.87.0",

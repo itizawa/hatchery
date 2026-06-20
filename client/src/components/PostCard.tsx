@@ -10,7 +10,7 @@ import { VoteControl } from "./VoteControl.js";
 import { ShareButton } from "./ShareButton.js";
 import { MarkdownContent } from "./MarkdownContent.js";
 import type { VoteDirection } from "./VoteControl.js";
-import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
+import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutlined";
 
 /** 投稿カードに表示する所属コミュニティの最小情報（#503）。 */
 export interface PostCardCommunity {

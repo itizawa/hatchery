@@ -33,11 +33,11 @@ export const RecentWorkersSection = ({ workers }: RecentWorkersSectionProps): Re
             {worker.displayName.charAt(0).toUpperCase()}
           </Avatar>
           <Box>
-            <Typography variant="body2" fontWeight="medium" lineHeight={1.2}>
+            <Typography variant="body2" sx={{ fontWeight: "medium", lineHeight: 1.2 }}>
               {worker.displayName}
             </Typography>
             {worker.role && (
-              <Typography variant="caption" color="text.secondary" lineHeight={1.2}>
+              <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.2 }}>
                 {worker.role}
               </Typography>
             )}

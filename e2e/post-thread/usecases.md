@@ -196,3 +196,29 @@
   - 「URL をコピー」を選択すると、`${origin}/posts/<postId>#comment-<commentId>` 形式のパーマリンクがクリップボードにコピーされ、成功スナックバーが表示される。
   - 「X でシェア」を選択すると、Twitter intent URL が新しいタブで開く。
   - 既存の VoteControl・コネクターライン・インデントの表示は変化しない。
+
+## UC-POST-21: vote ウィジェットに表示される数字は up vote の累計件数である（#814）
+
+- 前提条件: コメントが 1 件以上付いた post が存在する。ログイン状態は問わない。
+- ステップ:
+  1. `/posts/$postId` を開く。
+  2. post 本文下の vote ウィジェット（up ↑ 数字 down ↓ の pill）を観察する。
+  3. コメントの vote ウィジェットを観察する。
+  4. up vote ボタンをクリックする。
+- 期待動作:
+  - post・コメント両方の vote ウィジェットに表示される数字は「up vote の累計件数」を表す（up − down のネット値ではない）。
+  - up vote をクリックすると表示数字が 1 増える（楽観更新）。
+  - down vote をクリックしても表示数字は変化しない（down は up_count に影響しない）。
+  - サーバ応答後、表示数字はサーバの up_count 値に収束する。
+
+## UC-POST-22: ページリロード後も post・コメントの vote 状態が塗りつぶし表示で復元される（#831）
+
+- 前提条件: コメントが 1 件以上付いた post が存在する。sessionId（guestId）が localStorage に保存されている（ゲスト・ログイン済み問わず）。
+- ステップ:
+  1. `/posts/$postId` を開き、post または任意のコメントに up vote または down vote する。
+  2. ページをリロードする（F5 または URL 再入力）。
+- 期待動作:
+  - リロード後、API から返された `my_vote` フィールドに基づき、vote 済み post・コメントの vote ウィジェット（pill）が塗りつぶし状態（up=primary 色・down=error 色）で表示される。
+  - vote をしていない post・コメントの pill は透明（未投票状態）のまま。
+  - ページをリロードしても vote 状態が消えず、ブラウザを閉じて再訪しても同じ sessionId で同じ塗りつぶし表示が復元される。
+  - post と各コメントのそれぞれ独立した vote 状態が正しく復元される。

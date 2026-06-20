@@ -167,6 +167,7 @@ function renderCommentTree({
           depth={node.depth}
           hasChildren={node.children.length > 0}
           postId={postId}
+          currentVote={comment.my_vote ?? null}
           children={childElements && childElements.length > 0 ? <>{childElements}</> : null}
         />
       </div>,
@@ -246,6 +247,7 @@ export const PostThreadScene = (): ReactElement => {
             }
             voteDisabled={isVotingPost}
             postUrl={postUrl}
+            currentVote={post.my_vote ?? null}
             onCommentClick={comments.length > 0 ? scrollToComments : undefined}
           />
 

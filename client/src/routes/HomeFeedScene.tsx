@@ -95,6 +95,7 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
                   voteStopPropagation
                   truncateText
                   community={community}
+                  currentVote={post.my_vote ?? null}
                   onCommunityClick={
                     community
                       ? () => void navigate({ to: "/communities/$slug", params: { slug: community.slug } })

@@ -53,8 +53,8 @@ const RSS_WITH_HTML_DESC = `<?xml version="1.0" encoding="UTF-8"?>
   </channel>
 </rss>`;
 
-function makeFetcher(xml: string, status = 200) {
-  return async (_url: string, _init?: RequestInit) => {
+function makeFetcher({ xml, status = 200 }: { xml: string; status?: number }) {
+  return async () => {
     return {
       ok: status >= 200 && status < 300,
       status,
@@ -64,7 +64,7 @@ function makeFetcher(xml: string, status = 200) {
 }
 
 function makeFailFetcher(error: Error) {
-  return async (_url: string, _init?: RequestInit): Promise<Response> => {
+  return async (): Promise<Response> => {
     throw error;
   };
 }
@@ -74,7 +74,7 @@ describe("fetchExternalFeed", () => {
     it("RSS の item を FeedArticle[] に変換する", async () => {
       const result = await fetchExternalFeed({
         feedUrl: "https://zenn.dev/feed",
-        fetcher: makeFetcher(RSS_SAMPLE),
+        fetcher: makeFetcher({ xml: RSS_SAMPLE }),
       });
 
       expect(result).toHaveLength(3);
@@ -89,7 +89,7 @@ describe("fetchExternalFeed", () => {
     it("author タグが無い item は author: null を返す", async () => {
       const result = await fetchExternalFeed({
         feedUrl: "https://zenn.dev/feed",
-        fetcher: makeFetcher(RSS_SAMPLE),
+        fetcher: makeFetcher({ xml: RSS_SAMPLE }),
       });
       expect(result[2]?.author).toBeNull();
     });
@@ -97,7 +97,7 @@ describe("fetchExternalFeed", () => {
     it("description の HTML タグを除去してテキストのみを返す", async () => {
       const result = await fetchExternalFeed({
         feedUrl: "https://example.com/feed",
-        fetcher: makeFetcher(RSS_WITH_HTML_DESC),
+        fetcher: makeFetcher({ xml: RSS_WITH_HTML_DESC }),
       });
       expect(result[0]?.summary).not.toContain("<p>");
       expect(result[0]?.summary).not.toContain("<strong>");
@@ -109,7 +109,7 @@ describe("fetchExternalFeed", () => {
     it("Atom の entry を FeedArticle[] に変換する", async () => {
       const result = await fetchExternalFeed({
         feedUrl: "https://example.com/feed.atom",
-        fetcher: makeFetcher(ATOM_SAMPLE),
+        fetcher: makeFetcher({ xml: ATOM_SAMPLE }),
       });
 
       expect(result).toHaveLength(2);
@@ -124,7 +124,7 @@ describe("fetchExternalFeed", () => {
     it("author が無い entry は author: null を返す", async () => {
       const result = await fetchExternalFeed({
         feedUrl: "https://example.com/feed.atom",
-        fetcher: makeFetcher(ATOM_SAMPLE),
+        fetcher: makeFetcher({ xml: ATOM_SAMPLE }),
       });
       expect(result[1]?.author).toBeNull();
     });
@@ -134,7 +134,7 @@ describe("fetchExternalFeed", () => {
     it("maxArticles で件数を制限する", async () => {
       const result = await fetchExternalFeed({
         feedUrl: "https://zenn.dev/feed",
-        fetcher: makeFetcher(RSS_SAMPLE),
+        fetcher: makeFetcher({ xml: RSS_SAMPLE }),
         maxArticles: 2,
       });
       expect(result).toHaveLength(2);
@@ -143,6 +143,7 @@ describe("fetchExternalFeed", () => {
     it("デフォルトの maxArticles は 6", async () => {
       const manyItems = Array.from(
         { length: 10 },
+        // eslint-disable-next-line max-params
         (_, i) => `
         <item>
           <title>記事${i + 1}</title>
@@ -154,7 +155,7 @@ describe("fetchExternalFeed", () => {
 
       const result = await fetchExternalFeed({
         feedUrl: "https://example.com/feed",
-        fetcher: makeFetcher(feed),
+        fetcher: makeFetcher({ xml: feed }),
       });
       expect(result).toHaveLength(6);
     });
@@ -172,7 +173,7 @@ describe("fetchExternalFeed", () => {
     it("HTTP 4xx エラーは空配列を返す", async () => {
       const result = await fetchExternalFeed({
         feedUrl: "https://example.com/feed",
-        fetcher: makeFetcher("Not Found", 404),
+        fetcher: makeFetcher({ xml: "Not Found", status: 404 }),
       });
       expect(result).toEqual([]);
     });
@@ -180,7 +181,7 @@ describe("fetchExternalFeed", () => {
     it("HTTP 5xx エラーは空配列を返す", async () => {
       const result = await fetchExternalFeed({
         feedUrl: "https://example.com/feed",
-        fetcher: makeFetcher("Server Error", 500),
+        fetcher: makeFetcher({ xml: "Server Error", status: 500 }),
       });
       expect(result).toEqual([]);
     });
@@ -188,7 +189,7 @@ describe("fetchExternalFeed", () => {
     it("不正な XML（パース失敗）は空配列を返す", async () => {
       const result = await fetchExternalFeed({
         feedUrl: "https://example.com/feed",
-        fetcher: makeFetcher("<not valid xml >><><"),
+        fetcher: makeFetcher({ xml: "<not valid xml >><><" }),
       });
       expect(result).toEqual([]);
     });
@@ -196,7 +197,7 @@ describe("fetchExternalFeed", () => {
     it("RSS でも Atom でもない XML は空配列を返す", async () => {
       const result = await fetchExternalFeed({
         feedUrl: "https://example.com/feed",
-        fetcher: makeFetcher("<root><something>hello</something></root>"),
+        fetcher: makeFetcher({ xml: "<root><something>hello</something></root>" }),
       });
       expect(result).toEqual([]);
     });

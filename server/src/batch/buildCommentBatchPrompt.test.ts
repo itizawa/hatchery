@@ -10,6 +10,7 @@ const community: CommunityRecord = {
   slug: "test-comm",
   description: "コミュニティの説明",
   generationInstruction: null,
+  feedUrl: null,
   synopsis: null,
   createdAt: new Date("2026-01-01"),
 };

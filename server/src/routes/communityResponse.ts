@@ -27,12 +27,13 @@ export function toCommunityResponse(r: CommunityRecord, stats?: CommunityPostSta
 }
 
 /**
- * CommunityRecord（camelCase）を admin API レスポンスに変換する（#488）。
- * 公開レスポンスに加えて `generationInstruction` を含む。admin エンドポイントのみで使用する。
+ * CommunityRecord（camelCase）を admin API レスポンスに変換する（#488 / #491）。
+ * 公開レスポンスに加えて `generationInstruction` と `feedUrl` を含む。admin エンドポイントのみで使用する。
  */
 export function toAdminCommunityResponse(r: CommunityRecord) {
   return {
     ...toCommunityResponse(r),
     generationInstruction: r.generationInstruction ?? null,
+    feedUrl: r.feedUrl ?? null,
   };
 }

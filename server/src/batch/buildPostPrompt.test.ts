@@ -10,6 +10,7 @@ const community: CommunityRecord = {
   name: "テクノロジー",
   description: "テクノロジーとプログラミングの話題を楽しむコミュニティ。",
   generationInstruction: null,
+  feedUrl: null,
   synopsis: null,
   lastSlotKey: null,
   iconUrl: null,

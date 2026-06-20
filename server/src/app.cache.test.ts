@@ -48,6 +48,7 @@ describe("公開 GET の Cache-Control（#559 AC2）", () => {
         iconUrl: null,
         coverUrl: null,
         generationInstruction: null,
+  feedUrl: null,
         createdAt: new Date("2026-01-01"),
       },
     ]);
@@ -117,6 +118,7 @@ describe("private 必須 GET の Cache-Control（#559 AC3）", () => {
         iconUrl: null,
         coverUrl: null,
         generationInstruction: null,
+  feedUrl: null,
         createdAt: new Date("2026-01-01"),
       },
     ]);
@@ -164,6 +166,7 @@ describe("書き込み系には public キャッシュを付けない（#559 AC6
         iconUrl: null,
         coverUrl: null,
         generationInstruction: null,
+  feedUrl: null,
         createdAt: new Date("2026-01-01"),
       },
     ]);

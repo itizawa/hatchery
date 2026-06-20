@@ -152,7 +152,7 @@ describe("buildCommunityPrompt (#306)", () => {
 describe("verbosity（文章量設定）のプロンプト反映 (#625)", () => {
   const community = {
     id: "c1", slug: "s", name: "N", description: "テスト",
-    generationInstruction: null, synopsis: null, lastSlotKey: null, iconUrl: null, coverUrl: null, createdAt: new Date(),
+    generationInstruction: null, feedUrl: null, synopsis: null, lastSlotKey: null, iconUrl: null, coverUrl: null, createdAt: new Date(),
   };
 
   it("verbosity=concise のワーカーの定義行に簡潔指示が含まれる", () => {
@@ -459,7 +459,7 @@ describe("既存Post参照（#555）", () => {
   const workers = [{ id: "haru", displayName: "haru" }];
   const baseCommunity = {
     id: "c1", slug: "tech", name: "テクノロジー", description: "テク話",
-    generationInstruction: null, synopsis: null, lastSlotKey: null,
+    generationInstruction: null, feedUrl: null, synopsis: null, lastSlotKey: null,
     iconUrl: null, coverUrl: null, createdAt: new Date(),
   };
 
@@ -539,7 +539,7 @@ describe("既存Post参照（#555）", () => {
 describe("UUID誘導ラベル（#715）", () => {
   const community = {
     id: "c1", slug: "s", name: "N", description: "テスト",
-    generationInstruction: null, synopsis: null, lastSlotKey: null,
+    generationInstruction: null, feedUrl: null, synopsis: null, lastSlotKey: null,
     iconUrl: null, coverUrl: null, createdAt: new Date(),
   };
   const workers = [

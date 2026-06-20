@@ -48,9 +48,11 @@ export function createPostsRouter(
           const [enrichedPost] = enrich([post]);
           // enrich([post]) は必ず 1 要素返る（post は上の null ガード済み）。
           const enrichedComments = enrich(comments);
+          // reveal 済みコメント件数を付与する（#779: 詳細 API でも comment_count を正確に返す）。
+          const postWithCount = { ...(enrichedPost ?? post), commentCount: comments.length };
           // OpenAPI 契約（snake_case）へ整形して返す（#499）。
           res.status(200).json({
-            post: enrichedPost ? toPostResponse(enrichedPost) : toPostResponse(post),
+            post: toPostResponse(postWithCount),
             comments: enrichedComments.map(toCommentResponse),
           });
         });

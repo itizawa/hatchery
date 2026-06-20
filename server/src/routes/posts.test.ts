@@ -79,6 +79,42 @@ describe("GET /api/posts/:postId", () => {
     expect(res.status).toBe(404);
   });
 
+  it("コメントが N 件ある post を取得すると comment_count: N が返る（#779）", async () => {
+    const postRepo = createInMemoryPostRepository();
+    const commentRepo = createInMemoryCommentRepository();
+
+    const [post] = await postRepo.createMany("community-1", [
+      { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "T", text: "Body" },
+    ]);
+    await commentRepo.createMany("community-1", [
+      { postId: post.id, slotKey: "2026-06-10T09:00", seq: 0, author: "worker-2", text: "Reply 1" },
+      { postId: post.id, slotKey: "2026-06-10T09:00", seq: 1, author: "worker-3", text: "Reply 2" },
+      { postId: post.id, slotKey: "2026-06-10T09:00", seq: 2, author: "worker-4", text: "Reply 3" },
+    ]);
+
+    const deps = await createTestDeps({ postRepository: postRepo, commentRepository: commentRepo });
+    const app = createApp(deps);
+
+    const res = await request(app).get(`/api/posts/${post.id}`);
+    expect(res.status).toBe(200);
+    expect(res.body.post.comment_count).toBe(3);
+  });
+
+  it("コメントが 0 件の post を取得すると comment_count: 0 が返る（#779）", async () => {
+    const postRepo = createInMemoryPostRepository();
+
+    const [post] = await postRepo.createMany("community-1", [
+      { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "T", text: "Body" },
+    ]);
+
+    const deps = await createTestDeps({ postRepository: postRepo });
+    const app = createApp(deps);
+
+    const res = await request(app).get(`/api/posts/${post.id}`);
+    expect(res.status).toBe(200);
+    expect(res.body.post.comment_count).toBe(0);
+  });
+
   it("post と各 comment に author_worker（display_name + image_url）を付与する（#479）", async () => {
     const postRepo = createInMemoryPostRepository();
     const commentRepo = createInMemoryCommentRepository();

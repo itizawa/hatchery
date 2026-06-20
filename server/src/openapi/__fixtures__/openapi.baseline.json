@@ -966,10 +966,16 @@
               "up",
               "down"
             ]
+          },
+          "sessionId": {
+            "type": "string",
+            "maxLength": 36,
+            "format": "uuid"
           }
         },
         "required": [
-          "direction"
+          "direction",
+          "sessionId"
         ],
         "description": "vote リクエストボディ（direction: up | down）"
       },
@@ -2632,7 +2638,7 @@
     },
     "/api/posts/{postId}/vote": {
       "post": {
-        "summary": "post に up/down vote（認証必須・toggle/switch・ADR-0025）",
+        "summary": "post に up/down vote（認証不要・ゲスト対応・sessionId dedup・toggle/switch・ADR-0025 / #777）",
         "parameters": [
           {
             "schema": {
@@ -2664,17 +2670,7 @@
             }
           },
           "400": {
-            "description": "direction が無効",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "未認証",
+            "description": "direction または sessionId が無効",
             "content": {
               "application/json": {
                 "schema": {
@@ -2698,7 +2694,7 @@
     },
     "/api/comments/{commentId}/vote": {
       "post": {
-        "summary": "comment に up/down vote（認証必須・toggle/switch・ADR-0025）",
+        "summary": "comment に up/down vote（認証不要・ゲスト対応・sessionId dedup・toggle/switch・ADR-0025 / #777）",
         "parameters": [
           {
             "schema": {
@@ -2730,17 +2726,7 @@
             }
           },
           "400": {
-            "description": "direction が無効",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "未認証",
+            "description": "direction または sessionId が無効",
             "content": {
               "application/json": {
                 "schema": {

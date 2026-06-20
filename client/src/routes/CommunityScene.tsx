@@ -13,7 +13,6 @@ import {
 import { useAuth } from "../api/auth.js";
 import { CommunityHeader } from "../components/CommunityHeader.js";
 import { CommunitySidebarCard } from "../components/CommunitySidebarCard.js";
-import { LoginPromptSnackbar } from "../components/LoginPromptSnackbar.js";
 import { PostCard } from "../components/PostCard.js";
 import { QueryBoundary } from "../components/QueryBoundary.js";
 import { RecentWorkersSection } from "../components/RecentWorkersSection.js";
@@ -22,7 +21,6 @@ import type { VoteDirection } from "../components/VoteControl.js";
 import { SubscribeButton } from "../components/SubscribeButton.js";
 import { SubscriptionStatus } from "../components/SubscriptionStatus.js";
 import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
-import { useGuestVoteGuard } from "../hooks/useGuestVoteGuard.js";
 import type { Community } from "../api/communities.js";
 
 /**
@@ -54,7 +52,6 @@ const CommunityContent = ({
   const { mutate: subscribe, isPending: isSubscribing } = useSubscribe(communitySlug);
   const { mutate: unsubscribe, isPending: isUnsubscribing } = useUnsubscribe(communitySlug);
   const { mutate: votePost, isPending: isVotingPost } = useVotePost(communitySlug);
-  const { guardVote, promptOpen, closePrompt } = useGuestVoteGuard();
 
   const isSubscriptionPending = isSubscribing || isUnsubscribing;
 
@@ -107,7 +104,7 @@ const CommunityContent = ({
                       <PostCard
                         post={post}
                         onVote={(direction: VoteDirection) =>
-                          guardVote(() => votePost({ postId: post.id, direction }))
+                          votePost({ postId: post.id, direction })
                         }
                         voteDisabled={isVotingPost}
                         voteStopPropagation
@@ -163,7 +160,6 @@ const CommunityContent = ({
               </CommunitySidebarCard>
             </Box>
           </Box>
-          <LoginPromptSnackbar open={promptOpen} onClose={closePrompt} />
         </Box>
       )}
     </SubscriptionStatus>

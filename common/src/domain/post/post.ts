@@ -12,9 +12,11 @@ export const POST_TEXT_MAX_LENGTH = 1000;
 export const VoteDirectionSchema = z.enum(["up", "down"]);
 export type VoteDirection = z.infer<typeof VoteDirectionSchema>;
 
-/** vote リクエストボディの Zod スキーマ（ADR-0025）。 */
+/** vote リクエストボディの Zod スキーマ（ADR-0025 / #777: sessionId 必須に変更）。 */
 export const VoteRequestSchema = z.object({
   direction: VoteDirectionSchema,
+  /** クライアント生成の UUID（36文字以下）。ゲストは localStorage 永続化 guestId、ログイン済みは userId を送る。 */
+  sessionId: z.string().uuid().max(36),
 });
 export type VoteRequest = z.infer<typeof VoteRequestSchema>;
 

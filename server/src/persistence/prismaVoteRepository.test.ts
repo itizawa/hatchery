@@ -15,6 +15,10 @@ describe.skipIf(!DATABASE_URL)("createPrismaVoteRepository (integration)", () =>
   let postId2: string;
   let commentId: string;
 
+  // テスト用 sessionId（#777: sessionId を dedup キーに変更）。
+  const sessId1 = "00000000-0000-7000-0000-000000000001";
+  const sessId2 = "00000000-0000-7000-0000-000000000002";
+
   beforeAll(async () => {
     prisma = new PrismaClient({ datasources: { db: { url: DATABASE_URL } } });
     await prisma.$connect();
@@ -64,7 +68,7 @@ describe.skipIf(!DATABASE_URL)("createPrismaVoteRepository (integration)", () =>
       await setupFixtures();
       const repo = createPrismaVoteRepository(prisma);
 
-      const result = await repo.findVote(userId, "post", postId);
+      const result = await repo.findVote({ sessionId: sessId1, targetType: "post", targetId: postId });
 
       expect(result).toBeNull();
     });
@@ -73,10 +77,11 @@ describe.skipIf(!DATABASE_URL)("createPrismaVoteRepository (integration)", () =>
       await setupFixtures();
       const repo = createPrismaVoteRepository(prisma);
 
-      await repo.vote(userId, "post", postId, "up");
-      const result = await repo.findVote(userId, "post", postId);
+      await repo.vote({ sessionId: sessId1, userId, targetType: "post", targetId: postId, direction: "up" });
+      const result = await repo.findVote({ sessionId: sessId1, targetType: "post", targetId: postId });
 
       expect(result).not.toBeNull();
+      expect(result?.sessionId).toBe(sessId1);
       expect(result?.userId).toBe(userId);
       expect(result?.targetType).toBe("post");
       expect(result?.targetId).toBe(postId);
@@ -87,9 +92,9 @@ describe.skipIf(!DATABASE_URL)("createPrismaVoteRepository (integration)", () =>
       await setupFixtures();
       const repo = createPrismaVoteRepository(prisma);
 
-      await repo.vote(userId, "post", postId, "up");
+      await repo.vote({ sessionId: sessId1, userId, targetType: "post", targetId: postId, direction: "up" });
       // 同じ id 文字列でも comment としては存在しない → null（混同しない）。
-      const result = await repo.findVote(userId, "comment", postId);
+      const result = await repo.findVote({ sessionId: sessId1, targetType: "comment", targetId: postId });
 
       expect(result).toBeNull();
     });
@@ -100,10 +105,10 @@ describe.skipIf(!DATABASE_URL)("createPrismaVoteRepository (integration)", () =>
       await setupFixtures();
       const repo = createPrismaVoteRepository(prisma);
 
-      const { scoreDelta } = await repo.vote(userId, "post", postId, "up");
+      const { scoreDelta } = await repo.vote({ sessionId: sessId1, userId, targetType: "post", targetId: postId, direction: "up" });
 
       expect(scoreDelta).toBe(1);
-      const found = await repo.findVote(userId, "post", postId);
+      const found = await repo.findVote({ sessionId: sessId1, targetType: "post", targetId: postId });
       expect(found?.direction).toBe("up");
     });
 
@@ -111,10 +116,10 @@ describe.skipIf(!DATABASE_URL)("createPrismaVoteRepository (integration)", () =>
       await setupFixtures();
       const repo = createPrismaVoteRepository(prisma);
 
-      const { scoreDelta } = await repo.vote(userId, "post", postId, "down");
+      const { scoreDelta } = await repo.vote({ sessionId: sessId1, userId, targetType: "post", targetId: postId, direction: "down" });
 
       expect(scoreDelta).toBe(-1);
-      const found = await repo.findVote(userId, "post", postId);
+      const found = await repo.findVote({ sessionId: sessId1, targetType: "post", targetId: postId });
       expect(found?.direction).toBe("down");
     });
 
@@ -122,11 +127,11 @@ describe.skipIf(!DATABASE_URL)("createPrismaVoteRepository (integration)", () =>
       await setupFixtures();
       const repo = createPrismaVoteRepository(prisma);
 
-      await repo.vote(userId, "post", postId, "up");
-      const { scoreDelta } = await repo.vote(userId, "post", postId, "up");
+      await repo.vote({ sessionId: sessId1, userId, targetType: "post", targetId: postId, direction: "up" });
+      const { scoreDelta } = await repo.vote({ sessionId: sessId1, userId, targetType: "post", targetId: postId, direction: "up" });
 
       expect(scoreDelta).toBe(-1);
-      const found = await repo.findVote(userId, "post", postId);
+      const found = await repo.findVote({ sessionId: sessId1, targetType: "post", targetId: postId });
       expect(found).toBeNull();
     });
 
@@ -134,11 +139,11 @@ describe.skipIf(!DATABASE_URL)("createPrismaVoteRepository (integration)", () =>
       await setupFixtures();
       const repo = createPrismaVoteRepository(prisma);
 
-      await repo.vote(userId, "post", postId, "down");
-      const { scoreDelta } = await repo.vote(userId, "post", postId, "down");
+      await repo.vote({ sessionId: sessId1, userId, targetType: "post", targetId: postId, direction: "down" });
+      const { scoreDelta } = await repo.vote({ sessionId: sessId1, userId, targetType: "post", targetId: postId, direction: "down" });
 
       expect(scoreDelta).toBe(1);
-      const found = await repo.findVote(userId, "post", postId);
+      const found = await repo.findVote({ sessionId: sessId1, targetType: "post", targetId: postId });
       expect(found).toBeNull();
     });
 
@@ -146,11 +151,11 @@ describe.skipIf(!DATABASE_URL)("createPrismaVoteRepository (integration)", () =>
       await setupFixtures();
       const repo = createPrismaVoteRepository(prisma);
 
-      await repo.vote(userId, "post", postId, "up");
-      const { scoreDelta } = await repo.vote(userId, "post", postId, "down");
+      await repo.vote({ sessionId: sessId1, userId, targetType: "post", targetId: postId, direction: "up" });
+      const { scoreDelta } = await repo.vote({ sessionId: sessId1, userId, targetType: "post", targetId: postId, direction: "down" });
 
       expect(scoreDelta).toBe(-2);
-      const found = await repo.findVote(userId, "post", postId);
+      const found = await repo.findVote({ sessionId: sessId1, targetType: "post", targetId: postId });
       expect(found?.direction).toBe("down");
     });
 
@@ -158,11 +163,11 @@ describe.skipIf(!DATABASE_URL)("createPrismaVoteRepository (integration)", () =>
       await setupFixtures();
       const repo = createPrismaVoteRepository(prisma);
 
-      await repo.vote(userId, "post", postId, "down");
-      const { scoreDelta } = await repo.vote(userId, "post", postId, "up");
+      await repo.vote({ sessionId: sessId1, userId, targetType: "post", targetId: postId, direction: "down" });
+      const { scoreDelta } = await repo.vote({ sessionId: sessId1, userId, targetType: "post", targetId: postId, direction: "up" });
 
       expect(scoreDelta).toBe(2);
-      const found = await repo.findVote(userId, "post", postId);
+      const found = await repo.findVote({ sessionId: sessId1, targetType: "post", targetId: postId });
       expect(found?.direction).toBe("up");
     });
 
@@ -170,45 +175,57 @@ describe.skipIf(!DATABASE_URL)("createPrismaVoteRepository (integration)", () =>
       await setupFixtures();
       const repo = createPrismaVoteRepository(prisma);
 
-      await repo.vote(userId, "post", postId, "up");
-      await repo.vote(userId, "comment", commentId, "down");
+      await repo.vote({ sessionId: sessId1, userId, targetType: "post", targetId: postId, direction: "up" });
+      await repo.vote({ sessionId: sessId1, userId, targetType: "comment", targetId: commentId, direction: "down" });
 
-      expect((await repo.findVote(userId, "post", postId))?.direction).toBe("up");
-      expect((await repo.findVote(userId, "comment", commentId))?.direction).toBe("down");
+      expect((await repo.findVote({ sessionId: sessId1, targetType: "post", targetId: postId }))?.direction).toBe("up");
+      expect((await repo.findVote({ sessionId: sessId1, targetType: "comment", targetId: commentId }))?.direction).toBe("down");
     });
 
-    it("異なるユーザーの vote は独立して管理される", async () => {
+    it("異なる sessionId の vote は独立して管理される（#777: sessionId が dedup キー）", async () => {
       await setupFixtures();
       const repo = createPrismaVoteRepository(prisma);
 
-      await repo.vote(userId, "post", postId, "up");
-      await repo.vote(userId2, "post", postId, "down");
+      await repo.vote({ sessionId: sessId1, userId, targetType: "post", targetId: postId, direction: "up" });
+      await repo.vote({ sessionId: sessId2, userId: userId2, targetType: "post", targetId: postId, direction: "down" });
 
-      expect((await repo.findVote(userId, "post", postId))?.direction).toBe("up");
-      expect((await repo.findVote(userId2, "post", postId))?.direction).toBe("down");
+      expect((await repo.findVote({ sessionId: sessId1, targetType: "post", targetId: postId }))?.direction).toBe("up");
+      expect((await repo.findVote({ sessionId: sessId2, targetType: "post", targetId: postId }))?.direction).toBe("down");
     });
 
-    it("同一ユーザーが同一対象へ重複 vote しない（ユニーク制約・AC4）", async () => {
+    it("同一 sessionId が同一対象へ重複 vote しない（ユニーク制約・AC4）", async () => {
       await setupFixtures();
       const repo = createPrismaVoteRepository(prisma);
 
-      await repo.vote(userId, "post", postId, "up");
-      await repo.vote(userId, "post", postId, "up");
+      await repo.vote({ sessionId: sessId1, userId, targetType: "post", targetId: postId, direction: "up" });
+      await repo.vote({ sessionId: sessId1, userId, targetType: "post", targetId: postId, direction: "up" });
 
-      const votes = await prisma.vote.findMany({ where: { userId } });
+      const votes = await prisma.vote.findMany({ where: { sessionId: sessId1 } });
       expect(votes).toHaveLength(0);
     });
 
-    it("同一ユーザーが異なる post には独立して vote できる（NULL 区別の複合ユニーク・AC4）", async () => {
+    it("同一 sessionId が異なる post には独立して vote できる（NULL 区別の複合ユニーク・AC4）", async () => {
       await setupFixtures();
       const repo = createPrismaVoteRepository(prisma);
 
-      await repo.vote(userId, "post", postId, "up");
-      await repo.vote(userId, "post", postId2, "up");
+      await repo.vote({ sessionId: sessId1, userId, targetType: "post", targetId: postId, direction: "up" });
+      await repo.vote({ sessionId: sessId1, userId, targetType: "post", targetId: postId2, direction: "up" });
 
-      expect((await repo.findVote(userId, "post", postId))?.direction).toBe("up");
-      expect((await repo.findVote(userId, "post", postId2))?.direction).toBe("up");
-      expect(await prisma.vote.count({ where: { userId } })).toBe(2);
+      expect((await repo.findVote({ sessionId: sessId1, targetType: "post", targetId: postId }))?.direction).toBe("up");
+      expect((await repo.findVote({ sessionId: sessId1, targetType: "post", targetId: postId2 }))?.direction).toBe("up");
+      expect(await prisma.vote.count({ where: { sessionId: sessId1 } })).toBe(2);
+    });
+
+    it("ゲスト（userId=null）でも vote できる（#777）", async () => {
+      await setupFixtures();
+      const repo = createPrismaVoteRepository(prisma);
+
+      const { scoreDelta } = await repo.vote({ sessionId: sessId1, userId: null, targetType: "post", targetId: postId, direction: "up" });
+
+      expect(scoreDelta).toBe(1);
+      const found = await repo.findVote({ sessionId: sessId1, targetType: "post", targetId: postId });
+      expect(found?.direction).toBe("up");
+      expect(found?.userId).toBeNull();
     });
   });
 
@@ -217,21 +234,21 @@ describe.skipIf(!DATABASE_URL)("createPrismaVoteRepository (integration)", () =>
       await setupFixtures();
       const repo = createPrismaVoteRepository(prisma);
 
-      await expect(repo.vote(userId, "post", "non-existent-post-id", "up")).rejects.toThrow();
+      await expect(repo.vote({ sessionId: sessId1, userId, targetType: "post", targetId: "non-existent-post-id", direction: "up" })).rejects.toThrow();
     });
 
     it("存在しない Comment への vote は FK 違反で拒否される（AC5）", async () => {
       await setupFixtures();
       const repo = createPrismaVoteRepository(prisma);
 
-      await expect(repo.vote(userId, "comment", "non-existent-comment-id", "up")).rejects.toThrow();
+      await expect(repo.vote({ sessionId: sessId1, userId, targetType: "comment", targetId: "non-existent-comment-id", direction: "up" })).rejects.toThrow();
     });
 
     it("Post を削除すると関連 vote が cascade 削除される（AC6）", async () => {
       await setupFixtures();
       const repo = createPrismaVoteRepository(prisma);
 
-      await repo.vote(userId, "post", postId, "up");
+      await repo.vote({ sessionId: sessId1, userId, targetType: "post", targetId: postId, direction: "up" });
       expect(await prisma.vote.count({ where: { postId } })).toBe(1);
 
       await prisma.post.delete({ where: { id: postId } });
@@ -243,7 +260,7 @@ describe.skipIf(!DATABASE_URL)("createPrismaVoteRepository (integration)", () =>
       await setupFixtures();
       const repo = createPrismaVoteRepository(prisma);
 
-      await repo.vote(userId, "comment", commentId, "up");
+      await repo.vote({ sessionId: sessId1, userId, targetType: "comment", targetId: commentId, direction: "up" });
       expect(await prisma.vote.count({ where: { commentId } })).toBe(1);
 
       await prisma.comment.delete({ where: { id: commentId } });
@@ -263,20 +280,20 @@ describe.skipIf(!DATABASE_URL)("createPrismaVoteRepository (integration)", () =>
       await setupFixtures();
       const repo = createPrismaVoteRepository(prisma);
 
-      const result = await repo.voteAndApplyScore(userId, "post", postId, "up", failIfCalled);
+      const result = await repo.voteAndApplyScore({ sessionId: sessId1, userId, targetType: "post", targetId: postId, direction: "up", applyScore: failIfCalled });
 
       expect(result.scoreDelta).toBe(1);
       expect(result.score).toBe(1);
       expect((await prisma.post.findUnique({ where: { id: postId } }))?.score).toBe(1);
-      expect((await repo.findVote(userId, "post", postId))?.direction).toBe("up");
+      expect((await repo.findVote({ sessionId: sessId1, targetType: "post", targetId: postId }))?.direction).toBe("up");
     });
 
     it("post: up 済み → down (switch) で score が -2 され更新後 score を返す", async () => {
       await setupFixtures();
       const repo = createPrismaVoteRepository(prisma);
 
-      await repo.voteAndApplyScore(userId, "post", postId, "up", failIfCalled); // score=1
-      const result = await repo.voteAndApplyScore(userId, "post", postId, "down", failIfCalled);
+      await repo.voteAndApplyScore({ sessionId: sessId1, userId, targetType: "post", targetId: postId, direction: "up", applyScore: failIfCalled }); // score=1
+      const result = await repo.voteAndApplyScore({ sessionId: sessId1, userId, targetType: "post", targetId: postId, direction: "down", applyScore: failIfCalled });
 
       expect(result.scoreDelta).toBe(-2);
       expect(result.score).toBe(-1);
@@ -287,19 +304,19 @@ describe.skipIf(!DATABASE_URL)("createPrismaVoteRepository (integration)", () =>
       await setupFixtures();
       const repo = createPrismaVoteRepository(prisma);
 
-      await repo.voteAndApplyScore(userId, "post", postId, "up", failIfCalled); // score=1
-      const result = await repo.voteAndApplyScore(userId, "post", postId, "up", failIfCalled);
+      await repo.voteAndApplyScore({ sessionId: sessId1, userId, targetType: "post", targetId: postId, direction: "up", applyScore: failIfCalled }); // score=1
+      const result = await repo.voteAndApplyScore({ sessionId: sessId1, userId, targetType: "post", targetId: postId, direction: "up", applyScore: failIfCalled });
 
       expect(result.scoreDelta).toBe(-1);
       expect(result.score).toBe(0);
-      expect(await repo.findVote(userId, "post", postId)).toBeNull();
+      expect(await repo.findVote({ sessionId: sessId1, targetType: "post", targetId: postId })).toBeNull();
     });
 
     it("comment: 未投票 → down で vote 作成と comment.score -1 が同時に整合する", async () => {
       await setupFixtures();
       const repo = createPrismaVoteRepository(prisma);
 
-      const result = await repo.voteAndApplyScore(userId, "comment", commentId, "down", failIfCalled);
+      const result = await repo.voteAndApplyScore({ sessionId: sessId1, userId, targetType: "comment", targetId: commentId, direction: "down", applyScore: failIfCalled });
 
       expect(result.scoreDelta).toBe(-1);
       expect(result.score).toBe(-1);
@@ -311,10 +328,10 @@ describe.skipIf(!DATABASE_URL)("createPrismaVoteRepository (integration)", () =>
       const repo = createPrismaVoteRepository(prisma);
 
       await expect(
-        repo.voteAndApplyScore(userId, "post", "non-existent-post-id", "up", failIfCalled),
+        repo.voteAndApplyScore({ sessionId: sessId1, userId, targetType: "post", targetId: "non-existent-post-id", direction: "up", applyScore: failIfCalled }),
       ).rejects.toThrow();
       // 中間状態が残らない（vote が 0 件）。
-      expect(await prisma.vote.count({ where: { userId } })).toBe(0);
+      expect(await prisma.vote.count({ where: { sessionId: sessId1 } })).toBe(0);
     });
   });
 
@@ -371,11 +388,11 @@ describe.skipIf(!DATABASE_URL)("createPrismaVoteRepository (integration)", () =>
       const repo = createPrismaVoteRepository(prisma);
 
       // community1: post1 up(+1)、comment1 down(-1) = 0
-      await repo.vote(userId, "post", fx.post1, "up");
-      await repo.vote(userId, "comment", fx.comment1, "down");
-      // community2: post2 down(-1)、別ユーザーも post2 down(-1) = -2
-      await repo.vote(userId, "post", fx.post2, "down");
-      await repo.vote(userId2, "post", fx.post2, "down");
+      await repo.vote({ sessionId: sessId1, userId, targetType: "post", targetId: fx.post1, direction: "up" });
+      await repo.vote({ sessionId: sessId1, userId, targetType: "comment", targetId: fx.comment1, direction: "down" });
+      // community2: post2 down(-1)、別 sessionId も post2 down(-1) = -2
+      await repo.vote({ sessionId: sessId1, userId, targetType: "post", targetId: fx.post2, direction: "down" });
+      await repo.vote({ sessionId: sessId2, userId: userId2, targetType: "post", targetId: fx.post2, direction: "down" });
 
       const result = await repo.netScoresByCommunitySince(new Date("2020-01-01"));
 
@@ -388,7 +405,7 @@ describe.skipIf(!DATABASE_URL)("createPrismaVoteRepository (integration)", () =>
       const fx = await setupCommunityFixtures();
       const repo = createPrismaVoteRepository(prisma);
 
-      await repo.vote(userId, "post", fx.post1, "up");
+      await repo.vote({ sessionId: sessId1, userId, targetType: "post", targetId: fx.post1, direction: "up" });
 
       // since を未来に置くと直近 vote が除外され空になる。
       const future = new Date(Date.now() + 24 * 60 * 60 * 1000);

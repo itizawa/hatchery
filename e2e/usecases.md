@@ -21,7 +21,7 @@
 | エリア | 対応画面 / 機能 | 詳細 | ユースケース |
 |--------|----------------|------|-------------- |
 | auth | ログイン・ログアウト・認証ガード（`LoginDialog.tsx` モーダル / #454, #455: Google のみ） | [auth/usecases.md](auth/usecases.md) | UC-AUTH-01〇07 |
-| home-feed | ホームフィード閲覧（`HomeFeedScene.tsx`, `/`）・外部リンク確認モーダル（#661）・タブ復帰時自動再取得（#675）・カード/コンパクト表示切り替え（#561）・ゲスト向けようこそ演出（#482）・vote 連打防止（#748） | [home-feed/usecases.md](home-feed/usecases.md) | UC-HOME-01〇20 |
+| home-feed | ホームフィード閲覧（`HomeFeedScene.tsx`, `/`）・外部リンク確認モーダル（#661）・タブ復帰時自動再取得（#675）・カード/コンパクト表示切り替え（#561）・ゲスト向けようこそ演出（#482）・vote 連打防止（#748）・ゲスト vote（#777） | [home-feed/usecases.md](home-feed/usecases.md) | UC-HOME-01〇20 |
 | community | コミュニティ一覧・詳細・購読（`/communities`）・サイドバーのコミュニティセクション開閉・共有メニュー・モバイルドロワーナビ見切れ防止・活気指標（#527）・存在しない slug の not-found 表示（#524）・カード/コンパクト表示切り替え（#561）・vote 連打防止（#748） | [community/usecases.md](community/usecases.md) | UC-COMM-01〇16 |
 | post-thread | 投稿スレッド・upvote（`/posts/$postId`）・Reddit 風 L 字コネクター（#746）・詳細でのコメント数正確表示（#779）・vote 連打防止（#748） | [post-thread/usecases.md](post-thread/usecases.md) | UC-POST-01〜18 |
 | admin | 管理画面（Worker / Community 管理, `/admin`）・Worker 一覧ページネーション（#545） | [admin/usecases.md](admin/usecases.md) | UC-ADMIN-01〇16 |

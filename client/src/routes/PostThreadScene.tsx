@@ -18,11 +18,9 @@ import { useAuth } from "../api/auth.js";
 import { PostCard } from "../components/PostCard.js";
 import { CommentCard } from "../components/CommentCard.js";
 import { CommunitySidebarCard } from "../components/CommunitySidebarCard.js";
-import { LoginPromptSnackbar } from "../components/LoginPromptSnackbar.js";
 import { QueryBoundary } from "../components/QueryBoundary.js";
 import { SubscriptionStatus } from "../components/SubscriptionStatus.js";
 import type { VoteDirection } from "../components/VoteControl.js";
-import { useGuestVoteGuard } from "../hooks/useGuestVoteGuard.js";
 import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
 
 /** 右サイドバーの sticky ラッパー（md 未満で非表示）。 */
@@ -174,7 +172,6 @@ export const PostThreadScene = (): ReactElement => {
   const { data } = usePostThread(id);
   const { mutate: votePost, isPending: isVotingPost } = useVotePost();
   const { mutate: voteComment, isPending: isVotingComment } = useVoteComment(id);
-  const { guardVote, promptOpen, closePrompt } = useGuestVoteGuard();
 
   // 閉覧計測（#665 / ADR-0032）
   usePostViewBeacon(id);
@@ -224,7 +221,7 @@ export const PostThreadScene = (): ReactElement => {
           <PostCard
             post={post}
             onVote={(direction: VoteDirection) =>
-              guardVote(() => votePost({ postId: post.id, direction }))
+              votePost({ postId: post.id, direction })
             }
             voteDisabled={isVotingPost}
             postUrl={postUrl}
@@ -240,7 +237,7 @@ export const PostThreadScene = (): ReactElement => {
                 nodes: commentTree,
                 commentMap,
                 // eslint-disable-next-line max-params
-                onVote: (commentId, direction) => guardVote(() => voteComment({ commentId, direction })),
+                onVote: (commentId, direction) => voteComment({ commentId, direction }),
                 commentRef,
                 voteDisabled: isVotingComment,
               })}
@@ -261,7 +258,6 @@ export const PostThreadScene = (): ReactElement => {
           <PostThreadSidebar communityId={post.community_id} />
         </QueryBoundary>
       </Box>
-      <LoginPromptSnackbar open={promptOpen} onClose={closePrompt} />
     </Box>
   );
 };

@@ -31,6 +31,7 @@ export const handlers = [
 
   http.get("/api/posts/:postId", () => HttpResponse.json({ post: mockPosts[0], comments: [] })),
 
+  // POST /api/posts/:postId/vote — vote（認証不要・#777 ゲスト対応。sessionId を body に含む）。
   http.post("/api/posts/:postId/vote", () =>
     HttpResponse.json({ ...mockPosts[0], score: (mockPosts[0]?.score ?? 0) + 1 }),
   ),
@@ -41,6 +42,7 @@ export const handlers = [
   // POST /api/posts/:postId/comment-views — コメント閲覧ビーコン（#665）。
   http.post("/api/posts/:postId/comment-views", () => new HttpResponse(null, { status: 204 })),
 
+  // POST /api/comments/:commentId/vote — vote（認証不要・#777 ゲスト対応。sessionId を body に含む）。
   http.post("/api/comments/:commentId/vote", () =>
     HttpResponse.json({ id: "comment-1", score: 1 }),
   ),

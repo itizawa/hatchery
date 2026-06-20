@@ -166,7 +166,7 @@ export function createInMemoryVoteRepository(): VoteRepository {
       return map;
     },
 
-    async netScoresByWorkerSince(_since: Date) {
+    async netScoresByWorkerSince() {
       // in-memory では createdAt フィルタを省略（テスト用途では全件を返す）
       const scoreMap = new Map<string, number>();
       for (const r of records) {
@@ -176,7 +176,7 @@ export function createInMemoryVoteRepository(): VoteRepository {
       return scoreMap;
     },
 
-    async netScoresByCommunitySince(_since: Date) {
+    async netScoresByCommunitySince() {
       return new Map();
     },
   };

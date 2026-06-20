@@ -52,7 +52,7 @@ export async function fetchHomeFeedPage({
   cursor?: string;
   sort?: HomeFeedSort;
   sessionId?: string;
-}): Promise<{ posts: Post[]; nextCursor: string | null }> {
+} = {}): Promise<{ posts: Post[]; nextCursor: string | null }> {
   const query: { cursor?: string; limit: number; sort?: HomeFeedSort; sessionId?: string } = {
     limit: 20,
   };

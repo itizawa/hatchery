@@ -46,7 +46,7 @@ describe("fetchPostThread (GET /api/posts/{postId})", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    const result = await fetchPostThread("post-1");
+    const result = await fetchPostThread({ postId: "post-1" });
     expect(result).toEqual({ post: mockPost, comments: [mockComment] });
     const request = fetchMock.mock.calls[0][0] as Request;
     expect(request.url).toContain("/api/posts/post-1");
@@ -54,6 +54,6 @@ describe("fetchPostThread (GET /api/posts/{postId})", () => {
 
   it("404 のとき例外を投げる", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(404)));
-    await expect(fetchPostThread("not-exist")).rejects.toThrow();
+    await expect(fetchPostThread({ postId: "not-exist" })).rejects.toThrow();
   });
 });

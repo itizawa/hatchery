@@ -357,3 +357,5 @@ test.todo("UC-HOME-18: 認証済みで投稿がある場合はようこそセク
 test.todo("UC-HOME-19: 認証済みで投稿が 0 件のときはようこそセクションが表示される（#482）");
 
 test.todo("UC-HOME-20: vote ミューテーション進行中はフィードの vote ボタンが disabled になる（#748）");
+
+test.todo("UC-HOME-21: vote 済みの投稿は vote ウィジェットが塗りつぶし表示になる（#813）");

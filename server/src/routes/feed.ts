@@ -7,6 +7,7 @@ import type { VoteRepository } from "../persistence/voteRepository.js";
 import type { WorkerRepository } from "../persistence/workerRepository.js";
 import { attachAuthorWorker } from "./authorWorker.js";
 import { attachCommentCount } from "./commentCount.js";
+import { extractSessionId } from "./extractSessionId.js";
 import { toPostResponse } from "./postResponse.js";
 
 /**
@@ -15,13 +16,17 @@ import { toPostResponse } from "./postResponse.js";
  * #479: 各 post に発言者の表示用ワーカー情報（author_worker）を付与する。
  * #831: sessionId クエリパラメータ付きのとき my_vote を付与する。
  */
-// eslint-disable-next-line max-params
-export function createFeedRouter(
-  postRepo: PostRepository,
-  workerRepo: WorkerRepository,
-  commentRepo: CommentRepository,
-  voteRepo: VoteRepository,
-): Router {
+export function createFeedRouter({
+  postRepo,
+  workerRepo,
+  commentRepo,
+  voteRepo,
+}: {
+  postRepo: PostRepository;
+  workerRepo: WorkerRepository;
+  commentRepo: CommentRepository;
+  voteRepo: VoteRepository;
+}): Router {
   const router = Router();
 
   // eslint-disable-next-line max-params
@@ -32,9 +37,8 @@ export function createFeedRouter(
       return;
     }
     const { cursor, limit, sort } = parsed.data;
-    // sessionId は任意クエリパラメータ。UUID 以外や未指定はスキップ（#831）。
-    const rawSessionId = req.query["sessionId"];
-    const sessionId = typeof rawSessionId === "string" && rawSessionId.length > 0 ? rawSessionId : null;
+    // sessionId は任意クエリパラメータ。UUID 検証付きで取得し、不正・未指定は null（#831）。
+    const sessionId = extractSessionId(req);
 
     // reveal フィルタ（#556）: createdAt <= now のもののみ公開する。
     const now = new Date();

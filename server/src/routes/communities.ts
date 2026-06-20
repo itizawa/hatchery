@@ -13,6 +13,7 @@ import type { VoteRepository } from "../persistence/voteRepository.js";
 import type { WorkerRepository } from "../persistence/workerRepository.js";
 import { attachAuthorWorker } from "./authorWorker.js";
 import { attachCommentCount } from "./commentCount.js";
+import { extractSessionId } from "./extractSessionId.js";
 import { toPostResponse } from "./postResponse.js";
 
 const RECENT_WORKERS_LIMIT = 10;
@@ -50,9 +51,8 @@ export function createCommunitiesRouter(
   // eslint-disable-next-line max-params
   router.get("/:slug/feed", (req, res, next) => {
     const { slug } = req.params as { slug: string };
-    // sessionId は任意クエリパラメータ。付与されていれば my_vote を付与する（#831）。
-    const rawSessionId = req.query["sessionId"];
-    const sessionId = typeof rawSessionId === "string" && rawSessionId.length > 0 ? rawSessionId : null;
+    // sessionId は任意クエリパラメータ。UUID 検証付きで取得し、不正・未指定は null（#831）。
+    const sessionId = extractSessionId(req);
     // reveal フィルタ（#556）: createdAt <= now のもののみ公開する。
     const now = new Date();
     communityRepo

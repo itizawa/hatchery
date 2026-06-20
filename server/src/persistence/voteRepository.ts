@@ -54,7 +54,7 @@ export interface VoteRepository {
     targetId: string;
     direction: VoteDirection;
     applyScore: (delta: number) => Promise<number | null>;
-  }): Promise<{ scoreDelta: number; score: number | null }>;
+  }): Promise<{ scoreDelta: number; upCountDelta: number; score: number | null }>;
 
   /**
    * 指定セッション・対象種別で複数 targetId の vote 状態を一括取得する（#831・N+1 回避）。
@@ -147,9 +147,9 @@ export function createInMemoryVoteRepository(): VoteRepository {
     },
 
     async voteAndApplyScore({ sessionId, userId, targetType, targetId, direction, applyScore }) {
-      const { scoreDelta } = applyMutation({ sessionId, userId, targetType, targetId, direction });
+      const { scoreDelta, upCountDelta } = applyMutation({ sessionId, userId, targetType, targetId, direction });
       const score = await applyScore(scoreDelta);
-      return { scoreDelta, score };
+      return { scoreDelta, upCountDelta, score };
     },
 
     async findVotesBySessionAndTargets({ sessionId, targetType, targetIds }) {

@@ -237,7 +237,7 @@ export function createApp(deps: AppDeps): Express {
       voteRepo,
     ),
   );
-  app.use("/api/feed", publicCache, createFeedRouter(postRepo, deps.workerRepository, commentRepo, voteRepo));
+  app.use("/api/feed", publicCache, createFeedRouter({ postRepo, workerRepo: deps.workerRepository, commentRepo, voteRepo }));
   app.use("/api/ogp", publicCache, createOgpRouter());
   app.use(
     "/api",

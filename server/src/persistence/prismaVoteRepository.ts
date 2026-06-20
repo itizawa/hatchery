@@ -137,7 +137,7 @@ export function createPrismaVoteRepository(prisma: PrismaClient): VoteRepository
       targetId: string;
       direction: VoteDirection;
       applyScore: (delta: number) => Promise<number | null>;
-    }): Promise<{ scoreDelta: number; score: number | null }> {
+    }): Promise<{ scoreDelta: number; upCountDelta: number; score: number | null }> {
       // Prisma 実装は同一トランザクション内で対象 score / upCount を直接更新し原子化するため、
       // ポートの applyScore コールバック（in-memory 用の差し込み口）は使わない（#453）。
       void applyScore;
@@ -148,13 +148,13 @@ export function createPrismaVoteRepository(prisma: PrismaClient): VoteRepository
             where: { id: targetId },
             data: { score: { increment: scoreDelta }, upCount: { increment: upCountDelta } },
           });
-          return { scoreDelta, score: updated.score };
+          return { scoreDelta, upCountDelta, score: updated.score };
         }
         const updated = await tx.comment.update({
           where: { id: targetId },
           data: { score: { increment: scoreDelta }, upCount: { increment: upCountDelta } },
         });
-        return { scoreDelta, score: updated.score };
+        return { scoreDelta, upCountDelta, score: updated.score };
       });
     },
 

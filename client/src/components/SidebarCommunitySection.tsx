@@ -105,9 +105,9 @@ export const SidebarCommunitySection = (): ReactElement => {
               to="/communities"
               sx={{ color: SLACK_COLORS.sidebarText, py: 0.25 }}
             >
-              <Box component="span" sx={SIDEBAR_ICON_SX}>
+              <ListItemIcon sx={SIDEBAR_ICON_SX}>
                 <ExploreIcon fontSize="small" />
-              </Box>
+              </ListItemIcon>
               <ListItemText
                 primary="探す"
                 primaryTypographyProps={{ variant: "body2" }}

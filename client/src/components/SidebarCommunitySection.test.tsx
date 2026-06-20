@@ -139,13 +139,18 @@ describe("SidebarCommunitySection", () => {
   });
 
   it("「探す」リンクのアイコンが MuiListItemIcon-root クラスを持つ要素でレンダリングされる (#732)", async () => {
-    render(<SidebarCommunitySection />, { wrapper: Wrapper });
-    const exploreText = await screen.findByText("探す");
-    // 「探す」ボタン（ListItemButton）の直下の最初の子要素を取得
-    const listItemButton = exploreText.closest(".MuiListItemButton-root");
-    expect(listItemButton).not.toBeNull();
+    const { container } = render(<SidebarCommunitySection />, { wrapper: Wrapper });
+    await screen.findByText("探す");
+    // 「探す」リンク（a[href="/communities"]）を取得
+    const exploreLink = screen.getByRole("link", { name: /探す/ });
     // ListItemButton の最初の子要素（アイコンラッパー）が MuiListItemIcon-root クラスを持つ
-    const firstChild = listItemButton?.firstElementChild;
+    const firstChild = exploreLink.firstElementChild;
     expect(firstChild?.classList.contains("MuiListItemIcon-root")).toBe(true);
+    // 追加確認: コンテナ全体で MuiListItemIcon-root が存在すること
+    const allListItemIcons = container.querySelectorAll(".MuiListItemIcon-root");
+    const exploreIconWrapper = Array.from(allListItemIcons).find(
+      (el) => el.closest("a[href='/communities']") === el.closest("a"),
+    );
+    expect(exploreIconWrapper).toBeDefined();
   });
 });

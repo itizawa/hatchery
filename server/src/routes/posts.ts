@@ -124,10 +124,13 @@ export function createPostsRouter(
             .voteAndApplyScore(userId, "post", postId, direction, (delta) =>
               postRepo.addScore(postId, delta).then((r) => r?.score ?? null),
             )
-            .then(({ score }) => {
-              // OpenAPI 契約（snake_case）へ整形して返す（#499）。
-              res.status(200).json(toPostResponse({ ...post, score: score ?? post.score }));
-            });
+            .then(({ score }) =>
+              // comment_count を vote レスポンスにも付与する（#779）。
+              commentRepo.countByPostIds([postId]).then((counts) => {
+                const commentCount = counts.get(postId) ?? 0;
+                res.status(200).json(toPostResponse({ ...post, score: score ?? post.score, commentCount }));
+              }),
+            );
         })
         .catch(next);
     },

@@ -281,6 +281,28 @@ describe("POST /api/posts/:postId/vote", () => {
     const res = await request(app).post("/api/posts/not-exists/vote").send({ direction: "up" }).set("Cookie", cookie);
     expect(res.status).toBe(404);
   });
+
+  it("vote レスポンスに comment_count が正しく含まれる（#779）", async () => {
+    const postRepo = createInMemoryPostRepository();
+    const commentRepo = createInMemoryCommentRepository();
+    const [post] = await postRepo.createMany("community-1", [
+      { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "Title", text: "Text" },
+    ]);
+    await commentRepo.createMany("community-1", [
+      { postId: post.id, slotKey: "2026-06-10T09:00", seq: 0, author: "worker-2", text: "C1" },
+      { postId: post.id, slotKey: "2026-06-10T09:00", seq: 1, author: "worker-3", text: "C2" },
+    ]);
+    const deps = await createTestDeps({ postRepository: postRepo, commentRepository: commentRepo });
+    const app = createApp(deps);
+    const cookie = await loginAndGetCookie(app);
+
+    const res = await request(app)
+      .post(`/api/posts/${post.id}/vote`)
+      .send({ direction: "up" })
+      .set("Cookie", cookie);
+    expect(res.status).toBe(200);
+    expect(res.body.comment_count).toBe(2);
+  });
 });
 
 describe("POST /api/comments/:commentId/vote", () => {

@@ -1,4 +1,4 @@
-import MenuIcon from "@mui/icons-material/Menu";
+import MenuIcon from "@mui/icons-material/MenuRounded";
 import { Avatar, Box, ButtonBase, IconButton, Link, Menu, MenuItem, Skeleton } from "./uiParts";
 
 import { Link as RouterLink, useNavigate } from "@tanstack/react-router";

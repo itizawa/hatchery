@@ -1,5 +1,5 @@
-import ShareIcon from "@mui/icons-material/Share";
-import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import ShareIcon from "@mui/icons-material/ShareRounded";
+import ContentCopyIcon from "@mui/icons-material/ContentCopyRounded";
 import XIcon from "@mui/icons-material/X";
 import { useState, type ReactElement } from "react";
 

@@ -79,24 +79,44 @@ export default tseslint.config(
   },
   // 補助: パッケージ名（@hatchery/*）経由の依存方向違反をワークスペースごとに塞ぐ。
   // MUI 腐敗防止層: @mui/material への直接 import も禁止し uiParts 経由を強制する（Issue #178）。
+  // アイコン規約: @mui/icons-material は Rounded バリアントのみ許可（Issue #808）。
   {
     files: ["client/**/*.{ts,tsx}"],
     rules: {
       "no-restricted-imports": [
         "error",
         {
+          paths: [
+            // @mui/material 直接 import 禁止（uiParts 経由を強制）
+            { name: "@mui/material", message: "MUI は uiParts 経由で使う（Issue #178）。" },
+            // @mui/icons-material barrel import 禁止（Rounded 個別 import を強制）
+            {
+              name: "@mui/icons-material",
+              message:
+                "barrel import 禁止。Rounded バリアントを個別 import する（例: @mui/icons-material/HomeRounded）。",
+            },
+          ],
           patterns: [
-            "@hatchery/server",
-            "@hatchery/server/*",
-            "@mui/material",
-            "@mui/material/*",
+            // @hatchery/server 依存禁止
+            { group: ["@hatchery/server", "@hatchery/server/*"], message: "client → server は禁止。" },
+            // @mui/material/* 直接 import 禁止（uiParts 経由を強制）
+            { group: ["@mui/material/*"], message: "MUI は uiParts 経由で使う（Issue #178）。" },
+            // Rounded 以外のアイコン import 禁止。
+            // 例外: MUI が Rounded バリアントを提供していない既知のブランドアイコン群
+            //   X / Twitter / GitHub / Google / YouTube / Instagram / LinkedIn / Pinterest / WhatsApp / Telegram / Reddit / Apple
+            {
+              regex:
+                "^@mui/icons-material/(?!.*Rounded$|X$|Twitter$|GitHub$|Google$|YouTube$|Instagram$|LinkedIn$|Pinterest$|WhatsApp$|Telegram$|Reddit$|Apple$)",
+              message:
+                "アイコンは Rounded バリアントを使う（例: @mui/icons-material/HomeRounded）。例外: MUI が Rounded バリアントを提供しないブランドアイコン（X・Twitter・GitHub・Google・YouTube 等）はそのまま。",
+            },
           ],
         },
       ],
     },
   },
   // 例外: uiParts 自身は MUI を直接 import してよい（ACL 層）。theme.ts / AppRoot.tsx はテーマ基盤として許可。
-  // @hatchery/server の禁止は引き続き有効（MUI direct import のみ解除）。
+  // @hatchery/server の禁止・アイコン Rounded 規約（#808）は引き続き有効（MUI direct import のみ解除）。
   {
     files: [
       "client/src/components/uiParts/**",
@@ -104,7 +124,32 @@ export default tseslint.config(
       "client/src/AppRoot.tsx",
     ],
     rules: {
-      "no-restricted-imports": ["error", { patterns: ["@hatchery/server", "@hatchery/server/*"] }],
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            // @mui/icons-material barrel import 禁止（Rounded 個別 import を強制）
+            {
+              name: "@mui/icons-material",
+              message:
+                "barrel import 禁止。Rounded バリアントを個別 import する（例: @mui/icons-material/HomeRounded）。",
+            },
+          ],
+          patterns: [
+            // @hatchery/server 依存禁止
+            { group: ["@hatchery/server", "@hatchery/server/*"], message: "client → server は禁止。" },
+            // Rounded 以外のアイコン import 禁止。
+            // 例外: MUI が Rounded バリアントを提供していない既知のブランドアイコン群
+            //   X / Twitter / GitHub / Google / YouTube / Instagram / LinkedIn / Pinterest / WhatsApp / Telegram / Reddit / Apple
+            {
+              regex:
+                "^@mui/icons-material/(?!.*Rounded$|X$|Twitter$|GitHub$|Google$|YouTube$|Instagram$|LinkedIn$|Pinterest$|WhatsApp$|Telegram$|Reddit$|Apple$)",
+              message:
+                "アイコンは Rounded バリアントを使う（例: @mui/icons-material/HomeRounded）。例外: MUI が Rounded バリアントを提供しないブランドアイコン（X・Twitter・GitHub・Google・YouTube 等）はそのまま。",
+            },
+          ],
+        },
+      ],
     },
   },
   {

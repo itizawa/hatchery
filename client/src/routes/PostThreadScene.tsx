@@ -123,12 +123,14 @@ function renderCommentTree({
   commentMap,
   onVote,
   commentRef,
+  voteDisabled,
 }: {
   nodes: CommentTreeNode[];
   commentMap: Map<string, Comment>;
   // eslint-disable-next-line max-params
   onVote: (commentId: string, direction: VoteDirection) => void;
   commentRef: (commentId: string) => (el: HTMLElement | null) => void;
+  voteDisabled?: boolean;
 }): ReactElement[] {
   return nodes.flatMap((node) => {
     const comment = commentMap.get(node.id);
@@ -136,7 +138,7 @@ function renderCommentTree({
 
     const childElements =
       node.children.length > 0
-        ? renderCommentTree({ nodes: node.children, commentMap, onVote, commentRef })
+        ? renderCommentTree({ nodes: node.children, commentMap, onVote, commentRef, voteDisabled })
         : null;
 
     return [
@@ -144,6 +146,7 @@ function renderCommentTree({
         <CommentCard
           comment={comment}
           onVote={(direction: VoteDirection) => onVote(comment.id, direction)}
+          voteDisabled={voteDisabled}
           depth={node.depth}
           children={childElements && childElements.length > 0 ? <>{childElements}</> : null}
         />
@@ -162,14 +165,15 @@ function renderCommentTree({
  * 局所 QueryBoundary に委譲し、post 本文は先に描画する。
  * #481: ゲストの post / comment vote 押下は guardVote で握りつぶさずログイン誘導する。
  * #520: コメントを buildCommentTree でツリー化し Reddit 風コネクター線表示する。
+ * #748: useVotePost / useVoteComment の isPending を voteDisabled に渡し連打防止。
  */
 export const PostThreadScene = (): ReactElement => {
   const { postId } = useParams({ strict: false });
   const id = postId ?? "";
 
   const { data } = usePostThread(id);
-  const { mutate: votePost } = useVotePost();
-  const { mutate: voteComment } = useVoteComment(id);
+  const { mutate: votePost, isPending: isVotingPost } = useVotePost();
+  const { mutate: voteComment, isPending: isVotingComment } = useVoteComment(id);
   const { guardVote, promptOpen, closePrompt } = useGuestVoteGuard();
 
   // 閉覧計測（#665 / ADR-0032）
@@ -222,6 +226,7 @@ export const PostThreadScene = (): ReactElement => {
             onVote={(direction: VoteDirection) =>
               guardVote(() => votePost({ postId: post.id, direction }))
             }
+            voteDisabled={isVotingPost}
             postUrl={postUrl}
             onCommentClick={comments.length > 0 ? scrollToComments : undefined}
           />
@@ -237,6 +242,7 @@ export const PostThreadScene = (): ReactElement => {
                 // eslint-disable-next-line max-params
                 onVote: (commentId, direction) => guardVote(() => voteComment({ commentId, direction })),
                 commentRef,
+                voteDisabled: isVotingComment,
               })}
             </Box>
           )}

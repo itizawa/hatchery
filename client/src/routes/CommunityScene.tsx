@@ -42,6 +42,7 @@ const RecentWorkersPanel = ({ slug }: { slug: string }): ReactElement => {
  * コミュニティが実在する場合のみレンダーされる内側コンポーネント。
  * useCommunityFeed など、コミュニティ存在を前提とするフックをここに集約する（#524）。
  * 存在しない slug の場合は CommunityScene が早期リターンしてこのコンポーネントはレンダーされない。
+ * #748: useVotePost の isPending を voteDisabled に渡し連打防止。
  */
 const CommunityContent = ({
   community,
@@ -55,7 +56,7 @@ const CommunityContent = ({
 
   const { mutate: subscribe, isPending: isSubscribing } = useSubscribe(communitySlug);
   const { mutate: unsubscribe, isPending: isUnsubscribing } = useUnsubscribe(communitySlug);
-  const { mutate: votePost } = useVotePost(communitySlug);
+  const { mutate: votePost, isPending: isVotingPost } = useVotePost(communitySlug);
   const { guardVote, promptOpen, closePrompt } = useGuestVoteGuard();
   const { viewMode, toggleViewMode } = useViewMode();
 
@@ -119,6 +120,7 @@ const CommunityContent = ({
                         onVote={(direction: VoteDirection) =>
                           guardVote(() => votePost({ postId: post.id, direction }))
                         }
+                        voteDisabled={isVotingPost}
                         voteStopPropagation
                         truncateText
                         compact={viewMode === "compact"}
@@ -189,6 +191,7 @@ const CommunityContent = ({
  * #481: ゲストの vote 押下は guardVote で握りつぶさずログイン誘導する。
  * #524: 存在しない slug のとき「コミュニティが見つかりません」を表示する。
  * #561: カード/コンパクト切り替えトグル追加。
+ * #748: vote 連打防止（isPending → voteDisabled）。
  */
 export const CommunityScene = (): ReactElement => {
   const { slug } = useParams({ strict: false });

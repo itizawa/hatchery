@@ -309,4 +309,22 @@ describe("PostCard", () => {
       expect(textEl).not.toHaveStyle({ display: "none" });
     });
   });
+
+  describe("voteDisabled（ミューテーション進行中の連打防止・#748）", () => {
+    it("voteDisabled=true のとき up vote ボタンが disabled になる", () => {
+      render(<PostCard post={mockPost} onVote={vi.fn()} voteDisabled />);
+      expect(screen.getByRole("button", { name: /up vote/i })).toBeDisabled();
+    });
+
+    it("voteDisabled=true のとき down vote ボタンが disabled になる", () => {
+      render(<PostCard post={mockPost} onVote={vi.fn()} voteDisabled />);
+      expect(screen.getByRole("button", { name: /down vote/i })).toBeDisabled();
+    });
+
+    it("voteDisabled 未指定（デフォルト false）のとき vote ボタンは有効のまま", () => {
+      render(<PostCard post={mockPost} onVote={vi.fn()} />);
+      expect(screen.getByRole("button", { name: /up vote/i })).not.toBeDisabled();
+      expect(screen.getByRole("button", { name: /down vote/i })).not.toBeDisabled();
+    });
+  });
 });

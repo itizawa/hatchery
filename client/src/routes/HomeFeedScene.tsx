@@ -30,13 +30,14 @@ export interface HomeFeedSceneProps {
  * 購読状態・認証状態に関わらず全 community の post を表示する（ADR-0020 更新）。
  * #367: 無限スクロール（カーソルページネーション）対応。#435: 並び順パラメータ化。
  * #561: カード/コンパクト切り替えトグル追加。
+ * #748: useVotePost の isPending を voteDisabled に渡し連打防止。
  */
 export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactElement => {
   // #462: useInfiniteHomeFeed は Suspense 化。data は non-undefined。
   // ローディング/エラーは router の QueryBoundary に委譲する。
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteHomeFeed(sort);
   const { data: user } = useAuth();
-  const { mutate: votePost } = useVotePost();
+  const { mutate: votePost, isPending: isVotingPost } = useVotePost();
   const { guardVote, promptOpen, closePrompt } = useGuestVoteGuard();
   const navigate = useNavigate();
   const sentinelRef = useRef<HTMLDivElement | null>(null);
@@ -102,6 +103,7 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
                   onVote={(direction: VoteDirection) =>
                     guardVote(() => votePost({ postId: post.id, direction }))
                   }
+                  voteDisabled={isVotingPost}
                   voteStopPropagation
                   truncateText
                   compact={viewMode === "compact"}

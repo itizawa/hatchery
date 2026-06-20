@@ -1,5 +1,6 @@
 import { Box, Skeleton, Typography } from "../components/uiParts";
 import { useParams, Link as RouterLink } from "@tanstack/react-router";
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import type { ReactElement } from "react";
 import { useMemo, useRef } from "react";
 import { buildCommentTree, type CommentTreeNode } from "@hatchery/common";
@@ -63,10 +64,25 @@ const CommunityBreadcrumb = ({ communityId }: { communityId: string }): ReactEle
   if (!community) return null;
   return (
     <Box sx={{ mb: 1 }}>
-      <RouterLink to="/communities/$slug" params={{ slug: community.slug }}>
-        <Typography variant="body2" component="span" sx={{ color: "text.secondary", fontWeight: 600 }}>
-          ポスト一覧
-        </Typography>
+      <RouterLink
+        to="/communities/$slug"
+        params={{ slug: community.slug }}
+        style={{ color: "inherit", textDecoration: "none" }}
+      >
+        <Box
+          component="span"
+          sx={{
+            display: "inline-flex",
+            alignItems: "center",
+            color: "text.secondary",
+            "&:hover, &:active, &:visited": { color: "text.secondary" },
+          }}
+        >
+          <ChevronLeftIcon sx={{ fontSize: "1.125rem", mr: 0.25 }} />
+          <Typography variant="body2" component="span" sx={{ fontWeight: 600 }}>
+            ポスト一覧
+          </Typography>
+        </Box>
       </RouterLink>
     </Box>
   );

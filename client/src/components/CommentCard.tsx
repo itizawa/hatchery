@@ -97,10 +97,11 @@ export const CommentCard = ({
       {hasChildren && (
         <Box
           data-testid="comment-avatar-connector"
+          data-left={`${clampedDepth * INDENT_PER_DEPTH + 8}`}
           aria-hidden="true"
-          style={{ left: `${clampedDepth * INDENT_PER_DEPTH + 8}px` }}
           sx={{
             position: "absolute",
+            left: `${clampedDepth * INDENT_PER_DEPTH + 8}px`,
             top: "30px",
             bottom: 0,
             width: "2px",

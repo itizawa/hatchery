@@ -39,7 +39,7 @@ const SidebarCommunityItems = (): ReactElement => {
             to={`/communities/${community.slug}` as "/communities/$slug"}
             sx={{ color: SLACK_COLORS.sidebarText, py: 0.25 }}
           >
-            <ListItemIcon sx={{ minWidth: 32 }}>
+            <ListItemIcon sx={{ minWidth: 36 }}>
               <Avatar
                 src={community.iconUrl ?? undefined}
                 alt={community.name}

@@ -21,5 +21,12 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: ["./src/test/setup.ts"],
     include: ["src/**/*.test.{ts,tsx}"],
+    server: {
+      deps: {
+        // MUI v9 が内部で使う react-transition-group がディレクトリ import を使うため、
+        // Vitest の ESM 解決でエラーになる。インラインバンドルすることで回避する。
+        inline: [/@mui\/material/, /react-transition-group/],
+      },
+    },
   },
 });

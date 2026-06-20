@@ -61,7 +61,7 @@ export const CommunitySidebarCard = ({
         p: 2,
       }}
     >
-      <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 0.5 }}>
+      <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", mb: 0.5 }}>
         <Avatar
           src={community.iconUrl ?? undefined}
           alt={community.name}
@@ -90,7 +90,7 @@ export const CommunitySidebarCard = ({
         </Typography>
       )}
       {createdAtLabel && (
-        <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 2 }}>
+        <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 2 }}>
           {createdAtLabel}
         </Typography>
       )}

@@ -56,7 +56,8 @@ export function createPassport(userRepo: UserRepository, googleConfig?: GoogleAu
             const email = profile.emails?.[0]?.value ?? `${googleId}@google.local`;
             try {
               const newUser = await userRepo.create({ email, displayName, googleId });
-              return done(null, toAuthUser(newUser));
+              // 初回ログイン（新規作成）を info で伝え、コールバックがアカウント設定画面へ誘導できるようにする。
+              return done(null, toAuthUser(newUser), { isNewUser: true });
             } catch (createErr) {
               if (createErr instanceof GoogleIdAlreadyExistsError) {
                 // TOCTOU: 並行リクエストが先に同じ googleId でユーザーを作成した場合はリトライ（#455）。

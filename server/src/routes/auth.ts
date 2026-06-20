@@ -60,8 +60,11 @@ export function createAuthRouter(
         failureRedirect: `${frontendOrigin}/login`,
       }) as RequestHandler,
       // eslint-disable-next-line max-params
-      (_req, res) => {
-        res.redirect(`${frontendOrigin}/`);
+      (req, res) => {
+        // 初回ログイン（新規ユーザー作成時）はアカウント設定画面へ誘導し、表示名の設定を促す。
+        // passport の verify callback が done の info で渡した isNewUser を req.authInfo で受け取る。
+        const isNewUser = (req.authInfo as { isNewUser?: boolean } | undefined)?.isNewUser === true;
+        res.redirect(`${frontendOrigin}${isNewUser ? "/account?welcome=1" : "/"}`);
       },
     );
   }

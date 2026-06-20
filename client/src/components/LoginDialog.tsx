@@ -8,6 +8,7 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  Link,
   Typography,
 } from "./uiParts/index.js";
 
@@ -46,6 +47,18 @@ export function LoginDialog({ open, onClose }: LoginDialogProps): ReactElement {
           >
             Google でログイン
           </Button>
+          {/* ログイン＝規約同意とみなす旨を明示する。リンクは別タブで開き、進行中のログイン導線を保つ。 */}
+          <Typography variant="caption" color="text.secondary" sx={{ textAlign: "center" }}>
+            ログインすることで、
+            <Link href="/terms" target="_blank" rel="noopener noreferrer">
+              利用規約
+            </Link>
+            および
+            <Link href="/privacy" target="_blank" rel="noopener noreferrer">
+              プライバシーポリシー
+            </Link>
+            に同意したものとみなします。
+          </Typography>
         </Box>
       </DialogContent>
       <DialogActions>

@@ -243,7 +243,10 @@ const adminRoute = createRoute({
   },
 });
 
-/** アカウント設定画面（/account）。未ログインまたはネットワークエラーの場合は /login へリダイレクト。 */
+/**
+ * アカウント設定画面（/account）。未ログインまたはネットワークエラーの場合は /login へリダイレクト。
+ * `?welcome=1` は初回ログイン（OAuth で新規ユーザー作成）直後の遷移で付与され、表示名設定を促す歓迎表示に使う。
+ */
 const accountRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/account",
@@ -253,6 +256,11 @@ const accountRoute = createRoute({
     </Suspense>
   ),
   beforeLoad: requireAuth,
+  validateSearch: (search: Record<string, unknown>): { welcome?: boolean } => {
+    const raw = search.welcome;
+    const welcome = raw === true || raw === 1 || raw === "1" || raw === "true";
+    return welcome ? { welcome: true } : {};
+  },
 });
 
 /** 利用規約ページ（/terms）。認証不要の公開ページ。サイドバー付きの通常シェルで描画する（#484）。 */

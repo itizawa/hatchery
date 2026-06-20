@@ -22,6 +22,15 @@ describe("LoginDialog", () => {
     expect(screen.queryByLabelText(/パスワード/)).toBeNull();
   });
 
+  it("利用規約・プライバシーポリシーへのリンクを含む同意文言が表示される", () => {
+    render(<LoginDialog open onClose={() => {}} />);
+    expect(screen.getByText(/同意したものとみなします/)).toBeInTheDocument();
+    const terms = screen.getByRole("link", { name: "利用規約" });
+    expect(terms).toHaveAttribute("href", "/terms");
+    const privacy = screen.getByRole("link", { name: "プライバシーポリシー" });
+    expect(privacy).toHaveAttribute("href", "/privacy");
+  });
+
   it("閉じるボタンをクリックすると onClose が呼ばれる", async () => {
     const onClose = vi.fn();
     render(<LoginDialog open onClose={onClose} />);

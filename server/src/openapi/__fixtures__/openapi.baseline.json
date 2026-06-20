@@ -668,6 +668,21 @@
             "type": "integer",
             "minimum": 0,
             "default": 0
+          },
+          "up_count": {
+            "type": "integer",
+            "minimum": 0,
+            "default": 0
+          },
+          "my_vote": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "up",
+              "down"
+            ]
           }
         },
         "required": [
@@ -754,6 +769,21 @@
               "id",
               "display_name",
               "image_url"
+            ]
+          },
+          "up_count": {
+            "type": "integer",
+            "minimum": 0,
+            "default": 0
+          },
+          "my_vote": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "up",
+              "down"
             ]
           }
         },
@@ -1538,7 +1568,7 @@
             }
           },
           "400": {
-            "description": "リクエストボディが不正（displayName 空セatvtarUrl 不正など）",
+            "description": "リクエストボディが不正（displayName 空setvtarUrl 不正など）",
             "content": {
               "application/json": {
                 "schema": {
@@ -2218,6 +2248,16 @@
             "required": true,
             "name": "slug",
             "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "セッション ID（付与すると各 post に my_vote を付与・#831）"
+            },
+            "required": false,
+            "name": "sessionId",
+            "in": "query"
           }
         ],
         "responses": {
@@ -2460,6 +2500,16 @@
             "required": false,
             "name": "sort",
             "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "セッション ID（付与すると各 post に my_vote を付与・#831）"
+            },
+            "required": false,
+            "name": "sessionId",
+            "in": "query"
           }
         ],
         "responses": {
@@ -2517,6 +2567,16 @@
             "required": true,
             "name": "postId",
             "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "セッション ID（付与すると post / comments に my_vote を付与・#831）"
+            },
+            "required": false,
+            "name": "sessionId",
+            "in": "query"
           }
         ],
         "responses": {

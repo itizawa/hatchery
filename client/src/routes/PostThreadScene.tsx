@@ -1,5 +1,6 @@
 import { Box, Skeleton, Typography } from "../components/uiParts";
 import { useParams, Link as RouterLink } from "@tanstack/react-router";
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import type { ReactElement } from "react";
 import { useMemo, useRef } from "react";
 import { buildCommentTree, type CommentTreeNode } from "@hatchery/common";
@@ -18,11 +19,9 @@ import { useAuth } from "../api/auth.js";
 import { PostCard } from "../components/PostCard.js";
 import { CommentCard } from "../components/CommentCard.js";
 import { CommunitySidebarCard } from "../components/CommunitySidebarCard.js";
-import { LoginPromptSnackbar } from "../components/LoginPromptSnackbar.js";
 import { QueryBoundary } from "../components/QueryBoundary.js";
 import { SubscriptionStatus } from "../components/SubscriptionStatus.js";
 import type { VoteDirection } from "../components/VoteControl.js";
-import { useGuestVoteGuard } from "../hooks/useGuestVoteGuard.js";
 import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
 
 /** 右サイドバーの sticky ラッパー（md 未満で非表示）。 */
@@ -63,10 +62,25 @@ const CommunityBreadcrumb = ({ communityId }: { communityId: string }): ReactEle
   if (!community) return null;
   return (
     <Box sx={{ mb: 1 }}>
-      <RouterLink to="/communities/$slug" params={{ slug: community.slug }}>
-        <Typography variant="body2" component="span" sx={{ color: "text.secondary", fontWeight: 600 }}>
-          ポスト一覧
-        </Typography>
+      <RouterLink
+        to="/communities/$slug"
+        params={{ slug: community.slug }}
+        style={{ color: "inherit", textDecoration: "none" }}
+      >
+        <Box
+          component="span"
+          sx={{
+            display: "inline-flex",
+            alignItems: "center",
+            color: "text.secondary",
+            "&:hover, &:active, &:visited": { color: "text.secondary" },
+          }}
+        >
+          <ChevronLeftIcon sx={{ fontSize: "1.125rem", mr: 0.25 }} />
+          <Typography variant="body2" component="span" sx={{ fontWeight: 600 }}>
+            ポスト一覧
+          </Typography>
+        </Box>
       </RouterLink>
     </Box>
   );
@@ -123,12 +137,16 @@ function renderCommentTree({
   commentMap,
   onVote,
   commentRef,
+  voteDisabled,
+  postId,
 }: {
   nodes: CommentTreeNode[];
   commentMap: Map<string, Comment>;
   // eslint-disable-next-line max-params
   onVote: (commentId: string, direction: VoteDirection) => void;
   commentRef: (commentId: string) => (el: HTMLElement | null) => void;
+  voteDisabled?: boolean;
+  postId: string;
 }): ReactElement[] {
   return nodes.flatMap((node) => {
     const comment = commentMap.get(node.id);
@@ -136,7 +154,7 @@ function renderCommentTree({
 
     const childElements =
       node.children.length > 0
-        ? renderCommentTree({ nodes: node.children, commentMap, onVote, commentRef })
+        ? renderCommentTree({ nodes: node.children, commentMap, onVote, commentRef, voteDisabled, postId })
         : null;
 
     return [
@@ -144,7 +162,10 @@ function renderCommentTree({
         <CommentCard
           comment={comment}
           onVote={(direction: VoteDirection) => onVote(comment.id, direction)}
+          voteDisabled={voteDisabled}
           depth={node.depth}
+          hasChildren={node.children.length > 0}
+          postId={postId}
           children={childElements && childElements.length > 0 ? <>{childElements}</> : null}
         />
       </div>,
@@ -162,15 +183,15 @@ function renderCommentTree({
  * 局所 QueryBoundary に委譲し、post 本文は先に描画する。
  * #481: ゲストの post / comment vote 押下は guardVote で握りつぶさずログイン誘導する。
  * #520: コメントを buildCommentTree でツリー化し Reddit 風コネクター線表示する。
+ * #748: useVotePost / useVoteComment の isPending を voteDisabled に渡し連打防止。
  */
 export const PostThreadScene = (): ReactElement => {
   const { postId } = useParams({ strict: false });
   const id = postId ?? "";
 
   const { data } = usePostThread(id);
-  const { mutate: votePost } = useVotePost();
-  const { mutate: voteComment } = useVoteComment(id);
-  const { guardVote, promptOpen, closePrompt } = useGuestVoteGuard();
+  const { mutate: votePost, isPending: isVotingPost } = useVotePost();
+  const { mutate: voteComment, isPending: isVotingComment } = useVoteComment(id);
 
   // 閉覧計測（#665 / ADR-0032）
   usePostViewBeacon(id);
@@ -220,8 +241,9 @@ export const PostThreadScene = (): ReactElement => {
           <PostCard
             post={post}
             onVote={(direction: VoteDirection) =>
-              guardVote(() => votePost({ postId: post.id, direction }))
+              votePost({ postId: post.id, direction })
             }
+            voteDisabled={isVotingPost}
             postUrl={postUrl}
             onCommentClick={comments.length > 0 ? scrollToComments : undefined}
           />
@@ -235,8 +257,10 @@ export const PostThreadScene = (): ReactElement => {
                 nodes: commentTree,
                 commentMap,
                 // eslint-disable-next-line max-params
-                onVote: (commentId, direction) => guardVote(() => voteComment({ commentId, direction })),
+                onVote: (commentId, direction) => voteComment({ commentId, direction }),
                 commentRef,
+                voteDisabled: isVotingComment,
+                postId: post.id,
               })}
             </Box>
           )}
@@ -255,7 +279,6 @@ export const PostThreadScene = (): ReactElement => {
           <PostThreadSidebar communityId={post.community_id} />
         </QueryBoundary>
       </Box>
-      <LoginPromptSnackbar open={promptOpen} onClose={closePrompt} />
     </Box>
   );
 };

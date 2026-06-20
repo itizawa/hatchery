@@ -1,18 +1,14 @@
-import { Box, Typography, IconButton, Tooltip } from "../components/uiParts";
+import { Box, Typography } from "../components/uiParts";
 import type { HomeFeedSort } from "@hatchery/common";
 import { Link as RouterLink, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, type ReactElement } from "react";
-import ViewStreamIcon from "@mui/icons-material/ViewStream";
-import ViewHeadlineIcon from "@mui/icons-material/ViewHeadline";
 
 import { useInfiniteHomeFeed, usePublicCommunities, useVotePost } from "../api/communities.js";
 import { useAuth } from "../api/auth.js";
-import { LoginPromptSnackbar } from "../components/LoginPromptSnackbar.js";
 import { PostCard } from "../components/PostCard.js";
 import { WelcomeSection } from "../components/WelcomeSection.js";
 import type { VoteDirection } from "../components/VoteControl.js";
-import { useGuestVoteGuard } from "../hooks/useGuestVoteGuard.js";
-import { useViewMode } from "../hooks/useViewMode.js";
+
 
 /** sort ごとの画面見出し。 */
 const FEED_HEADING: Record<HomeFeedSort, string> = {
@@ -29,18 +25,16 @@ export interface HomeFeedSceneProps {
  * ホームフィード（/ = 新着順 / /popular = 人気順）。
  * 購読状態・認証状態に関わらず全 community の post を表示する（ADR-0020 更新）。
  * #367: 無限スクロール（カーソルページネーション）対応。#435: 並び順パラメータ化。
- * #561: カード/コンパクト切り替えトグル追加。
+ * #748: useVotePost の isPending を voteDisabled に渡し連打防止。
  */
 export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactElement => {
   // #462: useInfiniteHomeFeed は Suspense 化。data は non-undefined。
   // ローディング/エラーは router の QueryBoundary に委譲する。
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteHomeFeed(sort);
   const { data: user } = useAuth();
-  const { mutate: votePost } = useVotePost();
-  const { guardVote, promptOpen, closePrompt } = useGuestVoteGuard();
+  const { mutate: votePost, isPending: isVotingPost } = useVotePost();
   const navigate = useNavigate();
   const sentinelRef = useRef<HTMLDivElement | null>(null);
-  const { viewMode, toggleViewMode } = useViewMode();
 
   // #503: 混在フィードで「どの community の投稿か」を表示するため community_id → community を引く。
   const { data: communities } = usePublicCommunities();
@@ -77,11 +71,6 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
         <Typography variant="h5" component="h1">
           {FEED_HEADING[sort]}
         </Typography>
-        <Tooltip title={viewMode === "card" ? "コンパクト表示に切り替え" : "カード表示に切り替え"}>
-          <IconButton onClick={toggleViewMode} size="small" aria-label="表示モードを切り替え">
-            {viewMode === "card" ? <ViewHeadlineIcon /> : <ViewStreamIcon />}
-          </IconButton>
-        </Tooltip>
       </Box>
       {showWelcome && (
         <WelcomeSection communities={Array.isArray(communities) ? communities : []} />
@@ -100,11 +89,11 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
                 <PostCard
                   post={post}
                   onVote={(direction: VoteDirection) =>
-                    guardVote(() => votePost({ postId: post.id, direction }))
+                    votePost({ postId: post.id, direction })
                   }
+                  voteDisabled={isVotingPost}
                   voteStopPropagation
                   truncateText
-                  compact={viewMode === "compact"}
                   community={community}
                   onCommunityClick={
                     community
@@ -124,7 +113,6 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
           </Box>
         </Box>
       )}
-      <LoginPromptSnackbar open={promptOpen} onClose={closePrompt} />
     </Box>
   );
 };

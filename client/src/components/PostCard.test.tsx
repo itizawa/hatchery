@@ -292,21 +292,21 @@ describe("PostCard", () => {
     });
   });
 
-  describe("compact モード（#561）", () => {
-    it("compact=true のとき本文テキストが非表示になる", () => {
-      render(<PostCard post={mockPost} onVote={vi.fn()} compact />);
-      expect(screen.queryByText("おはようございます！今日もよろしくお願いします。")).not.toBeInTheDocument();
+  describe("voteDisabled（ミューテーション進行中の連打防止・#748）", () => {
+    it("voteDisabled=true のとき up vote ボタンが disabled になる", () => {
+      render(<PostCard post={mockPost} onVote={vi.fn()} voteDisabled />);
+      expect(screen.getByRole("button", { name: /up vote/i })).toBeDisabled();
     });
 
-    it("compact=true のときタイトルは表示される", () => {
-      render(<PostCard post={mockPost} onVote={vi.fn()} compact />);
-      expect(screen.getByText("今日も元気に始めましょう")).toBeInTheDocument();
+    it("voteDisabled=true のとき down vote ボタンが disabled になる", () => {
+      render(<PostCard post={mockPost} onVote={vi.fn()} voteDisabled />);
+      expect(screen.getByRole("button", { name: /down vote/i })).toBeDisabled();
     });
 
-    it("compact 未指定（デフォルト false）のとき本文テキストは表示される", () => {
+    it("voteDisabled 未指定（デフォルト false）のとき vote ボタンは有効のまま", () => {
       render(<PostCard post={mockPost} onVote={vi.fn()} />);
-      const textEl = screen.getByText("おはようございます！今日もよろしくお願いします。");
-      expect(textEl).not.toHaveStyle({ display: "none" });
+      expect(screen.getByRole("button", { name: /up vote/i })).not.toBeDisabled();
+      expect(screen.getByRole("button", { name: /down vote/i })).not.toBeDisabled();
     });
   });
 });

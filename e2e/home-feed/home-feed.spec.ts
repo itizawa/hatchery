@@ -6,7 +6,7 @@ import { expect, test } from "@playwright/test";
  * msw の起動は playwright.config.ts の webServer + setupFiles で行う。
  */
 
-/* ── モックデータ定義 ─────────────────────────────────────────── */
+/* ── モックデータ定義 ─────────────────────────────────────────────────────────── */
 
 const MOCK_WORKER_1 = {
   id: "worker1",
@@ -111,7 +111,7 @@ const MOCK_POSTS_PAGE_2 = {
 
 const MOCK_WORKERS = [MOCK_WORKER_1, MOCK_WORKER_2, MOCK_WORKER_3];
 
-/* ── ヘルパー ─────────────────────────────────────────────────── */
+/* ── ヘルパー ─────────────────────────────────────────────────────────────────── */
 
 /** 共通の API モックを一括設定する（各テストの前提） */
 async function setupCommonMocks(page: import("@playwright/test").Page) {
@@ -141,7 +141,7 @@ async function setupCommonMocks(page: import("@playwright/test").Page) {
   );
 }
 
-/* ── テスト ──────────────────────────────────────────────────── */
+/* ── テスト ──────────────────────────────────────────────────────────────────── */
 
 test("UC-HOME-01: 未ログインでもホームフィードに全コミュニティの投稿が新着順で表示される", async ({
   page,
@@ -355,3 +355,7 @@ test.todo("UC-HOME-17: 未認証ユーザーが / を開くとようこそセク
 test.todo("UC-HOME-18: 認証済みで投稿がある場合はようこそセクションが表示されない（#482）");
 
 test.todo("UC-HOME-19: 認証済みで投稿が 0 件のときはようこそセクションが表示される（#482）");
+
+test.todo("UC-HOME-20: vote ミューテーション進行中はフィードの vote ボタンが disabled になる（#748）");
+
+test.todo("UC-HOME-21: vote 済みの投稿は vote ウィジェットが塗りつぶし表示になる（#813）");

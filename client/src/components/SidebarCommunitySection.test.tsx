@@ -16,6 +16,7 @@ const mockCommunities: Community[] = [
     synopsis: undefined,
     last_slot_key: undefined,
     created_at: "2026-06-01T00:00:00Z",
+    iconUrl: "https://example.com/icon1.png",
   },
   {
     id: "community-2",
@@ -25,6 +26,7 @@ const mockCommunities: Community[] = [
     synopsis: undefined,
     last_slot_key: undefined,
     created_at: "2026-06-02T00:00:00Z",
+    iconUrl: null,
   },
 ];
 
@@ -120,5 +122,35 @@ describe("SidebarCommunitySection", () => {
     expect(await screen.findByText("AI 開発者の集い")).toBeInTheDocument();
     expect(screen.getByText("探す")).toBeInTheDocument();
     expect(toggle).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("iconUrl がある場合、img タグに src が設定される", async () => {
+    render(<SidebarCommunitySection />, { wrapper: Wrapper });
+    await screen.findByText("AI 開発者の集い");
+    const img = screen.getByRole("img", { name: "AI 開発者の集い" });
+    expect(img).toHaveAttribute("src", "https://example.com/icon1.png");
+  });
+
+  it("iconUrl が null の場合、Avatar にイニシャル（先頭1文字）が表示される", async () => {
+    render(<SidebarCommunitySection />, { wrapper: Wrapper });
+    await screen.findByText("AI 開発者の集い");
+    // "コーディング日常" の先頭文字 "コ" がフォールバック表示される
+    expect(screen.getByText("コ")).toBeInTheDocument();
+  });
+
+  it("「探す」リンクのアイコンが MuiListItemIcon-root クラスを持つ要素でレンダリングされる (#732)", async () => {
+    const { container } = render(<SidebarCommunitySection />, { wrapper: Wrapper });
+    await screen.findByText("探す");
+    // 「探す」リンク（a[href="/communities"]）を取得
+    const exploreLink = screen.getByRole("link", { name: /探す/ });
+    // ListItemButton の最初の子要素（アイコンラッパー）が MuiListItemIcon-root クラスを持つ
+    const firstChild = exploreLink.firstElementChild;
+    expect(firstChild?.classList.contains("MuiListItemIcon-root")).toBe(true);
+    // 追加確認: コンテナ全体で MuiListItemIcon-root が存在すること
+    const allListItemIcons = container.querySelectorAll(".MuiListItemIcon-root");
+    const exploreIconWrapper = Array.from(allListItemIcons).find(
+      (el) => el.closest("a[href='/communities']") === el.closest("a"),
+    );
+    expect(exploreIconWrapper).toBeDefined();
   });
 });

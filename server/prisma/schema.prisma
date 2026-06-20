@@ -229,16 +229,21 @@ enum VoteDirection {
   down
 }
 
-/// vote レコード。ADR-0019 / ADR-0025 / ADR-0031（#453: Exclusive Arc）。
+/// vote レコード。ADR-0019 / ADR-0025 / ADR-0031（#453: Exclusive Arc）/ ADR-0036（#777: sessionId dedup）。
 /// 投票対象（Post / Comment の 2 種固定）を多態参照ではなく
 /// postId? / commentId? の本物 FK（onDelete: Cascade）で表す。
 /// ちょうど片方だけ非 null を強制する CHECK 制約はマイグレーション SQL で付与する
-///（Prisma スキーマでは宣言不可）。二重投票防止は (userId, postId) / (userId, commentId)
+///（Prisma スキーマでは宣言不可）。二重投票防止は (sessionId, postId) / (sessionId, commentId)
 /// のユニーク制約で担保する（PostgreSQL は NULL を一意制約上区別するため両立する）。
+/// #777: userId を nullable に変更（ゲスト対応）、sessionId を dedup キーとして追加。
+/// ゲストは guestId（localStorage 永続化 UUID）、ログイン済みは userId を sessionId として送る。
 model Vote {
   id        String        @id @default(uuid(7))
-  userId    String
-  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// dedup キー（#777: ゲストは localStorage guestId、ログイン済みは userId）。
+  sessionId String
+  /// 認証済みユーザーの id（ゲストは null）。
+  userId    String?
+  user      User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
   /// 投票対象が Post のとき非 null。Comment 票のときは null（Exclusive Arc）。
   postId    String?
   post      Post?         @relation(fields: [postId], references: [id], onDelete: Cascade)
@@ -249,8 +254,8 @@ model Vote {
   direction VoteDirection @default(up)
   createdAt DateTime      @default(now())
 
-  @@unique([userId, postId])
-  @@unique([userId, commentId])
+  @@unique([sessionId, postId])
+  @@unique([sessionId, commentId])
   @@index([postId])
   @@index([commentId])
   /// #554: netScoresByCommunitySince の createdAt >= since フィルタ最適化。

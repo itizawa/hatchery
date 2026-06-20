@@ -1,8 +1,6 @@
-import { Box, Stack, Typography, IconButton, Tooltip } from "../components/uiParts";
+import { Box, Stack, Typography } from "../components/uiParts";
 import { Link as RouterLink, useParams } from "@tanstack/react-router";
 import type { ReactElement } from "react";
-import ViewStreamIcon from "@mui/icons-material/ViewStream";
-import ViewHeadlineIcon from "@mui/icons-material/ViewHeadline";
 
 import {
   useCommunityFeed,
@@ -15,7 +13,6 @@ import {
 import { useAuth } from "../api/auth.js";
 import { CommunityHeader } from "../components/CommunityHeader.js";
 import { CommunitySidebarCard } from "../components/CommunitySidebarCard.js";
-import { LoginPromptSnackbar } from "../components/LoginPromptSnackbar.js";
 import { PostCard } from "../components/PostCard.js";
 import { QueryBoundary } from "../components/QueryBoundary.js";
 import { RecentWorkersSection } from "../components/RecentWorkersSection.js";
@@ -24,8 +21,6 @@ import type { VoteDirection } from "../components/VoteControl.js";
 import { SubscribeButton } from "../components/SubscribeButton.js";
 import { SubscriptionStatus } from "../components/SubscriptionStatus.js";
 import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
-import { useGuestVoteGuard } from "../hooks/useGuestVoteGuard.js";
-import { useViewMode } from "../hooks/useViewMode.js";
 import type { Community } from "../api/communities.js";
 
 /**
@@ -42,6 +37,7 @@ const RecentWorkersPanel = ({ slug }: { slug: string }): ReactElement => {
  * コミュニティが実在する場合のみレンダーされる内側コンポーネント。
  * useCommunityFeed など、コミュニティ存在を前提とするフックをここに集約する（#524）。
  * 存在しない slug の場合は CommunityScene が早期リターンしてこのコンポーネントはレンダーされない。
+ * #748: useVotePost の isPending を voteDisabled に渡し連打防止。
  */
 const CommunityContent = ({
   community,
@@ -55,9 +51,7 @@ const CommunityContent = ({
 
   const { mutate: subscribe, isPending: isSubscribing } = useSubscribe(communitySlug);
   const { mutate: unsubscribe, isPending: isUnsubscribing } = useUnsubscribe(communitySlug);
-  const { mutate: votePost } = useVotePost(communitySlug);
-  const { guardVote, promptOpen, closePrompt } = useGuestVoteGuard();
-  const { viewMode, toggleViewMode } = useViewMode();
+  const { mutate: votePost, isPending: isVotingPost } = useVotePost(communitySlug);
 
   const isSubscriptionPending = isSubscribing || isUnsubscribing;
 
@@ -100,13 +94,6 @@ const CommunityContent = ({
                 </Box>
               ) : (
                 <Box>
-                  <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 1 }}>
-                    <Tooltip title={viewMode === "card" ? "コンパクト表示に切り替え" : "カード表示に切り替え"}>
-                      <IconButton onClick={toggleViewMode} size="small" aria-label="表示モードを切り替え">
-                        {viewMode === "card" ? <ViewHeadlineIcon /> : <ViewStreamIcon />}
-                      </IconButton>
-                    </Tooltip>
-                  </Box>
                   {posts.map((post) => (
                     <RouterLink
                       key={post.id}
@@ -117,11 +104,11 @@ const CommunityContent = ({
                       <PostCard
                         post={post}
                         onVote={(direction: VoteDirection) =>
-                          guardVote(() => votePost({ postId: post.id, direction }))
+                          votePost({ postId: post.id, direction })
                         }
+                        voteDisabled={isVotingPost}
                         voteStopPropagation
                         truncateText
-                        compact={viewMode === "compact"}
                       />
                     </RouterLink>
                   ))}
@@ -173,7 +160,6 @@ const CommunityContent = ({
               </CommunitySidebarCard>
             </Box>
           </Box>
-          <LoginPromptSnackbar open={promptOpen} onClose={closePrompt} />
         </Box>
       )}
     </SubscriptionStatus>
@@ -188,7 +174,7 @@ const CommunityContent = ({
  * useRecentWorkers はサイドバーの局所 QueryBoundary に委譲する。
  * #481: ゲストの vote 押下は guardVote で握りつぶさずログイン誘導する。
  * #524: 存在しない slug のとき「コミュニティが見つかりません」を表示する。
- * #561: カード/コンパクト切り替えトグル追加。
+ * #748: vote 連打防止（isPending → voteDisabled）。
  */
 export const CommunityScene = (): ReactElement => {
   const { slug } = useParams({ strict: false });

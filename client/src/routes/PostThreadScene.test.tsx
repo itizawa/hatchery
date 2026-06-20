@@ -317,10 +317,11 @@ describe("PostThreadScene レイアウトシフト解消 (#409)", () => {
 
 // #525: 投稿スレッド左カラム上部のコミュニティパンくずリンク。
 // #693: パンくずテキストを「c/slug」から「ポスト一覧」に変更。
+// #780: 左矢印アイコン追加 + クリック時に赤くならないよう色スタイル修正。
 describe("PostThreadScene コミュニティパンくず (#525 / #693)", () => {
   it("コミュニティが解決できるとき「ポスト一覧」のリンクが表示される", async () => {
     render(<BoundedScene />, { wrapper: createWrapper({ communities: mockCommunities }) });
-    const link = await screen.findByRole("link", { name: "ポスト一覧" });
+    const link = await screen.findByRole("link", { name: /ポスト一覧/ });
     expect(link).toHaveAttribute("href", "/communities/$slug");
   });
 
@@ -344,5 +345,28 @@ describe("PostThreadScene コミュニティパンくず (#525 / #693)", () => {
     // communities ロード中 → パンくずスケルトンが表示される
     expect(screen.getByTestId("community-breadcrumb-skeleton")).toBeInTheDocument();
     expect(screen.queryByText("ポスト一覧")).not.toBeInTheDocument();
+  });
+});
+
+// #780: パンくずリンクに左矢印アイコン追加 + クリック時に赤くならないスタイル修正。
+describe("PostThreadScene コミュニティパンくず アイコン追加 (#780)", () => {
+  it("パンくずリンク内に svg アイコンが表示される", async () => {
+    render(<BoundedScene />, { wrapper: createWrapper({ communities: mockCommunities }) });
+    const link = await screen.findByRole("link", { name: /ポスト一覧/ });
+    // リンク内に svg アイコンが存在する
+    const icon = link.querySelector("svg");
+    expect(icon).toBeInTheDocument();
+  });
+
+  it("パンくずリンクのテキスト「ポスト一覧」がリンク内に存在する", async () => {
+    render(<BoundedScene />, { wrapper: createWrapper({ communities: mockCommunities }) });
+    const link = await screen.findByRole("link", { name: /ポスト一覧/ });
+    expect(link).toHaveTextContent("ポスト一覧");
+  });
+
+  it("パンくずリンクは /communities/$slug へ遷移する（リンク先維持）", async () => {
+    render(<BoundedScene />, { wrapper: createWrapper({ communities: mockCommunities }) });
+    const link = await screen.findByRole("link", { name: /ポスト一覧/ });
+    expect(link).toHaveAttribute("href", "/communities/$slug");
   });
 });

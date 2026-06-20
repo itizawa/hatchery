@@ -103,29 +103,3 @@ export const createAvatarUrlResolver = (
   const imageUrlById = new Map(workers.map((w) => [w.id, w.imageUrl]));
   return (workerId: string): string | undefined => imageUrlById.get(workerId);
 };
-
-// ── 後方互換エクスポート（Employee → Worker リネーム #329） ────────────────────────
-/** @deprecated Use WorkerSchema */
-export const EmployeeSchema = WorkerSchema;
-/** @deprecated Use UpdateWorkerSchema */
-export const UpdateEmployeeSchema = UpdateWorkerSchema;
-/** @deprecated Use UpdateWorkerInput */
-export type UpdateEmployeeInput = UpdateWorkerInput;
-/** @deprecated Use CreateWorkerSchema */
-export const CreateEmployeeSchema = CreateWorkerSchema;
-/** @deprecated Use CreateWorkerInput */
-export type CreateEmployeeInput = CreateWorkerInput;
-/** @deprecated Use DEFAULT_WORKERS */
-export const DEFAULT_EMPLOYEES = DEFAULT_WORKERS;
-/** @deprecated Use WORKER_DISPLAY_NAME_MAX_LENGTH */
-export const EMPLOYEE_DISPLAY_NAME_MAX_LENGTH = WORKER_DISPLAY_NAME_MAX_LENGTH;
-/** @deprecated Use WORKER_ROLE_MAX_LENGTH */
-export const EMPLOYEE_ROLE_MAX_LENGTH = WORKER_ROLE_MAX_LENGTH;
-/** @deprecated Use WORKER_IMAGE_URL_MAX_LENGTH */
-export const EMPLOYEE_IMAGE_URL_MAX_LENGTH = WORKER_IMAGE_URL_MAX_LENGTH;
-/** @deprecated Use formatWorkerDisplayName */
-export const formatEmployeeDisplayName = formatWorkerDisplayName;
-/** @deprecated Use createDisplayNameResolver */
-export const createWorkerDisplayNameResolver = createDisplayNameResolver;
-/** @deprecated Use createAvatarUrlResolver */
-export const createWorkerAvatarUrlResolver = createAvatarUrlResolver;

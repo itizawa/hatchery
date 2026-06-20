@@ -1,9 +1,8 @@
 import { CommentViewsRequestSchema, NotFoundError, PostViewRequestSchema, VoteRequestSchema } from "@hatchery/common";
 import { Router } from "express";
 
-import { getAuthUser } from "../middleware/getAuthUser.js";
-import { requireAuth } from "../middleware/requireAuth.js";
 import { validateBody } from "../middleware/validateBody.js";
+import { createRateLimiter } from "../middleware/rateLimiter.js";
 import type { CommentRepository } from "../persistence/commentRepository.js";
 import type { PostRepository } from "../persistence/postRepository.js";
 import type { ViewRepository } from "../persistence/viewRepository.js";
@@ -12,11 +11,14 @@ import type { WorkerRepository } from "../persistence/workerRepository.js";
 import { buildAuthorWorkerEnricher } from "./authorWorker.js";
 import { toCommentResponse, toPostResponse } from "./postResponse.js";
 
+/** vote エンドポイント専用のレート制限（#777: ゲスト対応に伴い認証不要になったため IP ベースで制限）。 */
+const voteRateLimiter = createRateLimiter({ windowMs: 60_000, max: 60 });
+
 /**
  * /api/posts・/api/comments ルータ。
  * スレッド（post + comments）の取得、up/down vote、閲覧ビーコンを担う。ADR-0019 / ADR-0025 / ADR-0032。
  * - 読み取りは認証不要
- * - vote は認証必須（ADR-0025: up/down 両対応、toggle/switch）
+ * - vote は認証不要（#777: ゲスト対応・sessionId で dedup・IP レート制限付き）
  * - 閲覧ビーコン（/view・/comment-views）は認証不要（ゲスト対応・#665）
  * - #479: スレッドの post / 各 comment に発言者の表示用ワーカー情報（author_worker）を付与する。
  */
@@ -48,9 +50,11 @@ export function createPostsRouter(
           const [enrichedPost] = enrich([post]);
           // enrich([post]) は必ず 1 要素返る（post は上の null ガード済み）。
           const enrichedComments = enrich(comments);
+          // reveal 済みコメント件数を付与する（#779: 詳細 API でも comment_count を正確に返す）。
+          const postWithCount = { ...(enrichedPost ?? post), commentCount: comments.length };
           // OpenAPI 契約（snake_case）へ整形して返す（#499）。
           res.status(200).json({
-            post: enrichedPost ? toPostResponse(enrichedPost) : toPostResponse(post),
+            post: toPostResponse(postWithCount),
             comments: enrichedComments.map(toCommentResponse),
           });
         });
@@ -100,16 +104,16 @@ export function createPostsRouter(
     },
   );
 
-  // post への vote（認証必須・toggle/switch・ADR-0025）
+  // post への vote（認証不要・sessionId dedup・#777 ゲスト対応）
   router.post(
     "/posts/:postId/vote",
-    requireAuth,
+    voteRateLimiter,
     validateBody(VoteRequestSchema),
     // eslint-disable-next-line max-params
     (req, res, next) => {
       const { postId } = req.params as { postId: string };
-      const userId = getAuthUser(req).id;
-      const { direction } = req.body as { direction: "up" | "down" };
+      const userId = (req.user as { id?: string } | undefined)?.id ?? null;
+      const { direction, sessionId } = req.body as { direction: "up" | "down"; sessionId: string };
 
       postRepo
         .findById(postId)
@@ -119,28 +123,36 @@ export function createPostsRouter(
           }
           // vote 記録と score 更新を単一の整合操作で行う（#453・AC7）。
           return voteRepo
-            .voteAndApplyScore(userId, "post", postId, direction, (delta) =>
-              postRepo.addScore(postId, delta).then((r) => r?.score ?? null),
-            )
-            .then(({ score }) => {
-              // OpenAPI 契約（snake_case）へ整形して返す（#499）。
-              res.status(200).json(toPostResponse({ ...post, score: score ?? post.score }));
-            });
+            .voteAndApplyScore({
+              sessionId,
+              userId,
+              targetType: "post",
+              targetId: postId,
+              direction,
+              applyScore: (delta) => postRepo.addScore(postId, delta).then((r) => r?.score ?? null),
+            })
+            .then(({ score }) =>
+              // comment_count を vote レスポンスにも付与する（#779）。
+              commentRepo.countByPostIds([postId]).then((counts) => {
+                const commentCount = counts.get(postId) ?? 0;
+                res.status(200).json(toPostResponse({ ...post, score: score ?? post.score, commentCount }));
+              }),
+            );
         })
         .catch(next);
     },
   );
 
-  // comment への vote（認証必須・toggle/switch・ADR-0025）
+  // comment への vote（認証不要・sessionId dedup・#777 ゲスト対応）
   router.post(
     "/comments/:commentId/vote",
-    requireAuth,
+    voteRateLimiter,
     validateBody(VoteRequestSchema),
     // eslint-disable-next-line max-params
     (req, res, next) => {
       const { commentId } = req.params as { commentId: string };
-      const userId = getAuthUser(req).id;
-      const { direction } = req.body as { direction: "up" | "down" };
+      const userId = (req.user as { id?: string } | undefined)?.id ?? null;
+      const { direction, sessionId } = req.body as { direction: "up" | "down"; sessionId: string };
 
       commentRepo
         .findById(commentId)
@@ -150,9 +162,14 @@ export function createPostsRouter(
           }
           // vote 記録と score 更新を単一の整合操作で行う（#453・AC7）。
           return voteRepo
-            .voteAndApplyScore(userId, "comment", commentId, direction, (delta) =>
-              commentRepo.addScore(commentId, delta).then((r) => r?.score ?? null),
-            )
+            .voteAndApplyScore({
+              sessionId,
+              userId,
+              targetType: "comment",
+              targetId: commentId,
+              direction,
+              applyScore: (delta) => commentRepo.addScore(commentId, delta).then((r) => r?.score ?? null),
+            })
             .then(({ score }) => {
               // OpenAPI 契約（snake_case）へ整形して返す（#499）。
               res.status(200).json(toCommentResponse({ ...comment, score: score ?? comment.score }));

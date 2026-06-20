@@ -86,6 +86,53 @@ describe("CommentCard", () => {
     });
   });
 
+  describe("アバター下スレッドコネクター（#796）", () => {
+    it("hasChildren=true のとき縦線（comment-avatar-connector）が描画される", () => {
+      const { container } = render(
+        <CommentCard comment={mockComment} onVote={vi.fn()} hasChildren={true} />,
+      );
+      expect(
+        container.querySelector('[data-testid="comment-avatar-connector"]'),
+      ).toBeInTheDocument();
+    });
+
+    it("hasChildren=false のとき縦線（comment-avatar-connector）は描画されない", () => {
+      const { container } = render(
+        <CommentCard comment={mockComment} onVote={vi.fn()} hasChildren={false} />,
+      );
+      expect(
+        container.querySelector('[data-testid="comment-avatar-connector"]'),
+      ).not.toBeInTheDocument();
+    });
+
+    it("hasChildren を省略したとき縦線（comment-avatar-connector）は描画されない", () => {
+      const { container } = render(<CommentCard comment={mockComment} onVote={vi.fn()} />);
+      expect(
+        container.querySelector('[data-testid="comment-avatar-connector"]'),
+      ).not.toBeInTheDocument();
+    });
+
+    it("depth=0 かつ hasChildren=true のとき left が 8 になる", () => {
+      const { container } = render(
+        <CommentCard comment={mockComment} onVote={vi.fn()} depth={0} hasChildren={true} />,
+      );
+      const el = container.querySelector('[data-testid="comment-avatar-connector"]');
+      expect(el).toBeInTheDocument();
+      // clampedDepth=0, INDENT_PER_DEPTH=16 → left: 0*16+8 = 8px → data-left="8"
+      expect((el as HTMLElement).dataset.left).toBe("8");
+    });
+
+    it("depth=1 かつ hasChildren=true のとき left が 24 になる", () => {
+      const { container } = render(
+        <CommentCard comment={mockComment} onVote={vi.fn()} depth={1} hasChildren={true} />,
+      );
+      const el = container.querySelector('[data-testid="comment-avatar-connector"]');
+      expect(el).toBeInTheDocument();
+      // clampedDepth=1, INDENT_PER_DEPTH=16 → left: 1*16+8 = 24px → data-left="24"
+      expect((el as HTMLElement).dataset.left).toBe("24");
+    });
+  });
+
   describe("アクションバーのレイアウト（#683）", () => {
     it("vote コントロール（up vote ボタン）が本文テキストより後（DOM 順で後）に現れる", () => {
       render(<CommentCard comment={mockComment} onVote={vi.fn()} />);
@@ -135,6 +182,57 @@ describe("CommentCard", () => {
       render(<CommentCard comment={mockComment} onVote={vi.fn()} />);
       expect(screen.getByText("worker-ken")).toBeInTheDocument();
       expect(screen.queryByRole("img")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("voteDisabled（ミューテーション進行中の連打防止・#748）", () => {
+    it("voteDisabled=true のとき up vote ボタンが disabled になる", () => {
+      render(<CommentCard comment={mockComment} onVote={vi.fn()} voteDisabled />);
+      expect(screen.getByRole("button", { name: /up vote/i })).toBeDisabled();
+    });
+
+    it("voteDisabled=true のとき down vote ボタンが disabled になる", () => {
+      render(<CommentCard comment={mockComment} onVote={vi.fn()} voteDisabled />);
+      expect(screen.getByRole("button", { name: /down vote/i })).toBeDisabled();
+    });
+
+    it("voteDisabled 未指定（デフォルト false）のとき vote ボタンは有効のまま", () => {
+      render(<CommentCard comment={mockComment} onVote={vi.fn()} />);
+      expect(screen.getByRole("button", { name: /up vote/i })).not.toBeDisabled();
+      expect(screen.getByRole("button", { name: /down vote/i })).not.toBeDisabled();
+    });
+  });
+
+  describe("共有ボタン（#775）", () => {
+    it("postId を渡すと共有ボタンが表示される", () => {
+      render(<CommentCard comment={mockComment} onVote={vi.fn()} postId="post-1" />);
+      expect(screen.getByRole("button", { name: /共有/i })).toBeInTheDocument();
+    });
+
+    it("postId を渡さない場合は共有ボタンが表示されない", () => {
+      render(<CommentCard comment={mockComment} onVote={vi.fn()} />);
+      expect(screen.queryByRole("button", { name: /共有/i })).not.toBeInTheDocument();
+    });
+
+    it("共有ボタンの shareUrl が ${origin}/posts/<postId>#comment-<commentId> 形式になる", async () => {
+      // jsdom のデフォルト origin は "http://localhost"
+      // navigator.clipboard.writeText をスパイして実際にコピーされる URL を検証する
+      const writeText = vi.fn().mockResolvedValue(undefined);
+      Object.defineProperty(navigator, "clipboard", {
+        value: { writeText },
+        writable: true,
+      });
+
+      render(<CommentCard comment={mockComment} onVote={vi.fn()} postId="post-1" />);
+      const shareBtn = screen.getByRole("button", { name: /共有/i });
+      await userEvent.click(shareBtn);
+
+      const copyItem = screen.getByText("URL をコピー");
+      await userEvent.click(copyItem);
+
+      expect(writeText).toHaveBeenCalledWith(
+        `${window.location.origin}/posts/post-1#comment-${mockComment.id}`,
+      );
     });
   });
 });

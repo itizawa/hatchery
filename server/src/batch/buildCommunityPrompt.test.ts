@@ -584,3 +584,80 @@ describe("UUID誘導ラベル（#715）", () => {
     expect(repliesSection).toContain("UUID（上記ワーカー一覧の「author に指定するID」から選択");
   });
 });
+
+describe("buildCommunityPrompt: feedArticles の注入（#491 / ADR-0035）", () => {
+  const community = {
+    id: "community-feed",
+    slug: "zenn-fan",
+    name: "Zenn 感想部",
+    description: "技術記事の感想を語り合うコミュニティ。",
+    generationInstruction: null,
+    synopsis: null,
+    lastSlotKey: null,
+    iconUrl: null,
+    coverUrl: null,
+    feedUrl: null,
+    createdAt: new Date("2026-01-01"),
+  };
+  const workers = [{ id: "worker-1", displayName: "alice", role: null, personality: null }];
+
+  it("feedArticles が指定された場合にプロンプトに注入される", () => {
+    const { prompt } = buildCommunityPrompt({
+      community,
+      workers,
+      recentLog: [],
+      feedArticles: [
+        { title: "TypeScript 5.0 の新機能", url: "https://zenn.dev/articles/ts50", summary: "TS5.0 の概要。", author: "yamada" },
+      ],
+    });
+    expect(prompt).toContain("TypeScript 5.0 の新機能");
+    expect(prompt).toContain("https://zenn.dev/articles/ts50");
+    expect(prompt).toContain("TS5.0 の概要。");
+    expect(prompt).toContain("yamada");
+  });
+
+  it("feedArticles が省略された場合はプロンプトに変化なし（フィード関連テキストなし）", () => {
+    const { prompt } = buildCommunityPrompt({
+      community,
+      workers,
+      recentLog: [],
+    });
+    expect(prompt).not.toContain("最新フィード記事");
+  });
+
+  it("feedArticles が空配列の場合はプロンプトに変化なし（フィード関連テキストなし）", () => {
+    const { prompt } = buildCommunityPrompt({
+      community,
+      workers,
+      recentLog: [],
+      feedArticles: [],
+    });
+    expect(prompt).not.toContain("最新フィード記事");
+  });
+
+  it("author が null の場合はプロンプトに by ... が含まれない", () => {
+    const { prompt } = buildCommunityPrompt({
+      community,
+      workers,
+      recentLog: [],
+      feedArticles: [
+        { title: "匿名記事", url: "https://example.com/anon", summary: "無名の記事。", author: null },
+      ],
+    });
+    expect(prompt).toContain("匿名記事");
+    expect(prompt).not.toContain("by null");
+  });
+
+  it("summary が null の場合は概要行を省略する", () => {
+    const { prompt } = buildCommunityPrompt({
+      community,
+      workers,
+      recentLog: [],
+      feedArticles: [
+        { title: "概要なし記事", url: "https://example.com/nosummary", summary: null, author: "taro" },
+      ],
+    });
+    expect(prompt).toContain("概要なし記事");
+    expect(prompt).not.toContain("概要: null");
+  });
+});

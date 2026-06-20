@@ -101,11 +101,14 @@ export default tseslint.config(
             { group: ["@hatchery/server", "@hatchery/server/*"], message: "client → server は禁止。" },
             // @mui/material/* 直接 import 禁止（uiParts 経由を強制）
             { group: ["@mui/material/*"], message: "MUI は uiParts 経由で使う（Issue #178）。" },
-            // Rounded 以外のアイコン import 禁止。例外: X（ブランドアイコン、Rounded バリアントなし）
+            // Rounded 以外のアイコン import 禁止。
+            // 例外: MUI が Rounded バリアントを提供していない既知のブランドアイコン群
+            //   X / Twitter / GitHub / Google / YouTube / Instagram / LinkedIn / Pinterest / WhatsApp / Telegram / Reddit / Apple
             {
-              regex: "^@mui/icons-material/(?!.*Rounded$|X$)",
+              regex:
+                "^@mui/icons-material/(?!.*Rounded$|X$|Twitter$|GitHub$|Google$|YouTube$|Instagram$|LinkedIn$|Pinterest$|WhatsApp$|Telegram$|Reddit$|Apple$)",
               message:
-                "アイコンは Rounded バリアントを使う（例: @mui/icons-material/HomeRounded）。例外: Rounded バリアントが無いブランドアイコン（X 等）はそのまま。",
+                "アイコンは Rounded バリアントを使う（例: @mui/icons-material/HomeRounded）。例外: MUI が Rounded バリアントを提供しないブランドアイコン（X・Twitter・GitHub・Google・YouTube 等）はそのまま。",
             },
           ],
         },
@@ -135,11 +138,14 @@ export default tseslint.config(
           patterns: [
             // @hatchery/server 依存禁止
             { group: ["@hatchery/server", "@hatchery/server/*"], message: "client → server は禁止。" },
-            // Rounded 以外のアイコン import 禁止。例外: X（ブランドアイコン、Rounded バリアントなし）
+            // Rounded 以外のアイコン import 禁止。
+            // 例外: MUI が Rounded バリアントを提供していない既知のブランドアイコン群
+            //   X / Twitter / GitHub / Google / YouTube / Instagram / LinkedIn / Pinterest / WhatsApp / Telegram / Reddit / Apple
             {
-              regex: "^@mui/icons-material/(?!.*Rounded$|X$)",
+              regex:
+                "^@mui/icons-material/(?!.*Rounded$|X$|Twitter$|GitHub$|Google$|YouTube$|Instagram$|LinkedIn$|Pinterest$|WhatsApp$|Telegram$|Reddit$|Apple$)",
               message:
-                "アイコンは Rounded バリアントを使う（例: @mui/icons-material/HomeRounded）。例外: Rounded バリアントが無いブランドアイコン（X 等）はそのまま。",
+                "アイコンは Rounded バリアントを使う（例: @mui/icons-material/HomeRounded）。例外: MUI が Rounded バリアントを提供しないブランドアイコン（X・Twitter・GitHub・Google・YouTube 等）はそのまま。",
             },
           ],
         },

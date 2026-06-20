@@ -153,5 +153,5 @@ import HomeIcon from "@mui/icons-material/HomeRounded";
 ```
 
 - ESLint の `no-restricted-imports`（`eslint.config.mjs` client 向けブロック）で非 Rounded の `@mui/icons-material/*` import を `error` にしている。
-- **例外（Rounded バリアントが存在しないブランドアイコン）**: `@mui/icons-material/X`（旧 Twitter）等、Rounded バリアントが提供されていないアイコンはそのまま使う。ESLint ルールにも除外設定済み。
+- **例外（Rounded バリアントが存在しないブランドアイコン）**: `@mui/icons-material/X`（旧 Twitter）・`Twitter`・`GitHub`・`Google`・`YouTube`・`Instagram`・`LinkedIn`・`Pinterest`・`WhatsApp`・`Telegram`・`Reddit`・`Apple` 等、MUI が Rounded バリアントを提供していないアイコンはそのまま使う。ESLint ルールにも除外設定済み。
 - barrel import（`import { Home } from "@mui/icons-material"`）も禁止。必ず個別パス import（`@mui/icons-material/HomeRounded`）で使う。

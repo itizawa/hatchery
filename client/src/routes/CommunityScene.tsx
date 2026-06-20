@@ -21,7 +21,6 @@ import type { VoteDirection } from "../components/VoteControl.js";
 import { SubscribeButton } from "../components/SubscribeButton.js";
 import { SubscriptionStatus } from "../components/SubscriptionStatus.js";
 import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
-import { useViewMode } from "../hooks/useViewMode.js";
 import type { Community } from "../api/communities.js";
 
 /**
@@ -53,7 +52,6 @@ const CommunityContent = ({
   const { mutate: subscribe, isPending: isSubscribing } = useSubscribe(communitySlug);
   const { mutate: unsubscribe, isPending: isUnsubscribing } = useUnsubscribe(communitySlug);
   const { mutate: votePost, isPending: isVotingPost } = useVotePost(communitySlug);
-  const { viewMode, toggleViewMode } = useViewMode();
 
   const isSubscriptionPending = isSubscribing || isUnsubscribing;
 

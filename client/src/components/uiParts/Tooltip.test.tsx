@@ -1,43 +1,47 @@
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { Tooltip } from "./Tooltip";
 
 describe("Tooltip", () => {
-  it("arrow プロパティが未指定の場合、arrow=true がデフォルトで適用される", () => {
-    const { container } = render(
-      <Tooltip title="テスト">
+  it("arrow プロパティが未指定の場合、arrow=true がデフォルトで適用される（open で強制表示して矢印要素を確認）", () => {
+    render(
+      <Tooltip title="テスト" open>
         <span>テキスト</span>
       </Tooltip>,
     );
-    // Tooltip の子要素が正しく描画されることを確認
-    expect(container.querySelector("span")).toBeInTheDocument();
+    // MUI Tooltip の arrow=true のとき .MuiTooltip-arrow 要素が描画される
+    const arrowEl = document.querySelector(".MuiTooltip-arrow");
+    expect(arrowEl).toBeInTheDocument();
   });
 
-  it("title プロパティが正しく渡される", () => {
-    const { container } = render(
-      <Tooltip title="ツールチップテキスト">
+  it("title プロパティが正しく渡され、ツールチップのテキストが表示される（open で強制表示）", () => {
+    render(
+      <Tooltip title="ツールチップテキスト" open>
         <span>テキスト</span>
       </Tooltip>,
     );
-    expect(container.querySelector("span")).toBeInTheDocument();
+    expect(screen.getByText("ツールチップテキスト")).toBeInTheDocument();
   });
 
-  it("arrow={false} を渡した場合でもコンポーネントが正常に描画される", () => {
-    const { container } = render(
-      <Tooltip title="テスト" arrow={false}>
+  it("arrow={false} を渡した場合は矢印要素が描画されない", () => {
+    render(
+      <Tooltip title="テスト" arrow={false} open>
         <span>テキスト</span>
       </Tooltip>,
     );
-    expect(container.querySelector("span")).toBeInTheDocument();
+    const arrowEl = document.querySelector(".MuiTooltip-arrow");
+    expect(arrowEl).not.toBeInTheDocument();
   });
 
   it("その他の TooltipProps（placement など）が正しく受け渡しされる", () => {
-    const { container } = render(
-      <Tooltip title="テスト" placement="bottom">
+    render(
+      <Tooltip title="テスト" placement="bottom" open>
         <span>テキスト</span>
       </Tooltip>,
     );
-    expect(container.querySelector("span")).toBeInTheDocument();
+    // placement="bottom" のとき MuiTooltip に data-popper-placement 属性が付く
+    const tooltip = document.querySelector("[data-popper-placement]");
+    expect(tooltip).toHaveAttribute("data-popper-placement", "bottom");
   });
 });

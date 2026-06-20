@@ -14,7 +14,11 @@
     "dev": "turbo run dev",
     "typecheck": "tsc -b",
     "test:repo": "vitest run --root . --dir tests",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "db:migrate": "pnpm --filter @hatchery/server db:migrate",
+    "db:migrate:dev": "pnpm --filter @hatchery/server db:migrate:dev",
+    "db:seed": "pnpm --filter @hatchery/server db:seed",
+    "db:setup": "pnpm --filter @hatchery/server setup-db"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",

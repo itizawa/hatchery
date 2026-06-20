@@ -42,6 +42,8 @@ interface PostCardProps {
   onCommunityClick?: () => void;
   /** コンパクト表示モード（#561）。true のとき本文を非表示・パディングを縮小する。 */
   compact?: boolean;
+  /** コメント数 Chip クリック時のコールバック。指定時はクリック可能になる。 */
+  onCommentClick?: () => void;
 }
 
 /**
@@ -97,6 +99,7 @@ export const PostCard = ({
   community,
   onCommunityClick,
   compact = false,
+  onCommentClick,
 }: PostCardProps): ReactElement => {
   // comment_count はサーバ集計値（#500）。未指定（後方互換）は 0 として扱う。
   const commentCount = post.comment_count ?? 0;
@@ -164,7 +167,9 @@ export const PostCard = ({
           aria-label={`コメント ${commentCount} 件`}
           size="small"
           variant="outlined"
-          sx={{ bgcolor: "background.paper", borderColor: "divider", color: "text.secondary" }}
+          clickable={!!onCommentClick}
+          onClick={onCommentClick}
+          sx={{ height: 32, padding:"0px 6px 0px 8px", bgcolor: "background.paper", borderColor: "divider", color: "text.secondary" }}
         />
         {postUrl && <ShareButton shareUrl={postUrl} shareTitle={post.title} />}
       </Box>

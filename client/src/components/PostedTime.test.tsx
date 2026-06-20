@@ -1,4 +1,5 @@
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { PostedTime } from "./PostedTime";
@@ -29,6 +30,16 @@ describe("PostedTime", () => {
       const { container } = render(<PostedTime createdAt="2026-06-01T09:00:00Z" />);
       const timeEl = container.querySelector("time");
       expect(timeEl?.textContent).toBe("3時間前");
+    });
+
+    it("ホバー時に絶対日時のツールチップが表示される", async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime.bind(vi) });
+      render(<PostedTime createdAt="2026-06-01T09:00:00Z" />);
+      const timeEl = document.querySelector("time");
+      expect(timeEl).not.toBeNull();
+      await user.hover(timeEl!);
+      expect(await screen.findByRole("tooltip")).toBeInTheDocument();
+      expect(screen.getByRole("tooltip").textContent).toBe("2026/6/1 9:00:00");
     });
   });
 

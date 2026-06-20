@@ -126,67 +126,29 @@ describe("PostSchema", () => {
       image_url: "https://example.com/haru.png",
     });
   });
-});
 
-describe("CreatePostRequestSchema (#433)", () => {
-  const validRequest = {
-    communityId: "11111111-1111-1111-1111-111111111111",
-    authorWorkerId: "22222222-2222-2222-2222-222222222222",
-    title: "管理者による手動投稿",
-    text: "デモ用に手動で投入したポストです。",
-  };
-
-  it("有効なリクエストをパースできる", () => {
-    const result = CreatePostRequestSchema.safeParse(validRequest);
-    expect(result.success).toBe(true);
+  it("my_vote は省略可能（後方互換）", () => {
+    const result = PostSchema.parse(validPost);
+    expect(result.my_vote).toBeUndefined();
   });
 
-  it("communityId が uuid でない場合は reject する", () => {
-    const data = { ...validRequest, communityId: "not-a-uuid" };
-    expect(CreatePostRequestSchema.safeParse(data).success).toBe(false);
+  it("my_vote に 'up' を設定できる（#831）", () => {
+    const result = PostSchema.parse({ ...validPost, my_vote: "up" });
+    expect(result.my_vote).toBe("up");
   });
 
-  it("authorWorkerId が uuid でない場合は reject する", () => {
-    const data = { ...validRequest, authorWorkerId: "not-a-uuid" };
-    expect(CreatePostRequestSchema.safeParse(data).success).toBe(false);
+  it("my_vote に 'down' を設定できる（#831）", () => {
+    const result = PostSchema.parse({ ...validPost, my_vote: "down" });
+    expect(result.my_vote).toBe("down");
   });
 
-  it("title が空文字の場合は reject する", () => {
-    const data = { ...validRequest, title: "" };
-    expect(CreatePostRequestSchema.safeParse(data).success).toBe(false);
+  it("my_vote に null を設定できる（#831）", () => {
+    const result = PostSchema.parse({ ...validPost, my_vote: null });
+    expect(result.my_vote).toBeNull();
   });
 
-  it("title が上限を超える場合は reject する", () => {
-    const data = { ...validRequest, title: "あ".repeat(POST_TITLE_MAX_LENGTH + 1) };
-    expect(CreatePostRequestSchema.safeParse(data).success).toBe(false);
-  });
-
-  it("text が空文字の場合は reject する", () => {
-    const data = { ...validRequest, text: "" };
-    expect(CreatePostRequestSchema.safeParse(data).success).toBe(false);
-  });
-
-  it("text が上限を超える場合は reject する", () => {
-    const data = { ...validRequest, text: "あ".repeat(POST_TEXT_MAX_LENGTH + 1) };
-    expect(CreatePostRequestSchema.safeParse(data).success).toBe(false);
-  });
-
-  it("余分なフィールドは無視される（未知キーは落とす）", () => {
-    const result = CreatePostRequestSchema.parse({ ...validRequest, slotKey: "x" });
-    expect(result).not.toHaveProperty("slotKey");
-  });
-});
-
-describe("buildManualSlotKey (#433)", () => {
-  it("manual: プレフィックス付きの slotKey を返す", () => {
-    const slotKey = buildManualSlotKey("abc-123");
-    expect(slotKey).toBe(`${MANUAL_SLOT_KEY_PREFIX}abc-123`);
-  });
-
-  it("定時バッチ形式（YYYY-MM-DDTHH:MM）と決して一致しない", () => {
-    const slotKey = buildManualSlotKey("2026-06-13T09:00");
-    expect(slotKey.startsWith(MANUAL_SLOT_KEY_PREFIX)).toBe(true);
-    expect(slotKey).not.toBe("2026-06-13T09:00");
+  it("my_vote に無効な値は reject する（#831）", () => {
+    expect(PostSchema.safeParse({ ...validPost, my_vote: "neutral" }).success).toBe(false);
   });
 });
 

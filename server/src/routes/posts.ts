@@ -36,6 +36,10 @@ export function createPostsRouter(
   // eslint-disable-next-line max-params
   router.get("/posts/:postId", (req, res, next) => {
     const { postId } = req.params as { postId: string };
+    // sessionId は任意クエリパラメータ。付与されていれば my_vote を付与する（#831）。
+    const rawSessionId = req.query["sessionId"];
+    const sessionId = typeof rawSessionId === "string" && rawSessionId.length > 0 ? rawSessionId : null;
+
     postRepo
       .findById(postId)
       .then((post) => {
@@ -52,11 +56,32 @@ export function createPostsRouter(
           const enrichedComments = enrich(comments);
           // reveal 済みコメント件数を付与する（#779: 詳細 API でも comment_count を正確に返す）。
           const postWithCount = { ...(enrichedPost ?? post), commentCount: comments.length };
-          // OpenAPI 契約（snake_case）へ整形して返す（#499）。
-          res.status(200).json({
-            post: toPostResponse(postWithCount),
-            comments: enrichedComments.map(toCommentResponse),
-          });
+
+          if (sessionId) {
+            // sessionId 付きのとき post と comments の my_vote を一括取得して付与する（#831）。
+            const [postVotes, commentVotes] = await Promise.all([
+              voteRepo.findVotesBySessionAndTargets({
+                sessionId,
+                targetType: "post",
+                targetIds: [postId],
+              }),
+              voteRepo.findVotesBySessionAndTargets({
+                sessionId,
+                targetType: "comment",
+                targetIds: comments.map((c) => c.id),
+              }),
+            ]);
+            res.status(200).json({
+              post: toPostResponse({ ...postWithCount, myVote: postVotes.get(postId) ?? null }),
+              comments: enrichedComments.map((c) => toCommentResponse({ ...c, myVote: commentVotes.get(c.id) ?? null })),
+            });
+          } else {
+            // OpenAPI 契約（snake_case）へ整形して返す（#499）。
+            res.status(200).json({
+              post: toPostResponse(postWithCount),
+              comments: enrichedComments.map(toCommentResponse),
+            });
+          }
         });
       })
       .catch(next);

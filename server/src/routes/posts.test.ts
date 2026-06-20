@@ -525,3 +525,65 @@ describe("POST /api/posts/:postId/comment-views（コメント閲覧ビーコン
     expect(res.status).toBe(404);
   });
 });
+
+describe("GET /api/posts/:postId my_vote 付与（#831）", () => {
+  it("sessionId を付与すると投票済み post に my_vote が付く", async () => {
+    const postRepo = createInMemoryPostRepository();
+    const commentRepo = createInMemoryCommentRepository();
+    const voteRepo = createInMemoryVoteRepository();
+
+    const [post] = await postRepo.createMany("community-1", [
+      { slotKey: "s", seq: 0, author: "w", title: "T", text: "B" },
+    ]);
+    await voteRepo.vote({ sessionId: "sess-x", userId: null, targetType: "post", targetId: post.id, direction: "up" });
+
+    const deps = await createTestDeps({ postRepository: postRepo, commentRepository: commentRepo, voteRepository: voteRepo });
+    const app = createApp(deps);
+
+    const res = await request(app).get(`/api/posts/${post.id}?sessionId=sess-x`);
+    expect(res.status).toBe(200);
+    expect(res.body.post.my_vote).toBe("up");
+  });
+
+  it("sessionId を付与すると投票済み comment に my_vote が付く", async () => {
+    const postRepo = createInMemoryPostRepository();
+    const commentRepo = createInMemoryCommentRepository();
+    const voteRepo = createInMemoryVoteRepository();
+
+    const [post] = await postRepo.createMany("community-1", [
+      { slotKey: "s", seq: 0, author: "w", title: "T", text: "B" },
+    ]);
+    const [comment] = await commentRepo.createMany("community-1", [
+      { postId: post.id, slotKey: "s", seq: 0, author: "w2", text: "C" },
+    ]);
+    await voteRepo.vote({ sessionId: "sess-x", userId: null, targetType: "comment", targetId: comment.id, direction: "down" });
+
+    const deps = await createTestDeps({ postRepository: postRepo, commentRepository: commentRepo, voteRepository: voteRepo });
+    const app = createApp(deps);
+
+    const res = await request(app).get(`/api/posts/${post.id}?sessionId=sess-x`);
+    expect(res.status).toBe(200);
+    expect(res.body.comments[0].my_vote).toBe("down");
+  });
+
+  it("sessionId 未指定のときは my_vote を含まない（後方互換）", async () => {
+    const postRepo = createInMemoryPostRepository();
+    const commentRepo = createInMemoryCommentRepository();
+    const voteRepo = createInMemoryVoteRepository();
+
+    const [post] = await postRepo.createMany("community-1", [
+      { slotKey: "s", seq: 0, author: "w", title: "T", text: "B" },
+    ]);
+    await commentRepo.createMany("community-1", [
+      { postId: post.id, slotKey: "s", seq: 0, author: "w2", text: "C" },
+    ]);
+
+    const deps = await createTestDeps({ postRepository: postRepo, commentRepository: commentRepo, voteRepository: voteRepo });
+    const app = createApp(deps);
+
+    const res = await request(app).get(`/api/posts/${post.id}`);
+    expect(res.status).toBe(200);
+    expect(res.body.post).not.toHaveProperty("my_vote");
+    expect(res.body.comments[0]).not.toHaveProperty("my_vote");
+  });
+});

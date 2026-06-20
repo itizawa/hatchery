@@ -233,6 +233,23 @@ describe("認証ガード（未ログイン時のリダイレクト）", () => {
     expect(await screen.findByText("ホームフィード")).toBeInTheDocument();
   });
 
+  // #800: リダイレクト先の URL が /?login=1 であること（/?login=true は e2e 期待値と乖離する）。
+  it("未ログインで /account を開くとリダイレクト先 URL が /?login=1 になる", async () => {
+    const history = createMemoryHistory({ initialEntries: ["/account"] });
+    const router = createAppRouter({ history });
+    render(renderRouter(router));
+    await screen.findByRole("button", { name: /Google でログイン/ });
+    expect(router.state.location.href).toBe("/?login=1");
+  });
+
+  it("未ログインで /admin を開くとリダイレクト先 URL が /?login=1 になる", async () => {
+    const history = createMemoryHistory({ initialEntries: ["/admin"] });
+    const router = createAppRouter({ history });
+    render(renderRouter(router));
+    await screen.findByRole("button", { name: /Google でログイン/ });
+    expect(router.state.location.href).toBe("/?login=1");
+  });
+
   // コミュニティブラウズは認証不要（公開ページ）
   it("未認証でコミュニティブラウズ（/communities）を開いても /login へリダイレクトしない", async () => {
     const router = createAppRouter({

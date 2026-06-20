@@ -86,11 +86,11 @@ export function registerPosts(registry: OpenAPIRegistry, ctx: RegistryContext): 
     VoteRequestSchema.openapi({ description: "vote リクエストボディ（direction: up | down）" }),
   );
 
-  // post への vote（認証必須・toggle/switch・ADR-0025）
+  // post への vote（認証不要・ゲスト対応・sessionId dedup・#777）
   registry.registerPath({
     method: "post",
     path: "/api/posts/{postId}/vote",
-    summary: "post に up/down vote（認証必須・toggle/switch・ADR-0025）",
+    summary: "post に up/down vote（認証不要・ゲスト対応・sessionId dedup・toggle/switch・ADR-0025 / #777）",
     request: {
       params: z.object({ postId: postIdParam }),
       body: { content: { "application/json": { schema: VoteRequestComponent } } },
@@ -100,17 +100,16 @@ export function registerPosts(registry: OpenAPIRegistry, ctx: RegistryContext): 
         description: "vote 成功。更新後の post（score 加算済み）を返す",
         content: { "application/json": { schema: PostComponent } },
       },
-      400: { description: "direction が無効", ...errorJson },
-      401: { description: "未認証", ...errorJson },
+      400: { description: "direction または sessionId が無効", ...errorJson },
       404: { description: "投稿が存在しない", ...errorJson },
     },
   });
 
-  // comment への vote（認証必須・toggle/switch・ADR-0025）
+  // comment への vote（認証不要・ゲスト対応・sessionId dedup・#777）
   registry.registerPath({
     method: "post",
     path: "/api/comments/{commentId}/vote",
-    summary: "comment に up/down vote（認証必須・toggle/switch・ADR-0025）",
+    summary: "comment に up/down vote（認証不要・ゲスト対応・sessionId dedup・toggle/switch・ADR-0025 / #777）",
     request: {
       params: z.object({ commentId: commentIdParam }),
       body: { content: { "application/json": { schema: VoteRequestComponent } } },
@@ -120,8 +119,7 @@ export function registerPosts(registry: OpenAPIRegistry, ctx: RegistryContext): 
         description: "vote 成功。更新後の comment（score 加算済み）を返す",
         content: { "application/json": { schema: CommentComponent } },
       },
-      400: { description: "direction が無効", ...errorJson },
-      401: { description: "未認証", ...errorJson },
+      400: { description: "direction または sessionId が無効", ...errorJson },
       404: { description: "コメントが存在しない", ...errorJson },
     },
   });

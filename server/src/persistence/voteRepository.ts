@@ -1,7 +1,8 @@
 /**
  * Vote（up/down）の永続化境界（ポート）。ADR-0025 で down vote を追加・ADR-0031 で Exclusive Arc 化（#453）。
- * 1 ユーザー × 1 ターゲット（post または comment）につき 1 レコードを維持する
- *（DB では (userId, postId) / (userId, commentId) の複合ユニークで担保）。
+ * #777: sessionId を dedup キーにし userId を nullable に変更（ゲスト vote 対応）。
+ * 1 セッション × 1 ターゲット（post または comment）につき 1 レコードを維持する
+ *（DB では (sessionId, postId) / (sessionId, commentId) の複合ユニークで担保）。
  * 同一方向の再押下で toggle off（中立）、異なる方向で switch する。
  *
  * ポートの公開シグネチャは引き続き多態的な (targetType, targetId) を取り、
@@ -15,7 +16,8 @@ export type VoteTargetType = "post" | "comment";
 
 export interface VoteRecord {
   id: string;
-  userId: string;
+  sessionId: string;
+  userId: string | null;
   targetType: VoteTargetType;
   targetId: string;
   direction: VoteDirection;
@@ -24,7 +26,15 @@ export interface VoteRecord {
 
 export interface VoteRepository {
   /** 既存 vote レコードを取得する。未投票なら null。 */
-  findVote(userId: string, targetType: VoteTargetType, targetId: string): Promise<VoteRecord | null>;
+  findVote({
+    sessionId,
+    targetType,
+    targetId,
+  }: {
+    sessionId: string;
+    targetType: VoteTargetType;
+    targetId: string;
+  }): Promise<VoteRecord | null>;
   /**
    * vote を記録する（toggle/switch ロジック）。
    * - 未投票 → up: create, scoreDelta = +1
@@ -34,12 +44,19 @@ export interface VoteRepository {
    * - up 済み → down: update, scoreDelta = -2
    * - down 済み → up: update, scoreDelta = +2
    */
-  vote(
-    userId: string,
-    targetType: VoteTargetType,
-    targetId: string,
-    direction: VoteDirection,
-  ): Promise<{ scoreDelta: number }>;
+  vote({
+    sessionId,
+    userId,
+    targetType,
+    targetId,
+    direction,
+  }: {
+    sessionId: string;
+    userId: string | null;
+    targetType: VoteTargetType;
+    targetId: string;
+    direction: VoteDirection;
+  }): Promise<{ scoreDelta: number }>;
   /**
    * vote の記録（toggle/switch）と対象 score の更新を「単一の整合操作」として行う（#453 / AC7）。
    * vote 作成/更新/削除と score 加算が片方だけ成功する中間状態を排除する。
@@ -51,13 +68,21 @@ export interface VoteRepository {
    *   in-memory 実装はこのコールバックで対象 store（PostRepository/CommentRepository）を更新する。
    *   Prisma 実装は同一 DB トランザクション内で対象 score を直接更新するため、このコールバックは呼ばない。
    */
-  voteAndApplyScore(
-    userId: string,
-    targetType: VoteTargetType,
-    targetId: string,
-    direction: VoteDirection,
-    applyScore: (delta: number) => Promise<number | null>,
-  ): Promise<{ scoreDelta: number; score: number | null }>;
+  voteAndApplyScore({
+    sessionId,
+    userId,
+    targetType,
+    targetId,
+    direction,
+    applyScore,
+  }: {
+    sessionId: string;
+    userId: string | null;
+    targetType: VoteTargetType;
+    targetId: string;
+    direction: VoteDirection;
+    applyScore: (delta: number) => Promise<number | null>;
+  }): Promise<{ scoreDelta: number; score: number | null }>;
   /**
    * 直近の vote から community 別の純スコア（up: +1 / down: -1）合計を集計する（#486 / ADR-0030）。
    * 定時バッチの「vote 重み付き 1 コミュニティ選定」の重み算出に使う。
@@ -102,33 +127,43 @@ export function createInMemoryVoteRepository(
   const records: VoteRecord[] = [];
   let seq = 0;
 
-  // eslint-disable-next-line max-params
-  function findRecord(
-    userId: string,
-    targetType: VoteTargetType,
-    targetId: string,
-  ): VoteRecord | null {
+  function findRecord({
+    sessionId,
+    targetType,
+    targetId,
+  }: {
+    sessionId: string;
+    targetType: VoteTargetType;
+    targetId: string;
+  }): VoteRecord | null {
     return (
       records.find(
-        (r) => r.userId === userId && r.targetType === targetType && r.targetId === targetId,
+        (r) => r.sessionId === sessionId && r.targetType === targetType && r.targetId === targetId,
       ) ?? null
     );
   }
 
   /** toggle/switch ロジックで records を変異させ scoreDelta を返す（vote と voteAndApplyScore で共有）。 */
-  // eslint-disable-next-line max-params
-  function applyVoteMutation(
-    userId: string,
-    targetType: VoteTargetType,
-    targetId: string,
-    direction: VoteDirection,
-  ): number {
-    const existing = findRecord(userId, targetType, targetId);
+  function applyVoteMutation({
+    sessionId,
+    userId,
+    targetType,
+    targetId,
+    direction,
+  }: {
+    sessionId: string;
+    userId: string | null;
+    targetType: VoteTargetType;
+    targetId: string;
+    direction: VoteDirection;
+  }): number {
+    const existing = findRecord({ sessionId, targetType, targetId });
 
     if (!existing) {
       seq += 1;
       records.push({
         id: `vote-${seq}`,
+        sessionId,
         userId,
         targetType,
         targetId,
@@ -151,35 +186,51 @@ export function createInMemoryVoteRepository(
   }
 
   return {
-    // eslint-disable-next-line max-params
-    findVote(
-      userId: string,
-      targetType: VoteTargetType,
-      targetId: string,
-    ): Promise<VoteRecord | null> {
-      return Promise.resolve(findRecord(userId, targetType, targetId));
+    findVote({
+      sessionId,
+      targetType,
+      targetId,
+    }: {
+      sessionId: string;
+      targetType: VoteTargetType;
+      targetId: string;
+    }): Promise<VoteRecord | null> {
+      return Promise.resolve(findRecord({ sessionId, targetType, targetId }));
     },
 
-    // eslint-disable-next-line max-params
-    vote(
-      userId: string,
-      targetType: VoteTargetType,
-      targetId: string,
-      direction: VoteDirection,
-    ): Promise<{ scoreDelta: number }> {
-      const scoreDelta = applyVoteMutation(userId, targetType, targetId, direction);
+    vote({
+      sessionId,
+      userId,
+      targetType,
+      targetId,
+      direction,
+    }: {
+      sessionId: string;
+      userId: string | null;
+      targetType: VoteTargetType;
+      targetId: string;
+      direction: VoteDirection;
+    }): Promise<{ scoreDelta: number }> {
+      const scoreDelta = applyVoteMutation({ sessionId, userId, targetType, targetId, direction });
       return Promise.resolve({ scoreDelta });
     },
 
-    // eslint-disable-next-line max-params
-    async voteAndApplyScore(
-      userId: string,
-      targetType: VoteTargetType,
-      targetId: string,
-      direction: VoteDirection,
-      applyScore: (delta: number) => Promise<number | null>,
-    ): Promise<{ scoreDelta: number; score: number | null }> {
-      const scoreDelta = applyVoteMutation(userId, targetType, targetId, direction);
+    async voteAndApplyScore({
+      sessionId,
+      userId,
+      targetType,
+      targetId,
+      direction,
+      applyScore,
+    }: {
+      sessionId: string;
+      userId: string | null;
+      targetType: VoteTargetType;
+      targetId: string;
+      direction: VoteDirection;
+      applyScore: (delta: number) => Promise<number | null>;
+    }): Promise<{ scoreDelta: number; score: number | null }> {
+      const scoreDelta = applyVoteMutation({ sessionId, userId, targetType, targetId, direction });
       const score = await applyScore(scoreDelta);
       return { scoreDelta, score };
     },

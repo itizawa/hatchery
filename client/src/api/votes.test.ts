@@ -45,7 +45,7 @@ describe("votePost (POST /api/posts/{postId}/vote)", () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, updatedPost));
     vi.stubGlobal("fetch", fetchMock);
 
-    const result = await votePost("post-1");
+    const result = await votePost({ postId: "post-1", direction: "up", sessionId: "00000000-0000-0000-0000-000000000001" });
     expect(result).toEqual(updatedPost);
     expect(result.score).toBe(6);
     const request = fetchMock.mock.calls[0][0] as Request;
@@ -55,7 +55,7 @@ describe("votePost (POST /api/posts/{postId}/vote)", () => {
 
   it("409（二重投票）のとき例外を投げる", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(409, { error: "AlreadyVoted" })));
-    await expect(votePost("post-1")).rejects.toThrow();
+    await expect(votePost({ postId: "post-1", direction: "up", sessionId: "00000000-0000-0000-0000-000000000001" })).rejects.toThrow();
   });
 });
 
@@ -69,7 +69,7 @@ describe("voteComment (POST /api/comments/{commentId}/vote)", () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, updatedComment));
     vi.stubGlobal("fetch", fetchMock);
 
-    const result = await voteComment("comment-1");
+    const result = await voteComment({ commentId: "comment-1", direction: "up", sessionId: "00000000-0000-0000-0000-000000000002" });
     expect(result).toEqual(updatedComment);
     expect(result.score).toBe(3);
     const request = fetchMock.mock.calls[0][0] as Request;

@@ -189,7 +189,7 @@ describe("POST /api/posts/:postId/vote", () => {
 
     const res = await request(app)
       .post(`/api/posts/${post.id}/vote`)
-      .send({ direction: "up" })
+      .send({ direction: "up", sessionId: "00000000-0000-0000-0000-000000000010" })
       .set("Cookie", cookie);
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({ score: 1 });
@@ -206,7 +206,7 @@ describe("POST /api/posts/:postId/vote", () => {
 
     const res = await request(app)
       .post(`/api/posts/${post.id}/vote`)
-      .send({ direction: "down" })
+      .send({ direction: "down", sessionId: "00000000-0000-0000-0000-000000000011" })
       .set("Cookie", cookie);
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({ score: -1 });
@@ -222,8 +222,8 @@ describe("POST /api/posts/:postId/vote", () => {
     const app = createApp(deps);
     const cookie = await loginAndGetCookie(app);
 
-    await request(app).post(`/api/posts/${post.id}/vote`).send({ direction: "up" }).set("Cookie", cookie);
-    const res = await request(app).post(`/api/posts/${post.id}/vote`).send({ direction: "up" }).set("Cookie", cookie);
+    await request(app).post(`/api/posts/${post.id}/vote`).send({ direction: "up", sessionId: "00000000-0000-0000-0000-000000000012" }).set("Cookie", cookie);
+    const res = await request(app).post(`/api/posts/${post.id}/vote`).send({ direction: "up", sessionId: "00000000-0000-0000-0000-000000000012" }).set("Cookie", cookie);
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({ score: 0 });
   });
@@ -238,8 +238,8 @@ describe("POST /api/posts/:postId/vote", () => {
     const app = createApp(deps);
     const cookie = await loginAndGetCookie(app);
 
-    await request(app).post(`/api/posts/${post.id}/vote`).send({ direction: "up" }).set("Cookie", cookie);
-    const res = await request(app).post(`/api/posts/${post.id}/vote`).send({ direction: "down" }).set("Cookie", cookie);
+    await request(app).post(`/api/posts/${post.id}/vote`).send({ direction: "up", sessionId: "00000000-0000-0000-0000-000000000013" }).set("Cookie", cookie);
+    const res = await request(app).post(`/api/posts/${post.id}/vote`).send({ direction: "down", sessionId: "00000000-0000-0000-0000-000000000013" }).set("Cookie", cookie);
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({ score: -1 });
   });
@@ -255,7 +255,7 @@ describe("POST /api/posts/:postId/vote", () => {
 
     const res = await request(app)
       .post(`/api/posts/${post.id}/vote`)
-      .send({ direction: "down" })
+      .send({ direction: "down", sessionId: "00000000-0000-0000-0000-000000000014" })
       .set("Cookie", cookie);
     expect(res.body).not.toHaveProperty("downVotes");
     expect(res.body).not.toHaveProperty("downCount");
@@ -310,7 +310,7 @@ describe("POST /api/posts/:postId/vote", () => {
     const app = createApp(deps);
     const loginRes = await request(app).post("/api/auth/dev-login");
     const cookie = loginRes.headers["set-cookie"] as string[];
-    const res = await request(app).post("/api/posts/not-exists/vote").send({ direction: "up" }).set("Cookie", cookie);
+    const res = await request(app).post("/api/posts/not-exists/vote").send({ direction: "up", sessionId: "00000000-0000-0000-0000-000000000015" }).set("Cookie", cookie);
     expect(res.status).toBe(404);
   });
 
@@ -330,7 +330,7 @@ describe("POST /api/posts/:postId/vote", () => {
 
     const res = await request(app)
       .post(`/api/posts/${post.id}/vote`)
-      .send({ direction: "up" })
+      .send({ direction: "up", sessionId: "00000000-0000-0000-0000-000000000016" })
       .set("Cookie", cookie);
     expect(res.status).toBe(200);
     expect(res.body.comment_count).toBe(2);
@@ -358,7 +358,7 @@ describe("POST /api/comments/:commentId/vote", () => {
 
     const res = await request(app)
       .post(`/api/comments/${comment.id}/vote`)
-      .send({ direction: "up" })
+      .send({ direction: "up", sessionId: "00000000-0000-0000-0000-000000000017" })
       .set("Cookie", cookie);
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({ score: 1 });
@@ -379,7 +379,7 @@ describe("POST /api/comments/:commentId/vote", () => {
 
     const res = await request(app)
       .post(`/api/comments/${comment.id}/vote`)
-      .send({ direction: "down" })
+      .send({ direction: "down", sessionId: "00000000-0000-0000-0000-000000000018" })
       .set("Cookie", cookie);
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({ score: -1 });
@@ -399,8 +399,8 @@ describe("POST /api/comments/:commentId/vote", () => {
     const app = createApp(deps);
     const cookie = await loginAndGetCookie(app);
 
-    await request(app).post(`/api/comments/${comment.id}/vote`).send({ direction: "down" }).set("Cookie", cookie);
-    const res = await request(app).post(`/api/comments/${comment.id}/vote`).send({ direction: "down" }).set("Cookie", cookie);
+    await request(app).post(`/api/comments/${comment.id}/vote`).send({ direction: "down", sessionId: "00000000-0000-0000-0000-000000000019" }).set("Cookie", cookie);
+    const res = await request(app).post(`/api/comments/${comment.id}/vote`).send({ direction: "down", sessionId: "00000000-0000-0000-0000-000000000019" }).set("Cookie", cookie);
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({ score: 0 });
   });

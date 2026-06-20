@@ -5,11 +5,10 @@ import { useEffect, useMemo, useRef, type ReactElement } from "react";
 
 import { useInfiniteHomeFeed, usePublicCommunities, useVotePost } from "../api/communities.js";
 import { useAuth } from "../api/auth.js";
-import { LoginPromptSnackbar } from "../components/LoginPromptSnackbar.js";
 import { PostCard } from "../components/PostCard.js";
 import { WelcomeSection } from "../components/WelcomeSection.js";
 import type { VoteDirection } from "../components/VoteControl.js";
-import { useGuestVoteGuard } from "../hooks/useGuestVoteGuard.js";
+import { useViewMode } from "../hooks/useViewMode.js";
 
 /** sort ごとの画面見出し。 */
 const FEED_HEADING: Record<HomeFeedSort, string> = {
@@ -34,7 +33,6 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteHomeFeed(sort);
   const { data: user } = useAuth();
   const { mutate: votePost, isPending: isVotingPost } = useVotePost();
-  const { guardVote, promptOpen, closePrompt } = useGuestVoteGuard();
   const navigate = useNavigate();
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
@@ -91,7 +89,7 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
                 <PostCard
                   post={post}
                   onVote={(direction: VoteDirection) =>
-                    guardVote(() => votePost({ postId: post.id, direction }))
+                    votePost({ postId: post.id, direction })
                   }
                   voteDisabled={isVotingPost}
                   voteStopPropagation
@@ -115,7 +113,6 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
           </Box>
         </Box>
       )}
-      <LoginPromptSnackbar open={promptOpen} onClose={closePrompt} />
     </Box>
   );
 };

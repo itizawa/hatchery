@@ -7,10 +7,11 @@ import type {
   VoteTargetType,
 } from "./voteRepository.js";
 
-/** Prisma の Vote 行（Exclusive Arc: postId / commentId のいずれか片方が非 null・#453）。 */
+/** Prisma の Vote 行（Exclusive Arc: postId / commentId のいずれか片方が非 null・#453 / #777: sessionId 追加）。 */
 interface VoteRow {
   id: string;
-  userId: string;
+  sessionId: string;
+  userId: string | null;
   postId: string | null;
   commentId: string | null;
   direction: VoteDirection;
@@ -18,14 +19,13 @@ interface VoteRow {
 }
 
 /**
- * 多態的な (targetType, targetId) を Exclusive Arc の複合ユニーク where にマップする（#453）。
- * post 票なら userId_postId、comment 票なら userId_commentId を使う。
+ * 多態的な (targetType, targetId) を Exclusive Arc の複合ユニーク where にマップする（#453 / #777）。
+ * post 票なら sessionId_postId、comment 票なら sessionId_commentId を使う。
  */
-// eslint-disable-next-line max-params
-function uniqueWhere(userId: string, targetType: VoteTargetType, targetId: string) {
+function uniqueWhere({ sessionId, targetType, targetId }: { sessionId: string; targetType: VoteTargetType; targetId: string }) {
   return targetType === "post"
-    ? ({ userId_postId: { userId, postId: targetId } } as const)
-    : ({ userId_commentId: { userId, commentId: targetId } } as const);
+    ? ({ sessionId_postId: { sessionId, postId: targetId } } as const)
+    : ({ sessionId_commentId: { sessionId, commentId: targetId } } as const);
 }
 
 /** Exclusive Arc の行を多態的な VoteRecord に戻す（postId / commentId → targetType / targetId）。 */
@@ -34,6 +34,7 @@ function toRecord(row: VoteRow): VoteRecord {
   const targetId = row.postId ?? row.commentId ?? "";
   return {
     id: row.id,
+    sessionId: row.sessionId,
     userId: row.userId,
     targetType,
     targetId,
@@ -42,7 +43,7 @@ function toRecord(row: VoteRow): VoteRecord {
   };
 }
 
-/** VoteRepository の Prisma / PostgreSQL 実装（ADR-0019 / ADR-0025 / ADR-0031 #453）。 */
+/** VoteRepository の Prisma / PostgreSQL 実装（ADR-0019 / ADR-0025 / ADR-0031 #453 / #777）。 */
 export function createPrismaVoteRepository(prisma: PrismaClient): VoteRepository {
   /**
    * toggle/switch ロジックを Prisma クライアント（または同一トランザクションの tx）上で実行し
@@ -51,19 +52,22 @@ export function createPrismaVoteRepository(prisma: PrismaClient): VoteRepository
   // eslint-disable-next-line max-params
   async function applyVoteMutation(
     client: Prisma.TransactionClient,
-    userId: string,
-    targetType: VoteTargetType,
-    targetId: string,
-    direction: VoteDirection,
+    { sessionId, userId, targetType, targetId, direction }: {
+      sessionId: string;
+      userId: string | null;
+      targetType: VoteTargetType;
+      targetId: string;
+      direction: VoteDirection;
+    },
   ): Promise<number> {
-    const where = uniqueWhere(userId, targetType, targetId);
+    const where = uniqueWhere({ sessionId, targetType, targetId });
     const existing = await client.vote.findUnique({ where });
 
     if (!existing) {
       const data =
         targetType === "post"
-          ? { userId, postId: targetId, direction }
-          : { userId, commentId: targetId, direction };
+          ? { sessionId, userId, postId: targetId, direction }
+          : { sessionId, userId, commentId: targetId, direction };
       await client.vote.create({ data });
       return direction === "up" ? 1 : -1;
     }
@@ -78,42 +82,58 @@ export function createPrismaVoteRepository(prisma: PrismaClient): VoteRepository
   }
 
   return {
-    // eslint-disable-next-line max-params
-    async findVote(
-      userId: string,
-      targetType: VoteTargetType,
-      targetId: string,
-    ): Promise<VoteRecord | null> {
+    async findVote({
+      sessionId,
+      targetType,
+      targetId,
+    }: {
+      sessionId: string;
+      targetType: VoteTargetType;
+      targetId: string;
+    }): Promise<VoteRecord | null> {
       const row = await prisma.vote.findUnique({
-        where: uniqueWhere(userId, targetType, targetId),
+        where: uniqueWhere({ sessionId, targetType, targetId }),
       });
-      return row ? toRecord(row) : null;
+      return row ? toRecord(row as VoteRow) : null;
     },
 
-    // eslint-disable-next-line max-params
-    async vote(
-      userId: string,
-      targetType: VoteTargetType,
-      targetId: string,
-      direction: VoteDirection,
-    ): Promise<{ scoreDelta: number }> {
-      const scoreDelta = await applyVoteMutation(prisma, userId, targetType, targetId, direction);
+    async vote({
+      sessionId,
+      userId,
+      targetType,
+      targetId,
+      direction,
+    }: {
+      sessionId: string;
+      userId: string | null;
+      targetType: VoteTargetType;
+      targetId: string;
+      direction: VoteDirection;
+    }): Promise<{ scoreDelta: number }> {
+      const scoreDelta = await applyVoteMutation(prisma, { sessionId, userId, targetType, targetId, direction });
       return { scoreDelta };
     },
 
-    // eslint-disable-next-line max-params
-    async voteAndApplyScore(
-      userId: string,
-      targetType: VoteTargetType,
-      targetId: string,
-      direction: VoteDirection,
-      applyScore: (delta: number) => Promise<number | null>,
-    ): Promise<{ scoreDelta: number; score: number | null }> {
+    async voteAndApplyScore({
+      sessionId,
+      userId,
+      targetType,
+      targetId,
+      direction,
+      applyScore,
+    }: {
+      sessionId: string;
+      userId: string | null;
+      targetType: VoteTargetType;
+      targetId: string;
+      direction: VoteDirection;
+      applyScore: (delta: number) => Promise<number | null>;
+    }): Promise<{ scoreDelta: number; score: number | null }> {
       // Prisma 実装は同一トランザクション内で対象 score を直接更新し原子化するため、
       // ポートの applyScore コールバック（in-memory 用の差し込み口）は使わない（#453）。
       void applyScore;
       return prisma.$transaction(async (tx) => {
-        const scoreDelta = await applyVoteMutation(tx, userId, targetType, targetId, direction);
+        const scoreDelta = await applyVoteMutation(tx, { sessionId, userId, targetType, targetId, direction });
         if (targetType === "post") {
           const updated = await tx.post.update({
             where: { id: targetId },

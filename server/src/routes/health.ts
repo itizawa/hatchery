@@ -16,7 +16,8 @@ export function createHealthRouter(healthCheck?: HealthChecker): Router {
     if (healthCheck) {
       try {
         await healthCheck();
-      } catch {
+      } catch (err) {
+        console.error("[health] healthCheck failed:", err);
         res.status(503).json({ status: "error", message: "service unavailable" });
         return;
       }

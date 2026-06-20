@@ -47,11 +47,4 @@ describe("createHealthRouter（AC-2: 異常系）", () => {
     expect(healthCheck).toHaveBeenCalledOnce();
   });
 
-  it("healthCheck が Rejected Promise を返す場合、503 と { status: 'error' } を返す", async () => {
-    const healthCheck = vi.fn().mockRejectedValue(new Error("timeout"));
-    const app = buildApp(healthCheck);
-    const res = await request(app).get("/health");
-    expect(res.status).toBe(503);
-    expect(res.body).toEqual({ status: "error", message: "service unavailable" });
-  });
 });

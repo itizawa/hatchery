@@ -86,6 +86,53 @@ describe("CommentCard", () => {
     });
   });
 
+  describe("アバター下スレッドコネクター（#796）", () => {
+    it("hasChildren=true のとき縦線（comment-avatar-connector）が描画される", () => {
+      const { container } = render(
+        <CommentCard comment={mockComment} onVote={vi.fn()} hasChildren={true} />,
+      );
+      expect(
+        container.querySelector('[data-testid="comment-avatar-connector"]'),
+      ).toBeInTheDocument();
+    });
+
+    it("hasChildren=false のとき縦線（comment-avatar-connector）は描画されない", () => {
+      const { container } = render(
+        <CommentCard comment={mockComment} onVote={vi.fn()} hasChildren={false} />,
+      );
+      expect(
+        container.querySelector('[data-testid="comment-avatar-connector"]'),
+      ).not.toBeInTheDocument();
+    });
+
+    it("hasChildren を省略したとき縦線（comment-avatar-connector）は描画されない", () => {
+      const { container } = render(<CommentCard comment={mockComment} onVote={vi.fn()} />);
+      expect(
+        container.querySelector('[data-testid="comment-avatar-connector"]'),
+      ).not.toBeInTheDocument();
+    });
+
+    it("depth=0 かつ hasChildren=true のとき left が 8px になる", () => {
+      const { container } = render(
+        <CommentCard comment={mockComment} onVote={vi.fn()} depth={0} hasChildren={true} />,
+      );
+      const el = container.querySelector('[data-testid="comment-avatar-connector"]');
+      expect(el).toBeInTheDocument();
+      // clampedDepth=0, INDENT_PER_DEPTH=16 → left: 0*16+8 = 8px
+      expect((el as HTMLElement).style.left).toBe("8px");
+    });
+
+    it("depth=1 かつ hasChildren=true のとき left が 24px になる", () => {
+      const { container } = render(
+        <CommentCard comment={mockComment} onVote={vi.fn()} depth={1} hasChildren={true} />,
+      );
+      const el = container.querySelector('[data-testid="comment-avatar-connector"]');
+      expect(el).toBeInTheDocument();
+      // clampedDepth=1, INDENT_PER_DEPTH=16 → left: 1*16+8 = 24px
+      expect((el as HTMLElement).style.left).toBe("24px");
+    });
+  });
+
   describe("アクションバーのレイアウト（#683）", () => {
     it("vote コントロール（up vote ボタン）が本文テキストより後（DOM 順で後）に現れる", () => {
       render(<CommentCard comment={mockComment} onVote={vi.fn()} />);

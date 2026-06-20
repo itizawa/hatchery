@@ -19,6 +19,7 @@ const makeCommunity = (overrides: Partial<CommunityRecord> = {}): CommunityRecor
   iconUrl: null,
   coverUrl: null,
   generationInstruction: null,
+  feedUrl: null,
   createdAt: new Date("2026-01-01"),
   ...overrides,
 });

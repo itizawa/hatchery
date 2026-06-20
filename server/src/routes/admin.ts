@@ -117,6 +117,7 @@ export function createAdminRouter(
           name?: string;
           description?: string;
           generationInstruction?: string | null;
+          feedUrl?: string | null;
         };
         const community = await communityRepository.update(id, input);
         if (!community) {

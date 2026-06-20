@@ -20,6 +20,7 @@ import {
   type ConversationGenerator,
 } from "./aiMessageGenerator.js";
 import { buildCommunityPrompt, type WorkerDef } from "./buildCommunityPrompt.js";
+import { fetchExternalFeed, type FeedArticle } from "./fetchExternalFeed.js";
 import { fetchRecentContext } from "./fetchRecentContext.js";
 import { generateCountHints } from "./generateCountHints.js";
 import { extractErrorMessage, logBatchError, logBatchInfo } from "./logger.js";
@@ -135,6 +136,12 @@ export interface RunCommunityBatchDeps {
    * 省略時は DEFAULT_DRIP_WINDOW_MS（3h）。env.batchDripWindowMs から注入する。
    */
   dripWindowMs?: number;
+  /**
+   * 外部フィード取得関数（#491 / ADR-0035）。
+   * community.feedUrl が設定されている場合に呼ばれる。省略時は fetchExternalFeed を使う。
+   * 失敗・空配列はフォールバックとして扱い、フィード注入なしで通常生成を継続する。
+   */
+  feedFetcher?: (feedUrl: string) => Promise<FeedArticle[]>;
 }
 
 /**
@@ -163,6 +170,7 @@ async function processCommunity({
   dripWindowMs,
   currentWorkerStates,
   botWorkersPromise,
+  feedFetcher,
 }: {
   community: CommunityRecord;
   deps: RunCommunityBatchDeps;
@@ -175,6 +183,7 @@ async function processCommunity({
   dripWindowMs: number;
   currentWorkerStates: Record<string, WorkerState>;
   botWorkersPromise: Promise<readonly WorkerRecord[]>;
+  feedFetcher: (feedUrl: string) => Promise<FeedArticle[]>;
 }): Promise<CommunityBatchResult> {
   const worldStateRepo = deps.worldStateRepository;
   const appearedWorkerIds = new Set<string>();
@@ -229,6 +238,16 @@ async function processCommunity({
       ? generateCountHints(deps.postRange, deps.commentRange, rng)
       : undefined;
 
+  // 外部フィード取得（#491 / ADR-0035）。feedUrl 設定時のみ取得・失敗時は空配列フォールバック。
+  let feedArticles: FeedArticle[] | undefined;
+  if (community.feedUrl) {
+    try {
+      feedArticles = await feedFetcher(community.feedUrl);
+    } catch {
+      feedArticles = [];
+    }
+  }
+
   // プロンプト構築（お題は含めない・ADR-0020）
   const { prompt, postRefMap } = buildCommunityPrompt({
     community,
@@ -237,6 +256,7 @@ async function processCommunity({
     recentPosts: recentPostsForReply,
     popularPosts,
     countHints,
+    feedArticles,
   });
 
   // AI 生成（1 コミュニティ = 1 API コール・ADR-0009）
@@ -368,6 +388,8 @@ export async function runCommunityBatch(
   const rng = deps.rng ?? Math.random;
   const now = deps.now ?? new Date();
   const dripWindowMs = deps.dripWindowMs ?? DEFAULT_DRIP_WINDOW_MS;
+  const feedFetcher =
+    deps.feedFetcher ?? ((feedUrl: string) => fetchExternalFeed({ feedUrl }));
 
   const communities = await deps.communityRepo.list();
 
@@ -401,6 +423,7 @@ export async function runCommunityBatch(
         dripWindowMs,
         currentWorkerStates,
         botWorkersPromise,
+        feedFetcher,
       }),
     ),
   );

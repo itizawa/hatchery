@@ -29,6 +29,7 @@ const community1: CommunityRecord = {
   iconUrl: null,
   coverUrl: null,
   generationInstruction: null,
+  feedUrl: null,
   createdAt: new Date("2026-01-01"),
 };
 
@@ -42,6 +43,7 @@ const community2: CommunityRecord = {
   iconUrl: null,
   coverUrl: null,
   generationInstruction: null,
+  feedUrl: null,
   createdAt: new Date("2026-01-02"),
 };
 

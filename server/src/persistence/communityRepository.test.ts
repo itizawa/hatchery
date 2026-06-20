@@ -11,6 +11,7 @@ const makeCommunity = (overrides: Partial<Parameters<typeof createInMemoryCommun
   iconUrl: null,
   coverUrl: null,
   generationInstruction: null,
+  feedUrl: null,
   createdAt: new Date("2026-01-01"),
   ...overrides,
 });

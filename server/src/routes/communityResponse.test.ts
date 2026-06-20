@@ -107,6 +107,7 @@ describe("toAdminCommunityResponse", () => {
     const res = toAdminCommunityResponse({
       ...baseRecord,
       generationInstruction: null,
+  feedUrl: null,
     }) as Record<string, unknown>;
     expect(res).toHaveProperty("generationInstruction");
     expect(res.generationInstruction).toBeNull();

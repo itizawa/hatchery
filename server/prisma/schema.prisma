@@ -125,6 +125,8 @@ model Community {
   coverUrl      String?
   /// 非公開の生成プロンプト指示（#488）。admin のみが設定・閲覧できる。公開 API には返さない。
   generationInstruction String?
+  /// 外部フィード URL（#491 / ADR-0035）。定時バッチ時に RSS/Atom を取得してプロンプトへ注入する。最大 500 文字。
+  feedUrl       String?
   createdAt     DateTime       @default(now())
   posts         Post[]
   comments      Comment[]

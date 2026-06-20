@@ -1,8 +1,7 @@
-import { Box } from "./uiParts";
+import { Avatar, Box, Typography } from "./uiParts";
 import type { ReactElement } from "react";
 import type { Comment } from "../api/communities.js";
 import { extractFirstUrl } from "@hatchery/common";
-import { AuthorByline } from "./AuthorByline.js";
 import { OgpCard } from "./OgpCard.js";
 import { PostedTime } from "./PostedTime.js";
 import { VoteControl } from "./VoteControl.js";
@@ -127,29 +126,46 @@ export const CommentCard = ({
         />
       )}
 
-      {/* コメント本体 */}
-      <Box
-        sx={{
-          py: 0.75,
-          pl: depth > 0 ? 1 : 0,
-        }}
-      >
-        <Box
-          sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5, flexWrap: "wrap" }}
-        >
-          <AuthorByline author={comment.author} authorWorker={comment.author_worker} />
-          <PostedTime createdAt={comment.created_at} />
+      {/* コメント本体: アバター列 + コンテンツ列 を flex で横並び */}
+      <Box sx={{ display: "flex", py: 0.75 }}>
+        {/* 左列: アバター（コネクターが重ならないよう本文と分離） */}
+        <Box sx={{ flexShrink: 0, width: 24, mr: 1 }}>
+          {comment.author_worker && (
+            <Avatar
+              src={comment.author_worker.image_url ?? undefined}
+              alt={comment.author_worker.display_name}
+              sx={{ width: 24, height: 24, fontSize: "0.7rem" }}
+            >
+              {comment.author_worker.display_name.charAt(0).toUpperCase()}
+            </Avatar>
+          )}
         </Box>
-        <MarkdownContent content={comment.text} variant="body2" />
-        {firstUrl && <OgpCard url={firstUrl} />}
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 0.5 }}>
-          <VoteControl
-            score={comment.score}
-            onVote={onVote}
-            currentVote={currentVote}
-            disabled={voteDisabled}
-          />
-          {shareUrl && <ShareButton shareUrl={shareUrl} shareTitle={shareTitle} />}
+
+        {/* 右列: 著者名・投稿時刻・本文・アクション */}
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5, flexWrap: "wrap" }}>
+            {comment.author_worker ? (
+              <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                {comment.author_worker.display_name}
+              </Typography>
+            ) : (
+              <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                {comment.author}
+              </Typography>
+            )}
+            <PostedTime createdAt={comment.created_at} />
+          </Box>
+          <MarkdownContent content={comment.text} variant="body2" />
+          {firstUrl && <OgpCard url={firstUrl} />}
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 0.5 }}>
+            <VoteControl
+              score={comment.score}
+              onVote={onVote}
+              currentVote={currentVote}
+              disabled={voteDisabled}
+            />
+            {shareUrl && <ShareButton shareUrl={shareUrl} shareTitle={shareTitle} />}
+          </Box>
         </Box>
       </Box>
 

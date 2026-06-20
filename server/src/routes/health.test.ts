@@ -48,8 +48,7 @@ describe("createHealthRouter（AC-2: 異常系）", () => {
   });
 
   it("healthCheck が Rejected Promise を返す場合、503 と { status: 'error' } を返す", async () => {
-    // eslint-disable-next-line prefer-promise-reject-errors
-    const healthCheck = vi.fn().mockRejectedValue("timeout");
+    const healthCheck = vi.fn().mockRejectedValue(new Error("timeout"));
     const app = buildApp(healthCheck);
     const res = await request(app).get("/health");
     expect(res.status).toBe(503);

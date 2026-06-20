@@ -1,6 +1,6 @@
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
-import { Box, IconButton, Typography } from "./uiParts";
+import { Box, Chip, Typography } from "./uiParts";
 import type { ReactElement } from "react";
 import type { VoteDirection } from "@hatchery/common";
 
@@ -14,9 +14,9 @@ interface VoteControlProps {
 }
 
 /**
- * up/down vote コントロール（ADR-0025）。
- * up 矢印・中央スコア・down 矢印を横並びで表示する。
- * 現在の投票状態（up/down/未投票）を視覚的に区別する。
+ * up/down vote コントロール（ADR-0025 / #747）。
+ * up Chip・中央スコア・down Chip の 3 要素構成で表示する（pill 型ボタン）。
+ * 現在の投票状態（up/down/未投票）を色で区別する。
  * down 累積数は表示しない（score のみ）。
  */
 export const VoteControl = ({
@@ -26,8 +26,12 @@ export const VoteControl = ({
   disabled = false,
 }: VoteControlProps): ReactElement => {
   return (
-    <Box sx={{ display: "flex", alignItems: "center", gap: 0.25 }}>
-      <IconButton
+    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+      <Chip
+        component="button"
+        clickable
+        icon={<ArrowUpwardIcon />}
+        label=""
         aria-label="up vote"
         aria-pressed={currentVote === "up"}
         onClick={() => onVote("up")}
@@ -35,11 +39,13 @@ export const VoteControl = ({
         size="small"
         sx={{
           color: currentVote === "up" ? "primary.main" : "action.active",
+          borderColor: currentVote === "up" ? "primary.main" : "divider",
+          bgcolor: "background.paper",
+          "& .MuiChip-label": { display: "none" },
           "&:hover": { color: "primary.main" },
         }}
-      >
-        <ArrowUpwardIcon fontSize="small" />
-      </IconButton>
+        variant="outlined"
+      />
       <Typography
         variant="body2"
         component="span"
@@ -47,7 +53,11 @@ export const VoteControl = ({
       >
         {score}
       </Typography>
-      <IconButton
+      <Chip
+        component="button"
+        clickable
+        icon={<ArrowDownwardIcon />}
+        label=""
         aria-label="down vote"
         aria-pressed={currentVote === "down"}
         onClick={() => onVote("down")}
@@ -55,11 +65,13 @@ export const VoteControl = ({
         size="small"
         sx={{
           color: currentVote === "down" ? "error.main" : "action.active",
+          borderColor: currentVote === "down" ? "error.main" : "divider",
+          bgcolor: "background.paper",
+          "& .MuiChip-label": { display: "none" },
           "&:hover": { color: "error.main" },
         }}
-      >
-        <ArrowDownwardIcon fontSize="small" />
-      </IconButton>
+        variant="outlined"
+      />
     </Box>
   );
 };

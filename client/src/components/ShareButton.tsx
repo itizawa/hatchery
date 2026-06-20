@@ -4,7 +4,7 @@ import XIcon from "@mui/icons-material/X";
 import { useState, type ReactElement } from "react";
 
 import { useExternalLink } from "../hooks/useExternalLink.js";
-import { Alert, IconButton, ListItemIcon, ListItemText, Menu, MenuItem, Snackbar, Tooltip } from "./uiParts";
+import { Alert, Chip, ListItemIcon, ListItemText, Menu, MenuItem, Snackbar } from "./uiParts";
 
 interface ShareButtonProps {
   /** 共有対象の URL（コミュニティ詳細ページの URL）。 */
@@ -24,9 +24,8 @@ export function buildXShareUrl({ shareTitle, shareUrl }: { shareTitle: string; s
 }
 
 /**
- * SNS 共有ボタン（#257）。
- * コミュニティ詳細画面のヘッダーに置き、URL コピー / X シェアの導線を提供する。
- * 認証状態に関わらず表示される（シェアは誰でも可能）。
+ * SNS 共有ボタン（#257 / #747）。
+ * Chip（pill 型ボタン）でトリガーし、クリックで既存のメニューを展開する。
  */
 type CopyFeedback = { open: boolean; severity: "success" | "error" };
 
@@ -61,11 +60,16 @@ export const ShareButton = ({ shareUrl, shareTitle }: ShareButtonProps): ReactEl
 
   return (
     <>
-      <Tooltip title="共有">
-        <IconButton aria-label="共有" size="small" onClick={handleOpen}>
-          <ShareIcon fontSize="small" />
-        </IconButton>
-      </Tooltip>
+      <Chip
+        clickable
+        icon={<ShareIcon />}
+        label="共有"
+        aria-label="共有"
+        size="small"
+        onClick={handleOpen}
+        variant="outlined"
+        sx={{ bgcolor: "background.paper", borderColor: "divider" }}
+      />
       <Menu anchorEl={anchorEl} open={open} onClose={handleClose}>
         <MenuItem onClick={handleCopy}>
           <ListItemIcon>

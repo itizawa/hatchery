@@ -126,6 +126,12 @@ describe("PostCard", () => {
       render(<PostCard post={postWithout} onVote={vi.fn()} />);
       expect(screen.getByLabelText("コメント 0 件")).toBeInTheDocument();
     });
+
+    it("コメント数は Chip（div）としてレンダリングされる（#747）", () => {
+      const { container } = render(<PostCard post={mockPost} onVote={vi.fn()} />);
+      const el = container.querySelector('[aria-label="コメント 3 件"]');
+      expect(el?.tagName).toBe("DIV");
+    });
   });
 
   describe("author_worker（発言者のアバター + 表示名・#479）", () => {

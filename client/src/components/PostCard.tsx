@@ -1,4 +1,4 @@
-import { Box, Link, Typography } from "./uiParts";
+import { Box, Chip, Link, Typography } from "./uiParts";
 import type { ReactElement } from "react";
 import type React from "react";
 import type { Post } from "../api/communities.js";
@@ -158,16 +158,14 @@ export const PostCard = ({
             disabled={voteDisabled}
           />
         </Box>
-        <Typography
-          variant="body2"
-          color="text.secondary"
-          component="span"
+        <Chip
+          icon={<ChatBubbleOutlineIcon />}
+          label={commentCount}
           aria-label={`コメント ${commentCount} 件`}
-          sx={{ display: "inline-flex", alignItems: "center", gap: 0.5 }}
-        >
-          <ChatBubbleOutlineIcon fontSize="small" sx={{ color: "text.secondary", verticalAlign: "middle" }} aria-hidden="true" />
-          {commentCount}
-        </Typography>
+          size="small"
+          variant="outlined"
+          sx={{ bgcolor: "background.paper", borderColor: "divider", color: "text.secondary" }}
+        />
         {postUrl && <ShareButton shareUrl={postUrl} shareTitle={post.title} />}
       </Box>
     </Box>

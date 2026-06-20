@@ -1,8 +1,4 @@
-/**
- * WorkerRankingScene のレンダリングテスト（#774）。
- * 文言変更（「評価（7日）」「賛成から反対を引いた評価スコア」）と
- * 負値スコアの色変更を検証する。
- */
+// WorkerRankingScene の文言変更（「評価（7日）」「賛成から反対を引いた評価スコア」）を検証するテスト（#774）。
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
@@ -67,7 +63,7 @@ describe("WorkerRankingScene (#774)", () => {
   it("ワーカー名が表示される", async () => {
     renderWithData();
     expect(await screen.findByText("Alice")).toBeInTheDocument();
-    expect(screen.getByText("Bob")).toBeInTheDocument();
+    expect(await screen.findByText("Bob")).toBeInTheDocument();
   });
 
   it("データが空のとき「まだランキングデータがありません。」が表示される", async () => {

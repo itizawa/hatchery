@@ -262,15 +262,47 @@ describe("POST /api/posts/:postId/vote", () => {
     expect(res.body).not.toHaveProperty("down_count");
   });
 
-  it("未認証では 401 を返す", async () => {
+  it("未認証（sessionId のみ）でも post に vote できる（HTTP 200）(#777)", async () => {
     const postRepo = createInMemoryPostRepository();
     const [post] = await postRepo.createMany("community-1", [
       { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "Title", text: "Text" },
     ]);
     const deps = await createTestDeps({ postRepository: postRepo });
     const app = createApp(deps);
-    const res = await request(app).post(`/api/posts/${post.id}/vote`).send({ direction: "up" });
-    expect(res.status).toBe(401);
+    const res = await request(app)
+      .post(`/api/posts/${post.id}/vote`)
+      .send({ direction: "up", sessionId: "00000000-0000-0000-0000-000000000001" });
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ score: 1 });
+  });
+
+  it("sessionId なしの vote リクエストは 400 を返す (#777)", async () => {
+    const postRepo = createInMemoryPostRepository();
+    const [post] = await postRepo.createMany("community-1", [
+      { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "Title", text: "Text" },
+    ]);
+    const deps = await createTestDeps({ postRepository: postRepo });
+    const app = createApp(deps);
+    const res = await request(app)
+      .post(`/api/posts/${post.id}/vote`)
+      .send({ direction: "up" });
+    expect(res.status).toBe(400);
+  });
+
+  it("同一 sessionId × 同一 post で toggle が機能する（未認証）(#777)", async () => {
+    const postRepo = createInMemoryPostRepository();
+    const voteRepo = createInMemoryVoteRepository();
+    const [post] = await postRepo.createMany("community-1", [
+      { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "Title", text: "Text" },
+    ]);
+    const deps = await createTestDeps({ postRepository: postRepo, voteRepository: voteRepo });
+    const app = createApp(deps);
+    const sessionId = "00000000-0000-0000-0000-000000000002";
+
+    await request(app).post(`/api/posts/${post.id}/vote`).send({ direction: "up", sessionId });
+    const res = await request(app).post(`/api/posts/${post.id}/vote`).send({ direction: "up", sessionId });
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ score: 0 });
   });
 
   it("存在しない post は 404 を返す", async () => {
@@ -371,6 +403,24 @@ describe("POST /api/comments/:commentId/vote", () => {
     const res = await request(app).post(`/api/comments/${comment.id}/vote`).send({ direction: "down" }).set("Cookie", cookie);
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({ score: 0 });
+  });
+
+  it("未認証（sessionId のみ）でも comment に vote できる（HTTP 200）(#777)", async () => {
+    const postRepo = createInMemoryPostRepository();
+    const commentRepo = createInMemoryCommentRepository();
+    const [post] = await postRepo.createMany("community-1", [
+      { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "Title", text: "Text" },
+    ]);
+    const [comment] = await commentRepo.createMany("community-1", [
+      { postId: post.id, slotKey: "2026-06-10T09:00", seq: 0, author: "worker-2", text: "Comment" },
+    ]);
+    const deps = await createTestDeps({ postRepository: postRepo, commentRepository: commentRepo });
+    const app = createApp(deps);
+    const res = await request(app)
+      .post(`/api/comments/${comment.id}/vote`)
+      .send({ direction: "up", sessionId: "00000000-0000-0000-0000-000000000003" });
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ score: 1 });
   });
 });
 

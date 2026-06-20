@@ -33,7 +33,8 @@ describe("useLoginModal (#588)", () => {
     expect(result.current.isOpen).toBe(false);
   });
 
-  it("openLogin が既存の search param を保ったまま login:true を付与する", () => {
+  // #800: openLogin は login: 1（数値）を渡し /?login=1 を生成する（?login=true を避ける）。
+  it("openLogin が既存の search param を保ったまま login:1 を付与する", () => {
     mockSearch = { foo: "bar" };
     const { result } = renderHook(() => useLoginModal());
 
@@ -51,7 +52,7 @@ describe("useLoginModal (#588)", () => {
       prev: Record<string, unknown>
     ) => Record<string, unknown>;
     const prev = { foo: "bar", otherParam: "baz" };
-    expect(searchFn(prev)).toEqual({ foo: "bar", otherParam: "baz", login: true });
+    expect(searchFn(prev)).toEqual({ foo: "bar", otherParam: "baz", login: 1 });
   });
 
   it("closeLogin が login キーのみ削除し他を保持する", () => {

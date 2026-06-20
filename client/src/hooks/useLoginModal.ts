@@ -18,13 +18,15 @@ export function useLoginModal(): {
 } {
   const navigate = useNavigate();
   // root ルートに validateSearch を定義しているため strict:false で全ルートから login を読める。
-  const search = useSearch({ strict: false }) as { login?: boolean };
-  const isOpen = search.login === true;
+  // #800: login は数値 1 を正規形とする（validateRootSearch が 1 を返す）。互換のため truthy チェック。
+  const search = useSearch({ strict: false }) as { login?: boolean | number };
+  const isOpen = !!search.login;
 
   const openLogin = useCallback(() => {
     void navigate({
       to: ".",
-      search: (prev: Record<string, unknown>) => ({ ...prev, login: true }),
+      // #800: 数値 1 を渡すことで URL が /?login=1 になる（?login=true を避ける）。
+      search: (prev: Record<string, unknown>) => ({ ...prev, login: 1 }),
     });
   }, [navigate]);
 

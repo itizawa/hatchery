@@ -16,7 +16,7 @@ interface VoteControlProps {
 /**
  * up/down vote コントロール（ADR-0025 / #747）。
  * 1 つの pill コンテナ内に up・スコア・down を横並びで表示する。
- * 現在の投票状態（up/down/未投票）を色で区別する。
+ * 投票済み（up/down）は Box 背景の塗りつぶしで明示（#813）。
  * down 累積数は表示しない（score のみ）。
  */
 export const VoteControl = ({
@@ -25,14 +25,25 @@ export const VoteControl = ({
   currentVote = null,
   disabled = false,
 }: VoteControlProps): ReactElement => {
+  const voted = currentVote ?? "none";
+  const isVoted = currentVote !== null;
+
   return (
     <Box
+      data-voted={voted}
       sx={{
         display: "inline-flex",
         alignItems: "center",
         height: 32,
         borderRadius: "999px",
         overflow: "hidden",
+        bgcolor:
+          currentVote === "up"
+            ? "primary.main"
+            : currentVote === "down"
+              ? "error.main"
+              : "transparent",
+        color: isVoted ? "primary.contrastText" : "inherit",
       }}
     >
       <Tooltip title="高評価">
@@ -44,11 +55,14 @@ export const VoteControl = ({
             disabled={disabled}
             size="small"
             sx={{
-              color: currentVote === "up" ? "primary.main" : "action.active",
+              color: isVoted ? "inherit" : currentVote === "up" ? "primary.main" : "action.active",
               height: 32,
               width: 32,
               borderRadius: "50%",
-              "&:hover": { color: "primary.main", bgcolor: "action.hover" },
+              "&:hover": {
+                color: isVoted ? "inherit" : "primary.main",
+                bgcolor: isVoted ? "rgba(255,255,255,0.15)" : "action.hover",
+              },
             }}
           >
             <ArrowUpward fontSize="small" />
@@ -71,11 +85,14 @@ export const VoteControl = ({
             disabled={disabled}
             size="small"
             sx={{
-              color: currentVote === "down" ? "error.main" : "action.active",
+              color: isVoted ? "inherit" : currentVote === "down" ? "error.main" : "action.active",
               height: 32,
               width: 32,
               borderRadius: "50%",
-              "&:hover": { color: "error.main", bgcolor: "action.hover" },
+              "&:hover": {
+                color: isVoted ? "inherit" : "error.main",
+                bgcolor: isVoted ? "rgba(255,255,255,0.15)" : "action.hover",
+              },
             }}
           >
             <ArrowDownward fontSize="small" />

@@ -138,6 +138,7 @@ function renderCommentTree({
   onVote,
   commentRef,
   voteDisabled,
+  postId,
 }: {
   nodes: CommentTreeNode[];
   commentMap: Map<string, Comment>;
@@ -145,6 +146,7 @@ function renderCommentTree({
   onVote: (commentId: string, direction: VoteDirection) => void;
   commentRef: (commentId: string) => (el: HTMLElement | null) => void;
   voteDisabled?: boolean;
+  postId: string;
 }): ReactElement[] {
   return nodes.flatMap((node) => {
     const comment = commentMap.get(node.id);
@@ -152,7 +154,7 @@ function renderCommentTree({
 
     const childElements =
       node.children.length > 0
-        ? renderCommentTree({ nodes: node.children, commentMap, onVote, commentRef, voteDisabled })
+        ? renderCommentTree({ nodes: node.children, commentMap, onVote, commentRef, voteDisabled, postId })
         : null;
 
     return [
@@ -163,6 +165,7 @@ function renderCommentTree({
           voteDisabled={voteDisabled}
           depth={node.depth}
           hasChildren={node.children.length > 0}
+          postId={postId}
           children={childElements && childElements.length > 0 ? <>{childElements}</> : null}
         />
       </div>,
@@ -257,6 +260,7 @@ export const PostThreadScene = (): ReactElement => {
                 onVote: (commentId, direction) => voteComment({ commentId, direction }),
                 commentRef,
                 voteDisabled: isVotingComment,
+                postId: post.id,
               })}
             </Box>
           )}

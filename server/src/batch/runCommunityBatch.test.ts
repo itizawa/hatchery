@@ -1092,3 +1092,110 @@ describe("runCommunityBatch トークン使用量記録 (#663)", () => {
     expect(tokenUsageLogRepository.create).not.toHaveBeenCalled();
   });
 });
+
+describe("runCommunityBatch: 外部フィード取り込み（#491 / ADR-0035）", () => {
+  const botWorkers: WorkerRecord[] = [
+    { id: "haru", displayName: "haru", role: null, personality: null, verbosity: null, isBot: true, createdAt: new Date() },
+  ];
+
+  const communityWithFeed: CommunityRecord = {
+    id: "community-zenn",
+    slug: "zenn-fan",
+    name: "Zenn 感想部",
+    description: "Zenn 記事の感想を語り合うコミュニティ。",
+    generationInstruction: null,
+    synopsis: null,
+    lastSlotKey: null,
+    iconUrl: null,
+    coverUrl: null,
+    feedUrl: "https://zenn.dev/feed",
+    createdAt: new Date("2026-01-01"),
+  };
+
+  const communityWithoutFeed: CommunityRecord = {
+    id: "community-no-feed",
+    slug: "no-feed",
+    name: "フィードなし",
+    description: "フィード URL が設定されていないコミュニティ。",
+    generationInstruction: null,
+    synopsis: null,
+    lastSlotKey: null,
+    iconUrl: null,
+    coverUrl: null,
+    feedUrl: null,
+    createdAt: new Date("2026-01-02"),
+  };
+
+  const validOutput = JSON.stringify({
+    topic: "Zenn 記事の話題",
+    posts: [
+      {
+        id: "p1",
+        author: "haru",
+        title: "TypeScript について",
+        text: "型が便利",
+        comments: [],
+      },
+    ],
+    replies: [],
+  });
+
+  function buildFeedDeps(community: CommunityRecord) {
+    const communityRepo = createInMemoryCommunityRepository([community]);
+    const postRepo = createInMemoryPostRepository();
+    const commentRepo = createInMemoryCommentRepository();
+    const workerCommunityRepo = createInMemoryWorkerCommunityRepository({ workers: [], links: [] });
+    const botWorkerProvider = (): Promise<readonly WorkerRecord[]> => Promise.resolve(botWorkers);
+    return {
+      communityRepo,
+      postRepo,
+      commentRepo,
+      workerCommunityRepo,
+      botWorkerProvider,
+      anthropicApiKey: "test-key",
+      rng: () => 0,
+    };
+  }
+
+  it("feedUrl が設定された community では feedFetcher が呼ばれる", async () => {
+    const feedFetcher = vi.fn().mockResolvedValue([
+      { title: "TypeScript 記事", url: "https://zenn.dev/ts", summary: "TS の話", author: "yamada" },
+    ]);
+    const generate = vi.fn().mockResolvedValue({ text: validOutput });
+    const deps = buildFeedDeps(communityWithFeed);
+
+    await runCommunityBatch({ ...deps, generate, feedFetcher });
+
+    expect(feedFetcher).toHaveBeenCalledWith("https://zenn.dev/feed");
+  });
+
+  it("feedUrl が設定されていない community では feedFetcher が呼ばれない", async () => {
+    const feedFetcher = vi.fn().mockResolvedValue([]);
+    const generate = vi.fn().mockResolvedValue({ text: validOutput });
+    const deps = buildFeedDeps(communityWithoutFeed);
+
+    await runCommunityBatch({ ...deps, generate, feedFetcher });
+
+    expect(feedFetcher).not.toHaveBeenCalled();
+  });
+
+  it("feedFetcher が空配列を返した場合はフォールバックして通常生成する", async () => {
+    const feedFetcher = vi.fn().mockResolvedValue([]);
+    const generate = vi.fn().mockResolvedValue({ text: validOutput });
+    const deps = buildFeedDeps(communityWithFeed);
+
+    await runCommunityBatch({ ...deps, generate, feedFetcher });
+
+    expect(generate).toHaveBeenCalledOnce();
+  });
+
+  it("feedFetcher が rejected した場合でもフォールバックして通常生成する", async () => {
+    const feedFetcher = vi.fn().mockRejectedValue(new Error("network error"));
+    const generate = vi.fn().mockResolvedValue({ text: validOutput });
+    const deps = buildFeedDeps(communityWithFeed);
+
+    await runCommunityBatch({ ...deps, generate, feedFetcher });
+
+    expect(generate).toHaveBeenCalledOnce();
+  });
+});

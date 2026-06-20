@@ -32,9 +32,6 @@ export const VoteControl = ({
         alignItems: "center",
         height: 32,
         borderRadius: "999px",
-        border: "1px solid",
-        borderColor: "divider",
-        bgcolor: "background.paper",
         overflow: "hidden",
       }}
     >

@@ -169,7 +169,7 @@ export const PostCard = ({
           variant="outlined"
           clickable={!!onCommentClick}
           onClick={onCommentClick}
-          sx={{ height: 32, padding:"0px 6px 0px 8px", bgcolor: "background.paper", borderColor: "divider", color: "text.secondary" }}
+          sx={{ height: 32, padding:"0px 6px 0px 8px",border:"none", color: "text.secondary" }}
         />
         {postUrl && <ShareButton shareUrl={postUrl} shareTitle={post.title} />}
       </Box>

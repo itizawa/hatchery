@@ -1,5 +1,5 @@
-import {ArrowDownward} from "@mui/icons-material";
-import {ArrowUpward} from "@mui/icons-material";
+import ArrowDownward from "@mui/icons-material/ArrowDownward";
+import ArrowUpward from "@mui/icons-material/ArrowUpward";
 import { Box, IconButton, Typography } from "./uiParts";
 import type { ReactElement } from "react";
 import type { VoteDirection } from "@hatchery/common";

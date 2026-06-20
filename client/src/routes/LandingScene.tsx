@@ -52,7 +52,7 @@ export const LandingScene = (): ReactElement => {
             component={RouterLink}
             // #454: ページ遷移せず ?login=1 を付与してログインモーダルを開く（背景の LP を保持）。
             to="."
-            search={((prev: Record<string, unknown>) => ({ ...prev, login: true })) as never}
+            search={((prev: Record<string, unknown>) => ({ ...prev, login: 1 })) as never}
             variant="contained"
             size="large"
             sx={{ px: 5 }}

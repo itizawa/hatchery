@@ -64,7 +64,7 @@ flowchart TD
 | `priority/low` | 低 | 1 |
 
 - `priority/*` を**付けない Issue は `medium`（重み 2）扱い**＝未設定でも `low` に埋もれない。
-- `/df`（引数なし）の着手順は **マイルストーン昇順 → 優先度の重み降順 → フェーズ進捗（PR あり ＞ PR なし）→ `createdAt` 古い順（FIFO）** の順に評価する（`.claude/commands/df.md` STEP 1-B が正本）。
+- `/df`（引数なし）の自動選択は **直近マイルストーンのみを対象**とする。直近マイルストーンとは open Issue に付いた `milestone/*` ラベルのうちアルファベット昇順で最小のもの（例: `milestone/v1.0.0` が `milestone/v1.1.0` より優先）。直近マイルストーン以外の Issue は自動選択の対象外。直近マイルストーンに AI 実行可能な Issue が無い場合は他マイルストーンへフォールバックせずスキップして終了する。同一マイルストーン内の着手順は **優先度の重み降順 → フェーズ進捗（PR あり ＞ PR なし）→ `createdAt` 古い順（FIFO）**（`.claude/commands/df.md` STEP 1-B が正本）。
 
 ## 4. フェーズ詳細
 

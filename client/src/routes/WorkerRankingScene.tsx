@@ -38,10 +38,7 @@ const RankingRow = ({
       </Typography>
     </TableCell>
     <TableCell align="right">{item.view_count.toLocaleString()}</TableCell>
-    <TableCell
-      align="right"
-      sx={{ color: item.vote_net_score >= 0 ? "success.main" : "error.main" }}
-    >
+    <TableCell align="right" sx={{ color: "text.secondary" }}>
       {item.vote_net_score >= 0 ? `+${item.vote_net_score}` : `${item.vote_net_score}`}
     </TableCell>
   </TableRow>
@@ -75,7 +72,7 @@ const RankingContent = (): ReactElement => {
             <TableCell align="center">順位</TableCell>
             <TableCell>ワーカー</TableCell>
             <TableCell align="right">閲覧数（7日）</TableCell>
-            <TableCell align="right">Vote スコア（7日）</TableCell>
+            <TableCell align="right">評価（7日）</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -105,7 +102,7 @@ export const WorkerRankingScene = (): ReactElement => {
         </Typography>
       </Box>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        直近 7 日間の閲覧数と純 Vote スコア（up − down）でワーカーをランク付けしています。
+        直近 7 日間の閲覧数と賛成から反対を引いた評価スコアでワーカーをランク付けしています。
       </Typography>
       <RankingContent />
     </Box>

@@ -13,8 +13,9 @@ import { LandingScene } from "./LandingScene";
 function renderLandingScene(): ReactElement {
   const rootRoute = createRootRoute({
     component: LandingScene,
-    validateSearch: (search: Record<string, unknown>): { login?: boolean } =>
-      search.login === true || search.login === "1" ? { login: true } : {},
+    // #800: 本番の validateRootSearch に合わせて login: 1 を正規形とする。
+    validateSearch: (search: Record<string, unknown>): { login?: number } =>
+      search.login === true || search.login === 1 || search.login === "1" || search.login === "true" ? { login: 1 } : {},
   });
   const router = createRouter({
     routeTree: rootRoute.addChildren([]),
@@ -57,6 +58,7 @@ describe("LandingScene", () => {
   it("ログインモーダルを開く CTA リンク（href に login=1 を含む）を表示する", async () => {
     render(renderLandingScene());
     const cta = await screen.findByRole("link", { name: /ログイン|はじめる/ });
-    expect(cta.getAttribute("href")).toMatch(/login=(1|true)/);
+    // #800: URL は必ず ?login=1（数値）であることを確認する。
+    expect(cta.getAttribute("href")).toMatch(/login=1/);
   });
 });

@@ -28,7 +28,7 @@ import { useLoginModal } from "./hooks/useLoginModal.js";
 
 /** root の search param。`login=1`（モーダル開）を全ルートで共有する（#454）。 */
 interface RootSearch {
-  login?: boolean;
+  login?: boolean | number;
 }
 
 /**
@@ -39,7 +39,10 @@ interface RootSearch {
 function validateRootSearch(search: Record<string, unknown>): RootSearch {
   const raw = search.login;
   const login = raw === true || raw === 1 || raw === "1" || raw === "true";
-  return login ? { login: true } : {};
+  // #800: login=1（数値）を正規形とし、URL が /?login=true にならないようにする。
+  // TanStack Router は validateSearch の戻り値を再シリアライズするため、ここで 1 を返すことで
+  // 常に /?login=1 が URL に現れる（e2e 期待値との整合）。
+  return login ? { login: 1 } : {};
 }
 
 // ルートコンポーネントを lazyRouteComponent で動的 import（コード分割）する。
@@ -81,9 +84,9 @@ async function requireAuth(): Promise<void> {
   try {
     user = await fetchMe();
   } catch {
-    throw redirect({ to: "/", search: { login: true } });
+    throw redirect({ to: "/", search: { login: 1 } });
   }
-  if (!user) throw redirect({ to: "/", search: { login: true } });
+  if (!user) throw redirect({ to: "/", search: { login: 1 } });
 }
 
 /**
@@ -95,9 +98,9 @@ async function requireAdminRoute(): Promise<void> {
   try {
     user = await fetchMe();
   } catch {
-    throw redirect({ to: "/", search: { login: true } });
+    throw redirect({ to: "/", search: { login: 1 } });
   }
-  if (!user) throw redirect({ to: "/", search: { login: true } });
+  if (!user) throw redirect({ to: "/", search: { login: 1 } });
   if (!isAdmin(user)) throw redirect({ to: "/" });
 }
 
@@ -206,7 +209,7 @@ const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/login",
   beforeLoad: () => {
-    throw redirect({ to: "/", search: { login: true } });
+    throw redirect({ to: "/", search: { login: 1 } });
   },
 });
 

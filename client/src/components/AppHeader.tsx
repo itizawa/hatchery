@@ -72,7 +72,7 @@ const AppHeaderAuthSection = (): ReactElement => {
         // #454: 現在パスを保ったまま ?login=1 を付与してログインモーダルを開く。
         // href も /?login=1 になりリロード・新規タブでも復元可能（middle-click 互換）。
         to="."
-        search={((prev: Record<string, unknown>) => ({ ...prev, login: true })) as never}
+        search={((prev: Record<string, unknown>) => ({ ...prev, login: 1 })) as never}
         onClick={handleLoginClick}
         underline="none"
         sx={{

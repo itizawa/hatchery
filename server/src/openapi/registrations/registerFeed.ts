@@ -39,6 +39,11 @@ export function registerFeed(registry: OpenAPIRegistry, ctx: RegistryContext): v
           .enum(["latest", "popular"])
           .default("latest")
           .openapi({ description: "並び順（latest=新着順 / popular=vote 数降順、既定 latest）" }),
+        sessionId: z
+          .string()
+          .uuid()
+          .optional()
+          .openapi({ description: "セッション ID（付与すると各 post に my_vote を付与・#831）" }),
       }),
     },
     responses: {

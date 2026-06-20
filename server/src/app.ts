@@ -234,9 +234,10 @@ export function createApp(deps: AppDeps): Express {
       subscriptionRepo,
       deps.workerRepository,
       commentRepo,
+      voteRepo,
     ),
   );
-  app.use("/api/feed", publicCache, createFeedRouter(postRepo, deps.workerRepository, commentRepo));
+  app.use("/api/feed", publicCache, createFeedRouter(postRepo, deps.workerRepository, commentRepo, voteRepo));
   app.use("/api/ogp", publicCache, createOgpRouter());
   app.use(
     "/api",

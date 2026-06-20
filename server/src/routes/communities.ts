@@ -9,6 +9,7 @@ import type { CommentRepository } from "../persistence/commentRepository.js";
 import type { CommunityRepository } from "../persistence/communityRepository.js";
 import type { PostRepository } from "../persistence/postRepository.js";
 import type { SubscriptionRepository } from "../persistence/subscriptionRepository.js";
+import type { VoteRepository } from "../persistence/voteRepository.js";
 import type { WorkerRepository } from "../persistence/workerRepository.js";
 import { attachAuthorWorker } from "./authorWorker.js";
 import { attachCommentCount } from "./commentCount.js";
@@ -20,6 +21,7 @@ const RECENT_WORKERS_LIMIT = 10;
  * /api/communities ルータ。公共コミュニティの読み取り API と購読 API。ADR-0019 / ADR-0020。
  * - 一覧・フィードは認証不要（公共コミュニティ）
  * - 購読・購読解除は認証必須（up vote と購読のみ・ADR-0020）
+ * - #831: community フィードでも sessionId 付きのとき my_vote を付与する。
  */
 // eslint-disable-next-line max-params
 export function createCommunitiesRouter(
@@ -28,6 +30,7 @@ export function createCommunitiesRouter(
   subscriptionRepo: SubscriptionRepository,
   workerRepo: WorkerRepository,
   commentRepo: CommentRepository,
+  voteRepo: VoteRepository,
 ): Router {
   const router = Router();
 
@@ -47,6 +50,9 @@ export function createCommunitiesRouter(
   // eslint-disable-next-line max-params
   router.get("/:slug/feed", (req, res, next) => {
     const { slug } = req.params as { slug: string };
+    // sessionId は任意クエリパラメータ。付与されていれば my_vote を付与する（#831）。
+    const rawSessionId = req.query["sessionId"];
+    const sessionId = typeof rawSessionId === "string" && rawSessionId.length > 0 ? rawSessionId : null;
     // reveal フィルタ（#556）: createdAt <= now のもののみ公開する。
     const now = new Date();
     communityRepo
@@ -60,8 +66,19 @@ export function createCommunitiesRouter(
       .then((posts) => attachAuthorWorker(posts, workerRepo))
       // 各 post にコメント件数を付与する（N+1 回避・#500）。
       .then((posts) => attachCommentCount(posts, commentRepo))
-      // OpenAPI 契約（snake_case）へ整形して返す（#499）。
-      .then((posts) => res.status(200).json(posts.map(toPostResponse)))
+      .then(async (posts) => {
+        if (sessionId) {
+          const voteMap = await voteRepo.findVotesBySessionAndTargets({
+            sessionId,
+            targetType: "post",
+            targetIds: posts.map((p) => p.id),
+          });
+          res.status(200).json(posts.map((p) => toPostResponse({ ...p, myVote: voteMap.get(p.id) ?? null })));
+        } else {
+          // OpenAPI 契約（snake_case）へ整形して返す（#499）。
+          res.status(200).json(posts.map(toPostResponse));
+        }
+      })
       .catch(next);
   });
 

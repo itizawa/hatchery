@@ -79,17 +79,34 @@ export default tseslint.config(
   },
   // 補助: パッケージ名（@hatchery/*）経由の依存方向違反をワークスペースごとに塞ぐ。
   // MUI 腐敗防止層: @mui/material への直接 import も禁止し uiParts 経由を強制する（Issue #178）。
+  // アイコン規約: @mui/icons-material は Rounded バリアントのみ許可（Issue #808）。
   {
     files: ["client/**/*.{ts,tsx}"],
     rules: {
       "no-restricted-imports": [
         "error",
         {
+          paths: [
+            // @mui/material 直接 import 禁止（uiParts 経由を強制）
+            { name: "@mui/material", message: "MUI は uiParts 経由で使う（Issue #178）。" },
+            // @mui/icons-material barrel import 禁止（Rounded 個別 import を強制）
+            {
+              name: "@mui/icons-material",
+              message:
+                "barrel import 禁止。Rounded バリアントを個別 import する（例: @mui/icons-material/HomeRounded）。",
+            },
+          ],
           patterns: [
-            "@hatchery/server",
-            "@hatchery/server/*",
-            "@mui/material",
-            "@mui/material/*",
+            // @hatchery/server 依存禁止
+            { group: ["@hatchery/server", "@hatchery/server/*"], message: "client → server は禁止。" },
+            // @mui/material/* 直接 import 禁止（uiParts 経由を強制）
+            { group: ["@mui/material/*"], message: "MUI は uiParts 経由で使う（Issue #178）。" },
+            // Rounded 以外のアイコン import 禁止。例外: X（ブランドアイコン、Rounded バリアントなし）
+            {
+              regex: "^@mui/icons-material/(?!.*Rounded$|X$)",
+              message:
+                "アイコンは Rounded バリアントを使う（例: @mui/icons-material/HomeRounded）。例外: Rounded バリアントが無いブランドアイコン（X 等）はそのまま。",
+            },
           ],
         },
       ],

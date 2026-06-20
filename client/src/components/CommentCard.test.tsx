@@ -216,11 +216,23 @@ describe("CommentCard", () => {
 
     it("共有ボタンの shareUrl が ${origin}/posts/<postId>#comment-<commentId> 形式になる", async () => {
       // jsdom のデフォルト origin は "http://localhost"
+      // navigator.clipboard.writeText をスパイして実際にコピーされる URL を検証する
+      const writeText = vi.fn().mockResolvedValue(undefined);
+      Object.defineProperty(navigator, "clipboard", {
+        value: { writeText },
+        writable: true,
+      });
+
       render(<CommentCard comment={mockComment} onVote={vi.fn()} postId="post-1" />);
       const shareBtn = screen.getByRole("button", { name: /共有/i });
       await userEvent.click(shareBtn);
-      // メニューが開く → "URL をコピー" が表示されていればShareButtonが正しくレンダリングされている
-      expect(screen.getByText("URL をコピー")).toBeInTheDocument();
+
+      const copyItem = screen.getByText("URL をコピー");
+      await userEvent.click(copyItem);
+
+      expect(writeText).toHaveBeenCalledWith(
+        `${window.location.origin}/posts/post-1#comment-${mockComment.id}`,
+      );
     });
   });
 });

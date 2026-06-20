@@ -1,8 +1,6 @@
-import { Box, Stack, Typography, IconButton, Tooltip } from "../components/uiParts";
+import { Box, Stack, Typography } from "../components/uiParts";
 import { Link as RouterLink, useParams } from "@tanstack/react-router";
 import type { ReactElement } from "react";
-import ViewStreamIcon from "@mui/icons-material/ViewStream";
-import ViewHeadlineIcon from "@mui/icons-material/ViewHeadline";
 
 import {
   useCommunityFeed,
@@ -25,7 +23,6 @@ import { SubscribeButton } from "../components/SubscribeButton.js";
 import { SubscriptionStatus } from "../components/SubscriptionStatus.js";
 import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
 import { useGuestVoteGuard } from "../hooks/useGuestVoteGuard.js";
-import { useViewMode } from "../hooks/useViewMode.js";
 import type { Community } from "../api/communities.js";
 
 /**
@@ -58,7 +55,6 @@ const CommunityContent = ({
   const { mutate: unsubscribe, isPending: isUnsubscribing } = useUnsubscribe(communitySlug);
   const { mutate: votePost, isPending: isVotingPost } = useVotePost(communitySlug);
   const { guardVote, promptOpen, closePrompt } = useGuestVoteGuard();
-  const { viewMode, toggleViewMode } = useViewMode();
 
   const isSubscriptionPending = isSubscribing || isUnsubscribing;
 
@@ -101,13 +97,6 @@ const CommunityContent = ({
                 </Box>
               ) : (
                 <Box>
-                  <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 1 }}>
-                    <Tooltip title={viewMode === "card" ? "コンパクト表示に切り替え" : "カード表示に切り替え"}>
-                      <IconButton onClick={toggleViewMode} size="small" aria-label="表示モードを切り替え">
-                        {viewMode === "card" ? <ViewHeadlineIcon /> : <ViewStreamIcon />}
-                      </IconButton>
-                    </Tooltip>
-                  </Box>
                   {posts.map((post) => (
                     <RouterLink
                       key={post.id}
@@ -123,7 +112,6 @@ const CommunityContent = ({
                         voteDisabled={isVotingPost}
                         voteStopPropagation
                         truncateText
-                        compact={viewMode === "compact"}
                       />
                     </RouterLink>
                   ))}
@@ -190,7 +178,6 @@ const CommunityContent = ({
  * useRecentWorkers はサイドバーの局所 QueryBoundary に委譲する。
  * #481: ゲストの vote 押下は guardVote で握りつぶさずログイン誘導する。
  * #524: 存在しない slug のとき「コミュニティが見つかりません」を表示する。
- * #561: カード/コンパクト切り替えトグル追加。
  * #748: vote 連打防止（isPending → voteDisabled）。
  */
 export const CommunityScene = (): ReactElement => {

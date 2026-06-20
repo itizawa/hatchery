@@ -668,6 +668,11 @@
             "type": "integer",
             "minimum": 0,
             "default": 0
+          },
+          "up_count": {
+            "type": "integer",
+            "minimum": 0,
+            "default": 0
           }
         },
         "required": [
@@ -755,6 +760,11 @@
               "display_name",
               "image_url"
             ]
+          },
+          "up_count": {
+            "type": "integer",
+            "minimum": 0,
+            "default": 0
           }
         },
         "required": [

@@ -359,3 +359,5 @@ test.todo("UC-HOME-19: 認証済みで投稿が 0 件のときはようこそセ
 test.todo("UC-HOME-20: vote ミューテーション進行中はフィードの vote ボタンが disabled になる（#748）");
 
 test.todo("UC-HOME-21: vote 済みの投稿は vote ウィジェットが塗りつぶし表示になる（#813）");
+
+test.todo("UC-HOME-22: vote ウィジェットに表示される数字は up vote の累計件数である（#814）");

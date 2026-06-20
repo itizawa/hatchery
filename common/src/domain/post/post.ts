@@ -30,6 +30,8 @@ export type VoteRequest = z.infer<typeof VoteRequestSchema>;
  *   server が author（id か displayName）から解決して付与する。生成出力・永続化には含めない。
  * - comment_count はそのスレッドのコメント件数（#500）。読み取り API のレスポンスで server が
  *   集計して付与する内部集計値（新規ユーザー入力ではないため .max() 対象外）。省略時 0。
+ * - up_count は up vote の累計件数（#814）。vote トランザクション内で増減する内部集計値
+ *   （新規ユーザー入力ではないため .max() 対象外）。省略時 0。
  */
 export const PostSchema = z.object({
   id: z.string().min(1),
@@ -43,6 +45,8 @@ export const PostSchema = z.object({
   created_at: z.date(),
   author_worker: AuthorWorkerSchema.optional(),
   comment_count: z.number().int().nonnegative().default(0),
+  /** up vote の累計件数（#814）。内部集計値のため .max() 対象外。省略時 0。 */
+  up_count: z.number().int().nonnegative().default(0),
 });
 
 export type Post = z.infer<typeof PostSchema>;

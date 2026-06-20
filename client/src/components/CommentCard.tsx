@@ -27,6 +27,8 @@ interface CommentCardProps {
   depth?: number;
   /** 子コメント（再帰表示用）。 */
   children?: ReactElement | null;
+  /** 子コメントを持つかどうか。true のときアバター下に縦線を描画する（#796）。 */
+  hasChildren?: boolean;
 }
 
 /**
@@ -41,6 +43,7 @@ export const CommentCard = ({
   voteDisabled = false,
   depth = 0,
   children = null,
+  hasChildren = false,
 }: CommentCardProps): ReactElement => {
   const clampedDepth = Math.min(depth, MAX_COMMENT_DEPTH);
   const indentLeft = clampedDepth * INDENT_PER_DEPTH;
@@ -86,6 +89,23 @@ export const CommentCard = ({
             borderBottom: "2px solid",
             borderColor: CONNECTOR_COLOR,
             borderRadius: "0 0 0 4px",
+          }}
+        />
+      )}
+
+      {/* アバター下コネクター（#796）: 子コメントを持つときアバター下から底辺まで縦線を描画する。 */}
+      {hasChildren && (
+        <Box
+          data-testid="comment-avatar-connector"
+          aria-hidden="true"
+          style={{ left: `${clampedDepth * INDENT_PER_DEPTH + 8}px` }}
+          sx={{
+            position: "absolute",
+            top: "30px",
+            bottom: 0,
+            width: "2px",
+            bgcolor: CONNECTOR_COLOR,
+            borderRadius: "1px",
           }}
         />
       )}

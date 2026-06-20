@@ -148,6 +148,7 @@ function renderCommentTree({
           onVote={(direction: VoteDirection) => onVote(comment.id, direction)}
           voteDisabled={voteDisabled}
           depth={node.depth}
+          hasChildren={node.children.length > 0}
           children={childElements && childElements.length > 0 ? <>{childElements}</> : null}
         />
       </div>,

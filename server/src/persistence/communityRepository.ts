@@ -19,6 +19,8 @@ export interface CommunityRecord {
   coverUrl: string | null;
   /** 非公開の生成プロンプト指示（#488）。admin のみが設定・閲覧できる。公開 API には返さない。 */
   generationInstruction: string | null;
+  /** 外部フィード URL（#491 / ADR-0035）。定時バッチ時にプロンプトへ最新記事を注入する。admin のみが設定・閲覧できる。 */
+  feedUrl: string | null;
   createdAt: Date;
 }
 
@@ -30,7 +32,7 @@ export interface CreateCommunityRecordInput {
   generationInstruction?: string | null;
 }
 
-/** コミュニティ更新の入力型（#310 / #457 / #488）。slug は不変。 */
+/** コミュニティ更新の入力型（#310 / #457 / #488 / #491）。slug は不変。 */
 export interface UpdateCommunityRecordInput {
   name?: string;
   description?: string;
@@ -40,6 +42,8 @@ export interface UpdateCommunityRecordInput {
   coverUrl?: string;
   /** 非公開の生成プロンプト指示の更新（#488）。 */
   generationInstruction?: string | null;
+  /** 外部フィード URL の更新（#491）。null でクリア。 */
+  feedUrl?: string | null;
 }
 
 export interface CommunityRepository {
@@ -93,6 +97,7 @@ export function createInMemoryCommunityRepository(
         iconUrl: null,
         coverUrl: null,
         generationInstruction: input.generationInstruction ?? null,
+        feedUrl: null,
         createdAt: new Date(),
       };
       records.push(record);
@@ -109,6 +114,7 @@ export function createInMemoryCommunityRepository(
       if (input.coverUrl !== undefined) record.coverUrl = input.coverUrl;
       if (input.generationInstruction !== undefined)
         record.generationInstruction = input.generationInstruction;
+      if (input.feedUrl !== undefined) record.feedUrl = input.feedUrl;
       return Promise.resolve(cloneRecord(record));
     },
   };

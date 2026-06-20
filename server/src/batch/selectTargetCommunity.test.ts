@@ -13,6 +13,7 @@ const makeCommunity = (id: string): CommunityRecord => ({
   name: id,
   description: `${id} description`,
   generationInstruction: null,
+  feedUrl: null,
   synopsis: null,
   lastSlotKey: null,
   iconUrl: null,

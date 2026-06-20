@@ -18,6 +18,9 @@ export const COMMUNITY_GENERATION_INSTRUCTION_MAX_LENGTH = 2000;
 /** Community のアイコン / カバー画像 URL の最大文字数（#457・#91。worker と同値）。 */
 export const COMMUNITY_IMAGE_URL_MAX_LENGTH = 500;
 
+/** Community の feedUrl（外部フィード URL）の最大文字数（#491・#91）。 */
+export const COMMUNITY_FEED_URL_MAX_LENGTH = 500;
+
 /**
  * slug の形式バリデーション（#310）。
  * - 小文字英数字で始まり終わる
@@ -67,9 +70,9 @@ export const CommunitySchema = z.object({
 export type Community = z.infer<typeof CommunitySchema>;
 
 /**
- * admin 向けコミュニティスキーマ（#488）。
- * 公開スキーマを extends し `generationInstruction`（非公開・生成プロンプト指示）を追加する。
- * admin API のレスポンスのみで使用し、公開エンドポイントには絶対に含めない。
+ * admin 向けコミュニティスキーマ（#488 / #491）。
+ * 公開スキーマを extends し `generationInstruction`（非公開・生成プロンプト指示）と
+ * `feedUrl`（外部フィード URL）を追加する。admin API のレスポンスのみで使用し、公開エンドポイントには絶対に含めない。
  */
 export const AdminCommunitySchema = CommunitySchema.extend({
   generationInstruction: z
@@ -77,6 +80,7 @@ export const AdminCommunitySchema = CommunitySchema.extend({
     .max(COMMUNITY_GENERATION_INSTRUCTION_MAX_LENGTH)
     .nullable()
     .optional(),
+  feedUrl: z.string().url().max(COMMUNITY_FEED_URL_MAX_LENGTH).nullable().optional(),
 });
 
 export type AdminCommunity = z.infer<typeof AdminCommunitySchema>;
@@ -112,6 +116,7 @@ export const UpdateCommunitySchema = z.object({
     .max(COMMUNITY_GENERATION_INSTRUCTION_MAX_LENGTH)
     .nullable()
     .optional(),
+  feedUrl: z.string().url().max(COMMUNITY_FEED_URL_MAX_LENGTH).nullable().optional(),
 });
 
 export type UpdateCommunityInput = z.infer<typeof UpdateCommunitySchema>;

@@ -14,6 +14,7 @@ const community: CommunityRecord = {
   name: "Tech",
   description: "Tech discussions",
   generationInstruction: null,
+  feedUrl: null,
   synopsis: null,
   lastSlotKey: null,
   iconUrl: null,

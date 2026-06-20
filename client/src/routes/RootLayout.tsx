@@ -10,12 +10,12 @@ import {
 } from "../components/uiParts";
 
 import { isAdmin } from "@hatchery/common";
-import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
-import DescriptionIcon from "@mui/icons-material/Description";
-import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
-import HomeIcon from "@mui/icons-material/Home";
-import PrivacyTipIcon from "@mui/icons-material/PrivacyTip";
-import TrendingUpIcon from "@mui/icons-material/TrendingUp";
+import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettingsRounded";
+import DescriptionIcon from "@mui/icons-material/DescriptionRounded";
+import EmojiEventsIcon from "@mui/icons-material/EmojiEventsRounded";
+import HomeIcon from "@mui/icons-material/HomeRounded";
+import PrivacyTipIcon from "@mui/icons-material/PrivacyTipRounded";
+import TrendingUpIcon from "@mui/icons-material/TrendingUpRounded";
 import { Link as RouterLink, Outlet, useLocation } from "@tanstack/react-router";
 import { Suspense, useEffect, useRef, useState, type ReactElement } from "react";
 

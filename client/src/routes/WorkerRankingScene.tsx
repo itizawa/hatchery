@@ -13,7 +13,7 @@ import {
   TableRow,
   Typography,
 } from "../components/uiParts";
-import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
+import EmojiEventsIcon from "@mui/icons-material/EmojiEventsRounded";
 import type { ReactElement } from "react";
 
 import { useWorkerRanking } from "../api/workers.js";

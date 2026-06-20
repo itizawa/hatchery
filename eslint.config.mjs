@@ -113,7 +113,7 @@ export default tseslint.config(
     },
   },
   // 例外: uiParts 自身は MUI を直接 import してよい（ACL 層）。theme.ts / AppRoot.tsx はテーマ基盤として許可。
-  // @hatchery/server の禁止は引き続き有効（MUI direct import のみ解除）。
+  // @hatchery/server の禁止・アイコン Rounded 規約（#808）は引き続き有効（MUI direct import のみ解除）。
   {
     files: [
       "client/src/components/uiParts/**",
@@ -121,7 +121,29 @@ export default tseslint.config(
       "client/src/AppRoot.tsx",
     ],
     rules: {
-      "no-restricted-imports": ["error", { patterns: ["@hatchery/server", "@hatchery/server/*"] }],
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            // @mui/icons-material barrel import 禁止（Rounded 個別 import を強制）
+            {
+              name: "@mui/icons-material",
+              message:
+                "barrel import 禁止。Rounded バリアントを個別 import する（例: @mui/icons-material/HomeRounded）。",
+            },
+          ],
+          patterns: [
+            // @hatchery/server 依存禁止
+            { group: ["@hatchery/server", "@hatchery/server/*"], message: "client → server は禁止。" },
+            // Rounded 以外のアイコン import 禁止。例外: X（ブランドアイコン、Rounded バリアントなし）
+            {
+              regex: "^@mui/icons-material/(?!.*Rounded$|X$)",
+              message:
+                "アイコンは Rounded バリアントを使う（例: @mui/icons-material/HomeRounded）。例外: Rounded バリアントが無いブランドアイコン（X 等）はそのまま。",
+            },
+          ],
+        },
+      ],
     },
   },
   {

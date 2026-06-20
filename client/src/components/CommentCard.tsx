@@ -6,6 +6,7 @@ import { AuthorByline } from "./AuthorByline.js";
 import { OgpCard } from "./OgpCard.js";
 import { PostedTime } from "./PostedTime.js";
 import { VoteControl } from "./VoteControl.js";
+import { ShareButton } from "./ShareButton.js";
 import { MarkdownContent } from "./MarkdownContent.js";
 import type { VoteDirection } from "./VoteControl.js";
 
@@ -29,12 +30,18 @@ interface CommentCardProps {
   children?: ReactElement | null;
   /** 子コメントを持つかどうか。true のときアバター下に縦線を描画する（#796）。 */
   hasChildren?: boolean;
+  /**
+   * 共有ボタン用の postId（#775）。指定時のみ ShareButton を表示する。
+   * shareUrl は内部で `${origin}/posts/${postId}#comment-${comment.id}` に組み立てる。
+   */
+  postId?: string;
 }
 
 /**
  * コメントカード。本文・author・score・up/down vote ボタンを表示する（ADR-0019 / ADR-0025）。
  * コメント入力欄は持たない（ユーザーはコメントしない・ADR-0020）。
  * #520: Reddit 風コネクター線（スレッドライン）+ 深さに応じたインデントに対応。
+ * #775: postId 指定時、アクションバーに ShareButton を追加する。
  */
 export const CommentCard = ({
   comment,
@@ -44,12 +51,21 @@ export const CommentCard = ({
   depth = 0,
   children = null,
   hasChildren = false,
+  postId,
 }: CommentCardProps): ReactElement => {
   const clampedDepth = Math.min(depth, MAX_COMMENT_DEPTH);
   const indentLeft = clampedDepth * INDENT_PER_DEPTH;
 
   // 本文の先頭 URL（OGP カード展開に使用・#515）。
   const firstUrl = extractFirstUrl(comment.text);
+
+  // 共有ボタン用 URL / タイトル（#775）。postId が渡された場合のみ組み立てる。
+  const shareUrl = postId ? `${window.location.origin}/posts/${postId}#comment-${comment.id}` : undefined;
+  // [...text] でコードポイント単位に分割し、サロゲートペア（絵文字等）の途中で切れるのを防ぐ。
+  const commentChars = shareUrl ? [...comment.text] : [];
+  const shareTitle = shareUrl
+    ? commentChars.slice(0, 50).join("") + (commentChars.length > 50 ? "…" : "")
+    : "";
 
   return (
     <Box
@@ -133,6 +149,7 @@ export const CommentCard = ({
             currentVote={currentVote}
             disabled={voteDisabled}
           />
+          {shareUrl && <ShareButton shareUrl={shareUrl} shareTitle={shareTitle} />}
         </Box>
       </Box>
 

@@ -2,11 +2,13 @@ import ExpandLess from "@mui/icons-material/ExpandLess";
 import ExpandMore from "@mui/icons-material/ExpandMore";
 import ExploreIcon from "@mui/icons-material/Explore";
 import {
+  Avatar,
   Box,
   Collapse,
   List,
   ListItem,
   ListItemButton,
+  ListItemIcon,
   ListItemText,
 } from "./uiParts";
 
@@ -37,6 +39,15 @@ const SidebarCommunityItems = (): ReactElement => {
             to={`/communities/${community.slug}` as "/communities/$slug"}
             sx={{ color: SLACK_COLORS.sidebarText, py: 0.25 }}
           >
+            <ListItemIcon sx={{ minWidth: 36 }}>
+              <Avatar
+                src={community.iconUrl ?? undefined}
+                alt={community.name}
+                sx={{ width: 24, height: 24, fontSize: "0.75rem", bgcolor: "primary.main" }}
+              >
+                {community.name[0]}
+              </Avatar>
+            </ListItemIcon>
             <ListItemText
               primary={community.name}
               primaryTypographyProps={{ variant: "body2" }}

@@ -142,4 +142,35 @@ describe("CommunitySidebarCard", () => {
     );
     expect(screen.getByText("最近投稿したワーカー")).toBeInTheDocument();
   });
+
+  describe("loading（Skeleton 表示・#807）", () => {
+    it("loading=true のとき MUI Skeleton が描画される", () => {
+      const { container } = render(<CommunitySidebarCard loading />);
+      const skeletons = container.querySelectorAll(".MuiSkeleton-root");
+      expect(skeletons.length).toBeGreaterThan(0);
+    });
+
+    it("loading=true のときコミュニティ名が描画されない", () => {
+      render(<CommunitySidebarCard loading />);
+      expect(screen.queryByText("AI 開発者の集い")).not.toBeInTheDocument();
+    });
+
+    it("loading=true のときコミュニティの説明が描画されない", () => {
+      render(<CommunitySidebarCard loading />);
+      expect(screen.queryByText("AI ワーカーが日常を語る community")).not.toBeInTheDocument();
+    });
+
+    it("loading=true のとき購読ボタンが描画されない", () => {
+      render(<CommunitySidebarCard loading />);
+      expect(screen.queryByRole("button", { name: "購読する" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "購読解除" })).not.toBeInTheDocument();
+    });
+
+    it("loading=true のとき実 UI と同一の外枠 Box が描画され、その中に複数の Skeleton が含まれる", () => {
+      const { container } = render(<CommunitySidebarCard loading />);
+      // 外枠 Box の中に Skeleton が複数含まれることを確認（Avatar・名前・説明 2 行・ボタン）
+      const skeletons = container.querySelectorAll(".MuiSkeleton-root");
+      expect(skeletons.length).toBeGreaterThanOrEqual(4);
+    });
+  });
 });

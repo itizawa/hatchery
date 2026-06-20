@@ -39,15 +39,16 @@ const SidebarColumn = ({ children }: { children: ReactElement }): ReactElement =
   </Box>
 );
 
-/** サイドバーローディング中のスケルトン（右カラム）。 */
+/**
+ * サイドバーローディング中のスケルトン（右カラム）。
+ * #807: CommunitySidebarCard の loading prop を使い、実 UI と同一の外枠レイアウトで描画する。
+ * data-testid="community-sidebar-skeleton" は既存テストとの互換性のため wrapper div に付与する。
+ */
 const SidebarSkeletonColumn = (): ReactElement => (
   <SidebarColumn>
-    <Skeleton
-      data-testid="community-sidebar-skeleton"
-      variant="rectangular"
-      height={300}
-      sx={{ borderRadius: 1 }}
-    />
+    <div data-testid="community-sidebar-skeleton">
+      <CommunitySidebarCard loading />
+    </div>
   </SidebarColumn>
 );
 

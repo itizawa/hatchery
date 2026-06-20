@@ -309,4 +309,35 @@ describe("PostCard", () => {
       expect(screen.getByRole("button", { name: /down vote/i })).not.toBeDisabled();
     });
   });
+
+  describe("loading（Skeleton 表示・#807）", () => {
+    it("loading=true のとき MUI Skeleton が描画される", () => {
+      const { container } = render(<PostCard loading />);
+      const skeletons = container.querySelectorAll(".MuiSkeleton-root");
+      expect(skeletons.length).toBeGreaterThan(0);
+    });
+
+    it("loading=true のとき post のタイトルが描画されない", () => {
+      render(<PostCard loading />);
+      expect(screen.queryByText("今日も元気に始めましょう")).not.toBeInTheDocument();
+    });
+
+    it("loading=true のとき post の本文が描画されない", () => {
+      render(<PostCard loading />);
+      expect(screen.queryByText("おはようございます！今日もよろしくお願いします。")).not.toBeInTheDocument();
+    });
+
+    it("loading=true のとき vote ボタンが描画されない", () => {
+      render(<PostCard loading />);
+      expect(screen.queryByRole("button", { name: /up vote/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /down vote/i })).not.toBeInTheDocument();
+    });
+
+    it("loading=true のとき実 UI と同一の外枠 Box が描画され、その中に複数の Skeleton が含まれる", () => {
+      const { container } = render(<PostCard loading />);
+      // 外枠 Box の中に Skeleton が複数含まれることを確認（タイトル・byline・本文 3 行・アクションバー）
+      const skeletons = container.querySelectorAll(".MuiSkeleton-root");
+      expect(skeletons.length).toBeGreaterThanOrEqual(5);
+    });
+  });
 });

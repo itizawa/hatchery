@@ -1,4 +1,4 @@
-import { Avatar, Box, Divider, Stack, Typography } from "./uiParts";
+import { Avatar, Box, Divider, Skeleton, Stack, Typography } from "./uiParts";
 import { Link as RouterLink } from "@tanstack/react-router";
 import type { ReactElement, ReactNode } from "react";
 
@@ -6,21 +6,31 @@ import { ShareButton } from "./ShareButton.js";
 import { SubscribeButton } from "./SubscribeButton.js";
 import type { Community } from "../api/communities.js";
 
-interface CommunitySidebarCardProps {
-  community: Community;
-  shareUrl: string;
-  shareTitle: string;
-  /** ログイン済みのときのみ true（購読ボタンの表示制御） */
-  showSubscribe: boolean;
-  subscribed: boolean;
-  subscriptionPending: boolean;
-  onSubscribe: () => void;
-  onUnsubscribe: () => void;
-  /** true ならコミュニティ名を /communities/$slug へのリンクにする（PostThreadScene 用） */
-  nameLink?: boolean;
-  /** 追加セクション（例: 最近投稿したワーカー）。ボタン群の直前に描画する */
-  children?: ReactNode;
-}
+/**
+ * CommunitySidebarCard の props。loading=true のとき community 等は不要（#807）。
+ * discriminated union で loading 時にデータ系 prop を必須にしない形にする。
+ */
+type CommunitySidebarCardProps =
+  | {
+      /** loading={true} のとき Skeleton を表示する。community 等は不要。 */
+      loading: true;
+    }
+  | {
+      loading?: false;
+      community: Community;
+      shareUrl: string;
+      shareTitle: string;
+      /** ログイン済みのときのみ true（購読ボタンの表示制御） */
+      showSubscribe: boolean;
+      subscribed: boolean;
+      subscriptionPending: boolean;
+      onSubscribe: () => void;
+      onUnsubscribe: () => void;
+      /** true ならコミュニティ名を /communities/$slug へのリンクにする（PostThreadScene 用） */
+      nameLink?: boolean;
+      /** 追加セクション（例: 最近投稿したワーカー）。ボタン群の直前に描画する */
+      children?: ReactNode;
+    };
 
 /**
  * community.created_at を "YYYY年M月D日 作成" 形式（UTC 基準）にフォーマットする。
@@ -34,33 +44,55 @@ const formatCreatedAt = (dateStr: string | undefined): string | null => {
   return `${d.getUTCFullYear()}年${d.getUTCMonth() + 1}月${d.getUTCDate()}日 作成`;
 };
 
+/** 外枠 Box のスタイル（loading / 通常で共通）。 */
+const outerBoxSx = {
+  border: 1,
+  borderColor: "divider",
+  borderRadius: 1,
+  p: 2,
+} as const;
+
 /**
  * コミュニティ詳細サイドバーカード（#370 / #390）。
  * 名前・説明・作成日・シェア/購読ボタンを表示する presentational コンポーネント。
  * CommunityScene と PostThreadScene の右サイドバーで共用する。
+ * loading={true} のとき、実 UI と同一の外枠 Box の中に Skeleton を描画する（#807）。
  */
-export const CommunitySidebarCard = ({
-  community,
-  shareUrl,
-  shareTitle,
-  showSubscribe,
-  subscribed,
-  subscriptionPending,
-  onSubscribe,
-  onUnsubscribe,
-  nameLink = false,
-  children,
-}: CommunitySidebarCardProps): ReactElement => {
+export const CommunitySidebarCard = (props: CommunitySidebarCardProps): ReactElement => {
+  if (props.loading) {
+    return (
+      <Box sx={outerBoxSx}>
+        {/* Avatar + コミュニティ名 */}
+        <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", mb: 0.5 }}>
+          <Skeleton variant="circular" width={40} height={40} />
+          <Skeleton variant="text" width="60%" />
+        </Stack>
+        <Divider sx={{ mb: 1 }} />
+        {/* 説明文（2 行） */}
+        <Skeleton variant="text" sx={{ mb: 0.5 }} />
+        <Skeleton variant="text" width="80%" sx={{ mb: 1 }} />
+        {/* ボタン群相当 */}
+        <Skeleton variant="rectangular" height={36} width="100%" sx={{ borderRadius: 1 }} />
+      </Box>
+    );
+  }
+
+  const {
+    community,
+    shareUrl,
+    shareTitle,
+    showSubscribe,
+    subscribed,
+    subscriptionPending,
+    onSubscribe,
+    onUnsubscribe,
+    nameLink = false,
+    children,
+  } = props;
+
   const createdAtLabel = formatCreatedAt(community.created_at);
   return (
-    <Box
-      sx={{
-        border: 1,
-        borderColor: "divider",
-        borderRadius: 1,
-        p: 2,
-      }}
-    >
+    <Box sx={outerBoxSx}>
       <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", mb: 0.5 }}>
         <Avatar
           src={community.iconUrl ?? undefined}

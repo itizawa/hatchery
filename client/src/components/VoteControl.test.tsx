@@ -106,7 +106,11 @@ describe("VoteControl", () => {
       const { container } = render(<VoteControl score={0} onVote={vi.fn()} />);
       const upEl = container.querySelector('[aria-label="up vote"]');
       const downEl = container.querySelector('[aria-label="down vote"]');
-      expect(upEl?.parentElement).toBe(downEl?.parentElement);
+      // Tooltip の <span> ラッパーを考慮し、共通の Box コンテナ（MuiBox-root）で同居を確認
+      const upContainer = upEl?.closest(".MuiBox-root");
+      const downContainer = downEl?.closest(".MuiBox-root");
+      expect(upContainer).toBeTruthy();
+      expect(upContainer).toBe(downContainer);
     });
   });
 });

@@ -36,22 +36,24 @@ export const VoteControl = ({
       }}
     >
       <Tooltip title="高評価">
-        <IconButton
-          aria-label="up vote"
-          aria-pressed={currentVote === "up"}
-          onClick={() => onVote("up")}
-          disabled={disabled}
-          size="small"
-          sx={{
-            color: currentVote === "up" ? "primary.main" : "action.active",
-            height: 32,
-            width: 32,
-            borderRadius: "50%",
-            "&:hover": { color: "primary.main", bgcolor: "action.hover" },
-          }}
-        >
-          <ArrowUpward fontSize="small" />
-        </IconButton>
+        <span>
+          <IconButton
+            aria-label="up vote"
+            aria-pressed={currentVote === "up"}
+            onClick={() => onVote("up")}
+            disabled={disabled}
+            size="small"
+            sx={{
+              color: currentVote === "up" ? "primary.main" : "action.active",
+              height: 32,
+              width: 32,
+              borderRadius: "50%",
+              "&:hover": { color: "primary.main", bgcolor: "action.hover" },
+            }}
+          >
+            <ArrowUpward fontSize="small" />
+          </IconButton>
+        </span>
       </Tooltip>
       <Typography
         variant="body2"
@@ -61,22 +63,24 @@ export const VoteControl = ({
         {score}
       </Typography>
       <Tooltip title="低評価">
-        <IconButton
-          aria-label="down vote"
-          aria-pressed={currentVote === "down"}
-          onClick={() => onVote("down")}
-          disabled={disabled}
-          size="small"
-          sx={{
-            color: currentVote === "down" ? "error.main" : "action.active",
-            height: 32,
-            width: 32,
-            borderRadius: "50%",
-            "&:hover": { color: "error.main", bgcolor: "action.hover" },
-          }}
-        >
-          <ArrowDownward fontSize="small" />
-        </IconButton>
+        <span>
+          <IconButton
+            aria-label="down vote"
+            aria-pressed={currentVote === "down"}
+            onClick={() => onVote("down")}
+            disabled={disabled}
+            size="small"
+            sx={{
+              color: currentVote === "down" ? "error.main" : "action.active",
+              height: 32,
+              width: 32,
+              borderRadius: "50%",
+              "&:hover": { color: "error.main", bgcolor: "action.hover" },
+            }}
+          >
+            <ArrowDownward fontSize="small" />
+          </IconButton>
+        </span>
       </Tooltip>
     </Box>
   );

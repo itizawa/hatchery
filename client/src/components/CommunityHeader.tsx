@@ -56,7 +56,7 @@ export const CommunityHeader = ({ community, actions }: CommunityHeaderProps): R
           mt: `-${ICON_SIZE / 2}px`,
         }}
       >
-        <Stack direction="row" spacing={2} alignItems="flex-end" sx={{ minWidth: 0 }}>
+        <Stack direction="row" spacing={2} sx={{ alignItems: "flex-end", minWidth: 0 }}>
           <Avatar
             src={iconUrl ?? undefined}
             alt={name}

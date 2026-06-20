@@ -107,7 +107,7 @@ export const AccountScene = (): ReactElement => {
               required
               fullWidth
               size="small"
-              inputProps={{ maxLength: DISPLAY_NAME_MAX_LENGTH }}
+              slotProps={{ htmlInput: { maxLength: DISPLAY_NAME_MAX_LENGTH } }}
               error={field.state.meta.errors.length > 0}
               helperText={field.state.meta.errors[0] ?? ""}
             />
@@ -130,7 +130,7 @@ export const AccountScene = (): ReactElement => {
               fullWidth
               size="small"
               placeholder="https://example.com/avatar.png"
-              inputProps={{ maxLength: AVATAR_URL_MAX_LENGTH }}
+              slotProps={{ htmlInput: { maxLength: AVATAR_URL_MAX_LENGTH } }}
               error={field.state.meta.errors.length > 0}
               helperText={field.state.meta.errors[0] ?? ""}
             />

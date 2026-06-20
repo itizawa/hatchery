@@ -63,7 +63,7 @@ export const CommunitySidebarCard = (props: CommunitySidebarCardProps): ReactEle
     return (
       <Box sx={outerBoxSx}>
         {/* Avatar + コミュニティ名 */}
-        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 0.5 }}>
+        <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", mb: 0.5 }}>
           <Skeleton variant="circular" width={40} height={40} />
           <Skeleton variant="text" width="60%" />
         </Stack>
@@ -93,7 +93,7 @@ export const CommunitySidebarCard = (props: CommunitySidebarCardProps): ReactEle
   const createdAtLabel = formatCreatedAt(community.created_at);
   return (
     <Box sx={outerBoxSx}>
-      <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 0.5 }}>
+      <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", mb: 0.5 }}>
         <Avatar
           src={community.iconUrl ?? undefined}
           alt={community.name}
@@ -122,7 +122,7 @@ export const CommunitySidebarCard = (props: CommunitySidebarCardProps): ReactEle
         </Typography>
       )}
       {createdAtLabel && (
-        <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 2 }}>
+        <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 2 }}>
           {createdAtLabel}
         </Typography>
       )}

@@ -93,6 +93,13 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
+    server: {
+      deps: {
+        // MUI v9 が内部で使う react-transition-group がディレクトリ import を使うため、
+        // Vitest の ESM 解決でエラーになる。インラインバンドルすることで回避する。
+        inline: [/@mui\/material/, /react-transition-group/],
+      },
+    },
     include: ["src/**/*.test.{ts,tsx}", "functions/**/*.test.ts", "vite.config.test.ts"],
     // vite.config.test.ts はデフォルト exclude（**/{...vite...}.config.*）にマッチするため、
     // 明示的に exclude から除外し include の指定が有効になるようにする。

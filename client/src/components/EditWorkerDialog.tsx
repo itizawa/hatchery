@@ -135,7 +135,7 @@ export function EditWorkerDialog({ worker, open, onClose }: EditWorkerDialogProp
                   <TextField
                     label="表示名"
                     id="edit-worker-display-name"
-                    inputProps={{ "aria-label": "表示名", maxLength: WORKER_DISPLAY_NAME_MAX_LENGTH }}
+                    slotProps={{ htmlInput: { "aria-label": "表示名", maxLength: WORKER_DISPLAY_NAME_MAX_LENGTH } }}
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
@@ -150,7 +150,7 @@ export function EditWorkerDialog({ worker, open, onClose }: EditWorkerDialogProp
                   <TextField
                     label="役割"
                     id="edit-worker-role"
-                    inputProps={{ "aria-label": "役割", maxLength: WORKER_ROLE_MAX_LENGTH }}
+                    slotProps={{ htmlInput: { "aria-label": "役割", maxLength: WORKER_ROLE_MAX_LENGTH } }}
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
@@ -164,7 +164,7 @@ export function EditWorkerDialog({ worker, open, onClose }: EditWorkerDialogProp
                   <TextField
                     label="性格"
                     id="edit-worker-personality"
-                    inputProps={{ "aria-label": "性格", maxLength: WORKER_PERSONALITY_MAX_LENGTH }}
+                    slotProps={{ htmlInput: { "aria-label": "性格", maxLength: WORKER_PERSONALITY_MAX_LENGTH } }}
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
@@ -184,7 +184,7 @@ export function EditWorkerDialog({ worker, open, onClose }: EditWorkerDialogProp
                       labelId="edit-worker-verbosity-label"
                       id="edit-worker-verbosity"
                       label="文章量"
-                      inputProps={{ "aria-label": "文章量" }}
+                      slotProps={{ input: { "aria-label": "文章量" } }}
                       value={field.state.value}
                       onChange={(e) => field.handleChange(e.target.value as WorkerVerbosity)}
                       onBlur={field.handleBlur}

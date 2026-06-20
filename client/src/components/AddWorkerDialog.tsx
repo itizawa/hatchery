@@ -83,7 +83,7 @@ export const AddWorkerDialog = ({ open, onClose }: AddWorkerDialogProps): ReactE
                 label="表示名"
                 value={field.state.value}
                 onChange={(e) => field.handleChange(e.target.value)}
-                inputProps={{ "aria-label": "表示名", maxLength: WORKER_DISPLAY_NAME_MAX_LENGTH }}
+                slotProps={{ htmlInput: { "aria-label": "表示名", maxLength: WORKER_DISPLAY_NAME_MAX_LENGTH } }}
                 error={field.state.meta.errors.length > 0}
                 helperText={field.state.meta.errors[0] ?? ""}
                 autoFocus
@@ -99,7 +99,7 @@ export const AddWorkerDialog = ({ open, onClose }: AddWorkerDialogProps): ReactE
                 label="役割（任意）"
                 value={field.state.value}
                 onChange={(e) => field.handleChange(e.target.value)}
-                inputProps={{ "aria-label": "役割（任意）", maxLength: WORKER_ROLE_MAX_LENGTH }}
+                slotProps={{ htmlInput: { "aria-label": "役割（任意）", maxLength: WORKER_ROLE_MAX_LENGTH } }}
                 fullWidth
               />
             )}

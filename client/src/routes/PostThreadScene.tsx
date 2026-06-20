@@ -1,7 +1,7 @@
 import { Box, Skeleton, Typography } from "../components/uiParts";
 import { useParams, Link as RouterLink } from "@tanstack/react-router";
 import type { ReactElement } from "react";
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import { buildCommentTree, type CommentTreeNode } from "@hatchery/common";
 
 import {
@@ -13,6 +13,7 @@ import {
   useUnsubscribe,
 } from "../api/communities.js";
 import type { Comment } from "../api/communities.js";
+import { usePostViewBeacon, useCommentImpressions } from "../api/views.js";
 import { useAuth } from "../api/auth.js";
 import { PostCard } from "../components/PostCard.js";
 import { CommentCard } from "../components/CommentCard.js";
@@ -52,7 +53,7 @@ const SidebarSkeletonColumn = (): ReactElement => (
 );
 
 /**
- * 投稿スレッド左カラム上部のコミュニティパンくずリンク。
+ * 投稿スレッド左カラム上部のコミュニティパンくずりリンク。
  * usePublicCommunities は Suspense クエリのため QueryBoundary で包んで使う。
  * コミュニティが特定できない場合は null を返す。
  */
@@ -115,29 +116,38 @@ const PostThreadSidebar = ({ communityId }: { communityId: string }): ReactEleme
 /**
  * コメントのツリーノードを再帰的に CommentCard としてレンダリングする（#520）。
  * depth に応じてコネクター線 + インデントが付く。
+ * commentRef ラッパー div で IntersectionObserver による閉覧計測を行う（#665）。
  */
-function renderCommentTree(
-  nodes: CommentTreeNode[],
-  commentMap: Map<string, Comment>,
-  onVote: (commentId: string, direction: VoteDirection) => void,
-): ReactElement[] {
+function renderCommentTree({
+  nodes,
+  commentMap,
+  onVote,
+  commentRef,
+}: {
+  nodes: CommentTreeNode[];
+  commentMap: Map<string, Comment>;
+  // eslint-disable-next-line max-params
+  onVote: (commentId: string, direction: VoteDirection) => void;
+  commentRef: (commentId: string) => (el: HTMLElement | null) => void;
+}): ReactElement[] {
   return nodes.flatMap((node) => {
     const comment = commentMap.get(node.id);
     if (!comment) return [];
 
     const childElements =
       node.children.length > 0
-        ? renderCommentTree(node.children, commentMap, onVote)
+        ? renderCommentTree({ nodes: node.children, commentMap, onVote, commentRef })
         : null;
 
     return [
-      <CommentCard
-        key={comment.id}
-        comment={comment}
-        onVote={(direction: VoteDirection) => onVote(comment.id, direction)}
-        depth={node.depth}
-        children={childElements && childElements.length > 0 ? <>{childElements}</> : null}
-      />,
+      <div key={comment.id} ref={commentRef(comment.id)}>
+        <CommentCard
+          comment={comment}
+          onVote={(direction: VoteDirection) => onVote(comment.id, direction)}
+          depth={node.depth}
+          children={childElements && childElements.length > 0 ? <>{childElements}</> : null}
+        />
+      </div>,
     ];
   });
 }
@@ -162,10 +172,19 @@ export const PostThreadScene = (): ReactElement => {
   const { mutate: voteComment } = useVoteComment(id);
   const { guardVote, promptOpen, closePrompt } = useGuestVoteGuard();
 
+  // 閉覧計測（#665 / ADR-0032）
+  usePostViewBeacon(id);
+  const { commentRef } = useCommentImpressions(id);
+
   const { post, comments } = data;
   const postUrl = `${window.location.origin}/posts/${post.id}`;
 
   useDocumentTitle(`${post.title} - Hatchery`);
+
+  const commentSectionRef = useRef<HTMLDivElement>(null);
+  const scrollToComments = () => {
+    commentSectionRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
   const commentTree = useMemo(
     () =>
@@ -204,16 +223,21 @@ export const PostThreadScene = (): ReactElement => {
               guardVote(() => votePost({ postId: post.id, direction }))
             }
             postUrl={postUrl}
+            onCommentClick={comments.length > 0 ? scrollToComments : undefined}
           />
 
           {comments.length > 0 && (
-            <Box sx={{ mt: 2 }}>
+            <Box ref={commentSectionRef} sx={{ mt: 2 }}>
               <Typography variant="subtitle2" sx={{ mb: 1, color: "text.secondary" }}>
                 コメント {comments.length} 件
               </Typography>
-              {renderCommentTree(commentTree, commentMap, (commentId, direction) =>
-                guardVote(() => voteComment({ commentId, direction })),
-              )}
+              {renderCommentTree({
+                nodes: commentTree,
+                commentMap,
+                // eslint-disable-next-line max-params
+                onVote: (commentId, direction) => guardVote(() => voteComment({ commentId, direction })),
+                commentRef,
+              })}
             </Box>
           )}
 

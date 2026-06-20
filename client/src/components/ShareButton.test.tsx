@@ -13,6 +13,12 @@ describe("ShareButton", () => {
     expect(screen.getByRole("button", { name: "共有" })).toBeInTheDocument();
   });
 
+  it("共有ボタンは Chip（div[role=button]）としてレンダリングされる（#747）", () => {
+    const { container } = render(<ShareButton shareUrl={SHARE_URL} shareTitle={SHARE_TITLE} />);
+    const shareEl = container.querySelector('[aria-label="共有"]');
+    expect(shareEl?.tagName).toBe("DIV");
+  });
+
   it("共有ボタン押下でメニューが開き「URL をコピー」「X でシェア」が表示される", async () => {
     render(<ShareButton shareUrl={SHARE_URL} shareTitle={SHARE_TITLE} />);
     await userEvent.click(screen.getByRole("button", { name: "共有" }));

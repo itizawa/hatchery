@@ -23,6 +23,7 @@ import { DEFAULT_BATCH_MODEL } from "../config/env.js";
 const RELEASE_NOTES_MAX_TOKENS = 2048;
 
 /** AI にプロンプトを投げてテキストを返す関数型（DI 用）。 */
+// eslint-disable-next-line max-params
 export type ReleaseNotesGenerator = (prompt: string, apiKey: string) => Promise<string>;
 
 /** `runGenerateReleaseNotes` の引数。 */
@@ -55,7 +56,7 @@ export async function runGenerateReleaseNotes(
   const { version, commitLines, apiKey, generator = createDefaultGenerator() } = options;
 
   try {
-    const prompt = buildReleaseNotesPrompt(version, commitLines);
+    const prompt = buildReleaseNotesPrompt({ version, commitLines });
     const rawText = await generator(prompt, apiKey);
 
     // コードブロック記法（```json ... ``` または ``` ... ```）を除去してから JSON パース
@@ -104,6 +105,7 @@ function stripCodeBlock(text: string): string {
  * 実 Anthropic SDK を使うデフォルトの ReleaseNotesGenerator を作る。
  */
 function createDefaultGenerator(): ReleaseNotesGenerator {
+  // eslint-disable-next-line max-params
   return async (prompt: string, apiKey: string): Promise<string> => {
     const client = new Anthropic({ apiKey });
     const message = await client.messages.create({

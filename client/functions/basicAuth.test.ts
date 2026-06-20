@@ -33,44 +33,44 @@ describe("parseBasicAuth", () => {
 
 describe("validateBasicAuth", () => {
   it("Authorization ヘッダが null の場合は false を返す", () => {
-    expect(validateBasicAuth(null, "user", "pass")).toBe(false);
+    expect(validateBasicAuth({ authHeader: null, expectedUser: "user", expectedPassword: "pass" })).toBe(false);
   });
 
   it("Authorization ヘッダが undefined の場合は false を返す", () => {
-    expect(validateBasicAuth(undefined, "user", "pass")).toBe(false);
+    expect(validateBasicAuth({ authHeader: undefined, expectedUser: "user", expectedPassword: "pass" })).toBe(false);
   });
 
   it("'Basic ' プレフィックスが無い場合は false を返す", () => {
-    expect(validateBasicAuth("Bearer token", "user", "pass")).toBe(false);
+    expect(validateBasicAuth({ authHeader: "Bearer token", expectedUser: "user", expectedPassword: "pass" })).toBe(false);
   });
 
   it("不正な Base64 の場合は false を返す", () => {
-    expect(validateBasicAuth("Basic !!!invalid!!!", "user", "pass")).toBe(false);
+    expect(validateBasicAuth({ authHeader: "Basic !!!invalid!!!", expectedUser: "user", expectedPassword: "pass" })).toBe(false);
   });
 
   it("':' を含まない decoded 値の場合は false を返す", () => {
-    expect(validateBasicAuth("Basic " + btoa("nocolon"), "user", "pass")).toBe(false);
+    expect(validateBasicAuth({ authHeader: "Basic " + btoa("nocolon"), expectedUser: "user", expectedPassword: "pass" })).toBe(false);
   });
 
   it("正しい資格情報の場合は true を返す", () => {
-    expect(validateBasicAuth("Basic " + btoa("user:pass"), "user", "pass")).toBe(true);
+    expect(validateBasicAuth({ authHeader: "Basic " + btoa("user:pass"), expectedUser: "user", expectedPassword: "pass" })).toBe(true);
   });
 
   it("パスワード不一致の場合は false を返す", () => {
-    expect(validateBasicAuth("Basic " + btoa("user:wrong"), "user", "pass")).toBe(false);
+    expect(validateBasicAuth({ authHeader: "Basic " + btoa("user:wrong"), expectedUser: "user", expectedPassword: "pass" })).toBe(false);
   });
 
   it("ユーザ名不一致の場合は false を返す", () => {
-    expect(validateBasicAuth("Basic " + btoa("wrong:pass"), "user", "pass")).toBe(false);
+    expect(validateBasicAuth({ authHeader: "Basic " + btoa("wrong:pass"), expectedUser: "user", expectedPassword: "pass" })).toBe(false);
   });
 
   it("パスワードに ':' を含む場合でも正しく検証する", () => {
     expect(
-      validateBasicAuth("Basic " + btoa("user:pass:with:colons"), "user", "pass:with:colons"),
+      validateBasicAuth({ authHeader: "Basic " + btoa("user:pass:with:colons"), expectedUser: "user", expectedPassword: "pass:with:colons" }),
     ).toBe(true);
   });
 
   it("空文字列ユーザ名でも正しく検証する", () => {
-    expect(validateBasicAuth("Basic " + btoa(":pass"), "", "pass")).toBe(true);
+    expect(validateBasicAuth({ authHeader: "Basic " + btoa(":pass"), expectedUser: "", expectedPassword: "pass" })).toBe(true);
   });
 });

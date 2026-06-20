@@ -13,6 +13,7 @@ export type AuthorWorkerEnricher = <T extends HasAuthor>(
   records: readonly T[],
 ) => Array<T & { author_worker?: AuthorWorker }>;
 
+// eslint-disable-next-line max-params
 function enrichWith<T extends HasAuthor>(
   records: readonly T[],
   resolve: (author: string) => AuthorWorker | undefined,
@@ -42,6 +43,7 @@ export async function buildAuthorWorkerEnricher(
  * 単一コレクション（feed / community feed）の post レコードに `author_worker` を付与する（#479）。
  * 解決できない author のレコードは `author_worker` を付けずにそのまま返す（client が生 author にフォールバック）。
  */
+// eslint-disable-next-line max-params
 export async function attachAuthorWorker<T extends HasAuthor>(
   records: readonly T[],
   workerRepo: WorkerRepository,

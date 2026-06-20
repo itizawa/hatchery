@@ -157,6 +157,7 @@ describe("createInMemoryVoteRepository", () => {
 
   describe("netScoresByCommunitySince (#486)", () => {
     // targetId → communityId の解決マップ（テスト用）。
+    // eslint-disable-next-line max-params
     const resolve = (targetType: "post" | "comment", targetId: string): string | null => {
       const map: Record<string, string> = {
         "post:p1": "community-1",

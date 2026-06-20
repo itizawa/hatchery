@@ -74,13 +74,6 @@ model WorkerCommunity {
   @@map("worker_communities")
 }
 
-/// アプリ設定のキーバリューストア（#52）。API キーや各種設定値を格納する。値は暗号化して保存。
-model AppSetting {
-  key       String   @id
-  value     String
-  updatedAt DateTime @updatedAt
-}
-
 /// バッチ実行ログ（#75）。定時バッチの成功・失敗を記録する。
 model BatchRunLog {
   id           String            @id @default(uuid(7))
@@ -132,6 +125,8 @@ model Community {
   coverUrl      String?
   /// 非公開の生成プロンプト指示（#488）。admin のみが設定・閲覧できる。公開 API には返さない。
   generationInstruction String?
+  /// 外部フィード URL（#491 / ADR-0035）。定時バッチ時に RSS/Atom を取得してプロンプトへ注入する。最大 500 文字。
+  feedUrl       String?
   createdAt     DateTime       @default(now())
   posts         Post[]
   comments      Comment[]
@@ -156,10 +151,14 @@ model Post {
   text        String
   /// up vote の累積数（ADR-0019）。生成出力には含めない。
   score       Int       @default(0)
+  /// 累積閲覧数（#665 / ADR-0032）。PageView の新規挿入時に +1 する。
+  viewCount   Int       @default(0)
   createdAt   DateTime  @default(now())
   comments    Comment[]
   /// この post への vote（#453: Exclusive Arc 化の逆リレーション。Post 削除で cascade）。
   votes       Vote[]
+  /// この post への閲覧記録（#665: Exclusive Arc 化の逆リレーション。Post 削除で cascade）。
+  pageViews   PageView[]
 
   @@unique([communityId, slotKey, seq])
   @@index([communityId, createdAt])
@@ -183,6 +182,8 @@ model Comment {
   text        String
   /// up vote の累積数（ADR-0019）。生成出力には含めない。
   score       Int       @default(0)
+  /// 累積閲覧数（#665 / ADR-0032）。PageView の新規挿入時に +1 する。
+  viewCount   Int       @default(0)
   createdAt   DateTime  @default(now())
   /// 返信先コメント id（nullable）。#520 ネスト対応。トップレベルコメントは null。
   parentCommentId String?
@@ -190,6 +191,8 @@ model Comment {
   replies         Comment[] @relation("CommentReplies")
   /// この comment への vote（#453: Exclusive Arc 化の逆リレーション。Comment 削除で cascade）。
   votes       Vote[]
+  /// この comment への閲覧記録（#665: Exclusive Arc 化の逆リレーション。Comment 削除で cascade）。
+  pageViews   PageView[]
 
   @@unique([communityId, slotKey, seq])
   @@index([postId, createdAt])
@@ -252,4 +255,30 @@ model Vote {
   @@index([commentId])
   /// #554: netScoresByCommunitySince の createdAt >= since フィルタ最適化。
   @@index([createdAt])
+}
+
+/// 閲覧計測レコード。ADR-0032 / #665。
+/// Vote と同じ Exclusive Arc（postId? / commentId? の本物 FK）で Post / Comment 2 種固定を対象にする。
+/// ちょうど片方だけ非 null を強制する CHECK 制約はマイグレーション SQL で付与する
+///（Prisma スキーマでは宣言不可）。セッション単位 dedup は (postId, sessionId) / (commentId, sessionId)
+/// のユニーク制約で担保する（PostgreSQL は NULL を一意制約上区別するため両立する）。
+model PageView {
+  id        String   @id @default(uuid(7))
+  /// 閲覧対象が Post のとき非 null。Comment のときは null（Exclusive Arc）。
+  postId    String?
+  post      Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  /// 閲覧対象が Comment のとき非 null。Post のときは null（Exclusive Arc）。
+  commentId String?
+  comment   Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  /// 閲覧ユーザー id（認証済みユーザーは紐づけ・ゲストは null）。
+  userId    String?
+  /// 匿名セッション識別子（clientside で生成・dedup に使う）。
+  sessionId String
+  viewedAt  DateTime @default(now())
+
+  @@unique([postId, sessionId])
+  @@unique([commentId, sessionId])
+  @@index([postId])
+  @@index([commentId])
+  @@index([viewedAt])
 }

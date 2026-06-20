@@ -12,6 +12,7 @@ export interface CorsOptions {
 }
 
 /** origin が許可リストに含まれるか（`*` は任意許可）。 */
+// eslint-disable-next-line max-params
 function isAllowed(origin: string, allowedOrigins: string[]): boolean {
   return allowedOrigins.includes("*") || allowedOrigins.includes(origin);
 }
@@ -25,6 +26,7 @@ function isAllowed(origin: string, allowedOrigins: string[]): boolean {
  */
 export function createCors(options: CorsOptions): RequestHandler {
   const { allowedOrigins } = options;
+  // eslint-disable-next-line max-params
   return (req, res, next) => {
     const origin = req.headers.origin;
     const allowed = typeof origin === "string" && isAllowed(origin, allowedOrigins);

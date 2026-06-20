@@ -11,7 +11,6 @@ import { createRateLimiter } from "./middleware/rateLimiter.js";
 import { createRequestLogger } from "./middleware/requestLogger.js";
 import { createJsonBodyParser, createRequestTimeout } from "./middleware/requestLimits.js";
 import { createSecureHeaders } from "./middleware/secureHeaders.js";
-import type { AppSettingRepository } from "./persistence/appSettingRepository.js";
 import type { BatchRunLogRepository } from "./persistence/batchRunLogRepository.js";
 import type { CommunityRepository } from "./persistence/communityRepository.js";
 import type { CommentRepository } from "./persistence/commentRepository.js";
@@ -22,6 +21,7 @@ import type { PostRepository } from "./persistence/postRepository.js";
 import type { SubscriptionRepository } from "./persistence/subscriptionRepository.js";
 import type { TokenUsageLogRepository } from "./persistence/tokenUsageLogRepository.js";
 import type { UserRepository } from "./persistence/userRepository.js";
+import type { ViewRepository } from "./persistence/viewRepository.js";
 import type { VoteRepository } from "./persistence/voteRepository.js";
 import type { WorldStateRepository } from "./persistence/worldStateRepository.js";
 import { createAdminRouter } from "./routes/admin.js";
@@ -66,12 +66,15 @@ const DEFAULT_SECURITY: Required<SecurityOptions> = {
   cacheStaleWhileRevalidateSeconds: CACHE_DEFAULTS.staleWhileRevalidateSeconds,
 };
 
+/** セッション cookie の有効期限（30 日）（#757）。 */
+export const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+
 export function buildSessionCookieOptions(crossSiteCookie: boolean) {
   return {
     httpOnly: true,
     sameSite: crossSiteCookie ? ("none" as const) : ("lax" as const),
     secure: crossSiteCookie,
-    maxAge: 24 * 60 * 60 * 1000,
+    maxAge: SESSION_MAX_AGE_MS,
   };
 }
 
@@ -79,13 +82,13 @@ export interface AppDeps {
   userRepository: UserRepository;
   workerRepository: WorkerRepository;
   workerCommunityRepository: WorkerCommunityRepository;
-  appSettingRepository: AppSettingRepository;
   batchRunLogRepository: BatchRunLogRepository;
   tokenUsageLogRepository: TokenUsageLogRepository;
   communityRepository: CommunityRepository;
   postRepository: PostRepository;
   commentRepository: CommentRepository;
   subscriptionRepository: SubscriptionRepository;
+  viewRepository: ViewRepository;
   voteRepository: VoteRepository;
   worldStateRepository: WorldStateRepository;
   storageService: StorageService;
@@ -149,6 +152,7 @@ export function createApp(deps: AppDeps): Express {
   const postRepo = deps.postRepository;
   const commentRepo = deps.commentRepository;
   const subscriptionRepo = deps.subscriptionRepository;
+  const viewRepo = deps.viewRepository;
   const voteRepo = deps.voteRepository;
 
   // Cache-Control 方針（#559）。公開・コンテンツのみの GET（未認証時）はエッジ/ブラウザに
@@ -181,7 +185,11 @@ export function createApp(deps: AppDeps): Express {
       deps.publicBaseUrl ?? DEFAULT_PUBLIC_BASE_URL,
     ),
   );
-  app.use("/api/workers", publicCache, createWorkersRouter(deps.workerRepository));
+  app.use(
+    "/api/workers",
+    publicCache,
+    createWorkersRouter(deps.workerRepository, viewRepo, voteRepo),
+  );
   app.use("/api/admin/batch-logs", noStoreCache, createBatchLogsRouter(deps.batchRunLogRepository));
   app.use(
     "/api/admin/token-usage",
@@ -192,7 +200,6 @@ export function createApp(deps: AppDeps): Express {
     "/api/admin",
     noStoreCache,
     createAdminRouter(
-      deps.appSettingRepository,
       deps.workerRepository,
       communityRepo,
       postRepo,
@@ -234,7 +241,7 @@ export function createApp(deps: AppDeps): Express {
   app.use(
     "/api",
     publicCache,
-    createPostsRouter(postRepo, commentRepo, voteRepo, deps.workerRepository),
+    createPostsRouter(postRepo, commentRepo, voteRepo, viewRepo, deps.workerRepository),
   );
 
   app.use(errorHandler);

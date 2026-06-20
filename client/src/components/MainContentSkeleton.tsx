@@ -7,6 +7,7 @@ const BODY_LINE_COUNT = 5;
 export const MainContentSkeleton = (): ReactElement => (
   <Box sx={{ p: 3 }} aria-label="コンテンツ読み込み中">
     <Skeleton variant="text" width="40%" height={40} sx={{ mb: 2 }} />
+    {/* eslint-disable-next-line max-params */}
     {Array.from({ length: BODY_LINE_COUNT }, (_, i) => (
       <Skeleton
         key={i}

@@ -21,6 +21,7 @@ import {
  * 保存先 URL を Community.iconUrl / coverUrl に永続化して返す。
  * MIME 制限（png/jpeg/webp/gif）・サイズ上限（5MB）は worker 実装に合わせる。
  */
+// eslint-disable-next-line max-params
 export function createAdminCommunityImageRouter(
   communityRepository: CommunityRepository,
   storageService: StorageService,
@@ -29,6 +30,7 @@ export function createAdminCommunityImageRouter(
 
   const upload = multer({
     storage: multer.memoryStorage(),
+    // eslint-disable-next-line max-params
     fileFilter(_req, file, callback) {
       const allowedMimes: readonly string[] = ALLOWED_IMAGE_MIME_TYPES;
       if (allowedMimes.includes(file.mimetype)) {
@@ -45,6 +47,7 @@ export function createAdminCommunityImageRouter(
       `/communities/:id/${kind}`,
       requireAuth,
       requireAdmin,
+      // eslint-disable-next-line max-params
       (req, res, next) => {
         upload.single("image")(req, res, (err) => {
           if (err instanceof multer.MulterError && err.code === "LIMIT_FILE_SIZE") {
@@ -58,6 +61,7 @@ export function createAdminCommunityImageRouter(
           next();
         });
       },
+      // eslint-disable-next-line max-params
       async (req, res, next) => {
         try {
           const { id } = req.params as { id: string };

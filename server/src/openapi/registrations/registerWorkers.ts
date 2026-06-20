@@ -6,6 +6,7 @@ import {
   WORKER_PAGINATION_LIMIT_MAX,
   WorkerCommunityIdsSchema,
   WorkerListQuerySchema,
+  WorkerRankingItemSchema,
 } from "@hatchery/common";
 import { z } from "zod";
 
@@ -15,6 +16,7 @@ import { type RegistryContext, workerPathIdParam } from "./shared.js";
  * Worker CRUD（#38 / #329）と admin worker 作成・削除（#217 / #218 / #337）、
  * ワーカーの参加コミュニティ編集（#490）の OpenAPI 登録（#535）。
  */
+// eslint-disable-next-line max-params
 export function registerWorkers(registry: OpenAPIRegistry, ctx: RegistryContext): void {
   const { errorJson, WorkerComponent } = ctx;
 
@@ -32,6 +34,32 @@ export function registerWorkers(registry: OpenAPIRegistry, ctx: RegistryContext)
     "WorkerListQuery",
     WorkerListQuerySchema.openapi({ description: "Worker 一覧取得のクエリパラメータ（ページネーション・#545）" }),
   );
+
+  // ワーカーランキング（認証不要・直近 7 日の閲覧数 + 純 vote スコア・#665 / ADR-0032）
+  const WorkerRankingItemComponent = registry.register(
+    "WorkerRankingItem",
+    WorkerRankingItemSchema.openapi({
+      description: "ワーカーランキング項目（閲覧数・純 vote スコア・#665）",
+    }),
+  );
+
+  registry.registerPath({
+    method: "get",
+    path: "/api/workers/ranking",
+    summary: "ワーカーランキングを取得（認証不要・直近 7 日・#665 / ADR-0032）",
+    responses: {
+      200: {
+        description: "ワーカーランキング一覧",
+        content: {
+          "application/json": {
+            schema: z.object({
+              workers: z.array(WorkerRankingItemComponent),
+            }),
+          },
+        },
+      },
+    },
+  });
 
   registry.registerPath({
     method: "get",

@@ -4,7 +4,6 @@ import {
   mockAdminUser,
   mockCommunities,
   mockPosts,
-  mockSettings,
   mockBatchLogs,
   mockWorkers,
 } from "./data/fixtures.js";
@@ -36,11 +35,15 @@ export const handlers = [
     HttpResponse.json({ ...mockPosts[0], score: (mockPosts[0]?.score ?? 0) + 1 }),
   ),
 
+  // POST /api/posts/:postId/view — 閲覧ビーコン（#665）。fire-and-forget なので空ボディで OK。
+  http.post("/api/posts/:postId/view", () => new HttpResponse(null, { status: 204 })),
+
+  // POST /api/posts/:postId/comment-views — コメント閲覧ビーコン（#665）。
+  http.post("/api/posts/:postId/comment-views", () => new HttpResponse(null, { status: 204 })),
+
   http.post("/api/comments/:commentId/vote", () =>
     HttpResponse.json({ id: "comment-1", score: 1 }),
   ),
-
-  http.get("/api/admin/settings", () => HttpResponse.json(mockSettings)),
 
   http.get("/api/admin/batch-logs", () => HttpResponse.json(mockBatchLogs)),
 

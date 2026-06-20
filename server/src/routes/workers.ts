@@ -11,15 +11,50 @@ import { Router } from "express";
 
 import { requireAdminAccess } from "../middleware/requireAdminAccess.js";
 import { validateBody } from "../middleware/validateBody.js";
+import type { ViewRepository } from "../persistence/viewRepository.js";
+import type { VoteRepository } from "../persistence/voteRepository.js";
 import type { WorkerRepository } from "../persistence/workerRepository.js";
 import { resultToResponse } from "../utils/resultToResponse.js";
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 100;
+const RANKING_LIMIT = 1000;
+/** ランキング集計ウィンドウ（直近 7 日）。 */
+const RANKING_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
-export function createWorkersRouter(workerRepository: WorkerRepository): Router {
+// eslint-disable-next-line max-params
+export function createWorkersRouter(
+  workerRepository: WorkerRepository,
+  viewRepository: ViewRepository,
+  voteRepository: VoteRepository,
+): Router {
   const router = Router();
 
+  // ワーカーランキング（認証不要・#665 / ADR-0032）。/ranking は /:id より先に定義する。
+  // eslint-disable-next-line max-params
+  router.get("/ranking", (_req, res, next) => {
+    const since = new Date(Date.now() - RANKING_WINDOW_MS);
+    Promise.all([
+      workerRepository.listBotWorkersPaginated(1, RANKING_LIMIT, false),
+      viewRepository.viewsByWorkerSince(since),
+      voteRepository.netScoresByWorkerSince(since),
+    ])
+      .then(([{ workers }, viewCounts, voteScores]) => {
+        const ranking = workers
+          .map((w) => ({
+            worker_id: w.id,
+            display_name: w.displayName,
+            view_count: viewCounts.get(w.id) ?? 0,
+            vote_net_score: voteScores.get(w.id) ?? 0,
+          }))
+          // eslint-disable-next-line max-params
+          .sort((a, b) => b.view_count - a.view_count || b.vote_net_score - a.vote_net_score);
+        res.status(200).json({ workers: ranking });
+      })
+      .catch(next);
+  });
+
+  // eslint-disable-next-line max-params
   router.get("/", (req, res, next) => {
     const parsed = WorkerListQuerySchema.safeParse(req.query);
     if (!parsed.success) {
@@ -37,6 +72,7 @@ export function createWorkersRouter(workerRepository: WorkerRepository): Router 
     "/:id",
     requireAdminAccess,
     validateBody(UpdateWorkerSchema),
+    // eslint-disable-next-line max-params
     (req, res, next) => {
       const { id } = req.params as { id: string };
       const input = req.body as UpdateWorkerInput;

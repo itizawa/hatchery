@@ -2,7 +2,7 @@ import session from "express-session";
 import request from "supertest";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { buildSessionCookieOptions, createApp } from "./app.js";
+import { buildSessionCookieOptions, createApp, SESSION_MAX_AGE_MS } from "./app.js";
 import type { AppDeps } from "./app.js";
 import { createTestDeps } from "./testing/createTestDeps.js";
 
@@ -109,7 +109,7 @@ describe("buildSessionCookieOptions（別ドメイン配信のクロスサイト
       httpOnly: true,
       sameSite: "none",
       secure: true,
-      maxAge: 24 * 60 * 60 * 1000,
+      maxAge: SESSION_MAX_AGE_MS,
     });
   });
 
@@ -118,7 +118,7 @@ describe("buildSessionCookieOptions（別ドメイン配信のクロスサイト
       httpOnly: true,
       sameSite: "lax",
       secure: false,
-      maxAge: 24 * 60 * 60 * 1000,
+      maxAge: SESSION_MAX_AGE_MS,
     });
   });
 });

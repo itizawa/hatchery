@@ -32,6 +32,7 @@ export function createPrismaWorkerRepository(prisma: PrismaClient): WorkerReposi
       return toRecord(row);
     },
 
+    // eslint-disable-next-line max-params
     async update(id: string, input: UpdateWorkerInput): Promise<WorkerRecord | null> {
       try {
         const row = await prisma.worker.update({
@@ -93,6 +94,7 @@ export function createPrismaWorkerRepository(prisma: PrismaClient): WorkerReposi
       return rows.map((row) => toRecord(row));
     },
 
+    // eslint-disable-next-line max-params
     async listBotWorkersPaginated(
       page: number,
       limit: number,
@@ -127,6 +129,7 @@ export function createPrismaWorkerRepository(prisma: PrismaClient): WorkerReposi
       return toRecord(row);
     },
 
+    // eslint-disable-next-line max-params
     async updateImageUrl(id: string, imageUrl: string): Promise<WorkerRecord | null> {
       try {
         const row = await prisma.worker.update({

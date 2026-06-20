@@ -66,6 +66,28 @@ export const GenerationOutputSchema = z.object({
 export type GenerationOutput = z.infer<typeof GenerationOutputSchema>;
 
 /**
+ * comment バッチ用: 既存 post への comment 追加出力スキーマ（#673）。
+ * ref は postRefMap 経由で実際の postId に変換される。
+ */
+export const CommentBatchPostOutputSchema = z.object({
+  ref: z.string().min(1).max(50),
+  comments: z.array(GenerationOutputCommentSchema),
+});
+
+export type CommentBatchPostOutput = z.infer<typeof CommentBatchPostOutputSchema>;
+
+/**
+ * comment バッチのトップレベル出力スキーマ（#673）。
+ * GenerationOutputSchema とは別に定義（posts.min(1) は新規 post 作成用・#673 は既存 post へのコメント追加）。
+ */
+export const CommentBatchOutputSchema = z.object({
+  topic: z.string().min(1).max(200),
+  posts: z.array(CommentBatchPostOutputSchema).min(1),
+});
+
+export type CommentBatchOutput = z.infer<typeof CommentBatchOutputSchema>;
+
+/**
  * 生成出力の検証関数。ADR-0019 / ADR-0020 / #555。
  * - author が既知の workerId のみ含まれているか検証する
  * - 指定外の worker が出ていないかを登場制御（knownWorkerIds に含まれない author は reject）
@@ -80,11 +102,15 @@ export type GenerationOutput = z.infer<typeof GenerationOutputSchema>;
  * @param knownPostRefs プロンプトに提示した既存Post参照ID集合（省略時は targetPostRef 検証をスキップ）
  * @throws Error author が knownWorkerIds に含まれない場合、または targetPostRef が knownPostRefs に含まれない場合
  */
-export const validateGenerationOutput = (
-  output: GenerationOutput,
-  knownWorkerIds: readonly string[],
-  knownPostRefs?: ReadonlySet<string> | readonly string[],
-): void => {
+export const validateGenerationOutput = ({
+  output,
+  knownWorkerIds,
+  knownPostRefs,
+}: {
+  output: GenerationOutput;
+  knownWorkerIds: readonly string[];
+  knownPostRefs?: ReadonlySet<string> | readonly string[];
+}): void => {
   const known = new Set(knownWorkerIds);
 
   for (const post of output.posts) {

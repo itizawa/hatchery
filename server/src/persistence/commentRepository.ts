@@ -81,6 +81,7 @@ export interface CommentRepository {
    * comment の parentCommentId を更新する（#520 reply_to 解決用）。
    * 存在しない場合は null を返す。このメソッドはオプショナル。
    */
+  // eslint-disable-next-line max-params
   updateParentCommentId?: (id: string, parentCommentId: string | null) => Promise<CommentRecord | null>;
 }
 
@@ -93,6 +94,7 @@ export function createInMemoryCommentRepository(): CommentRepository {
   const records: CommentRecord[] = [];
 
   return {
+    // eslint-disable-next-line max-params
     createMany(communityId: string, inputs: CommentCreateInput[]): Promise<CommentRecord[]> {
       const created: CommentRecord[] = [];
       for (const input of inputs) {
@@ -125,22 +127,26 @@ export function createInMemoryCommentRepository(): CommentRepository {
       return Promise.resolve(created);
     },
 
+    // eslint-disable-next-line max-params
     listByPost(postId: string, options?: RevealFilterOptions): Promise<CommentRecord[]> {
       const now = options?.now;
       const filtered = records
         .filter((r) => r.postId === postId)
         // reveal フィルタ（#556）: now が渡された場合、createdAt > now のコメントを除外する。
         .filter((r) => now === undefined || r.createdAt.getTime() <= now.getTime())
+        // eslint-disable-next-line max-params
         .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
       return Promise.resolve(filtered.map(cloneRecord));
     },
 
+    // eslint-disable-next-line max-params
     listByCommunity(communityId: string, limit = 50, options?: RevealFilterOptions): Promise<CommentRecord[]> {
       const now = options?.now;
       const filtered = records
         .filter((r) => r.communityId === communityId)
         // reveal フィルタ（#556）: now が渡された場合、createdAt > now のコメントを除外する。
         .filter((r) => now === undefined || r.createdAt.getTime() <= now.getTime())
+        // eslint-disable-next-line max-params
         .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
         .slice(0, limit);
       return Promise.resolve(filtered.map(cloneRecord));
@@ -163,6 +169,7 @@ export function createInMemoryCommentRepository(): CommentRepository {
       return Promise.resolve(counts);
     },
 
+    // eslint-disable-next-line max-params
     addScore(id: string, delta: number): Promise<CommentRecord | null> {
       const record = records.find((r) => r.id === id);
       if (!record) return Promise.resolve(null);
@@ -170,6 +177,7 @@ export function createInMemoryCommentRepository(): CommentRepository {
       return Promise.resolve(cloneRecord(record));
     },
 
+    // eslint-disable-next-line max-params
     updateParentCommentId(id: string, parentCommentId: string | null): Promise<CommentRecord | null> {
       const record = records.find((r) => r.id === id);
       if (!record) return Promise.resolve(null);

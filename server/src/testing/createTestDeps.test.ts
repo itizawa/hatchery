@@ -8,7 +8,6 @@ describe("createTestDeps", () => {
     const deps = await createTestDeps();
     expect(deps.userRepository).toBeDefined();
     expect(deps.workerRepository).toBeDefined();
-    expect(deps.appSettingRepository).toBeDefined();
     expect(deps.batchRunLogRepository).toBeDefined();
   });
 

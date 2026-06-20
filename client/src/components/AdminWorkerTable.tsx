@@ -47,6 +47,7 @@ const AdminWorkerTableInner = (): ReactElement => {
         page={page}
         rowsPerPage={ADMIN_WORKERS_PAGE_SIZE}
         rowsPerPageOptions={[ADMIN_WORKERS_PAGE_SIZE]}
+        // eslint-disable-next-line max-params
         onPageChange={(_, newPage) => setPage(newPage)}
       />
       <AddWorkerDialog open={dialogOpen} onClose={() => setDialogOpen(false)} />

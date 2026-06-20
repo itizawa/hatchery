@@ -37,6 +37,7 @@ export function createInMemoryUserRepository(initialUsers: User[] = []): UserRep
       return Promise.resolve(users.find((u) => u.googleId === googleId) ?? null);
     },
 
+    // eslint-disable-next-line max-params
     updateProfile(id: string, data: { displayName: string; avatarUrl?: string }): Promise<User> {
       const user = users.find((u) => u.id === id);
       if (!user) throw new Error(`User not found: ${id}`);

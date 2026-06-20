@@ -52,6 +52,7 @@ export function isCrawler(userAgent: string | null | undefined): boolean {
 }
 
 /** チャンネル一覧から id 一致の要素を返す（未一致は undefined）。 */
+// eslint-disable-next-line max-params
 export function findChannelInList<T extends { id: string }>(
   channels: readonly T[],
   id: string,
@@ -80,6 +81,7 @@ export function buildOgpMeta(args: { channel: ChannelLike; requestUrl: string })
  * API のベース URL を解決する。`env.API_BASE_URL` を優先（末尾スラッシュ除去）、
  * 未設定/空なら同一オリジン（リクエスト URL の origin）を返す。
  */
+// eslint-disable-next-line max-params
 export function resolveApiBase(env: OgpEnv, requestUrl: string): string {
   const configured = env.API_BASE_URL?.trim();
   if (configured) {

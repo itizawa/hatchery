@@ -9,6 +9,8 @@ function createFakePrisma() {
     user: [] as Array<{ id: string; email: string; googleId: string; displayName: string }>,
     worker: [] as Array<{ id: string; role: string | null }>,
     community: [] as Array<{ slug: string; name: string; description: string }>,
+    post: [] as Array<{ id: string; communityId: string }>,
+    comment: [] as Array<{ id: string; postId: string }>,
   };
   const prisma: SeedPrisma = {
     user: {
@@ -27,6 +29,19 @@ function createFakePrisma() {
     community: {
       async upsert(args) {
         calls.community.push({ slug: args.create.slug, name: args.create.name, description: args.create.description });
+        return { id: `community-${args.create.slug}` };
+      },
+    },
+    post: {
+      async upsert(args) {
+        calls.post.push({ id: args.create.id, communityId: args.create.communityId });
+        return { id: args.create.id };
+      },
+    },
+    comment: {
+      async upsert(args) {
+        calls.comment.push({ id: args.create.id, postId: args.create.postId });
+        return { id: args.create.id };
       },
     },
   };

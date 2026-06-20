@@ -78,6 +78,7 @@ export function createInMemoryWorkerRepository(
       return Promise.resolve(found ? { ...found } : null);
     },
 
+    // eslint-disable-next-line max-params
     update(id: string, input: UpdateWorkerInput): Promise<WorkerRecord | null> {
       const worker = workers.find((w) => w.id === id && w.deletedAt === null);
       if (!worker) return Promise.resolve(null);
@@ -134,6 +135,7 @@ export function createInMemoryWorkerRepository(
       return Promise.resolve(found ? { ...found } : null);
     },
 
+    // eslint-disable-next-line max-params
     updateImageUrl(id: string, imageUrl: string): Promise<WorkerRecord | null> {
       const worker = workers.find((w) => w.id === id);
       if (!worker) return Promise.resolve(null);
@@ -155,6 +157,7 @@ export function createInMemoryWorkerRepository(
       return Promise.resolve({ ...record });
     },
 
+    // eslint-disable-next-line max-params
     listBotWorkersPaginated(
       page: number,
       limit: number,

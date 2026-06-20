@@ -7,6 +7,7 @@ import type { ZodType } from "zod";
  * スキーマを common と共有することで二重定義を避ける（ADR-0005 / ADR-0006）。
  */
 export function validateBody(schema: ZodType): RequestHandler {
+  // eslint-disable-next-line max-params
   return (req, res, next) => {
     const result = schema.safeParse(req.body);
     if (!result.success) {

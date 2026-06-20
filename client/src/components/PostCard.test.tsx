@@ -126,6 +126,12 @@ describe("PostCard", () => {
       render(<PostCard post={postWithout} onVote={vi.fn()} />);
       expect(screen.getByLabelText("コメント 0 件")).toBeInTheDocument();
     });
+
+    it("コメント数は Chip（div）としてレンダリングされる（#747）", () => {
+      const { container } = render(<PostCard post={mockPost} onVote={vi.fn()} />);
+      const el = container.querySelector('[aria-label="コメント 3 件"]');
+      expect(el?.tagName).toBe("DIV");
+    });
   });
 
   describe("author_worker（発言者のアバター + 表示名・#479）", () => {
@@ -198,7 +204,10 @@ describe("PostCard", () => {
     it.each([
       ["up vote", /up vote/i],
       ["down vote", /down vote/i],
-    ] as const)("有効時の %s クリックで stopPropagation と preventDefault の両方が呼ばれる", (_label, namePattern) => {
+    ] as const)(
+      "有効時の %s クリックで stopPropagation と preventDefault の両方が呼ばれる",
+      // eslint-disable-next-line max-params
+      (_label, namePattern) => {
       render(<PostCard post={mockPost} onVote={vi.fn()} voteStopPropagation={true} />);
 
       const event = new MouseEvent("click", { bubbles: true, cancelable: true });

@@ -1,7 +1,6 @@
 import type { PrismaClient } from "@prisma/client";
 
 import type { AppDeps } from "../app.js";
-import { createPrismaAppSettingRepository } from "../persistence/prismaAppSettingRepository.js";
 import { createPrismaBatchRunLogRepository } from "../persistence/prismaBatchRunLogRepository.js";
 import { createPrismaWorkerRepository } from "../persistence/prismaWorkerRepository.js";
 import { createPrismaWorkerCommunityRepository } from "../persistence/prismaWorkerCommunityRepository.js";
@@ -11,6 +10,7 @@ import { createPrismaCommunityRepository } from "../persistence/prismaCommunityR
 import { createPrismaPostRepository } from "../persistence/prismaPostRepository.js";
 import { createPrismaCommentRepository } from "../persistence/prismaCommentRepository.js";
 import { createPrismaSubscriptionRepository } from "../persistence/prismaSubscriptionRepository.js";
+import { createPrismaViewRepository } from "../persistence/prismaViewRepository.js";
 import { createPrismaVoteRepository } from "../persistence/prismaVoteRepository.js";
 import { createPrismaWorldStateRepository } from "../persistence/prismaWorldStateRepository.js";
 import { GcsStorageService, InMemoryStorageService } from "../services/storageService.js";
@@ -24,6 +24,7 @@ import { GcsStorageService, InMemoryStorageService } from "../services/storageSe
  * DI コンテナは使わず手動 DI のまま（ADR-0012）。
  * common への DI 基盤の漏洩なし（ADR-0001 / ADR-0005）。
  */
+// eslint-disable-next-line max-params
 export function createPrismaDeps(prisma: PrismaClient, gcsBucketName?: string): Omit<AppDeps, "security" | "sessionStore"> {
   const storageService = gcsBucketName
     ? new GcsStorageService(gcsBucketName)
@@ -33,13 +34,13 @@ export function createPrismaDeps(prisma: PrismaClient, gcsBucketName?: string): 
     userRepository: createPrismaUserRepository(prisma),
     workerRepository: createPrismaWorkerRepository(prisma),
     workerCommunityRepository: createPrismaWorkerCommunityRepository(prisma),
-    appSettingRepository: createPrismaAppSettingRepository(prisma),
     batchRunLogRepository: createPrismaBatchRunLogRepository(prisma),
     tokenUsageLogRepository: createPrismaTokenUsageLogRepository(prisma),
     communityRepository: createPrismaCommunityRepository(prisma),
     postRepository: createPrismaPostRepository(prisma),
     commentRepository: createPrismaCommentRepository(prisma),
     subscriptionRepository: createPrismaSubscriptionRepository(prisma),
+    viewRepository: createPrismaViewRepository(prisma),
     voteRepository: createPrismaVoteRepository(prisma),
     worldStateRepository: createPrismaWorldStateRepository(prisma),
     storageService,

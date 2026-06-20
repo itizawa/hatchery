@@ -25,10 +25,10 @@ export function extractFirstUrl(text: string): string | null {
  * - 見つからない場合は null
  */
 export function extractOgpFromHtml(html: string): OgpMeta {
-  const title = extractOgProperty(html, "og:title") ?? extractTitle(html) ?? null;
-  const description = extractOgProperty(html, "og:description") ?? null;
-  const image = extractOgProperty(html, "og:image") ?? null;
-  const site_name = extractOgProperty(html, "og:site_name") ?? null;
+  const title = extractOgProperty({ html, property: "og:title" }) ?? extractTitle(html) ?? null;
+  const description = extractOgProperty({ html, property: "og:description" }) ?? null;
+  const image = extractOgProperty({ html, property: "og:image" }) ?? null;
+  const site_name = extractOgProperty({ html, property: "og:site_name" }) ?? null;
 
   return { title, description, image, site_name };
 }
@@ -37,7 +37,7 @@ export function extractOgpFromHtml(html: string): OgpMeta {
  * HTML から指定の og: property を持つ <meta> タグの content を抽出する。
  * property 属性と content 属性の順序を問わない（両順序に対応）。
  */
-function extractOgProperty(html: string, property: string): string | undefined {
+function extractOgProperty({ html, property }: { html: string; property: string }): string | undefined {
   // <meta property="og:xxx" content="..." /> のパターン（属性順序不問・ダブル/シングルクォート対応）
   // property が先のパターン
   const propertyFirst = new RegExp(

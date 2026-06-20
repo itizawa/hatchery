@@ -9,6 +9,7 @@ describe("useViewMode", () => {
   let mockStore: Record<string, string> = {};
   const localStorageMock = {
     getItem: (key: string) => mockStore[key] ?? null,
+    // eslint-disable-next-line max-params
     setItem: (key: string, value: string) => {
       mockStore[key] = value;
     },

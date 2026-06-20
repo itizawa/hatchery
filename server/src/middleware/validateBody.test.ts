@@ -10,6 +10,7 @@ const TestSchema = z.array(z.object({ name: z.string().min(1) })).min(1);
 function appWithValidation(): Express {
   const app = express();
   app.use(express.json());
+  // eslint-disable-next-line max-params
   app.post("/t", validateBody(TestSchema), (req, res) => {
     res.status(200).json(req.body);
   });

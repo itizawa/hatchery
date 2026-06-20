@@ -10,10 +10,9 @@ import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { fetchMe } from "../api/auth.js";
-import { fetchSettings } from "../api/admin.js";
 import { fetchBatchLogs } from "../api/batchLogs.js";
 import { fetchPublicCommunities, fetchHomeFeedPage } from "../api/communities.js";
-import { mockAdminUser, mockSettings, mockBatchLogs, mockCommunities, mockPosts } from "./data/fixtures.js";
+import { mockAdminUser, mockBatchLogs, mockCommunities, mockPosts } from "./data/fixtures.js";
 import { handlers } from "./handlers.js";
 
 const server = setupServer(...handlers);
@@ -29,11 +28,6 @@ describe("MSW ハンドラのパスが API クライアントの実パスと一�
       id: mockAdminUser.id,
       displayName: mockAdminUser.displayName,
     });
-  });
-
-  it("fetchSettings が /api/admin/settings ハンドラにマッチしてモック設定を返す", async () => {
-    const result = await fetchSettings();
-    expect(result).toEqual(mockSettings);
   });
 
   it("fetchBatchLogs が /api/admin/batch-logs ハンドラにマッチしてモックログを返す", async () => {

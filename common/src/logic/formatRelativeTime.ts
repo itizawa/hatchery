@@ -19,7 +19,7 @@ const WEEK_MS = 7 * DAY_MS;
  * @param target 投稿時刻
  * @param now 基準時刻（描画時の現在時刻）
  */
-export const formatRelativeTime = (target: Date, now: Date): string => {
+export const formatRelativeTime = ({ target, now }: { target: Date; now: Date }): string => {
   const targetMs = target.getTime();
   const nowMs = now.getTime();
   if (Number.isNaN(targetMs) || Number.isNaN(nowMs)) return "";

@@ -127,28 +127,28 @@ describe("buildReleaseNotesPrompt", () => {
   ];
 
   it("version 文字列を含む", () => {
-    const prompt = buildReleaseNotesPrompt(version, commitLines);
+    const prompt = buildReleaseNotesPrompt({ version, commitLines });
     expect(prompt).toContain("v1.3.0");
   });
 
   it("commit 行を含む", () => {
-    const prompt = buildReleaseNotesPrompt(version, commitLines);
+    const prompt = buildReleaseNotesPrompt({ version, commitLines });
     expect(prompt).toContain("feat: 新機能Aを追加 (abc1234)");
     expect(prompt).toContain("fix: バグBを修正 (def5678)");
   });
 
   it("JSON 出力指示を含む", () => {
-    const prompt = buildReleaseNotesPrompt(version, commitLines);
+    const prompt = buildReleaseNotesPrompt({ version, commitLines });
     expect(prompt.toLowerCase()).toContain("json");
   });
 
   it("overview フィールドへの言及がある", () => {
-    const prompt = buildReleaseNotesPrompt(version, commitLines);
+    const prompt = buildReleaseNotesPrompt({ version, commitLines });
     expect(prompt).toContain("overview");
   });
 
   it("空のコミット一覧でもプロンプトを生成できる", () => {
-    const prompt = buildReleaseNotesPrompt(version, []);
+    const prompt = buildReleaseNotesPrompt({ version, commitLines: [] });
     expect(prompt).toContain("v1.3.0");
   });
 });

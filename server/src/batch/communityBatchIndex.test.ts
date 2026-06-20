@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createInMemoryAppSettingRepository } from "../persistence/appSettingRepository.js";
 import { createInMemoryBatchRunLogRepository } from "../persistence/batchRunLogRepository.js";
 import { createInMemoryCommentRepository } from "../persistence/commentRepository.js";
 import {
@@ -8,7 +7,6 @@ import {
   type CommunityRecord,
 } from "../persistence/communityRepository.js";
 import { createInMemoryPostRepository } from "../persistence/postRepository.js";
-import { createInMemoryVoteRepository } from "../persistence/voteRepository.js";
 import { createInMemoryWorkerCommunityRepository } from "../persistence/workerCommunityRepository.js";
 import type { WorkerRecord } from "../persistence/workerRepository.js";
 
@@ -31,6 +29,7 @@ const community1: CommunityRecord = {
   iconUrl: null,
   coverUrl: null,
   generationInstruction: null,
+  feedUrl: null,
   createdAt: new Date("2026-01-01"),
 };
 
@@ -44,6 +43,7 @@ const community2: CommunityRecord = {
   iconUrl: null,
   coverUrl: null,
   generationInstruction: null,
+  feedUrl: null,
   createdAt: new Date("2026-01-02"),
 };
 
@@ -75,7 +75,9 @@ describe("communityBatchIndex (#383)", () => {
   /** スタブ依存一式（DB・Anthropic SDK に実アクセスしない） */
   const buildCliDeps = (
     communities: CommunityRecord[],
-    generate: (prompt: string, apiKey: string) => Promise<string>,
+    // eslint-disable-next-line max-params
+    generate: (prompt: string, apiKey: string) => Promise<{ text: string }>,
+  // eslint-disable-next-line max-params
   ): CommunityBatchCliDeps & { disconnect: ReturnType<typeof vi.fn> } => {
     const disconnect = vi.fn().mockResolvedValue(undefined);
     return {
@@ -83,43 +85,37 @@ describe("communityBatchIndex (#383)", () => {
         communityRepo: createInMemoryCommunityRepository(communities),
         postRepo: createInMemoryPostRepository(),
         commentRepo: createInMemoryCommentRepository(),
-        appSettingRepo: createInMemoryAppSettingRepository(),
         batchRunLogRepository: createInMemoryBatchRunLogRepository(),
-        // vote 0（純スコアなし）→ 全コミュニティ床 +1（weight=1）の均等選定。
-        voteRepo: createInMemoryVoteRepository(),
         // WorkerCommunity 紐づきは無し → botWorkerProvider（haru/ken）へフォールバックする。
         workerCommunityRepo: createInMemoryWorkerCommunityRepository({ workers: [], links: [] }),
         botWorkerProvider: () => Promise.resolve(botWorkers),
         generate,
         anthropicApiKey: "test-key",
-        // rng=0 → 先頭（最古）コミュニティを決定的に選定する。
         rng: () => 0,
       },
       disconnect,
     };
   };
 
-  it("複数 community があっても 1 定時 = 1 コミュニティのみ生成される（#486）", async () => {
-    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
-    // rng=0 → community1 が選定される。
+  it("全コミュニティに対して generate が呼ばれる（#671）", async () => {
+    const generate = vi.fn().mockResolvedValue({ text: validGenerationOutput });
     const cliDeps = buildCliDeps([community1, community2], generate);
 
     const result = await runCommunityBatchCli(cliDeps);
 
-    // 1 定時 = vote 重み付きランダムで 1 コミュニティのみ → API コールは最大 1 回。
-    expect(generate).toHaveBeenCalledTimes(1);
-    expect(result.posts.map((p) => p.communityId)).toEqual(["community-1"]);
+    expect(generate).toHaveBeenCalledTimes(2);
+    expect(result.posts.some((p) => p.communityId === "community-1")).toBe(true);
+    expect(result.posts.some((p) => p.communityId === "community-2")).toBe(true);
   });
 
-  it("選定コミュニティの生成が失敗してもエントリ関数は正常終了する（#486）", async () => {
+  it("全コミュニティの生成が失敗してもエントリ関数は正常終了する", async () => {
     const generate = vi.fn().mockRejectedValue(new Error("API エラー"));
-    // rng=0 → community1 が選定される。その生成が失敗する。
     const cliDeps = buildCliDeps([community1, community2], generate);
 
-    // 生成失敗してもエントリ関数自体は正常終了する（エラーは batchRunLog に記録）。
+    // 全コミュニティの生成が失敗してもエントリ関数自体は正常終了する。
     const result = await runCommunityBatchCli(cliDeps);
 
-    expect(generate).toHaveBeenCalledTimes(1);
+    expect(generate).toHaveBeenCalledTimes(2);
     expect(result.posts.length).toBe(0);
   });
 
@@ -135,7 +131,7 @@ describe("communityBatchIndex (#383)", () => {
   });
 
   it("正常終了時に disconnect が 1 回呼ばれる", async () => {
-    const generate = vi.fn().mockResolvedValue(validGenerationOutput);
+    const generate = vi.fn().mockResolvedValue({ text: validGenerationOutput });
     const cliDeps = buildCliDeps([community1], generate);
 
     await runCommunityBatchCli(cliDeps);

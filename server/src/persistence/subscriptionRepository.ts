@@ -25,6 +25,7 @@ export function createInMemorySubscriptionRepository(): SubscriptionRepository {
   const records: SubscriptionRecord[] = [];
 
   return {
+    // eslint-disable-next-line max-params
     add(userId: string, communityId: string): Promise<void> {
       const exists = records.find((r) => r.userId === userId && r.communityId === communityId);
       if (!exists) {
@@ -33,6 +34,7 @@ export function createInMemorySubscriptionRepository(): SubscriptionRepository {
       return Promise.resolve();
     },
 
+    // eslint-disable-next-line max-params
     remove(userId: string, communityId: string): Promise<void> {
       const idx = records.findIndex((r) => r.userId === userId && r.communityId === communityId);
       if (idx !== -1) {
@@ -46,6 +48,7 @@ export function createInMemorySubscriptionRepository(): SubscriptionRepository {
       return Promise.resolve(ids);
     },
 
+    // eslint-disable-next-line max-params
     hasSubscription(userId: string, communityId: string): Promise<boolean> {
       const exists = records.some((r) => r.userId === userId && r.communityId === communityId);
       return Promise.resolve(exists);

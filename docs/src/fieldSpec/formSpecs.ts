@@ -7,8 +7,6 @@ import {
   // worker（旧 employee）の作成 / 更新
   CreateWorkerSchema,
   UpdateWorkerSchema,
-  // appSetting（管理者の設定更新）
-  UpdateAppSettingSchema,
 } from "@hatchery/common";
 
 import { extractFieldSpecs } from "./extractFieldSpecs.js";
@@ -55,12 +53,6 @@ const FORM_SOURCES = [
     title: "ワーカー更新（管理）",
     description: "管理者がワーカーの表示名・役割・性格を編集する際の入力。",
     schema: UpdateWorkerSchema,
-  },
-  {
-    id: "UpdateAppSettingSchema",
-    title: "アプリ設定更新（管理）",
-    description: "管理者がアプリ設定（key / value）を更新する際の入力。",
-    schema: UpdateAppSettingSchema,
   },
 ] as const;
 

@@ -31,6 +31,7 @@ export interface GoogleAuthConfig {
 }
 
 /** userRepo に束縛された独立した Passport インスタンスを生成する（グローバル汚染回避）。 */
+// eslint-disable-next-line max-params
 export function createPassport(userRepo: UserRepository, googleConfig?: GoogleAuthConfig): PassportInstance {
   const p = new Passport();
 
@@ -44,6 +45,7 @@ export function createPassport(userRepo: UserRepository, googleConfig?: GoogleAu
           // state: true で OAuth2 state パラメータを有効化し Login CSRF を防ぐ（#343）
           state: true,
         },
+        // eslint-disable-next-line max-params
         async (_accessToken, _refreshToken, profile, done) => {
           try {
             const googleId = profile.id;
@@ -72,10 +74,12 @@ export function createPassport(userRepo: UserRepository, googleConfig?: GoogleAu
     );
   }
 
+  // eslint-disable-next-line max-params
   p.serializeUser((user, done) => {
     done(null, user.id);
   });
 
+  // eslint-disable-next-line max-params
   p.deserializeUser(async (id: string, done) => {
     try {
       const user = await userRepo.findById(id);

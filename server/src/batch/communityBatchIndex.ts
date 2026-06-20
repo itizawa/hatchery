@@ -1,3 +1,6 @@
+/**
+ * @deprecated #673 完了後は postBatchIndex + commentBatchIndex に移行。Cloud Scheduler から外した後にコードを削除する（ADR-0034）。
+ */
 import { pathToFileURL } from "node:url";
 
 import { loadEnv } from "../config/env.js";
@@ -50,26 +53,24 @@ async function main(): Promise<void> {
 
   const [
     { prisma },
-    { createPrismaAppSettingRepository },
     { createPrismaBatchRunLogRepository },
     { createPrismaCommunityRepository },
     { createPrismaPostRepository },
     { createPrismaCommentRepository },
-    { createPrismaVoteRepository },
     { createPrismaWorkerCommunityRepository },
     { createPrismaWorkerRepository },
     { createPrismaWorldStateRepository },
+    { createPrismaTokenUsageLogRepository },
   ] = await Promise.all([
     import("../persistence/prismaClient.js"),
-    import("../persistence/prismaAppSettingRepository.js"),
     import("../persistence/prismaBatchRunLogRepository.js"),
     import("../persistence/prismaCommunityRepository.js"),
     import("../persistence/prismaPostRepository.js"),
     import("../persistence/prismaCommentRepository.js"),
-    import("../persistence/prismaVoteRepository.js"),
     import("../persistence/prismaWorkerCommunityRepository.js"),
     import("../persistence/prismaWorkerRepository.js"),
     import("../persistence/prismaWorldStateRepository.js"),
+    import("../persistence/prismaTokenUsageLogRepository.js"),
   ]);
 
   const workerRepo = createPrismaWorkerRepository(prisma);
@@ -79,10 +80,7 @@ async function main(): Promise<void> {
       communityRepo: createPrismaCommunityRepository(prisma),
       postRepo: createPrismaPostRepository(prisma),
       commentRepo: createPrismaCommentRepository(prisma),
-      appSettingRepo: createPrismaAppSettingRepository(prisma),
       batchRunLogRepository: createPrismaBatchRunLogRepository(prisma),
-      // vote 重み付き 1 コミュニティ選定の重み算出に使う（#486 / ADR-0030）。
-      voteRepo: createPrismaVoteRepository(prisma),
       // community 別の登場ワーカーを DB から解決する（#489）。
       workerCommunityRepo: createPrismaWorkerCommunityRepository(prisma),
       // 紐づき 0 件 community のフォールバック先（全 Bot ワーカー）。
@@ -99,6 +97,8 @@ async function main(): Promise<void> {
       commentRange: { min: env.batchCommentMin, max: env.batchCommentMax },
       // ドリップ窓の設定化（#556）: env.batchDripWindowMs を dripWindowMs に反映する。
       dripWindowMs: env.batchDripWindowMs,
+      // トークン使用量の記録（#663）: generate() 成功後に TokenUsageLog を保存する。
+      tokenUsageLogRepository: createPrismaTokenUsageLogRepository(prisma),
     },
     disconnect: () => prisma.$disconnect(),
   });

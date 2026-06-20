@@ -15,6 +15,7 @@ import {
  * admin 管理者向けワーカー画像アップロードルーター（#204 / ADR-0022）。
  * POST /api/admin/workers/:id/image
  */
+// eslint-disable-next-line max-params
 export function createAdminWorkerImageRouter(
   workerRepository: WorkerRepository,
   storageService: StorageService,
@@ -23,6 +24,7 @@ export function createAdminWorkerImageRouter(
 
   const upload = multer({
     storage: multer.memoryStorage(),
+    // eslint-disable-next-line max-params
     fileFilter(_req, file, callback) {
       const allowedMimes: readonly string[] = ALLOWED_IMAGE_MIME_TYPES;
       if (allowedMimes.includes(file.mimetype)) {
@@ -38,6 +40,7 @@ export function createAdminWorkerImageRouter(
     "/workers/:id/image",
     requireAuth,
     requireAdmin,
+    // eslint-disable-next-line max-params
     (req, res, next) => {
       upload.single("image")(req, res, (err) => {
         if (err instanceof multer.MulterError && err.code === "LIMIT_FILE_SIZE") {
@@ -51,6 +54,7 @@ export function createAdminWorkerImageRouter(
         next();
       });
     },
+    // eslint-disable-next-line max-params
     async (req, res, next) => {
       try {
         const { id } = req.params as { id: string };

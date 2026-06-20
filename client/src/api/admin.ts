@@ -1,56 +1,12 @@
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import type { AppSettingResponse, Worker, WorkerListResponse } from "@hatchery/common";
+import type { Worker, WorkerListResponse } from "@hatchery/common";
 
 import { ensureOk, openApiClient, unwrap } from "./client.js";
 import { BOT_WORKERS_QUERY_KEY } from "./workers.js";
 
-export const ADMIN_SETTINGS_QUERY_KEY = ["admin", "settings"] as const;
 export const ADMIN_WORKERS_QUERY_KEY = ["admin", "workers"] as const;
 
 export const ADMIN_WORKERS_PAGE_SIZE = 10;
-
-export type { AppSettingResponse };
-
-/**
- * GET /admin/settings を openApiClient（生成型・baseUrl 解決）経由で取得する（ADR-0006・#110）。
- * 生の相対 fetch はクロスオリジン配信（#78）で baseUrl が前置されず壊れるため openApiClient に統一。
- */
-export async function fetchSettings(): Promise<AppSettingResponse[]> {
-  // ensureOk は error / !response.ok を throw に変換する。空ボディ（data undefined）は許容し ?? [] でフォールバック。
-  const result = await openApiClient.GET("/api/admin/settings", {
-    credentials: "include",
-  });
-  return ensureOk(result, "GET /api/admin/settings") ?? [];
-}
-
-/** PATCH /admin/settings を openApiClient 経由で更新する（#110）。成功時は更新後の設定を返す。 */
-export async function patchSetting(key: string, value: string): Promise<AppSettingResponse> {
-  // 失敗時はサーバが返す { error } メッセージを Error に乗せ、無ければフォールバック文言を使う（#476）。
-  const result = await openApiClient.PATCH("/api/admin/settings", {
-    body: { key, value },
-    credentials: "include",
-  });
-  return unwrap(result, "設定の保存に失敗しました");
-}
-
-/**
- * 管理画面の設定一覧を取得するフック（#110）。
- * useSuspenseQuery（#459/#463）。ローディング・エラーは呼び出し元の QueryBoundary に委譲する。
- */
-export function useAdminSettings() {
-  return useSuspenseQuery({
-    queryKey: ADMIN_SETTINGS_QUERY_KEY,
-    queryFn: fetchSettings,
-  });
-}
-
-export function useSaveAdminSetting() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ key, value }: { key: string; value: string }) => patchSetting(key, value),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ADMIN_SETTINGS_QUERY_KEY }),
-  });
-}
 
 /** DELETE /api/admin/workers/:id で Worker を論理削除する（#218 / #329）。 */
 export async function deleteWorker(id: string): Promise<{ id: string; deletedAt: string }> {
@@ -78,6 +34,7 @@ export function useDeleteWorker() {
  * GET /api/workers をページネーションパラメータ付きで取得する（管理画面用・#545）。
  * page と limit を指定し、{ workers, total, page, limit } 形式のレスポンスを返す。
  */
+// eslint-disable-next-line max-params
 export async function fetchAdminWorkers(
   page: number,
   limit: number,

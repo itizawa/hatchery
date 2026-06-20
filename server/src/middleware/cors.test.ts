@@ -7,9 +7,11 @@ import { createCors } from "./cors.js";
 function appWith(allowedOrigins: string[]) {
   const app = express();
   app.use(createCors({ allowedOrigins }));
+  // eslint-disable-next-line max-params
   app.get("/x", (_req, res) => {
     res.json({ ok: true });
   });
+  // eslint-disable-next-line max-params
   app.post("/x", (_req, res) => {
     res.json({ ok: true });
   });

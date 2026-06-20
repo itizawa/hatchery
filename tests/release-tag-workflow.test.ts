@@ -142,3 +142,10 @@ describe("PR を作成・マージしない (ゲート1, 受け入れ条件 #6)"
     expect(run).not.toMatch(/gh\s+pr\s+merge\b/);
   });
 });
+
+describe("pnpm バナー抑制 (受け入れ条件 #4)", () => {
+  it("release-notes の pnpm 実行に --silent フラグが含まれる（stdout バナー混入防止）", () => {
+    const run = allRun(loadWorkflow());
+    expect(run).toMatch(/pnpm\s+(?:--silent|-s)\b[^#]*release-notes/s);
+  });
+});

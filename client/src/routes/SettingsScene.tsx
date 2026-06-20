@@ -1,12 +1,8 @@
-import { Alert, Box, Button, Chip, Skeleton, Snackbar, Tab, Table, TableBody, TableCell, TableHead, TableRow, Tabs, TextField, Typography } from "../components/uiParts";
+import { Box, Button, Chip, Skeleton, Tab, Table, TableBody, TableCell, TableHead, TableRow, Tabs, Typography } from "../components/uiParts";
 
-import { useForm } from "@tanstack/react-form";
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { type SyntheticEvent, useState, type ComponentType, type ReactElement, type ReactNode } from "react";
+import { type SyntheticEvent, type ComponentType, type ReactElement, type ReactNode } from "react";
 
-import { APP_SETTING_VALUE_MAX_LENGTH } from "@hatchery/common";
-import { useAdminSettings, useSaveAdminSetting } from "../api/admin.js";
-import { getApiErrorMessage } from "../api/errors.js";
 import { useBatchLogs, useRefreshBatchLogs } from "../api/batchLogs.js";
 import { useTokenUsage, useRefreshTokenUsage } from "../api/tokenUsage.js";
 import { AdminWorkerTable } from "../components/AdminWorkerTable.js";
@@ -24,6 +20,7 @@ import { type SettingsTabValue } from "./settingsTabValues.js";
  * @param Inner - タブ本体（QueryBoundary の子として使う）
  * @param skeleton - ローディング中に表示する Skeleton（各タブ固有の形状を渡す）
  */
+// eslint-disable-next-line max-params
 export function withSettingsTabPanel<P extends object>(
   Inner: ComponentType<P>,
   skeleton: ReactNode,
@@ -40,109 +37,12 @@ export function withSettingsTabPanel<P extends object>(
 /** タブ内のローディング表示（スケルトン行）。data-testid で各タブを識別する。 */
 const TabSkeleton = ({ testId }: { testId: string }): ReactElement => (
   <Box>
+    {/* eslint-disable-next-line max-params */}
     {Array.from({ length: 3 }, (_, i) => (
       <Skeleton key={i} variant="text" height={32} data-testid={testId} sx={{ my: 0.5 }} />
     ))}
   </Box>
 );
-
-/** API トークン設定タブのローディング表示（QueryBoundary の fallback・#463）。 */
-const ApiTokenSettingsSkeleton = (): ReactElement => (
-  <Box sx={{ maxWidth: 480, display: "flex", flexDirection: "column", gap: 2 }}>
-    <Skeleton variant="text" height={24} width="60%" data-testid="api-token-skeleton" />
-    <Skeleton variant="text" height={40} />
-  </Box>
-);
-
-/** API トークン設定タブの本体（#52）。useSuspenseQuery で取得し data は undefined を取らない。 */
-const ApiTokenSettingsInner = (): ReactElement => {
-  const { data: settings } = useAdminSettings();
-  const saveMutation = useSaveAdminSetting();
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-
-  const currentMasked =
-    settings.find((s) => s.key === "CLAUDE_API_KEY")?.maskedValue ?? null;
-
-  const form = useForm({
-    defaultValues: { apiKey: "" },
-    onSubmit: async ({ value }) => {
-      // エラー表示は saveMutation.isError / error に集約する（独立ローカル state を持たない・#476）。
-      // mutateAsync の reject を握りつぶさないよう try/catch するが、catch では何もしない
-      // （未処理 Promise を避けるためだけ）。再送信成功で isError=false に戻り残留しない。
-      try {
-        await saveMutation.mutateAsync({ key: "CLAUDE_API_KEY", value: value.apiKey });
-        form.reset();
-        setSnackbarOpen(true);
-      } catch {
-        // 表示は mutation 状態に委ねる
-      }
-    },
-  });
-
-  return (
-    <Box
-      component="form"
-      noValidate
-      onSubmit={async (e) => {
-        e.preventDefault();
-        await form.handleSubmit();
-      }}
-      sx={{ maxWidth: 480, display: "flex", flexDirection: "column", gap: 2 }}
-    >
-      <Typography variant="body2" color="text.secondary">
-        Claude API キーを設定します。設定済みの場合はマスク表示で確認できます。
-      </Typography>
-      {currentMasked && (
-        <Typography variant="body2">
-          現在の設定: <strong>{currentMasked}</strong>
-        </Typography>
-      )}
-      <form.Field name="apiKey">
-        {(field) => (
-          <TextField
-            label="Claude API キー"
-            type="password"
-            value={field.state.value}
-            onChange={(e) => field.handleChange(e.target.value)}
-            onBlur={field.handleBlur}
-            placeholder="sk-ant-api03-..."
-            fullWidth
-            size="small"
-            inputProps={{ maxLength: APP_SETTING_VALUE_MAX_LENGTH, autoComplete: "off" }}
-          />
-        )}
-      </form.Field>
-      <Button
-        type="submit"
-        variant="contained"
-        disabled={saveMutation.isPending}
-      >
-        保存
-      </Button>
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={3000}
-        onClose={() => setSnackbarOpen(false)}
-      >
-        <Alert severity="success" onClose={() => setSnackbarOpen(false)}>
-          APIキーを保存しました
-        </Alert>
-      </Snackbar>
-      <Snackbar
-        open={saveMutation.isError}
-        autoHideDuration={6000}
-        onClose={() => saveMutation.reset()}
-      >
-        <Alert severity="error" onClose={() => saveMutation.reset()}>
-          {getApiErrorMessage(saveMutation.error, "APIキーの保存に失敗しました")}
-        </Alert>
-      </Snackbar>
-    </Box>
-  );
-};
-
-/** API トークン設定タブ（#52 / #463 / #596）。withSettingsTabPanel でローディング・エラーを扱う。 */
-const ApiTokenSettings = withSettingsTabPanel(ApiTokenSettingsInner, <ApiTokenSettingsSkeleton />);
 
 /** バッチログタブの本体（#75）。useSuspenseQuery で取得し data は undefined を取らない。 */
 const BatchLogsInner = (): ReactElement => {
@@ -275,7 +175,6 @@ interface SettingsTab {
 
 const SETTINGS_TABS: readonly [SettingsTab, ...SettingsTab[]] = [
   { label: "ワーカー管理", value: "users", content: <AdminWorkerTable /> },
-  { label: "API トークン設定", value: "api-token", content: <ApiTokenSettings /> },
   { label: "バッチログ", value: "batch-logs", content: <BatchLogs /> },
   { label: "トークン使用量", value: "token-usage", content: <TokenUsageTab /> },
   { label: "コミュニティ", value: "communities", content: <CommunitiesTab /> },
@@ -287,6 +186,7 @@ export const SettingsScene = (): ReactElement => {
   const navigate = useNavigate({ from: "/admin" });
   const active: SettingsTabValue = tab;
 
+  // eslint-disable-next-line max-params
   const handleTabChange = (_: SyntheticEvent, value: SettingsTabValue) => {
     void navigate({ search: (prev) => ({ ...prev, tab: value }) });
   };

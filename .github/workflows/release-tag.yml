@@ -127,10 +127,11 @@ jobs:
           # mapfile で改行区切りの COMMIT_LINES を配列化する。
           mapfile -t commit_args <<< "${COMMIT_LINES:-}"
 
-          # AI リリースノートを生成して stdout のみを受け取る（stderr は分離してログに流す）。
-          # pnpm のスクリプト実行ヘッダーや tsx のログが stderr に出るため 2>&1 は使わない。
+          # AI リリースノートを生成して stdout のみを受け取る。
+          # pnpm --silent でスクリプト実行バナー（> pkg@ver script /path 等）の stdout 出力を抑制する。
+          # バナーが混入すると GitHub Markdown で blockquote として描画されるため必須（#735）。
           # 生成に失敗した場合は exit 1 となり continue-on-error が拾う。
-          ai_notes=$(pnpm --filter @hatchery/server release-notes \
+          ai_notes=$(pnpm --silent --filter @hatchery/server release-notes \
             --version "${RELEASE_VERSION}" \
             --commits "${commit_args[@]+"${commit_args[@]}"}") || {
             echo "AI リリースノートの生成に失敗しました。コミット羅列ノートを保持します。"

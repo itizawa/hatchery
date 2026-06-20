@@ -19,12 +19,17 @@ function buildUser(overrides: Partial<User> = {}): User {
 }
 
 type SerializeRunner = {
+  // eslint-disable-next-line max-params
   serializeUser(user: AuthUser, done: (err: unknown, id?: unknown) => void): void;
+  // eslint-disable-next-line max-params
   deserializeUser(id: string, done: (err: unknown, user?: AuthUser | false) => void): void;
 };
 
+// eslint-disable-next-line max-params
 function runSerializeUser(p: PassportInstance, user: AuthUser): Promise<unknown> {
+  // eslint-disable-next-line max-params
   return new Promise((resolve, reject) => {
+    // eslint-disable-next-line max-params
     (p as unknown as SerializeRunner).serializeUser(user, (err, id) => {
       if (err) reject(err instanceof Error ? err : new Error(String(err)));
       else resolve(id);
@@ -32,8 +37,11 @@ function runSerializeUser(p: PassportInstance, user: AuthUser): Promise<unknown>
   });
 }
 
+// eslint-disable-next-line max-params
 function runDeserializeUser(p: PassportInstance, id: string): Promise<AuthUser | false | undefined> {
+  // eslint-disable-next-line max-params
   return new Promise((resolve, reject) => {
+    // eslint-disable-next-line max-params
     (p as unknown as SerializeRunner).deserializeUser(id, (err, user) => {
       if (err) reject(err instanceof Error ? err : new Error(String(err)));
       else resolve(user);

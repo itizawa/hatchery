@@ -15,6 +15,7 @@ const config: StorybookConfig = {
   },
   docs: {},
   staticDirs: ["../public"],
+  // eslint-disable-next-line max-params
   viteFinal: async (config, { configType }) => {
     config.resolve = config.resolve ?? {};
     config.resolve.alias = Object.assign({}, config.resolve.alias ?? {}, {

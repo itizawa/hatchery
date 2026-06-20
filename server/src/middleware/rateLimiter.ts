@@ -17,6 +17,7 @@ export function createRateLimiter({ windowMs, max }: RateLimiterOptions): Reques
     limit: max,
     standardHeaders: true,
     legacyHeaders: false,
+    // eslint-disable-next-line max-params
     handler: (_req, res) => {
       res.status(429).json({ error: "TooManyRequests" });
     },

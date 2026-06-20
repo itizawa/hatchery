@@ -33,6 +33,7 @@ export function createPublicCache(
 ): RequestHandler {
   const publicValue = buildPublicCacheControl(options);
   const privateValue = buildPrivateCacheControl();
+  // eslint-disable-next-line max-params
   return (req, res, next) => {
     res.vary("Cookie");
     if (req.method === "GET" && !isAuthenticatedRequest(req)) {
@@ -50,6 +51,7 @@ export function createPublicCache(
  */
 export function createNoStoreCache(): RequestHandler {
   const value = buildPrivateCacheControl();
+  // eslint-disable-next-line max-params
   return (_req, res, next) => {
     res.setHeader("Cache-Control", value);
     next();

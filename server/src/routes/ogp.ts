@@ -41,6 +41,7 @@ function isSsrfBlockedHost(hostname: string): boolean {
 export function createOgpRouter(): Router {
   const router = Router();
 
+  // eslint-disable-next-line max-params
   router.get("/", async (req, res) => {
     // クエリパラメータ検証
     const parsed = OgpUrlQuerySchema.safeParse(req.query);

@@ -36,6 +36,7 @@ function toRecord(row: {
 /** CommentRepository の Prisma / PostgreSQL 実装（ADR-0019 / #305）。 */
 export function createPrismaCommentRepository(prisma: PrismaClient): CommentRepository {
   return {
+    // eslint-disable-next-line max-params
     async createMany(communityId: string, inputs: CommentCreateInput[]): Promise<CommentRecord[]> {
       const rows = await prisma.$transaction(
         inputs.map((input) =>
@@ -65,6 +66,7 @@ export function createPrismaCommentRepository(prisma: PrismaClient): CommentRepo
       return rows.map(toRecord);
     },
 
+    // eslint-disable-next-line max-params
     async listByPost(postId: string, options?: RevealFilterOptions): Promise<CommentRecord[]> {
       const now = options?.now;
       const rows = await prisma.comment.findMany({
@@ -78,6 +80,7 @@ export function createPrismaCommentRepository(prisma: PrismaClient): CommentRepo
       return rows.map(toRecord);
     },
 
+    // eslint-disable-next-line max-params
     async listByCommunity(communityId: string, limit = 50, options?: RevealFilterOptions): Promise<CommentRecord[]> {
       const now = options?.now;
       const rows = await prisma.comment.findMany({
@@ -112,6 +115,7 @@ export function createPrismaCommentRepository(prisma: PrismaClient): CommentRepo
       return counts;
     },
 
+    // eslint-disable-next-line max-params
     async addScore(id: string, delta: number): Promise<CommentRecord | null> {
       try {
         const row = await prisma.comment.update({
@@ -124,6 +128,7 @@ export function createPrismaCommentRepository(prisma: PrismaClient): CommentRepo
       }
     },
 
+    // eslint-disable-next-line max-params
     async updateParentCommentId(id: string, parentCommentId: string | null): Promise<CommentRecord | null> {
       try {
         const row = await prisma.comment.update({

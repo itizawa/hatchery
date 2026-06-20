@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { fetchPostThread } from "./posts.js";
 
 /** JSON ボディを持つ Response を組み立てる小ヘルパ。 */
+// eslint-disable-next-line max-params
 function jsonResponse(status: number, body?: unknown): Response {
   return new Response(body === undefined ? null : JSON.stringify(body), {
     status,

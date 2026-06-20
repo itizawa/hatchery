@@ -1,4 +1,5 @@
 import type { CommunityRecord } from "../persistence/communityRepository.js";
+import type { FeedArticle } from "./fetchExternalFeed.js";
 import type { CountHints } from "./generateCountHints.js";
 
 /** ワーカー定義（プロンプト構築に必要な最小フィールド）。 */
@@ -58,6 +59,12 @@ export interface BuildCommunityPromptParams {
    * 件数はあくまでプロンプト上の誘導であり、ハード制約ではない。
    */
   countHints?: CountHints;
+  /**
+   * 外部フィードから取得した記事リスト（#491 / ADR-0035）。
+   * 指定・非空の場合はプロンプトに「最新フィード記事」セクションとして注入する。
+   * 省略・空配列の場合はセクションを省略し、通常生成と同じプロンプトになる。
+   */
+  feedArticles?: readonly FeedArticle[];
 }
 
 /** buildCommunityPrompt の戻り値。#555 */
@@ -112,7 +119,7 @@ export const TONE_GUIDELINES = `## トーン規約（このコミュニティの
 export function buildCommunityPrompt(
   params: BuildCommunityPromptParams,
 ): BuildCommunityPromptResult {
-  const { community, workers, recentLog, recentPosts, popularPosts, countHints } = params;
+  const { community, workers, recentLog, recentPosts, popularPosts, countHints, feedArticles } = params;
 
   const workerLines = workers
     .map((w) => {
@@ -138,6 +145,18 @@ export function buildCommunityPrompt(
   const synopsisSection = community.synopsis
     ? `コミュニティのあらすじ:\n${community.synopsis}\n\n`
     : "";
+
+  // 外部フィード記事セクション（#491 / ADR-0035）
+  const feedArticlesSection =
+    feedArticles && feedArticles.length > 0
+      ? `最新フィード記事（${feedArticles.length}件）:\n${feedArticles
+          .map((a) => {
+            const authorPart = a.author ? `（by ${a.author}）` : "";
+            const summaryPart = a.summary ? `\n  概要: ${a.summary}` : "";
+            return `- 「${a.title}」${authorPart}\n  URL: ${a.url}${summaryPart}`;
+          })
+          .join("\n")}\n（↑ これらの記事を題材に会話を生成してください）\n\n`
+      : "";
 
   // 既存Post参照マップを構築（#555）
   const postRefMap = new Map<string, string>();
@@ -193,7 +212,7 @@ ${TONE_GUIDELINES}
 コミュニティ作風:
 ${toneInstruction}
 
-${synopsisSection}ワーカー一覧:
+${synopsisSection}${feedArticlesSection}ワーカー一覧:
 ${workerLines}
 ${recentPostsSection}
 ${popularPostsSection}${recentLogSection}

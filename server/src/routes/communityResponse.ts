@@ -9,6 +9,7 @@ import type { CommunityRecord } from "../persistence/communityRepository.js";
  * - iconUrl / coverUrl は null をそのまま返す（未設定を契約上の null として表現する・#457）
  * - post_count / last_post_at は stats から付与する（#527）
  */
+// eslint-disable-next-line max-params
 export function toCommunityResponse(r: CommunityRecord, stats?: CommunityPostStats) {
   return {
     id: r.id,
@@ -26,12 +27,13 @@ export function toCommunityResponse(r: CommunityRecord, stats?: CommunityPostSta
 }
 
 /**
- * CommunityRecord（camelCase）を admin API レスポンスに変換する（#488）。
- * 公開レスポンスに加えて `generationInstruction` を含む。admin エンドポイントのみで使用する。
+ * CommunityRecord（camelCase）を admin API レスポンスに変換する（#488 / #491）。
+ * 公開レスポンスに加えて `generationInstruction` と `feedUrl` を含む。admin エンドポイントのみで使用する。
  */
 export function toAdminCommunityResponse(r: CommunityRecord) {
   return {
     ...toCommunityResponse(r),
     generationInstruction: r.generationInstruction ?? null,
+    feedUrl: r.feedUrl ?? null,
   };
 }

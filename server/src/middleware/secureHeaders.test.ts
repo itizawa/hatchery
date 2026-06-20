@@ -7,6 +7,7 @@ import { createSecureHeaders } from "./secureHeaders.js";
 function appWith(enableHsts: boolean) {
   const app = express();
   app.use(createSecureHeaders({ enableHsts }));
+  // eslint-disable-next-line max-params
   app.get("/x", (_req, res) => {
     res.json({ ok: true });
   });

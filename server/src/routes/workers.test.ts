@@ -2,6 +2,8 @@ import request from "supertest";
 import { describe, expect, it } from "vitest";
 
 import { createApp } from "../app.js";
+import { createInMemoryViewRepository } from "../persistence/viewRepository.js";
+import { createInMemoryVoteRepository } from "../persistence/voteRepository.js";
 import { createInMemoryWorkerRepository } from "../persistence/workerRepository.js";
 import { createTestUserRepository } from "../persistence/userRepository.js";
 import { createTestDeps } from "../testing/createTestDeps.js";
@@ -183,5 +185,51 @@ describe("GET /api/workers（Bot Worker 一覧 / #240）", () => {
     const res = await request(app).get("/api/workers?includeDeleted=true");
     expect(res.status).toBe(200);
     expect(res.body.workers.map((w: { id: string }) => w.id).sort()).toEqual(["bot1", "bot2"]);
+  });
+});
+
+describe("GET /api/workers/ranking（ワーカーランキング・#665）", () => {
+  it("ランキング一覧を返す（認証不要）", async () => {
+    const workerRepo = createInMemoryWorkerRepository([
+      { id: "w1", displayName: "Worker Alpha", role: null, personality: null, imageUrl: null },
+    ]);
+    const viewRepo = createInMemoryViewRepository();
+    const voteRepo = createInMemoryVoteRepository();
+    const deps = await createTestDeps({ workerRepository: workerRepo, viewRepository: viewRepo, voteRepository: voteRepo });
+    const app = createApp(deps);
+
+    const res = await request(app).get("/api/workers/ranking");
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty("workers");
+    expect(Array.isArray(res.body.workers)).toBe(true);
+  });
+
+  it("workers 配列には worker_id / display_name / view_count / vote_net_score が含まれる", async () => {
+    const workerRepo = createInMemoryWorkerRepository([
+      { id: "w1", displayName: "Worker Alpha", role: null, personality: null, imageUrl: null },
+    ]);
+    const viewRepo = createInMemoryViewRepository();
+    const voteRepo = createInMemoryVoteRepository();
+    const deps = await createTestDeps({ workerRepository: workerRepo, viewRepository: viewRepo, voteRepository: voteRepo });
+    const app = createApp(deps);
+
+    const res = await request(app).get("/api/workers/ranking");
+    expect(res.status).toBe(200);
+    res.body.workers.forEach((item: unknown) => {
+      const w = item as Record<string, unknown>;
+      expect(w).toHaveProperty("worker_id");
+      expect(w).toHaveProperty("display_name");
+      expect(w).toHaveProperty("view_count");
+      expect(w).toHaveProperty("vote_net_score");
+    });
+  });
+
+  it("データがない場合は workers: [] を返す（空状態）", async () => {
+    const deps = await createTestDeps();
+    const app = createApp(deps);
+
+    const res = await request(app).get("/api/workers/ranking");
+    expect(res.status).toBe(200);
+    expect(res.body.workers).toEqual([]);
   });
 });

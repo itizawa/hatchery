@@ -33,7 +33,7 @@ interface RootSearch {
 
 /**
  * root の search param を検証する（#454）。`login=1` / `login=true` を真として
- * ログインモーダルを開く。未指定・偽値のときは `login` を持たない（モーダルは閉じる）。
+ * ログインモーダルを開く。未指定・偉値のときは `login` を持たない（モーダルは閉じる）。
  * 他の search param（例: /admin の tab）は各ルートの validateSearch が別途検証する。
  */
 function validateRootSearch(search: Record<string, unknown>): RootSearch {
@@ -65,11 +65,15 @@ const LazySettingsScene = lazyRouteComponent(() => import("./routes/SettingsScen
 const LazyAccountScene = lazyRouteComponent(() => import("./routes/AccountScene"), "AccountScene");
 const LazyTermsScene = lazyRouteComponent(() => import("./routes/TermsScene"), "TermsScene");
 const LazyPrivacyScene = lazyRouteComponent(() => import("./routes/PrivacyScene"), "PrivacyScene");
+const LazyWorkerRankingScene = lazyRouteComponent(
+  () => import("./routes/WorkerRankingScene"),
+  "WorkerRankingScene",
+);
 
 /**
  * 認証ガード（#454）: 未ログイン（fetchMe が null）またはネットワークエラーの場合、
  * 公開ホーム（/）へ `login=1` 付きでリダイレクトし、ホーム上にログインモーダルを開いて
- * 認証導線へ誘導する（ページ遷移せず閲覧コンテキストを保つ思想に合わせ、専用ログインページへは飛ばさない）。
+ * 認証導線へ誘導する（ページ遷移せず閉覧コンテキストを保つ思想に合わせ、専用ログインページへは飛ばさない）。
  * accountRoute の beforeLoad で使う。
  */
 async function requireAuth(): Promise<void> {
@@ -107,7 +111,7 @@ function isAuthLayout(pathname: string): boolean {
 
 /**
  * ログインモーダル（#454）。root の search param `login` 駆動で開閉し、
- * Root / Auth どちらのレイアウト上でも閲覧コンテキストを保ったまま重ねて表示する。
+ * Root / Auth どちらのレイアウト上でも閉覧コンテキストを保ったまま重ねて表示する。
  */
 function LoginModalMount(): ReactElement {
   const { isOpen, closeLogin } = useLoginModal();
@@ -273,6 +277,17 @@ const privacyRoute = createRoute({
   ),
 });
 
+/** ワーカーランキング（/ranking）。認証不要の公開ページ。直近 7 日の閉覧数・純 vote スコアを表示（#665）。 */
+const rankingRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/ranking",
+  component: () => (
+    <QueryBoundary fallback={<MainContentSkeleton />}>
+      <LazyWorkerRankingScene />
+    </QueryBoundary>
+  ),
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   popularRoute,
@@ -285,6 +300,7 @@ const routeTree = rootRoute.addChildren([
   accountRoute,
   termsRoute,
   privacyRoute,
+  rankingRoute,
 ]);
 
 export interface CreateAppRouterOptions {

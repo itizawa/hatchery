@@ -12,6 +12,7 @@ interface HasId {
  *
  * 解決後の整形（`comment_count` への変換）は `toPostResponse` が担う。
  */
+// eslint-disable-next-line max-params
 export async function attachCommentCount<T extends HasId>(
   records: readonly T[],
   commentRepo: CommentRepository,

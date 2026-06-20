@@ -268,6 +268,7 @@ describe("GET /api/auth/google (#343)", () => {
 describe("OAuth コールバックのリダイレクト先（フロント絶対 URL）", () => {
   // passport.authenticate をパススルー（成功扱い）にスタブし、コールバックの成功ハンドラに到達させる。
   const passthroughPassport = {
+    // eslint-disable-next-line max-params
     authenticate: () => (_req: express.Request, _res: express.Response, next: express.NextFunction) => next(),
   } as unknown as PassportInstance;
 

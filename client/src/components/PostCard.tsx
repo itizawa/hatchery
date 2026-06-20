@@ -1,4 +1,4 @@
-import { Box, Link, Typography } from "./uiParts";
+import { Box, Chip, Link, Typography } from "./uiParts";
 import type { ReactElement } from "react";
 import type React from "react";
 import type { Post } from "../api/communities.js";
@@ -42,6 +42,8 @@ interface PostCardProps {
   onCommunityClick?: () => void;
   /** コンパクト表示モード（#561）。true のとき本文を非表示・パディングを縮小する。 */
   compact?: boolean;
+  /** コメント数 Chip クリック時のコールバック。指定時はクリック可能になる。 */
+  onCommentClick?: () => void;
 }
 
 /**
@@ -97,6 +99,7 @@ export const PostCard = ({
   community,
   onCommunityClick,
   compact = false,
+  onCommentClick,
 }: PostCardProps): ReactElement => {
   // comment_count はサーバ集計値（#500）。未指定（後方互換）は 0 として扱う。
   const commentCount = post.comment_count ?? 0;
@@ -158,16 +161,16 @@ export const PostCard = ({
             disabled={voteDisabled}
           />
         </Box>
-        <Typography
-          variant="body2"
-          color="text.secondary"
-          component="span"
+        <Chip
+          icon={<ChatBubbleOutlineIcon />}
+          label={commentCount}
           aria-label={`コメント ${commentCount} 件`}
-          sx={{ display: "inline-flex", alignItems: "center", gap: 0.5 }}
-        >
-          <ChatBubbleOutlineIcon fontSize="small" sx={{ color: "text.secondary", verticalAlign: "middle" }} aria-hidden="true" />
-          {commentCount}
-        </Typography>
+          size="small"
+          variant="outlined"
+          clickable={!!onCommentClick}
+          onClick={onCommentClick}
+          sx={{ height: 32, padding:"0px 6px 0px 8px",border:"none", color: "text.secondary" }}
+        />
         {postUrl && <ShareButton shareUrl={postUrl} shareTitle={post.title} />}
       </Box>
     </Box>

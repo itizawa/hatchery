@@ -70,6 +70,7 @@ function makeRepos(): Repos {
   };
 }
 
+// eslint-disable-next-line max-params
 async function makeApp(repos: Repos, role: "admin" | "member" = "admin") {
   const userRepo = await createTestUserRepository(role);
   return createApp(

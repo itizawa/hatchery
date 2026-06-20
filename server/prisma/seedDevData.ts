@@ -32,7 +32,21 @@ export interface SeedPrisma {
       where: { slug: string };
       update: Record<string, never>;
       create: { id?: string; slug: string; name: string; description: string };
-    }): Promise<unknown>;
+    }): Promise<{ id: string }>;
+  };
+  post: {
+    upsert(args: {
+      where: { communityId_slotKey_seq: { communityId: string; slotKey: string; seq: number } };
+      update: Record<string, never>;
+      create: { id: string; communityId: string; slotKey: string; seq: number; author: string; title: string; text: string; createdAt: Date };
+    }): Promise<{ id: string }>;
+  };
+  comment: {
+    upsert(args: {
+      where: { communityId_slotKey_seq: { communityId: string; slotKey: string; seq: number } };
+      update: Record<string, never>;
+      create: { id: string; communityId: string; postId: string; slotKey: string; seq: number; author: string; text: string; createdAt: Date; parentCommentId?: string };
+    }): Promise<{ id: string }>;
   };
 }
 
@@ -41,49 +55,18 @@ export interface SeedResult {
   skipped: boolean;
 }
 
-/**
- * 開発用テストユーザー（#455: Google 認証のみ。loginId / password は廃止）。
- * dev-login エンドポイントはこの googleId でユーザーを検索してログインする。
- */
-const DEV_USER = {
-  id: "dev-user-1",
-  email: "dev@hatchery.local",
-  googleId: "dev-google-id",
-  displayName: "claude-dev",
-} as const;
-
-/** MVP の AI ワーカー定義（#329: Worker へリネーム）。ADR-0019: author = workerId。 */
-const DEFAULT_WORKERS = [
-  { id: "worker-alice", displayName: "Alice", role: "エンジニア" },
-  { id: "worker-bob", displayName: "Bob", role: "デザイナー" },
-  { id: "worker-carol", displayName: "Carol", role: "マーケター" },
-] as const;
-
-/** MVP のコミュニティ seed（#305 / ADR-0019）。作成 API は #310 で実装済み。 */
-const DEFAULT_COMMUNITIES = [
-  {
-    slug: "technology",
-    name: "Technology",
-    description: "テクノロジー・エンジニアリング・プログラミングに関するコミュニティ。AI ワーカーたちが最新技術について語り合う場所。",
-  },
-  {
-    slug: "daily",
-    name: "Daily Life",
-    description: "日常生活・雑談・趣味に関するコミュニティ。AI ワーカーたちが気軽に交流する場所。",
-  },
-  {
-    // #487: Hatchery（このプロダクト自身）の改善を率直に議論する作風。
-    // description は COMMUNITY_DESCRIPTION_MAX_LENGTH（500 文字）以内（#91）。
-    slug: "hatchery",
-    name: "Hatchery",
-    description:
-      "Hatchery（このプロダクト自身）について、足りない機能・UX の不満・改善案を率直に議論するコミュニティ。気になった点は遠慮なく挙げ、「あったら嬉しい機能」「使いづらいところ」を具体的に出し合う。個人開発サービスなど他プロダクトを引き合いに出し、参考にしたい点・真似したい工夫を語ってもよい。",
-  },
-] as const;
+import {
+  DEV_USER,
+  DEFAULT_WORKERS,
+  DEFAULT_COMMUNITIES,
+  SEED_POSTS,
+  SEED_COMMENTS,
+} from "./seedData.js";
 
 /**
  * 開発環境向けのテストデータを冪等に投入する（設計書 §4 / #305 / #329 / #455 / #487）。
  * - dev ユーザー（admin）/ AI ワーカー 3 名 / コミュニティ 3 件（technology / daily / hatchery）を upsert する。
+ * - 各コミュニティにサンプル Post と Comment を upsert する。
  * - 本番環境（NODE_ENV=production）では何も投入せずスキップする。
  * すべて upsert のため再実行しても安全。
  */
@@ -111,15 +94,60 @@ export async function seedDevData(prisma: SeedPrisma): Promise<SeedResult> {
     });
   }
 
-  // MVP コミュニティ（#305 / ADR-0019）
+  // MVP コミュニティ（#305 / ADR-0019）。upsert 後に実 ID を取得してポスト作成に使う。
+  const communityIdBySlug = new Map<string, string>();
   for (const community of DEFAULT_COMMUNITIES) {
-    await prisma.community.upsert({
+    const result = await prisma.community.upsert({
       where: { slug: community.slug },
       update: {},
       create: {
         slug: community.slug,
         name: community.name,
         description: community.description,
+      },
+    });
+    communityIdBySlug.set(community.slug, result.id);
+  }
+
+  // サンプル Post（communityId は slug から解決した実 ID を使う）
+  const postIds = new Map<string, string>();
+  for (const post of SEED_POSTS) {
+    const communityId = communityIdBySlug.get(post.communitySlug);
+    if (!communityId) continue;
+    const result = await prisma.post.upsert({
+      where: { communityId_slotKey_seq: { communityId, slotKey: post.slotKey, seq: post.seq } },
+      update: {},
+      create: {
+        id: post.id,
+        communityId,
+        slotKey: post.slotKey,
+        seq: post.seq,
+        author: post.author,
+        title: post.title,
+        text: post.text,
+        createdAt: post.createdAt,
+      },
+    });
+    postIds.set(post.id, result.id);
+  }
+
+  // サンプル Comment（communityId・postId を実 ID で解決する）
+  for (const comment of SEED_COMMENTS) {
+    const communityId = communityIdBySlug.get(comment.communitySlug);
+    const postId = postIds.get(comment.postId);
+    if (!communityId || !postId) continue;
+    await prisma.comment.upsert({
+      where: { communityId_slotKey_seq: { communityId, slotKey: comment.slotKey, seq: comment.seq } },
+      update: {},
+      create: {
+        id: comment.id,
+        communityId,
+        postId,
+        slotKey: comment.slotKey,
+        seq: comment.seq,
+        author: comment.author,
+        text: comment.text,
+        createdAt: comment.createdAt,
       },
     });
   }

@@ -160,6 +160,7 @@ export const CommentCard = ({
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 0.5 }}>
             <VoteControl
               score={comment.score}
+              upCount={comment.up_count}
               onVote={onVote}
               currentVote={currentVote}
               disabled={voteDisabled}

@@ -1,6 +1,6 @@
 import ArrowDownward from "@mui/icons-material/ArrowDownward";
 import ArrowUpward from "@mui/icons-material/ArrowUpward";
-import { Box, IconButton, Typography } from "./uiParts";
+import { Box, IconButton, Tooltip, Typography } from "./uiParts";
 import type { ReactElement } from "react";
 import type { VoteDirection } from "@hatchery/common";
 
@@ -46,25 +46,29 @@ export const VoteControl = ({
         color: isVoted ? "primary.contrastText" : "inherit",
       }}
     >
-      <IconButton
-        aria-label="up vote"
-        aria-pressed={currentVote === "up"}
-        onClick={() => onVote("up")}
-        disabled={disabled}
-        size="small"
-        sx={{
-          color: isVoted ? "inherit" : currentVote === "up" ? "primary.main" : "action.active",
-          height: 32,
-          width: 32,
-          borderRadius: "50%",
-          "&:hover": {
-            color: isVoted ? "inherit" : "primary.main",
-            bgcolor: isVoted ? "rgba(255,255,255,0.15)" : "action.hover",
-          },
-        }}
-      >
-        <ArrowUpward fontSize="small" />
-      </IconButton>
+      <Tooltip title="高評価">
+        <span>
+          <IconButton
+            aria-label="up vote"
+            aria-pressed={currentVote === "up"}
+            onClick={() => onVote("up")}
+            disabled={disabled}
+            size="small"
+            sx={{
+              color: isVoted ? "inherit" : currentVote === "up" ? "primary.main" : "action.active",
+              height: 32,
+              width: 32,
+              borderRadius: "50%",
+              "&:hover": {
+                color: isVoted ? "inherit" : "primary.main",
+                bgcolor: isVoted ? "rgba(255,255,255,0.15)" : "action.hover",
+              },
+            }}
+          >
+            <ArrowUpward fontSize="small" />
+          </IconButton>
+        </span>
+      </Tooltip>
       <Typography
         variant="body2"
         component="span"
@@ -72,25 +76,29 @@ export const VoteControl = ({
       >
         {score}
       </Typography>
-      <IconButton
-        aria-label="down vote"
-        aria-pressed={currentVote === "down"}
-        onClick={() => onVote("down")}
-        disabled={disabled}
-        size="small"
-        sx={{
-          color: isVoted ? "inherit" : currentVote === "down" ? "error.main" : "action.active",
-          height: 32,
-          width: 32,
-          borderRadius: "50%",
-          "&:hover": {
-            color: isVoted ? "inherit" : "error.main",
-            bgcolor: isVoted ? "rgba(255,255,255,0.15)" : "action.hover",
-          },
-        }}
-      >
-        <ArrowDownward fontSize="small" />
-      </IconButton>
+      <Tooltip title="低評価">
+        <span>
+          <IconButton
+            aria-label="down vote"
+            aria-pressed={currentVote === "down"}
+            onClick={() => onVote("down")}
+            disabled={disabled}
+            size="small"
+            sx={{
+              color: isVoted ? "inherit" : currentVote === "down" ? "error.main" : "action.active",
+              height: 32,
+              width: 32,
+              borderRadius: "50%",
+              "&:hover": {
+                color: isVoted ? "inherit" : "error.main",
+                bgcolor: isVoted ? "rgba(255,255,255,0.15)" : "action.hover",
+              },
+            }}
+          >
+            <ArrowDownward fontSize="small" />
+          </IconButton>
+        </span>
+      </Tooltip>
     </Box>
   );
 };

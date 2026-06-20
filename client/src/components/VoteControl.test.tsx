@@ -100,6 +100,22 @@ describe("VoteControl", () => {
     });
   });
 
+  describe("ツールチップ", () => {
+    it("up vote ボタンに『高評価』ツールチップが付く", async () => {
+      const user = userEvent.setup();
+      render(<VoteControl score={0} onVote={vi.fn()} />);
+      await user.hover(screen.getByRole("button", { name: /up vote/i }));
+      expect(await screen.findByRole("tooltip", { name: "高評価" })).toBeInTheDocument();
+    });
+
+    it("down vote ボタンに『低評価』ツールチップが付く", async () => {
+      const user = userEvent.setup();
+      render(<VoteControl score={0} onVote={vi.fn()} />);
+      await user.hover(screen.getByRole("button", { name: /down vote/i }));
+      expect(await screen.findByRole("tooltip", { name: "低評価" })).toBeInTheDocument();
+    });
+  });
+
   describe("pill コンテナ レンダリング", () => {
     it("up vote ボタンは IconButton（button 要素・ MuiIconButton-root）としてレンダリングされる", () => {
       const { container } = render(<VoteControl score={0} onVote={vi.fn()} />);
@@ -119,7 +135,11 @@ describe("VoteControl", () => {
       const { container } = render(<VoteControl score={0} onVote={vi.fn()} />);
       const upEl = container.querySelector('[aria-label="up vote"]');
       const downEl = container.querySelector('[aria-label="down vote"]');
-      expect(upEl?.parentElement).toBe(downEl?.parentElement);
+      // Tooltip の <span> ラッパーを考慮し、共通の Box コンテナ（MuiBox-root）で同居を確認
+      const upContainer = upEl?.closest(".MuiBox-root");
+      const downContainer = downEl?.closest(".MuiBox-root");
+      expect(upContainer).toBeTruthy();
+      expect(upContainer).toBe(downContainer);
     });
   });
 });

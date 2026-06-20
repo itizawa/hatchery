@@ -5,7 +5,7 @@
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { WORKER_RANKING_QUERY_KEY } from "../api/workers.js";
 import { QueryBoundary } from "../components/QueryBoundary.js";

@@ -13,4 +13,6 @@ test.todo("UC-ACCOUNT-02: 変更が無いとき保存ボタンが無効化され
 test.todo("UC-ACCOUNT-03: 不正な URL を入力すると保存できずエラーが表示される");
 
 test.todo("UC-ACCOUNT-04: プロフィール更新に失敗するとエラー内容が表示される");
+
+test.todo("UC-ACCOUNT-05: 初回ログイン直後（?welcome=1）に表示名設定を促す歓迎メッセージが表示される");
 </content>

@@ -1,6 +1,7 @@
 import { Alert, Box, Button, Snackbar, TextField, Typography } from "../components/uiParts";
 
 import { useForm } from "@tanstack/react-form";
+import { useSearch } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ReactElement, useEffect, useRef, useState } from "react";
 
@@ -22,6 +23,8 @@ export const AccountScene = (): ReactElement => {
   // #461: useAuth は useSuspenseQuery 化済み。/account は requireAuth ガード経由で到達するため
   // ここでは authUser は解決済み（AuthUser）。ローディングはルートの Suspense に委譲する。
   const { data: authUser } = authApi.useAuth();
+  // 初回ログイン直後（OAuth で新規ユーザー作成）の遷移で `?welcome=1` が付く。表示名設定を促す歓迎表示に使う。
+  const { welcome } = useSearch({ from: "/account" });
   const queryClient = useQueryClient();
   const updateMutation = useMutation({
     mutationFn: (body: Parameters<typeof authApi.updateProfile>[0]) => authApi.updateProfile(body),
@@ -72,6 +75,12 @@ export const AccountScene = (): ReactElement => {
       <Typography variant="h5" component="h1" gutterBottom>
         アカウント設定
       </Typography>
+
+      {welcome && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          ようこそ Hatchery へ！まずは表示名を設定しましょう。
+        </Alert>
+      )}
 
       <Box
         component="form"

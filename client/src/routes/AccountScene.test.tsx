@@ -156,6 +156,31 @@ describe("アカウント設定画面（#50）", () => {
   });
 });
 
+describe("初回ログインの歓迎メッセージ", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("?welcome=1 付きで /account を開くと表示名設定を促す歓迎メッセージが表示される", async () => {
+    stubAuthFetch({ id: "user1", displayName: "Alice" });
+    renderApp("/account?welcome=1");
+
+    expect(await screen.findByText(/ようこそ/)).toBeInTheDocument();
+  });
+
+  it("welcome なしで /account を開くと歓迎メッセージは表示されない", async () => {
+    stubAuthFetch({ id: "user1", displayName: "Alice" });
+    renderApp("/account");
+
+    await screen.findByRole("heading", { name: /アカウント設定/ });
+    expect(screen.queryByText(/ようこそ/)).not.toBeInTheDocument();
+  });
+});
+
 describe("プロフィール編集フォーム (#51)", () => {
   beforeEach(() => {
     vi.restoreAllMocks();

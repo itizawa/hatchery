@@ -297,4 +297,24 @@ describe("OAuth コールバックのリダイレクト先（フロント絶対 
     const res = await request(buildAuthApp("https://develop.hatchery.pages.dev/")).get("/api/auth/google/callback");
     expect(res.headers["location"]).toBe("https://develop.hatchery.pages.dev/");
   });
+
+  // 初回ログイン（新規ユーザー作成時）はアカウント設定画面へ誘導し、表示名を設定させる。
+  // passport の verify callback が done の info で isNewUser を伝え、コールバックハンドラが req.authInfo で受け取る。
+  it("新規ユーザー（初回ログイン）のときはアカウント設定画面（/account?welcome=1）へリダイレクトする", async () => {
+    const newUserPassport = {
+      // eslint-disable-next-line max-params
+      authenticate: () => (req: express.Request, _res: express.Response, next: express.NextFunction) => {
+        req.authInfo = { isNewUser: true };
+        next();
+      },
+    } as unknown as PassportInstance;
+    const app = express();
+    app.use(
+      "/api/auth",
+      createAuthRouter(newUserPassport, createTestUserRepository(), googleConfig, "production", "https://develop.hatchery.pages.dev"),
+    );
+    const res = await request(app).get("/api/auth/google/callback");
+    expect(res.status).toBe(302);
+    expect(res.headers["location"]).toBe("https://develop.hatchery.pages.dev/account?welcome=1");
+  });
 });

@@ -12,7 +12,11 @@ import { CommunitySidebarCard } from "./CommunitySidebarCard.js";
  *       レイアウトの単一情報源を実 UI コンポーネントに統一する。
  */
 
-/** コメントカード相当のスケルトン 1 件。 */
+/**
+ * コメントカード相当のスケルトン 1 件。
+ * CommentCard は #807 のスコープ外のため、PostCard / CommunitySidebarCard と異なり
+ * loading prop を持たない。CommentCard に loading prop を追加する場合は別 Issue で対応する。
+ */
 const CommentCardSkeleton = (): ReactElement => (
   <Box sx={{ mb: 1 }}>
     <Skeleton variant="rectangular" height={80} sx={{ borderRadius: 1, mb: 0.5 }} />

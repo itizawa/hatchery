@@ -333,11 +333,11 @@ describe("PostCard", () => {
       expect(screen.queryByRole("button", { name: /down vote/i })).not.toBeInTheDocument();
     });
 
-    it("loading=true のとき実 UI と同一の外枠 Box が描画される（border スタイルを持つ）", () => {
+    it("loading=true のとき実 UI と同一の外枠 Box が描画され、その中に複数の Skeleton が含まれる", () => {
       const { container } = render(<PostCard loading />);
-      // 外枠 Box には border スタイルが適用されている
-      const box = container.firstChild as HTMLElement;
-      expect(box).toBeInTheDocument();
+      // 外枠 Box の中に Skeleton が複数含まれることを確認（タイトル・byline・本文 3 行・アクションバー）
+      const skeletons = container.querySelectorAll(".MuiSkeleton-root");
+      expect(skeletons.length).toBeGreaterThanOrEqual(5);
     });
   });
 });

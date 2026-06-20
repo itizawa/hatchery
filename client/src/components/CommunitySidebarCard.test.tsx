@@ -166,10 +166,11 @@ describe("CommunitySidebarCard", () => {
       expect(screen.queryByRole("button", { name: "購読解除" })).not.toBeInTheDocument();
     });
 
-    it("loading=true のとき実 UI と同一の外枠 Box が描画される", () => {
+    it("loading=true のとき実 UI と同一の外枠 Box が描画され、その中に複数の Skeleton が含まれる", () => {
       const { container } = render(<CommunitySidebarCard loading />);
-      const box = container.firstChild as HTMLElement;
-      expect(box).toBeInTheDocument();
+      // 外枠 Box の中に Skeleton が複数含まれることを確認（Avatar・名前・説明 2 行・ボタン）
+      const skeletons = container.querySelectorAll(".MuiSkeleton-root");
+      expect(skeletons.length).toBeGreaterThanOrEqual(4);
     });
   });
 });

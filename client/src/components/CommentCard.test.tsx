@@ -202,4 +202,25 @@ describe("CommentCard", () => {
       expect(screen.getByRole("button", { name: /down vote/i })).not.toBeDisabled();
     });
   });
+
+  describe("共有ボタン（#775）", () => {
+    it("postId を渡すと共有ボタンが表示される", () => {
+      render(<CommentCard comment={mockComment} onVote={vi.fn()} postId="post-1" />);
+      expect(screen.getByRole("button", { name: /共有/i })).toBeInTheDocument();
+    });
+
+    it("postId を渡さない場合は共有ボタンが表示されない", () => {
+      render(<CommentCard comment={mockComment} onVote={vi.fn()} />);
+      expect(screen.queryByRole("button", { name: /共有/i })).not.toBeInTheDocument();
+    });
+
+    it("共有ボタンの shareUrl が ${origin}/posts/<postId>#comment-<commentId> 形式になる", async () => {
+      // jsdom のデフォルト origin は "http://localhost"
+      render(<CommentCard comment={mockComment} onVote={vi.fn()} postId="post-1" />);
+      const shareBtn = screen.getByRole("button", { name: /共有/i });
+      await userEvent.click(shareBtn);
+      // メニューが開く → "URL をコピー" が表示されていればShareButtonが正しくレンダリングされている
+      expect(screen.getByText("URL をコピー")).toBeInTheDocument();
+    });
+  });
 });

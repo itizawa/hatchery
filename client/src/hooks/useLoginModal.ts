@@ -8,7 +8,7 @@ import { useCallback } from "react";
  * リロード・リダイレクト（認証ガードからの `/?login=1` 誘導）でも復元できる。
  *
  * - `isOpen`: root の search param `login` が真のとき true。
- * - `openLogin()`: 現在のパスを保ったまま `login: true` を付与してモーダルを開く（背景の閲覧コンテキストを保持）。
+ * - `openLogin()`: 現在のパスを保ったまま `login: 1` を付与してモーダルを開く（背景の閲覧コンテキストを保持）。
  * - `closeLogin()`: `login` を取り除いてモーダルを閉じる（背景はそのまま）。
  */
 export function useLoginModal(): {

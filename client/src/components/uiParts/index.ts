@@ -14,7 +14,7 @@ export { default as DialogContent } from "@mui/material/DialogContent";
 export { default as DialogTitle } from "@mui/material/DialogTitle";
 export { default as IconButton } from "@mui/material/IconButton";
 export { default as Menu } from "@mui/material/Menu";
-export { default as Tooltip } from "@mui/material/Tooltip";
+export { Tooltip } from "./Tooltip";
 export { default as Checkbox } from "@mui/material/Checkbox";
 export { default as Chip } from "@mui/material/Chip";
 export { default as CircularProgress } from "@mui/material/CircularProgress";

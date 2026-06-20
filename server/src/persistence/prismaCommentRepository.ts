@@ -16,6 +16,7 @@ function toRecord(row: {
   author: string;
   text: string;
   score: number;
+  upCount: number;
   createdAt: Date;
   parentCommentId: string | null;
 }): CommentRecord {
@@ -28,6 +29,7 @@ function toRecord(row: {
     author: row.author,
     text: row.text,
     score: row.score,
+    upCount: row.upCount,
     createdAt: row.createdAt,
     parentCommentId: row.parentCommentId,
   };

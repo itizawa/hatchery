@@ -1,7 +1,7 @@
 import { Box, Skeleton, Typography } from "../components/uiParts";
 import { useParams, Link as RouterLink } from "@tanstack/react-router";
 import type { ReactElement } from "react";
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import { buildCommentTree, type CommentTreeNode } from "@hatchery/common";
 
 import {
@@ -181,6 +181,11 @@ export const PostThreadScene = (): ReactElement => {
 
   useDocumentTitle(`${post.title} - Hatchery`);
 
+  const commentSectionRef = useRef<HTMLDivElement>(null);
+  const scrollToComments = () => {
+    commentSectionRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
   const commentTree = useMemo(
     () =>
       buildCommentTree(
@@ -218,10 +223,11 @@ export const PostThreadScene = (): ReactElement => {
               guardVote(() => votePost({ postId: post.id, direction }))
             }
             postUrl={postUrl}
+            onCommentClick={comments.length > 0 ? scrollToComments : undefined}
           />
 
           {comments.length > 0 && (
-            <Box sx={{ mt: 2 }}>
+            <Box ref={commentSectionRef} sx={{ mt: 2 }}>
               <Typography variant="subtitle2" sx={{ mb: 1, color: "text.secondary" }}>
                 コメント {comments.length} 件
               </Typography>

@@ -68,7 +68,7 @@ export const ShareButton = ({ shareUrl, shareTitle }: ShareButtonProps): ReactEl
         size="small"
         onClick={handleOpen}
         variant="outlined"
-        sx={{ bgcolor: "background.paper", borderColor: "divider" }}
+        sx={{ height: 32,padding:"0px 8px", bgcolor: "background.paper", border:"none" }}
       />
       <Menu anchorEl={anchorEl} open={open} onClose={handleClose}>
         <MenuItem onClick={handleCopy}>

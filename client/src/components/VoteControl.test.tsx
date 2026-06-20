@@ -71,19 +71,26 @@ describe("VoteControl", () => {
     expect(screen.queryByText(/累積/i)).not.toBeInTheDocument();
   });
 
-  describe("Chip レンダリング（#747）", () => {
-    it("up vote ボタンは Chip（button 要素・MuiChip-root）としてレンダリングされる", () => {
+  describe("pill コンテナ レンダリング", () => {
+    it("up vote ボタンは IconButton（button 要素・MuiIconButton-root）としてレンダリングされる", () => {
       const { container } = render(<VoteControl score={0} onVote={vi.fn()} />);
       const upEl = container.querySelector('[aria-label="up vote"]');
       expect(upEl?.tagName).toBe("BUTTON");
-      expect(upEl?.classList.contains("MuiChip-root")).toBe(true);
+      expect(upEl?.classList.contains("MuiIconButton-root")).toBe(true);
     });
 
-    it("down vote ボタンは Chip（button 要素・MuiChip-root）としてレンダリングされる", () => {
+    it("down vote ボタンは IconButton（button 要素・MuiIconButton-root）としてレンダリングされる", () => {
       const { container } = render(<VoteControl score={0} onVote={vi.fn()} />);
       const downEl = container.querySelector('[aria-label="down vote"]');
       expect(downEl?.tagName).toBe("BUTTON");
-      expect(downEl?.classList.contains("MuiChip-root")).toBe(true);
+      expect(downEl?.classList.contains("MuiIconButton-root")).toBe(true);
+    });
+
+    it("up と down ボタンは同一の pill コンテナ内に存在する", () => {
+      const { container } = render(<VoteControl score={0} onVote={vi.fn()} />);
+      const upEl = container.querySelector('[aria-label="up vote"]');
+      const downEl = container.querySelector('[aria-label="down vote"]');
+      expect(upEl?.parentElement).toBe(downEl?.parentElement);
     });
   });
 });

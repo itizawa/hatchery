@@ -137,4 +137,15 @@ describe("SidebarCommunitySection", () => {
     // "コーディング日常" の先頭文字 "コ" がフォールバック表示される
     expect(screen.getByText("コ")).toBeInTheDocument();
   });
+
+  it("「探す」リンクのアイコンが MuiListItemIcon-root クラスを持つ要素でレンダリングされる (#732)", async () => {
+    render(<SidebarCommunitySection />, { wrapper: Wrapper });
+    const exploreText = await screen.findByText("探す");
+    // 「探す」ボタン（ListItemButton）の直下の最初の子要素を取得
+    const listItemButton = exploreText.closest(".MuiListItemButton-root");
+    expect(listItemButton).not.toBeNull();
+    // ListItemButton の最初の子要素（アイコンラッパー）が MuiListItemIcon-root クラスを持つ
+    const firstChild = listItemButton?.firstElementChild;
+    expect(firstChild?.classList.contains("MuiListItemIcon-root")).toBe(true);
+  });
 });

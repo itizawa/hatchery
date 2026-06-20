@@ -26,15 +26,16 @@ import { TextField } from "./uiParts/index.js";
 /**
  * CommunityFormFields が使用するフォームデータの最小インターフェース（#736）。
  * CreateCommunityInput / UpdateCommunityInput の共通フィールド。
- * UpdateCommunityInput では name / description が optional なため、ここも optional にする。
+ * UpdateCommunityInput では name / description が optional（string | undefined）なため optional にする。
+ * generationInstruction のみ nullable（string | null | undefined）。
  */
 interface CommunityFormData {
-  name?: string | null | undefined;
-  description?: string | null | undefined;
+  name?: string | undefined;
+  description?: string | undefined;
   generationInstruction?: string | null | undefined;
 }
 
-export interface CommunityFormFieldsProps<
+interface CommunityFormFieldsProps<
   TData extends CommunityFormData,
   TOnMount extends undefined | FormValidateOrFn<TData>,
   TOnChange extends undefined | FormValidateOrFn<TData>,
@@ -115,7 +116,7 @@ export function CommunityFormFields<
             required
             value={field.state.value ?? ""}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              // e.target.value は string であり、TData["name"] のサブタイプ（string | null | undefined）に
+              // e.target.value は string であり、TData["name"] のサブタイプ（string | undefined）に
               // 代入可能だが、TypeScript は DeepValue ジェネリクス経由では推論できないため
               // unknown 経由でのアサーションで補助する（any は使わない）
               field.handleChange(e.target.value as unknown as Updater<DeepValue<TData, "name">>)
@@ -123,7 +124,7 @@ export function CommunityFormFields<
             onBlur={field.handleBlur}
             slotProps={{ htmlInput: { maxLength: COMMUNITY_NAME_MAX_LENGTH } }}
             error={field.state.meta.errors.length > 0}
-            helperText={field.state.meta.errors[0] ?? ""}
+            helperText={String(field.state.meta.errors[0] ?? "")}
           />
         )}
       </form.Field>
@@ -149,7 +150,7 @@ export function CommunityFormFields<
             onBlur={field.handleBlur}
             slotProps={{ htmlInput: { maxLength: COMMUNITY_DESCRIPTION_MAX_LENGTH } }}
             error={field.state.meta.errors.length > 0}
-            helperText={field.state.meta.errors[0] ?? `最大 ${COMMUNITY_DESCRIPTION_MAX_LENGTH} 文字`}
+            helperText={String(field.state.meta.errors[0] ?? `最大 ${COMMUNITY_DESCRIPTION_MAX_LENGTH} 文字`)}
           />
         )}
       </form.Field>

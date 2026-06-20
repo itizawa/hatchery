@@ -50,7 +50,7 @@ export function WorkerCommunitiesSelect({
         label="参加コミュニティ"
         multiple
         value={value}
-        inputProps={{ "aria-label": "参加コミュニティ" }}
+        slotProps={{ input: { "aria-label": "参加コミュニティ" } }}
         onChange={(e) => {
           const next = e.target.value;
           const ids = typeof next === "string" ? next.split(",") : (next as string[]);

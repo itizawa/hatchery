@@ -88,8 +88,7 @@ export async function fetchAdminCommunities(): Promise<AdminCommunity[]> {
   });
   const data = unwrap(result, "GET /api/admin/communities");
   return AdminCommunitySchema.array().parse(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    data.map((c: any) => ({
+    data.map((c) => ({
       ...c,
       created_at: new Date(c.created_at),
     })),

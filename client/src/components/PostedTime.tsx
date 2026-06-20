@@ -1,5 +1,5 @@
-import { formatRelativeTime } from "@hatchery/common";
-import { Typography } from "./uiParts";
+import { formatAbsoluteTime, formatRelativeTime } from "@hatchery/common";
+import { Tooltip, Typography } from "./uiParts";
 import type { ReactElement } from "react";
 
 interface PostedTimeProps {
@@ -8,8 +8,9 @@ interface PostedTimeProps {
 }
 
 /**
- * 投稿時刻を相対時間（例「3時間前」、7日以上は日付）で表示する byline 要素（#502）。
- * - 機械可読な絶対時刻を `<time dateTime>` に持たせる（アクセシビリティ・将来のツールチップ拡張に備える）。
+ * 投稿時刻を相対時間（24時間未満）または絶対日付（24時間以上）で表示する byline 要素（#502・#781）。
+ * - 相対表示時はホバーで絶対日時のツールチップを表示する。
+ * - 機械可読な絶対時刻を `<time dateTime>` に持たせる（アクセシビリティ）。
  * - createdAt が未指定 / 不正な日付なら何も描画しない（破綻させない）。
  */
 export const PostedTime = ({ createdAt }: PostedTimeProps): ReactElement | null => {
@@ -21,14 +22,18 @@ export const PostedTime = ({ createdAt }: PostedTimeProps): ReactElement | null 
   const label = formatRelativeTime({ target, now: new Date() });
   if (label === "") return null;
 
+  const absoluteLabel = formatAbsoluteTime({ target });
+
   return (
-    <Typography
-      variant="body2"
-      component="time"
-      dateTime={target.toISOString()}
-      sx={{ color: "text.secondary" }}
-    >
-      {label}
-    </Typography>
+    <Tooltip title={absoluteLabel}>
+      <Typography
+        variant="body2"
+        component="time"
+        dateTime={target.toISOString()}
+        sx={{ color: "text.secondary" }}
+      >
+        {label}
+      </Typography>
+    </Tooltip>
   );
 };

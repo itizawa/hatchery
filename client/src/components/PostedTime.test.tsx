@@ -32,14 +32,23 @@ describe("PostedTime", () => {
       expect(timeEl?.textContent).toBe("3時間前");
     });
 
+  });
+
+  describe("ツールチップ: 相対時間表示時にホバーで絶対日時を表示する（リアルタイマー）", () => {
+    // MUI Tooltip はリアルタイマーが必要なためフェイクタイマーは使わない
+    // createdAt = 2026-06-01T09:00:00Z（UTCで 9時）は現実の「今」から見て過去なので
+    // 必ず絶対時刻表示（24時間超）または相対時刻（24時間未満）になる。
+    // ツールチップの中身が formatAbsoluteTime の出力と一致するかを検証する
+
     it("ホバー時に絶対日時のツールチップが表示される", async () => {
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime.bind(vi) });
+      const user = userEvent.setup();
       render(<PostedTime createdAt="2026-06-01T09:00:00Z" />);
       const timeEl = document.querySelector("time");
       expect(timeEl).not.toBeNull();
       await user.hover(timeEl!);
-      expect(await screen.findByRole("tooltip")).toBeInTheDocument();
-      expect(screen.getByRole("tooltip").textContent).toBe("2026/6/1 9:00:00");
+      const tooltip = await screen.findByRole("tooltip", {}, { timeout: 5000 });
+      expect(tooltip).toBeInTheDocument();
+      expect(tooltip.textContent).toBe("2026/6/1 9:00:00");
     });
   });
 

@@ -71,15 +71,44 @@ describe("VoteControl", () => {
     expect(screen.queryByText(/累積/i)).not.toBeInTheDocument();
   });
 
+  describe("投票済み塗りつぶし表示（#813）", () => {
+    it("currentVote='up' のとき pill コンテナに data-voted='up' が付く", () => {
+      const { container } = render(<VoteControl score={1} onVote={vi.fn()} currentVote="up" />);
+      expect(container.firstChild).toHaveAttribute("data-voted", "up");
+    });
+
+    it("currentVote='down' のとき pill コンテナに data-voted='down' が付く", () => {
+      const { container } = render(<VoteControl score={-1} onVote={vi.fn()} currentVote="down" />);
+      expect(container.firstChild).toHaveAttribute("data-voted", "down");
+    });
+
+    it("currentVote=null のとき pill コンテナに data-voted='none' が付く", () => {
+      const { container } = render(<VoteControl score={0} onVote={vi.fn()} currentVote={null} />);
+      expect(container.firstChild).toHaveAttribute("data-voted", "none");
+    });
+
+    it("currentVote='up' のとき up のみ active で down は非 active（排他性）", () => {
+      render(<VoteControl score={1} onVote={vi.fn()} currentVote="up" />);
+      expect(screen.getByRole("button", { name: /up vote/i })).toHaveAttribute("aria-pressed", "true");
+      expect(screen.getByRole("button", { name: /down vote/i })).toHaveAttribute("aria-pressed", "false");
+    });
+
+    it("currentVote='down' のとき down のみ active で up は非 active（排他性）", () => {
+      render(<VoteControl score={-1} onVote={vi.fn()} currentVote="down" />);
+      expect(screen.getByRole("button", { name: /down vote/i })).toHaveAttribute("aria-pressed", "true");
+      expect(screen.getByRole("button", { name: /up vote/i })).toHaveAttribute("aria-pressed", "false");
+    });
+  });
+
   describe("pill コンテナ レンダリング", () => {
-    it("up vote ボタンは IconButton（button 要素・MuiIconButton-root）としてレンダリングされる", () => {
+    it("up vote ボタンは IconButton（button 要素・ MuiIconButton-root）としてレンダリングされる", () => {
       const { container } = render(<VoteControl score={0} onVote={vi.fn()} />);
       const upEl = container.querySelector('[aria-label="up vote"]');
       expect(upEl?.tagName).toBe("BUTTON");
       expect(upEl?.classList.contains("MuiIconButton-root")).toBe(true);
     });
 
-    it("down vote ボタンは IconButton（button 要素・MuiIconButton-root）としてレンダリングされる", () => {
+    it("down vote ボタンは IconButton（button 要素・ MuiIconButton-root）としてレンダリングされる", () => {
       const { container } = render(<VoteControl score={0} onVote={vi.fn()} />);
       const downEl = container.querySelector('[aria-label="down vote"]');
       expect(downEl?.tagName).toBe("BUTTON");

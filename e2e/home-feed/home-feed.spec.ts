@@ -402,8 +402,8 @@ test(
 
     // refetchOnWindowFocus が機能し、フィードが再取得されることを確認
     // （初回より多くリクエストが発生していること）
-    await page.waitForTimeout(500);
-    expect(feedRequestCount).toBeGreaterThan(initialCount);
+    // expect.poll で再試行しながら待機することでフレーキーテストを防ぐ
+    await expect.poll(() => feedRequestCount, { timeout: 3000 }).toBeGreaterThan(initialCount);
   },
 );
 

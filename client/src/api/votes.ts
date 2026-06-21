@@ -125,8 +125,16 @@ export function useVotePost(communitySlug?: string) {
       }
     },
     // eslint-disable-next-line max-params
-    onSettled: (_data, _err, { postId }) => {
-      void queryClient.invalidateQueries({ queryKey: postThreadQueryKey(postId) });
+    onSuccess: (serverPost, { postId }) => {
+      // POST vote レスポンス（my_vote 込みの確定値）でスレッドキャッシュを更新する（#853）。
+      const threadKey = postThreadQueryKey(postId);
+      const current = queryClient.getQueryData<{ post: Post; comments: Comment[] }>(threadKey);
+      if (current) {
+        queryClient.setQueryData(threadKey, { ...current, post: { ...current.post, ...serverPost } });
+      }
+    },
+    onSettled: () => {
+      // postThreadQueryKey は onSuccess で確定値を直接書き込む（#853）。feed/community は invalidate を維持。
       if (communitySlug) {
         void queryClient.invalidateQueries({ queryKey: communityFeedQueryKey(communitySlug) });
       }
@@ -190,8 +198,17 @@ export function useVoteComment(postId: string) {
         queryClient.setQueryData(postThreadQueryKey(postId), context.previous);
       }
     },
-    onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: postThreadQueryKey(postId) });
+    // eslint-disable-next-line max-params
+    onSuccess: (serverComment, { commentId }) => {
+      // POST vote レスポンス（my_vote 込みの確定値）でスレッドキャッシュのコメントを更新する（#853）。
+      const threadKey = postThreadQueryKey(postId);
+      const current = queryClient.getQueryData<{ post: Post; comments: Comment[] }>(threadKey);
+      if (current) {
+        queryClient.setQueryData(threadKey, {
+          ...current,
+          comments: current.comments.map((c) => c.id === commentId ? { ...c, ...serverComment } : c),
+        });
+      }
     },
   });
 }

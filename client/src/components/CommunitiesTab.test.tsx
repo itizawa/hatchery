@@ -75,6 +75,29 @@ describe("CommunitiesTab（#833）", () => {
     );
   });
 
+  it("編集途中でキャンセルして再度開くと、途中の入力ではなく永続値が再表示される（再マウント）", async () => {
+    renderWithClient(<CommunitiesTab />);
+    await screen.findByText("AI 開発者の集い");
+
+    // 編集ダイアログを開いて名前を書き換える
+    await userEvent.click(screen.getByRole("button", { name: "編集" }));
+    let dialog = await screen.findByRole("dialog");
+    const nameInput = within(dialog).getByRole("textbox", { name: /コミュニティ名/ });
+    await userEvent.clear(nameInput);
+    await userEvent.type(nameInput, "保存しない途中編集");
+
+    // 保存せずキャンセルで閉じる
+    await userEvent.click(within(dialog).getByRole("button", { name: "キャンセル" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+
+    // 再度開くと、途中編集ではなく元の永続値が表示される
+    await userEvent.click(screen.getByRole("button", { name: "編集" }));
+    dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByRole("textbox", { name: /コミュニティ名/ })).toHaveValue(
+      "AI 開発者の集い",
+    );
+  });
+
   it("追加ダイアログのキャンセルでダイアログが閉じる", async () => {
     renderWithClient(<CommunitiesTab />);
     await screen.findByText("AI 開発者の集い");

@@ -51,12 +51,18 @@ export function AddCommunityDialog({ open, onClose, onCreated }: AddCommunityDia
         onClose();
       } catch (e) {
         const msg = e instanceof Error ? e.message : "作成に失敗しました";
-        setErrorMsg(msg.includes("409") ? "この slug はすでに使用されています" : msg);
+        // slug 重複は server が ConflictError("CommunitySlugAlreadyExists") を 409 で返す
+        // （errorHandler が { error: "CommunitySlugAlreadyExists" } を返すため message にそのトークンが乗る）。
+        // ボディに error が無いフォールバック時は "(409)" が付くため "409" も拾う。
+        const isSlugConflict = msg.includes("CommunitySlugAlreadyExists") || msg.includes("409");
+        setErrorMsg(isSlugConflict ? "この slug はすでに使用されています" : msg);
       }
     },
   });
 
   const handleClose = (): void => {
+    // 送信中は閉じない（保留中の作成が完了した際に onCreated/onClose が二重発火するのを防ぐ）。
+    if (createMutation.isPending) return;
     form.reset();
     setErrorMsg(null);
     onClose();
@@ -108,7 +114,9 @@ export function AddCommunityDialog({ open, onClose, onCreated }: AddCommunityDia
           <CommunityFormFields form={form} />
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleClose}>キャンセル</Button>
+          <Button onClick={handleClose} disabled={createMutation.isPending}>
+            キャンセル
+          </Button>
           <Button type="submit" variant="contained" disabled={createMutation.isPending}>
             作成
           </Button>

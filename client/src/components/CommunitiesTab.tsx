@@ -46,11 +46,19 @@ function CommunityRow({ community }: CommunityRowProps): ReactElement {
         <Button size="small" variant="outlined" onClick={() => setDialogOpen(true)}>
           編集
         </Button>
-        <EditCommunityDialog
-          community={community}
-          open={dialogOpen}
-          onClose={() => setDialogOpen(false)}
-        />
+        {/*
+          ダイアログは開いている間だけマウントする（条件付きマウント）。
+          EditCommunityDialog の useForm defaultValues は初回マウント時にのみ確定するため、
+          常時マウントだと編集途中で閉じて再度開いた際に前回の入力が残り、誤って古い値で
+          上書き保存されうる。開くたびに再マウントすることで毎回最新の community で再初期化する。
+        */}
+        {dialogOpen && (
+          <EditCommunityDialog
+            community={community}
+            open
+            onClose={() => setDialogOpen(false)}
+          />
+        )}
       </TableCell>
     </TableRow>
   );

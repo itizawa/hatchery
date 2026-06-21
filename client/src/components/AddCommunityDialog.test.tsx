@@ -33,7 +33,9 @@ const server = setupServer(
     const body = await request.json();
     createRequests.push(body);
     if (createStatus !== 201) {
-      return HttpResponse.json({ message: "conflict" }, { status: createStatus });
+      // 実サーバ契約: ConflictError("CommunitySlugAlreadyExists") → { error: "..." } を 409 で返す
+      // （server/src/routes/admin.ts / errorHandler.ts）。テストもこの body 形に揃える。
+      return HttpResponse.json({ error: "CommunitySlugAlreadyExists" }, { status: createStatus });
     }
     const input = body as { slug: string; name: string; description: string };
     return HttpResponse.json(
@@ -139,6 +141,23 @@ describe("AddCommunityDialog（#833）", () => {
     await userEvent.type(inputs.description, "重複する slug のテスト");
     await userEvent.click(screen.getByRole("button", { name: "作成" }));
     expect(await screen.findByText("この slug はすでに使用されています")).toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("作成送信中はキャンセルボタンが無効になり onClose は呼ばれない", async () => {
+    // POST を解決させず保留状態にし、isPending を維持する。
+    server.use(http.post("/api/admin/communities", () => new Promise<never>(() => {})));
+    const onClose = vi.fn();
+    renderWithClient(<AddCommunityDialog open onClose={onClose} />);
+    const inputs = getInputs();
+    await userEvent.type(inputs.slug, "tech-news");
+    await userEvent.type(inputs.name, "テックニュース");
+    await userEvent.type(inputs.description, "最新技術の話題を語る community");
+    await userEvent.click(screen.getByRole("button", { name: "作成" }));
+
+    // 送信中はキャンセルが無効化され、クリックで閉じられない（onClose/onCreated の二重発火を防ぐ）。
+    const cancelButton = screen.getByRole("button", { name: "キャンセル" });
+    await waitFor(() => expect(cancelButton).toBeDisabled());
     expect(onClose).not.toHaveBeenCalled();
   });
 

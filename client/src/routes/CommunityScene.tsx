@@ -1,5 +1,5 @@
 import { Box, Stack, Typography } from "../components/uiParts";
-import { Link as RouterLink, useParams } from "@tanstack/react-router";
+import { Link as RouterLink, useNavigate, useParams } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 
 import {
@@ -48,6 +48,7 @@ const CommunityContent = ({
 }): ReactElement => {
   const { data: posts } = useCommunityFeed(communitySlug);
   const { data: authUser } = useAuth();
+  const navigate = useNavigate();
 
   const { mutate: subscribe, isPending: isSubscribing } = useSubscribe(communitySlug);
   const { mutate: unsubscribe, isPending: isUnsubscribing } = useUnsubscribe(communitySlug);
@@ -110,6 +111,11 @@ const CommunityContent = ({
                         voteStopPropagation
                         truncateText
                         currentVote={post.my_vote ?? null}
+                        onCommentClick={
+                          post.comment_count
+                            ? () => void navigate({ to: "/posts/$postId", params: { postId: post.id }, hash: "comments" })
+                            : undefined
+                        }
                       />
                     </RouterLink>
                   ))}

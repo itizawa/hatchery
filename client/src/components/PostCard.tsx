@@ -195,7 +195,15 @@ export const PostCard = (props: PostCardProps): ReactElement => {
           size="small"
           variant="outlined"
           clickable={!!onCommentClick}
-          onClick={onCommentClick}
+          onClick={
+            onCommentClick
+              ? (e: React.MouseEvent) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onCommentClick();
+                }
+              : undefined
+          }
           sx={{ height: 32, padding:"0px 6px 0px 8px",border:"none", color: "text.secondary" }}
         />
         {postUrl && <ShareButton shareUrl={postUrl} shareTitle={post.title} />}

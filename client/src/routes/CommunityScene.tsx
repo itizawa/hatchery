@@ -111,8 +111,10 @@ const CommunityContent = ({
                         voteStopPropagation
                         truncateText
                         currentVote={post.my_vote ?? null}
-                        onCommentClick={() =>
-                          void navigate({ to: "/posts/$postId", params: { postId: post.id }, hash: "comments" })
+                        onCommentClick={
+                          post.comment_count
+                            ? () => void navigate({ to: "/posts/$postId", params: { postId: post.id }, hash: "comments" })
+                            : undefined
                         }
                       />
                     </RouterLink>

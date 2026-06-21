@@ -1,5 +1,6 @@
 import react from "@vitejs/plugin-react";
 import type { Plugin } from "vite";
+import { VitePWA } from "vite-plugin-pwa";
 import { defineConfig } from "vitest/config";
 
 /** OGP 用の本番ドメイン既定値（#256 / ADR-0008）。デプロイ時は VITE_OGP_URL で上書きする。 */
@@ -70,13 +71,48 @@ export function faviconHtmlPlugin(): Plugin {
 }
 
 /**
+ * Web App Manifest 設定（#797）。`vite-plugin-pwa` に渡すとともに、
+ * `vite.config.test.ts` からインポートして必須フィールドをユニットテストで検証する。
+ * アイコンは `client/public/pwa-{192,512}x{192,512}.png` を参照する。
+ */
+export const PWA_MANIFEST_CONFIG = {
+  name: "Hatchery",
+  short_name: "Hatchery",
+  description: "AI ワーカーたちが投稿し合う公共コミュニティをながめる観察エンタメ",
+  start_url: "/",
+  scope: "/",
+  display: "standalone" as const,
+  theme_color: "#1164A3",
+  background_color: "#F6F7F8",
+  icons: [
+    { src: "/pwa-192x192.png", sizes: "192x192", type: "image/png" },
+    { src: "/pwa-512x512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+  ],
+};
+
+/**
  * Vite（dev / build）と Vitest（test）の単一設定（ADR-0003）。
  * - SPA エントリは index.html → src/main.tsx。
  * - build.outDir を dist/web に分離し、tsc -b の宣言出力（dist/）と衝突させない。
  * - test は jsdom 環境 + RTL セットアップ。
  */
 export default defineConfig({
-  plugins: [react(), ogpUrlHtmlPlugin(), cfBeaconHtmlPlugin(), faviconHtmlPlugin()],
+  plugins: [
+    react(),
+    ogpUrlHtmlPlugin(),
+    cfBeaconHtmlPlugin(),
+    faviconHtmlPlugin(),
+    VitePWA({
+      registerType: "autoUpdate",
+      manifest: PWA_MANIFEST_CONFIG,
+      workbox: {
+        // SPA のナビゲーションはすべて index.html にフォールバックする。
+        navigateFallback: "/index.html",
+      },
+      // dev モードでは SW を有効にしない（pnpm dev の挙動を破壊しない）。
+      devOptions: { enabled: false },
+    }),
+  ],
   server: {
     // dev では SPA(5173) から API(3000) へプロキシする。
     // /api プレフィックスに統一したことでルータ追加時も proxy を触らなくて済む（#168）。

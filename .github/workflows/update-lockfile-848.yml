@@ -1,0 +1,44 @@
+name: Update pnpm lockfile (issue-848)
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Target branch'
+        required: true
+        default: 'feature/issue-848'
+
+jobs:
+  update-lockfile:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Update lockfile
+        run: pnpm install --no-frozen-lockfile --ignore-scripts
+
+      - name: Commit and push lockfile
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add pnpm-lock.yaml
+          if git diff --cached --quiet; then
+            echo "Lockfile already up to date"
+          else
+            git commit -m "config: pnpm lockfile を date-fns・@date-fns/utc 追加後に更新"
+            git push origin ${{ github.event.inputs.branch }}
+          fi

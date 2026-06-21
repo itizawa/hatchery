@@ -38,7 +38,11 @@ const RankingRow = ({
       </Typography>
     </TableCell>
     <TableCell align="right">{item.view_count.toLocaleString()}</TableCell>
-    <TableCell align="right" sx={{ color: "text.secondary" }}>
+    <TableCell
+      align="right"
+      data-testid={item.vote_net_score >= 0 ? "score-positive" : "score-negative"}
+      sx={{ color: item.vote_net_score >= 0 ? "success.main" : "error.main" }}
+    >
       {item.vote_net_score >= 0 ? `+${item.vote_net_score}` : `${item.vote_net_score}`}
     </TableCell>
   </TableRow>

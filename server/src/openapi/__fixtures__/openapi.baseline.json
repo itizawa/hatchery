@@ -381,12 +381,17 @@
           "totalTokens": {
             "type": "integer",
             "minimum": 0
+          },
+          "totalCostUsd": {
+            "type": "number",
+            "minimum": 0
           }
         },
         "required": [
           "totalInputTokens",
           "totalOutputTokens",
-          "totalTokens"
+          "totalTokens",
+          "totalCostUsd"
         ],
         "description": "トークン使用量の集計（全期間合計）"
       },
@@ -1568,7 +1573,7 @@
             }
           },
           "400": {
-            "description": "リクエストボディが不正（displayName 空セatvtarUrl 不正など）",
+            "description": "リクエストボディが不正（displayName 空setvtarUrl 不正など）",
             "content": {
               "application/json": {
                 "schema": {

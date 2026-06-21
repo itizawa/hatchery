@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import type { Page } from "@playwright/test";
 import { createWorker } from "../helpers/createWorker";
 import { createCommunity } from "../helpers/createCommunity";
 import { createPost } from "../helpers/createPost";
@@ -32,10 +33,6 @@ const MOCK_POST = {
 
 const MOCK_COMMENT_1 = {
   text: "最初のコメントです。",
-};
-
-const MOCK_COMMENT_2 = {
-  text: "返信コメントです。",
 };
 
 test(
@@ -322,16 +319,264 @@ test(
   },
 );
 
-test.todo(
+// ─── UC-POST-13〜15 用モックデータ（page.route() ベース）────────────────────────
+
+/** スレッド取得 API（GET /api/posts/:postId）のモックレスポンス共通構造。 */
+const MOCK_AUTHOR_WORKER = {
+  id: "worker-mock-1",
+  display_name: "モックワーカー",
+  image_url: null,
+};
+
+const MOCK_POST_ID = "mock-post-id-741";
+const MOCK_COMMUNITY_ID = "mock-community-id-741";
+const MOCK_COMMUNITY_SLUG = "mock-community-741";
+
+/** UC-POST-13 用: post.text と comment.text に URL を含むスレッドデータ。 */
+const MOCK_THREAD_WITH_URL = {
+  post: {
+    id: MOCK_POST_ID,
+    community_id: MOCK_COMMUNITY_ID,
+    slot_key: "2024-01-15T12:00",
+    seq: 0,
+    author: "worker-mock-1",
+    title: "OGP テスト投稿",
+    text: "https://example.com/ogp-page こちらの記事をご覧ください。",
+    score: 5,
+    comment_count: 1,
+    created_at: "2024-01-15T12:00:00.000Z",
+    author_worker: MOCK_AUTHOR_WORKER,
+  },
+  comments: [
+    {
+      id: "comment-mock-1",
+      community_id: MOCK_COMMUNITY_ID,
+      post_id: MOCK_POST_ID,
+      slot_key: "2024-01-15T12:00",
+      seq: 0,
+      author: "worker-mock-1",
+      text: "https://example.com/comment-ogp こちらも参考にどうぞ。",
+      score: 2,
+      parent_comment_id: null,
+      created_at: "2024-01-15T12:01:00.000Z",
+      author_worker: MOCK_AUTHOR_WORKER,
+    },
+  ],
+};
+
+/** UC-POST-14 用: 親子ネストコメントを含むスレッドデータ。 */
+const MOCK_THREAD_WITH_NESTED_COMMENTS = {
+  post: {
+    id: MOCK_POST_ID,
+    community_id: MOCK_COMMUNITY_ID,
+    slot_key: "2024-01-15T12:00",
+    seq: 0,
+    author: "worker-mock-1",
+    title: "ネストコメントテスト投稿",
+    text: "これはネストコメントのテスト投稿です。",
+    score: 3,
+    comment_count: 2,
+    created_at: "2024-01-15T12:00:00.000Z",
+    author_worker: MOCK_AUTHOR_WORKER,
+  },
+  comments: [
+    {
+      id: "comment-parent-1",
+      community_id: MOCK_COMMUNITY_ID,
+      post_id: MOCK_POST_ID,
+      slot_key: "2024-01-15T12:00",
+      seq: 0,
+      author: "worker-mock-1",
+      text: "これは親コメントです。",
+      score: 2,
+      parent_comment_id: null,
+      created_at: "2024-01-15T12:01:00.000Z",
+      author_worker: MOCK_AUTHOR_WORKER,
+    },
+    {
+      id: "comment-child-1",
+      community_id: MOCK_COMMUNITY_ID,
+      post_id: MOCK_POST_ID,
+      slot_key: "2024-01-15T12:00",
+      seq: 1,
+      author: "worker-mock-1",
+      text: "これは子コメント（返信）です。",
+      score: 1,
+      parent_comment_id: "comment-parent-1",
+      created_at: "2024-01-15T12:02:00.000Z",
+      author_worker: MOCK_AUTHOR_WORKER,
+    },
+  ],
+};
+
+/** UC-POST-15 用: コミュニティ付きスレッドデータ。 */
+const MOCK_THREAD_FOR_BREADCRUMB = {
+  post: {
+    id: MOCK_POST_ID,
+    community_id: MOCK_COMMUNITY_ID,
+    slot_key: "2024-01-15T12:00",
+    seq: 0,
+    author: "worker-mock-1",
+    title: "パンくずテスト投稿",
+    text: "これはパンくずリンクのテスト投稿です。",
+    score: 2,
+    comment_count: 0,
+    created_at: "2024-01-15T12:00:00.000Z",
+    author_worker: MOCK_AUTHOR_WORKER,
+  },
+  comments: [],
+};
+
+/** コミュニティ一覧のモックデータ（パンくず・サイドバー用）。 */
+const MOCK_COMMUNITY_LIST = [
+  {
+    id: MOCK_COMMUNITY_ID,
+    slug: MOCK_COMMUNITY_SLUG,
+    name: "モックコミュニティ",
+    description: "テスト用コミュニティ",
+    created_at: "2024-01-01T00:00:00.000Z",
+    iconUrl: null,
+    coverUrl: null,
+    post_count: 10,
+    last_post_at: "2024-01-15T12:00:00.000Z",
+  },
+];
+
+/**
+ * スレッドページの共通モック（POST /api/posts/:postId/view 等のビーコン、認証、コミュニティ）。
+ * 実テストで毎回設定する共通インフラ API をまとめてモックする。
+ */
+async function setupThreadCommonMocks({
+  page,
+  thread,
+}: {
+  page: Page;
+  thread: { post: unknown; comments: unknown[] };
+}): Promise<void> {
+  // スレッドデータ
+  await page.route(`**/api/posts/${MOCK_POST_ID}`, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(thread),
+    }),
+  );
+  // コミュニティ一覧（パンくず・サイドバー）
+  await page.route("**/api/communities", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(MOCK_COMMUNITY_LIST),
+    }),
+  );
+  // 認証（未ログイン）
+  await page.route("**/api/auth/me", (route) =>
+    route.fulfill({
+      status: 401,
+      contentType: "application/json",
+      body: JSON.stringify({ message: "Unauthorized" }),
+    }),
+  );
+  // 閲覧ビーコン（post view / comment-views）
+  await page.route(`**/api/posts/${MOCK_POST_ID}/view`, (route) =>
+    route.fulfill({ status: 202 }),
+  );
+  await page.route(`**/api/posts/${MOCK_POST_ID}/comment-views`, (route) =>
+    route.fulfill({ status: 202 }),
+  );
+  // サブスクリプション（サイドバー）
+  await page.route(`**/api/communities/${MOCK_COMMUNITY_SLUG}/subscription`, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ subscribed: false }),
+    }),
+  );
+}
+
+test(
   "UC-POST-13: post / コメント本文の先頭 URL が OGP カードとして展開表示される（#515）",
+  async ({ page }) => {
+    await setupThreadCommonMocks({ page, thread: MOCK_THREAD_WITH_URL });
+
+    // OGP API: 成功ケース（タイトルあり）
+    await page.route("**/api/ogp?*", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          title: "テスト記事タイトル",
+          description: "テスト記事の説明",
+          image: "https://example.com/og.jpg",
+          site_name: "Example Site",
+        }),
+      }),
+    );
+
+    await page.goto(`/posts/${MOCK_POST_ID}`);
+
+    // post 本文と OGP カード（role="link" として描画）が表示される
+    // OGP カードは複数出現しうる（post 本文 + コメント本文）
+    await expect(page.getByRole("link", { name: /テスト記事タイトル/ }).first()).toBeVisible();
+    // OGP タイトルテキストが表示される
+    await expect(page.getByText("テスト記事タイトル").first()).toBeVisible();
+  },
 );
 
-test.todo(
+test(
+  "UC-POST-13（フォールバック）: OGP 取得失敗時は OGP カードが表示されず URL リンクのみ残る",
+  async ({ page }) => {
+    await setupThreadCommonMocks({ page, thread: MOCK_THREAD_WITH_URL });
+
+    // OGP API: 失敗ケース（title なし）
+    await page.route("**/api/ogp?*", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ title: null, description: null, image: null, site_name: null }),
+      }),
+    );
+
+    await page.goto(`/posts/${MOCK_POST_ID}`);
+
+    // OGP カード（role="link" + "テスト記事タイトル"）は表示されない
+    await expect(page.getByRole("link", { name: /テスト記事タイトル/ })).not.toBeVisible();
+    // post 本文自体は表示される
+    await expect(page.getByText("こちらの記事をご覧ください")).toBeVisible();
+  },
+);
+
+test(
   "UC-POST-14: コメントが返信スレッド（ネスト構造）として Reddit 風に表示される（#520）",
+  async ({ page }) => {
+    await setupThreadCommonMocks({ page, thread: MOCK_THREAD_WITH_NESTED_COMMENTS });
+
+    await page.goto(`/posts/${MOCK_POST_ID}`);
+
+    // 親コメントと子コメントが両方表示される
+    await expect(page.getByText("これは親コメントです。")).toBeVisible();
+    await expect(page.getByText("これは子コメント（返信）です。")).toBeVisible();
+
+    // 子コメント（depth > 0）の L 字コネクターが表示される（Reddit 風インデント）
+    await expect(page.getByTestId("comment-l-connector")).toBeVisible();
+  },
 );
 
-test.todo(
+test(
   "UC-POST-15: 投稿スレッドにコミュニティへのパンくずリンクが表示される（#525 / #693 / #780）",
+  async ({ page }) => {
+    await setupThreadCommonMocks({ page, thread: MOCK_THREAD_FOR_BREADCRUMB });
+
+    await page.goto(`/posts/${MOCK_POST_ID}`);
+
+    // 「ポスト一覧」のパンくずリンクが表示される
+    const breadcrumb = page.getByRole("link", { name: /ポスト一覧/ });
+    await expect(breadcrumb).toBeVisible();
+
+    // クリックするとコミュニティページへ遷移する
+    await breadcrumb.click();
+    await page.waitForURL(`**/communities/${MOCK_COMMUNITY_SLUG}`);
+  },
 );
 
 test.todo(

@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { AuthorWorkerSchema } from "../worker/authorWorker.js";
+import { VoteDirectionSchema } from "../post/post.js";
 
 /** Comment の text の最大文字数（#91）。 */
 export const COMMENT_TEXT_MAX_LENGTH = 1000;
@@ -17,6 +18,8 @@ export const COMMENT_TEXT_MAX_LENGTH = 1000;
  *   server が author（id か displayName）から解決して付与する。生成出力・永続化には含めない。
  * - up_count は up vote の累計件数（#814）。vote トランザクション内で増減する内部集計値
  *   （新規ユーザー入力ではないため .max() 対象外）。省略時 0。
+ * - my_vote は sessionId を元にした現セッションの投票状態（#831）。GET 時に sessionId を
+ *   付与すると付く任意フィールド。未投票 / 未指定は省略。永続化・生成出力には含めない。
  */
 export const CommentSchema = z.object({
   id: z.string().min(1),
@@ -33,6 +36,8 @@ export const CommentSchema = z.object({
   author_worker: AuthorWorkerSchema.optional(),
   /** up vote の累計件数（#814）。内部集計値のため .max() 対象外。省略時 0。 */
   up_count: z.number().int().nonnegative().default(0),
+  /** 現セッションの投票状態（#831）。sessionId 付き GET 時のみ付与。未投票 / 未指定は省略。 */
+  my_vote: VoteDirectionSchema.nullable().optional(),
 });
 
 export type Comment = z.infer<typeof CommentSchema>;

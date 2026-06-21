@@ -137,7 +137,7 @@ export function createPrismaVoteRepository(prisma: PrismaClient): VoteRepository
       targetId: string;
       direction: VoteDirection;
       applyScore: (delta: number) => Promise<number | null>;
-    }): Promise<{ scoreDelta: number; score: number | null }> {
+    }): Promise<{ scoreDelta: number; upCountDelta: number; score: number | null }> {
       // Prisma 実装は同一トランザクション内で対象 score / upCount を直接更新し原子化するため、
       // ポートの applyScore コールバック（in-memory 用の差し込み口）は使わない（#453）。
       void applyScore;
@@ -148,14 +148,40 @@ export function createPrismaVoteRepository(prisma: PrismaClient): VoteRepository
             where: { id: targetId },
             data: { score: { increment: scoreDelta }, upCount: { increment: upCountDelta } },
           });
-          return { scoreDelta, score: updated.score };
+          return { scoreDelta, upCountDelta, score: updated.score };
         }
         const updated = await tx.comment.update({
           where: { id: targetId },
           data: { score: { increment: scoreDelta }, upCount: { increment: upCountDelta } },
         });
-        return { scoreDelta, score: updated.score };
+        return { scoreDelta, upCountDelta, score: updated.score };
       });
+    },
+
+    async findVotesBySessionAndTargets({
+      sessionId,
+      targetType,
+      targetIds,
+    }: {
+      sessionId: string;
+      targetType: VoteTargetType;
+      targetIds: string[];
+    }): Promise<Map<string, VoteDirection>> {
+      if (targetIds.length === 0) return new Map();
+      const rows = await prisma.vote.findMany({
+        where: {
+          sessionId,
+          ...(targetType === "post"
+            ? { postId: { in: targetIds } }
+            : { commentId: { in: targetIds } }),
+        },
+      });
+      const map = new Map<string, VoteDirection>();
+      for (const row of rows) {
+        const targetId = targetType === "post" ? row.postId : row.commentId;
+        if (targetId) map.set(targetId, row.direction as VoteDirection);
+      }
+      return map;
     },
 
     async netScoresByWorkerSince(since: Date): Promise<Map<string, number>> {

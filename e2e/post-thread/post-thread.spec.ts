@@ -230,7 +230,7 @@ test(
 );
 
 test(
-  "UC-POST-08: 未ログインユーザーが post / comment の vote を押すとログイン誘導が表示される（#481）",
+  "UC-POST-08: 未ログインユーザーが post / comment の vote を押すとログイン誦導が表示される（#481）",
   async ({ page }) => {
     const worker = await createWorker({ ...MOCK_WORKER_1 });
     const community = await createCommunity({ ...MOCK_COMMUNITY, workerIds: [worker.id] });
@@ -246,7 +246,7 @@ test(
     const upvoteButtons = page.getByRole("button", { name: /up vote/i });
     await upvoteButtons.first().click();
 
-    // ログイン誘導スナックバーが表示される
+    // ログイン誦導スナックバーが表示される
     await expect(page.getByText("投票するにはログインが必要です")).toBeVisible();
 
     // クリーンアップ
@@ -609,4 +609,8 @@ test.todo(
 
 test.todo(
   "UC-POST-21: vote ウィジェットに表示される数字は up vote の累計件数である（#814）",
+);
+
+test.todo(
+  "UC-POST-22: ページリロード後も post・コメントの vote 状態が塗りつぶし表示で復元される（#831）",
 );

@@ -93,19 +93,26 @@ export function useVotePost(communitySlug?: string) {
     mutationFn: ({ postId, direction }: { postId: string; direction: VoteDirection }) =>
       votePost({ postId, direction, sessionId }),
     onMutate: async ({ postId, direction }: { postId: string; direction: VoteDirection }) => {
-      // 楽観更新: スレッドキャッシュの score / up_count を direction に応じて更新（#814）。
+      // 楽観更新: スレッドキャッシュの score / up_count / my_vote を更新（#814 / #831）。
       // up_count は up 押下で +1、down 押下で変化なし（0）とする近似値。
       // 正確な値は onSettled の invalidate 後にサーバ応答で修正される。
       const threadKey = postThreadQueryKey(postId);
       await queryClient.cancelQueries({ queryKey: threadKey });
       const previous = queryClient.getQueryData<{ post: Post; comments: Comment[] }>(threadKey);
       if (previous) {
+        // toggle off: 同じ方向を再度押したらニュートラル（null）に戻す（#831）。
+        const prevMyVote = previous.post.my_vote ?? null;
+        const newMyVote = prevMyVote === direction ? null : direction;
+        // score / up_count は prevMyVote → newMyVote の遷移から正確に算出する（#831 レビュー指摘）。
+        const prevScoreVal = prevMyVote === "up" ? 1 : prevMyVote === "down" ? -1 : 0;
+        const newScoreVal = newMyVote === "up" ? 1 : newMyVote === "down" ? -1 : 0;
         queryClient.setQueryData(threadKey, {
           ...previous,
           post: {
             ...previous.post,
-            score: previous.post.score + (direction === "up" ? 1 : -1),
-            up_count: previous.post.up_count + (direction === "up" ? 1 : 0),
+            score: previous.post.score + (newScoreVal - prevScoreVal),
+            up_count: previous.post.up_count + (newMyVote === "up" ? 1 : 0) - (prevMyVote === "up" ? 1 : 0),
+            my_vote: newMyVote,
           },
         });
       }
@@ -150,7 +157,7 @@ export function useVoteComment(postId: string) {
       commentId: string;
       direction: VoteDirection;
     }) => {
-      // 楽観更新: スレッドキャッシュのコメント score / up_count を direction に応じて更新（#814）。
+      // 楽観更新: スレッドキャッシュのコメント score / up_count / my_vote を更新（#814 / #831）。
       // up_count は up 押下で +1、down 押下で変化なし（0）とする近似値。
       const threadKey = postThreadQueryKey(postId);
       await queryClient.cancelQueries({ queryKey: threadKey });
@@ -158,15 +165,21 @@ export function useVoteComment(postId: string) {
       if (previous) {
         queryClient.setQueryData(threadKey, {
           ...previous,
-          comments: previous.comments.map((c) =>
-            c.id === commentId
-              ? {
-                  ...c,
-                  score: c.score + (direction === "up" ? 1 : -1),
-                  up_count: c.up_count + (direction === "up" ? 1 : 0),
-                }
-              : c,
-          ),
+          comments: previous.comments.map((c) => {
+            if (c.id !== commentId) return c;
+            // toggle off: 同じ方向を再度押したらニュートラル（null）に戻す（#831）。
+            const prevMyVote = c.my_vote ?? null;
+            const newMyVote = prevMyVote === direction ? null : direction;
+            // score / up_count は prevMyVote → newMyVote の遷移から正確に算出する（#831 レビュー指摘）。
+            const prevScoreVal = prevMyVote === "up" ? 1 : prevMyVote === "down" ? -1 : 0;
+            const newScoreVal = newMyVote === "up" ? 1 : newMyVote === "down" ? -1 : 0;
+            return {
+              ...c,
+              score: c.score + (newScoreVal - prevScoreVal),
+              up_count: c.up_count + (newMyVote === "up" ? 1 : 0) - (prevMyVote === "up" ? 1 : 0),
+              my_vote: newMyVote,
+            };
+          }),
         });
       }
       return { previous, commentId };

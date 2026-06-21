@@ -561,3 +561,5 @@ test.todo("UC-HOME-20: vote ミューテーション進行中はフィードの 
 test.todo("UC-HOME-21: vote 済みの投稿は vote ウィジェットが塗りつぶし表示になる（#813）");
 
 test.todo("UC-HOME-22: vote ウィジェットに表示される数字は up vote の累計件数である（#814）");
+
+test.todo("UC-HOME-23: ページリロード後もホームフィードの vote 状態が塗りつぶし表示で復元される（#831）");

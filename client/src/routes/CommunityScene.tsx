@@ -109,6 +109,7 @@ const CommunityContent = ({
                         voteDisabled={isVotingPost}
                         voteStopPropagation
                         truncateText
+                        currentVote={post.my_vote ?? null}
                       />
                     </RouterLink>
                   ))}

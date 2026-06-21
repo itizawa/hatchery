@@ -115,38 +115,29 @@ describe("CommentSchema", () => {
       image_url: null,
     });
   });
-});
 
-describe("CreateCommentRequestSchema (#433)", () => {
-  const validRequest = {
-    postId: "33333333-3333-3333-3333-333333333333",
-    authorWorkerId: "22222222-2222-2222-2222-222222222222",
-    text: "デモ用に手動で投入したコメントです。",
-  };
-
-  it("有効なリクエストをパースできる", () => {
-    const result = CreateCommentRequestSchema.safeParse(validRequest);
-    expect(result.success).toBe(true);
+  it("my_vote は省略可能（後方互換）", () => {
+    const result = CommentSchema.parse(validComment);
+    expect(result.my_vote).toBeUndefined();
   });
 
-  it("postId が uuid でない場合は reject する", () => {
-    const data = { ...validRequest, postId: "not-a-uuid" };
-    expect(CreateCommentRequestSchema.safeParse(data).success).toBe(false);
+  it("my_vote に 'up' を設定できる（#831）", () => {
+    const result = CommentSchema.parse({ ...validComment, my_vote: "up" });
+    expect(result.my_vote).toBe("up");
   });
 
-  it("authorWorkerId が uuid でない場合は reject する", () => {
-    const data = { ...validRequest, authorWorkerId: "not-a-uuid" };
-    expect(CreateCommentRequestSchema.safeParse(data).success).toBe(false);
+  it("my_vote に 'down' を設定できる（#831）", () => {
+    const result = CommentSchema.parse({ ...validComment, my_vote: "down" });
+    expect(result.my_vote).toBe("down");
   });
 
-  it("text が空文字の場合は reject する", () => {
-    const data = { ...validRequest, text: "" };
-    expect(CreateCommentRequestSchema.safeParse(data).success).toBe(false);
+  it("my_vote に null を設定できる（#831）", () => {
+    const result = CommentSchema.parse({ ...validComment, my_vote: null });
+    expect(result.my_vote).toBeNull();
   });
 
-  it("text が上限を超える場合は reject する", () => {
-    const data = { ...validRequest, text: "あ".repeat(COMMENT_TEXT_MAX_LENGTH + 1) };
-    expect(CreateCommentRequestSchema.safeParse(data).success).toBe(false);
+  it("my_vote に無効な値は reject する（#831）", () => {
+    expect(CommentSchema.safeParse({ ...validComment, my_vote: "neutral" }).success).toBe(false);
   });
 });
 

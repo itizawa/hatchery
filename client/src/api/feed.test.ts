@@ -32,7 +32,7 @@ describe("fetchCommunityFeed (GET /api/communities/{slug}/feed)", () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, [mockPost]));
     vi.stubGlobal("fetch", fetchMock);
 
-    const result = await fetchCommunityFeed("ai-dev");
+    const result = await fetchCommunityFeed({ slug: "ai-dev" });
     expect(result).toEqual([mockPost]);
     const request = fetchMock.mock.calls[0][0] as Request;
     expect(request.url).toContain("/api/communities/ai-dev/feed");
@@ -40,7 +40,7 @@ describe("fetchCommunityFeed (GET /api/communities/{slug}/feed)", () => {
 
   it("404 のとき例外を投げる", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(404)));
-    await expect(fetchCommunityFeed("not-exist")).rejects.toThrow();
+    await expect(fetchCommunityFeed({ slug: "not-exist" })).rejects.toThrow();
   });
 });
 
@@ -69,7 +69,7 @@ describe("fetchHomeFeedPage (GET /api/feed)", () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, { posts: [], nextCursor: null }));
     vi.stubGlobal("fetch", fetchMock);
 
-    await fetchHomeFeedPage(undefined, "popular");
+    await fetchHomeFeedPage({ sort: "popular" });
     const request = fetchMock.mock.calls[0][0] as Request;
     expect(request.url).toContain("sort=popular");
   });

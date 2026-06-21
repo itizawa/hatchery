@@ -23,7 +23,16 @@ export function registerPosts(registry: OpenAPIRegistry, ctx: RegistryContext): 
     method: "get",
     path: "/api/posts/{postId}",
     summary: "スレッドを取得（post + comments・認証不要）",
-    request: { params: z.object({ postId: postIdParam }) },
+    request: {
+      params: z.object({ postId: postIdParam }),
+      query: z.object({
+        sessionId: z
+          .string()
+          .uuid()
+          .optional()
+          .openapi({ description: "セッション ID（付与すると post / comments に my_vote を付与・#831）" }),
+      }),
+    },
     responses: {
       200: {
         description: "post と comments の一覧",

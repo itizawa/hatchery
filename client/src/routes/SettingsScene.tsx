@@ -2,6 +2,8 @@ import { Box, Button, Chip, Skeleton, Tab, Table, TableBody, TableCell, TableHea
 
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { type SyntheticEvent, type ComponentType, type ReactElement, type ReactNode } from "react";
+import { calculateCostUsd } from "@hatchery/common";
+import type { TokenUsageLog } from "@hatchery/common";
 
 import { useBatchLogs, useRefreshBatchLogs } from "../api/batchLogs.js";
 import { useTokenUsage, useRefreshTokenUsage } from "../api/tokenUsage.js";
@@ -43,6 +45,52 @@ const TabSkeleton = ({ testId }: { testId: string }): ReactElement => (
     ))}
   </Box>
 );
+
+const CHART_HEIGHT = 80;
+
+/** logs を日付ごとに集計した日別コストバーチャート（#664）。新規ライブラリ依存なし。 */
+const DailyCostBarChart = ({ logs }: { logs: TokenUsageLog[] }): ReactElement => {
+  const dailyData: Record<string, number> = {};
+  for (const log of logs) {
+    const date = new Date(log.occurredAt).toISOString().slice(0, 10);
+    dailyData[date] = (dailyData[date] ?? 0) + calculateCostUsd({ model: log.model, inputTokens: log.inputTokens, outputTokens: log.outputTokens });
+  }
+  // eslint-disable-next-line max-params
+  const entries = Object.entries(dailyData).sort(([a], [b]) => a.localeCompare(b));
+
+  if (entries.length === 0) {
+    return (
+      <Typography variant="body2" color="text.secondary">
+        グラフデータがありません。
+      </Typography>
+    );
+  }
+
+  const maxCost = Math.max(...entries.map(([, v]) => v));
+  return (
+    <Box
+      role="img"
+      aria-label="日別コスト推移グラフ"
+      sx={{ display: "flex", alignItems: "flex-end", gap: 0.5, height: CHART_HEIGHT + 24, mt: 1 }}
+    >
+      {entries.map(([date, cost]) => {
+        const barHeight = maxCost > 0 ? Math.max(2, Math.round((cost / maxCost) * CHART_HEIGHT)) : 2;
+        return (
+          <Box key={date} sx={{ display: "flex", flexDirection: "column", alignItems: "center", flex: 1, minWidth: 20 }}>
+            <Box
+              data-testid="daily-cost-bar"
+              title={`${date}: $${cost.toFixed(6)}`}
+              sx={{ width: "100%", bgcolor: "primary.main", height: barHeight, borderRadius: "2px 2px 0 0" }}
+            />
+            <Typography variant="caption" sx={{ mt: 0.5, fontSize: "0.6rem", lineHeight: 1 }}>
+              {date.slice(5)}
+            </Typography>
+          </Box>
+        );
+      })}
+    </Box>
+  );
+};
 
 /** バッチログタブの本体（#75）。useSuspenseQuery で取得し data は undefined を取らない。 */
 const BatchLogsInner = (): ReactElement => {
@@ -102,7 +150,7 @@ const BatchLogsInner = (): ReactElement => {
 /** バッチログタブ（#75 / #463 / #596）。withSettingsTabPanel でローディング・エラーを扱う。 */
 const BatchLogs = withSettingsTabPanel(BatchLogsInner, <TabSkeleton testId="batch-logs-skeleton" />);
 
-/** トークン使用量タブの本体（#153）。useSuspenseQuery で取得し data は undefined を取らない。 */
+/** トークン使用量タブの本体（#153 / #664）。useSuspenseQuery で取得し data は undefined を取らない。 */
 const TokenUsageTabInner = (): ReactElement => {
   const { data } = useTokenUsage();
   const refresh = useRefreshTokenUsage();
@@ -129,6 +177,17 @@ const TokenUsageTabInner = (): ReactElement => {
             Output: {summary.totalOutputTokens.toLocaleString()} tokens &nbsp;/&nbsp;
             合計: {summary.totalTokens.toLocaleString()} tokens
           </Typography>
+          <Typography variant="body2" sx={{ mt: 0.5, fontWeight: "bold" }}>
+            推定コスト: ${summary.totalCostUsd.toFixed(6)}
+          </Typography>
+        </Box>
+      )}
+      {logs.length > 0 && (
+        <Box sx={{ mb: 2 }}>
+          <Typography variant="subtitle2" gutterBottom>
+            日別コスト推移（直近 50 件から集計）
+          </Typography>
+          <DailyCostBarChart logs={logs} />
         </Box>
       )}
       {logs.length === 0 ? (

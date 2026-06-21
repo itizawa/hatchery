@@ -214,4 +214,40 @@ describe("管理画面タブの Suspense / QueryBoundary（#463）", () => {
       await screen.findByRole("button", { name: "再試行" }, { timeout: 5000 }),
     ).toBeInTheDocument();
   });
+
+  it("トークン使用量タブ: 取得成功で合計コスト（$）とグラフが表示される（#664）", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation(() =>
+        Promise.resolve(
+          jsonResponse(200, {
+            logs: [
+              {
+                id: "t1",
+                occurredAt: "2026-06-01T00:00:00Z",
+                model: "claude-haiku-4-5",
+                inputTokens: 1_000_000,
+                outputTokens: 1_000_000,
+                batchRunLogId: null,
+              },
+            ],
+            summary: {
+              totalInputTokens: 1_000_000,
+              totalOutputTokens: 1_000_000,
+              totalTokens: 2_000_000,
+              totalCostUsd: 6,
+            },
+          }),
+        ),
+      ),
+    );
+    renderApp("/admin?tab=token-usage", { id: "user1", displayName: "Alice", role: "admin" });
+
+    // 合計コストが $ 表示される
+    expect(await screen.findByText(/\$6\.000000/, undefined, { timeout: 3000 })).toBeInTheDocument();
+    // 日別コストグラフが描画される
+    expect(screen.getByRole("img", { name: /日別コスト推移グラフ/ })).toBeInTheDocument();
+    // グラフのバーが少なくとも 1 本ある
+    expect(screen.getAllByTestId("daily-cost-bar").length).toBeGreaterThanOrEqual(1);
+  });
 });

@@ -13,6 +13,8 @@ export interface TokenUsageSummary {
   totalInputTokens: number;
   totalOutputTokens: number;
   totalTokens: number;
+  /** 全期間の合計コスト（USD）。未知モデルは 0 として扱う（#664）。 */
+  totalCostUsd: number;
 }
 
 /** GET /admin/token-usage のレスポンス型。 */
@@ -26,6 +28,7 @@ const TokenUsageSummarySchema = z.object({
   totalInputTokens: z.number().int().nonnegative(),
   totalOutputTokens: z.number().int().nonnegative(),
   totalTokens: z.number().int().nonnegative(),
+  totalCostUsd: z.number().nonnegative(),
 });
 
 /**

@@ -1,4 +1,5 @@
 import type { TokenUsageLog } from "@hatchery/common";
+import { calculateCostUsd } from "@hatchery/common";
 import type { PrismaClient } from "@prisma/client";
 
 import type { TokenUsageLogRepository, TokenUsageSummary } from "./tokenUsageLogRepository.js";
@@ -40,18 +41,26 @@ export function createPrismaTokenUsageLogRepository(prisma: PrismaClient): Token
     },
 
     async summarize(): Promise<TokenUsageSummary> {
-      const result = await prisma.tokenUsageLog.aggregate({
-        _sum: {
-          inputTokens: true,
-          outputTokens: true,
-        },
+      // groupBy(model) で 1 クエリでモデル別集計し、単価テーブルで $ 換算する。
+      const grouped = await prisma.tokenUsageLog.groupBy({
+        by: ["model"],
+        _sum: { inputTokens: true, outputTokens: true },
       });
-      const totalInputTokens = result._sum.inputTokens ?? 0;
-      const totalOutputTokens = result._sum.outputTokens ?? 0;
+      let totalInputTokens = 0;
+      let totalOutputTokens = 0;
+      let totalCostUsd = 0;
+      for (const g of grouped) {
+        const inp = g._sum.inputTokens ?? 0;
+        const out = g._sum.outputTokens ?? 0;
+        totalInputTokens += inp;
+        totalOutputTokens += out;
+        totalCostUsd += calculateCostUsd({ model: g.model, inputTokens: inp, outputTokens: out });
+      }
       return {
         totalInputTokens,
         totalOutputTokens,
         totalTokens: totalInputTokens + totalOutputTokens,
+        totalCostUsd,
       };
     },
   };

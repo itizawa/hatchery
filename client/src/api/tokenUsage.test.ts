@@ -26,6 +26,7 @@ const sampleResponse = {
     totalInputTokens: 100,
     totalOutputTokens: 50,
     totalTokens: 150,
+    totalCostUsd: 0.00035,
   },
 };
 
@@ -56,6 +57,7 @@ describe("tokenUsage API（openApiClient 経由）", () => {
     expect(result.summary.totalInputTokens).toBe(100);
     expect(result.summary.totalOutputTokens).toBe(50);
     expect(result.summary.totalTokens).toBe(150);
+    expect(result.summary.totalCostUsd).toBe(0.00035);
   });
 
   it("fetchTokenUsage は非 2xx で例外を投げる", async () => {

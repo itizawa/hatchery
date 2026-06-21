@@ -45,6 +45,7 @@ export function registerAdmin(registry: OpenAPIRegistry, ctx: RegistryContext): 
       totalInputTokens: z.number().int().nonnegative(),
       totalOutputTokens: z.number().int().nonnegative(),
       totalTokens: z.number().int().nonnegative(),
+      totalCostUsd: z.number().nonnegative(),
     }).openapi({ description: "トークン使用量の集計（全期間合計）" }),
   );
 

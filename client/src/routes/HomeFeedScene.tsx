@@ -101,6 +101,9 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
                       ? () => void navigate({ to: "/communities/$slug", params: { slug: community.slug } })
                       : undefined
                   }
+                  onCommentClick={() =>
+                    void navigate({ to: "/posts/$postId", params: { postId: post.id }, hash: "comments" })
+                  }
                 />
               </RouterLink>
             );

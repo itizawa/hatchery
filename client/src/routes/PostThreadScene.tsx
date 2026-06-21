@@ -252,7 +252,7 @@ export const PostThreadScene = (): ReactElement => {
           />
 
           {comments.length > 0 && (
-            <Box ref={commentSectionRef} sx={{ mt: 2 }}>
+            <Box ref={commentSectionRef} id="comments" sx={{ mt: 2 }}>
               <Typography variant="subtitle2" sx={{ mb: 1, color: "text.secondary" }}>
                 コメント {comments.length} 件
               </Typography>

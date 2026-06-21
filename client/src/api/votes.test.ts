@@ -84,7 +84,7 @@ describe("voteComment (POST /api/comments/{commentId}/vote)", () => {
   });
 });
 
-// ─── フックテスト共通 ─────────────────────────────────────────────────────────
+// ─── フックテスト共通 ────────────────────────────────────────────────────────────────────────────
 
 type ThreadPost = { id: string; score: number; up_count: number; my_vote: "up" | "down" | null | undefined };
 type ThreadComment = { id: string; score: number; up_count: number; my_vote: "up" | "down" | null | undefined };
@@ -104,7 +104,8 @@ function createHookWrapper() {
   };
 }
 
-// ─── useVotePost ──────────────────────────────────────────────────────────────
+// ─── useVotePost ──────────────────────────────────────────────────────────────────────────────
+
 describe("useVotePost (楽観更新フック)", () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -179,9 +180,9 @@ describe("useVotePost (楽観更新フック)", () => {
     expect(d?.post.my_vote).toBeNull();
   });
 
-  it("onSettled: 成功時に postThreadQueryKey・communityFeedQueryKey・homeFeedQueryKeyPrefix を invalidate する", async () => {
+  it("onSettled: 成功時に communityFeedQueryKey・homeFeedQueryKeyPrefix を invalidate する（postThreadQueryKey は invalidate しない）", async () => {
     vi.spyOn(authApi, "useAuth").mockReturnValue({ data: null } as ReturnType<typeof authApi.useAuth>);
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(200, { ...basePost, score: 6 })));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(200, { ...basePost, score: 6, my_vote: "up" })));
 
     const { queryClient, wrapper } = createHookWrapper();
     queryClient.setQueryData(postThreadQueryKey("post-1"), { post: { ...basePost }, comments: [] } satisfies ThreadData);
@@ -192,13 +193,32 @@ describe("useVotePost (楽観更新フック)", () => {
     act(() => { result.current.mutate({ postId: "post-1", direction: "up" }); });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: postThreadQueryKey("post-1") });
+    expect(invalidateSpy).not.toHaveBeenCalledWith({ queryKey: postThreadQueryKey("post-1") });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: communityFeedQueryKey("tech") });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: homeFeedQueryKeyPrefix() });
   });
+
+  it("onSuccess: サーバ応答の my_vote でスレッドキャッシュの post.my_vote が更新される (#853)", async () => {
+    vi.spyOn(authApi, "useAuth").mockReturnValue({ data: null } as ReturnType<typeof authApi.useAuth>);
+    const serverPost = { ...basePost, score: 6, my_vote: "up" as const };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(200, serverPost)));
+
+    const { queryClient, wrapper } = createHookWrapper();
+    queryClient.setQueryData(postThreadQueryKey("post-1"), { post: { ...basePost }, comments: [] } satisfies ThreadData);
+
+    const { result } = renderHook(() => useVotePost(), { wrapper });
+    act(() => { result.current.mutate({ postId: "post-1", direction: "up" }); });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    const d = queryClient.getQueryData<ThreadData>(postThreadQueryKey("post-1"));
+    expect(d?.post.my_vote).toBe("up");
+    expect(d?.post.score).toBe(6);
+  });
 });
 
-// ─── useVoteComment ───────────────────────────────────────────────────────────
+// ─── useVoteComment ──────────────────────────────────────────────────────────────────────────────
+
 describe("useVoteComment (楽観更新フック)", () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -252,5 +272,45 @@ describe("useVoteComment (楽観更新フック)", () => {
     expect(d?.comments[0]?.score).toBe(2);
     expect(d?.comments[0]?.up_count).toBe(2);
     expect(d?.comments[0]?.my_vote).toBeNull();
+  });
+
+  it("onSuccess: サーバ応答の my_vote で対象コメントの my_vote がキャッシュに反映される (#853)", async () => {
+    vi.spyOn(authApi, "useAuth").mockReturnValue({ data: null } as ReturnType<typeof authApi.useAuth>);
+    const serverComment = { ...baseComment, score: 3, my_vote: "up" as const };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(200, serverComment)));
+
+    const { queryClient, wrapper } = createHookWrapper();
+    queryClient.setQueryData(postThreadQueryKey("post-1"), {
+      post: { ...basePost },
+      comments: [{ ...baseComment, score: 2, up_count: 2, my_vote: null }],
+    } satisfies ThreadData);
+
+    const { result } = renderHook(() => useVoteComment("post-1"), { wrapper });
+    act(() => { result.current.mutate({ commentId: "comment-1", direction: "up" }); });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    const d = queryClient.getQueryData<ThreadData>(postThreadQueryKey("post-1"));
+    expect(d?.comments[0]?.my_vote).toBe("up");
+    expect(d?.comments[0]?.score).toBe(3);
+  });
+
+  it("onSettled: postThreadQueryKey を invalidate しない (#853)", async () => {
+    vi.spyOn(authApi, "useAuth").mockReturnValue({ data: null } as ReturnType<typeof authApi.useAuth>);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(200, { ...baseComment, score: 3, my_vote: "up" })));
+
+    const { queryClient, wrapper } = createHookWrapper();
+    queryClient.setQueryData(postThreadQueryKey("post-1"), {
+      post: { ...basePost },
+      comments: [{ ...baseComment, score: 2, up_count: 2, my_vote: null }],
+    } satisfies ThreadData);
+
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+    const { result } = renderHook(() => useVoteComment("post-1"), { wrapper });
+
+    act(() => { result.current.mutate({ commentId: "comment-1", direction: "up" }); });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(invalidateSpy).not.toHaveBeenCalledWith({ queryKey: postThreadQueryKey("post-1") });
   });
 });

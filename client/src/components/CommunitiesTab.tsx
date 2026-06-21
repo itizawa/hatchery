@@ -1,8 +1,9 @@
 /**
- * 管理画面コミュニティタブ（#310）。
+ * 管理画面コミュニティタブ（#310 / #833）。
  * admin が community の作成・編集・一覧表示を行う。
- * フォームは @tanstack/react-form を使用（CLAUDE.md フォーム規約）。
- * #595: name/description/generationInstruction の共通フィールドを CommunityFormFields に抽出。
+ * #833: 作成・編集をワーカー管理と同じモーダルダイアログ方式に統一した。
+ * 作成は「コミュニティを追加」ボタン → AddCommunityDialog、編集は一覧行の「編集」ボタン →
+ * EditCommunityDialog で行う（旧インライン CreateCommunityForm / EditCommunityForm は廃止）。
  */
 import {
   Alert,
@@ -15,202 +16,24 @@ import {
   TableCell,
   TableHead,
   TableRow,
-  TextField,
   Typography,
 } from "./uiParts";
 
-import { useForm } from "@tanstack/react-form";
 import { type ReactElement, useState } from "react";
 
-import {
-  COMMUNITY_SLUG_MAX_LENGTH,
-  COMMUNITY_SLUG_REGEX,
-} from "@hatchery/common";
-import type { AdminCommunity, CreateCommunityInput, UpdateCommunityInput } from "@hatchery/common";
-import { useCommunities, useCreateCommunity, useUpdateCommunity } from "../api/communities.js";
-import { CommunityFormFields } from "./CommunityFormFields.js";
-import { CommunityImageUpload } from "./CommunityImageUpload.js";
+import type { AdminCommunity } from "@hatchery/common";
+import { useCommunities } from "../api/communities.js";
+import { AddCommunityDialog } from "./AddCommunityDialog.js";
+import { EditCommunityDialog } from "./EditCommunityDialog.js";
 import { QueryBoundary } from "./QueryBoundary.js";
 
-/** コミュニティ作成フォーム。 */
-function CreateCommunityForm(): ReactElement {
-  const createMutation = useCreateCommunity();
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  const form = useForm({
-    defaultValues: { slug: "", name: "", description: "", generationInstruction: "" } as CreateCommunityInput,
-    onSubmit: async ({ value }) => {
-      setErrorMsg(null);
-      try {
-        await createMutation.mutateAsync(value);
-        form.reset();
-        setSnackbarOpen(true);
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : "作成に失敗しました";
-        setErrorMsg(msg.includes("409") ? "この slug はすでに使用されています" : msg);
-      }
-    },
-  });
-
-  return (
-    <Box
-      component="form"
-      onSubmit={async (e) => {
-        e.preventDefault();
-        await form.handleSubmit();
-      }}
-      sx={{ display: "flex", flexDirection: "column", gap: 2, maxWidth: 480 }}
-    >
-      <Typography variant="subtitle1">新しいコミュニティを作成</Typography>
-      {errorMsg && (
-        <Alert severity="error" onClose={() => setErrorMsg(null)}>
-          {errorMsg}
-        </Alert>
-      )}
-      <form.Field
-        name="slug"
-        validators={{
-          onSubmit: ({ value }) => {
-            if (!value) return "slug は必須です";
-            if (!COMMUNITY_SLUG_REGEX.test(value))
-              return "slug は小文字英数字とハイフンのみ（先頭末尾は英数字）";
-            return undefined;
-          },
-        }}
-      >
-        {(field) => (
-          <TextField
-            label="slug（URL 識別子）"
-            size="small"
-            required
-            value={field.state.value}
-            onChange={(e) => field.handleChange(e.target.value)}
-            onBlur={field.handleBlur}
-            slotProps={{ htmlInput: { maxLength: COMMUNITY_SLUG_MAX_LENGTH, autoComplete: "off" } }}
-            error={field.state.meta.errors.length > 0}
-            helperText={
-              field.state.meta.errors[0] ?? "小文字英数字とハイフンのみ（例: tech-news）"
-            }
-          />
-        )}
-      </form.Field>
-      <CommunityFormFields form={form} />
-      <Button
-        type="submit"
-        variant="contained"
-        disabled={createMutation.isPending}
-        sx={{ alignSelf: "flex-start" }}
-      >
-        作成
-      </Button>
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={3000}
-        onClose={() => setSnackbarOpen(false)}
-      >
-        <Alert severity="success" onClose={() => setSnackbarOpen(false)}>
-          コミュニティを作成しました
-        </Alert>
-      </Snackbar>
-    </Box>
-  );
-}
-
-/** コミュニティ編集フォーム（インライン）。 */
-interface EditCommunityFormProps {
-  community: AdminCommunity;
-  onCancel: () => void;
-}
-
-function EditCommunityForm({ community, onCancel }: EditCommunityFormProps): ReactElement {
-  const updateMutation = useUpdateCommunity();
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  const form = useForm({
-    defaultValues: {
-      name: community.name,
-      description: community.description,
-      generationInstruction: community.generationInstruction ?? "",
-    } as UpdateCommunityInput,
-    onSubmit: async ({ value }) => {
-      setErrorMsg(null);
-      try {
-        await updateMutation.mutateAsync({ id: community.id, input: value });
-        onCancel();
-      } catch (e) {
-        setErrorMsg(e instanceof Error ? e.message : "更新に失敗しました");
-      }
-    },
-  });
-
-  return (
-    <Box
-      component="form"
-      onSubmit={async (e) => {
-        e.preventDefault();
-        await form.handleSubmit();
-      }}
-      sx={{ display: "flex", flexDirection: "column", gap: 2 }}
-    >
-      {errorMsg && (
-        <Alert severity="error" onClose={() => setErrorMsg(null)}>
-          {errorMsg}
-        </Alert>
-      )}
-      {/* アイコン・カバー画像のアップロード（#457）。フォーム送信とは独立した即時アップロード。 */}
-      <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-        <Typography variant="caption" color="text.secondary">
-          カバー画像（ヘッダー）
-        </Typography>
-        <CommunityImageUpload
-          communityId={community.id}
-          kind="cover"
-          name={community.name}
-          currentImageUrl={community.coverUrl ?? null}
-        />
-        <Box sx={{ display: "flex", alignItems: "center", gap: 2, mt: 1 }}>
-          <CommunityImageUpload
-            communityId={community.id}
-            kind="icon"
-            name={community.name}
-            currentImageUrl={community.iconUrl ?? null}
-          />
-          <Typography variant="caption" color="text.secondary">
-            アイコン画像（クリックして変更）
-          </Typography>
-        </Box>
-      </Box>
-      <CommunityFormFields form={form} />
-      <Box sx={{ display: "flex", gap: 1 }}>
-        <Button type="submit" variant="contained" size="small" disabled={updateMutation.isPending}>
-          保存
-        </Button>
-        <Button type="button" variant="outlined" size="small" onClick={onCancel}>
-          キャンセル
-        </Button>
-      </Box>
-    </Box>
-  );
-}
-
-/** コミュニティ一覧テーブル行（編集モード切替を持つ）。 */
+/** コミュニティ一覧テーブル行（編集ダイアログの開閉を持つ）。 */
 interface CommunityRowProps {
   community: AdminCommunity;
 }
 
 function CommunityRow({ community }: CommunityRowProps): ReactElement {
-  const [editing, setEditing] = useState(false);
-
-  if (editing) {
-    return (
-      <TableRow>
-        <TableCell colSpan={4}>
-          <EditCommunityForm community={community} onCancel={() => setEditing(false)} />
-        </TableCell>
-      </TableRow>
-    );
-  }
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   return (
     <TableRow>
@@ -220,9 +43,22 @@ function CommunityRow({ community }: CommunityRowProps): ReactElement {
         {community.description}
       </TableCell>
       <TableCell>
-        <Button size="small" variant="outlined" onClick={() => setEditing(true)}>
+        <Button size="small" variant="outlined" onClick={() => setDialogOpen(true)}>
           編集
         </Button>
+        {/*
+          ダイアログは開いている間だけマウントする（条件付きマウント）。
+          EditCommunityDialog の useForm defaultValues は初回マウント時にのみ確定するため、
+          常時マウントだと編集途中で閉じて再度開いた際に前回の入力が残り、誤って古い値で
+          上書き保存されうる。開くたびに再マウントすることで毎回最新の community で再初期化する。
+        */}
+        {dialogOpen && (
+          <EditCommunityDialog
+            community={community}
+            open
+            onClose={() => setDialogOpen(false)}
+          />
+        )}
       </TableCell>
     </TableRow>
   );
@@ -278,14 +114,21 @@ function CommunityListSkeleton(): ReactElement {
 }
 
 /**
- * 管理画面コミュニティタブ（#310）。
- * #462: 一覧（useCommunities）は Suspense 化し、作成フォームは即時表示したいので一覧部分のみ
- * 局所 QueryBoundary（fallback=スケルトン）で包む。
+ * 管理画面コミュニティタブ（#310 / #833）。
+ * 「コミュニティを追加」ボタンで作成ダイアログを開き、一覧は Suspense 化（#462）して
+ * 局所 QueryBoundary（fallback=スケルトン）で包む。作成成功時に成功スナックバーを表示する。
  */
 export function CommunitiesTab(): ReactElement {
+  const [addOpen, setAddOpen] = useState(false);
+  const [createdSnackbarOpen, setCreatedSnackbarOpen] = useState(false);
+
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-      <CreateCommunityForm />
+      <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+        <Button variant="contained" size="small" onClick={() => setAddOpen(true)}>
+          コミュニティを追加
+        </Button>
+      </Box>
 
       <Box>
         <Typography variant="subtitle1" gutterBottom>
@@ -295,6 +138,21 @@ export function CommunitiesTab(): ReactElement {
           <CommunityListPanel />
         </QueryBoundary>
       </Box>
+
+      <AddCommunityDialog
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        onCreated={() => setCreatedSnackbarOpen(true)}
+      />
+      <Snackbar
+        open={createdSnackbarOpen}
+        autoHideDuration={3000}
+        onClose={() => setCreatedSnackbarOpen(false)}
+      >
+        <Alert severity="success" onClose={() => setCreatedSnackbarOpen(false)}>
+          コミュニティを作成しました
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

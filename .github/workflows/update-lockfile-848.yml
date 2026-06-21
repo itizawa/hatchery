@@ -1,11 +1,11 @@
 name: Update pnpm lockfile (issue-848)
 on:
-  workflow_dispatch:
-    inputs:
-      branch:
-        description: 'Target branch'
-        required: true
-        default: 'feature/issue-848'
+  push:
+    branches:
+      - feature/issue-848
+    paths:
+      - 'common/package.json'
+      - '.github/workflows/update-lockfile-848.yml'
 
 jobs:
   update-lockfile:
@@ -16,7 +16,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
         with:
-          ref: ${{ github.event.inputs.branch }}
+          ref: feature/issue-848
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup pnpm
@@ -40,5 +40,5 @@ jobs:
             echo "Lockfile already up to date"
           else
             git commit -m "config: pnpm lockfile を date-fns・@date-fns/utc 追加後に更新"
-            git push origin ${{ github.event.inputs.branch }}
+            git push origin feature/issue-848
           fi

@@ -372,7 +372,7 @@ describe("GET /api/feed my_vote 付与（#831）", () => {
       { slotKey: "s", seq: 0, author: "w", title: "P", text: "t" },
     ]);
     const voteRepo = createInMemoryVoteRepository();
-    await voteRepo.vote({ sessionId: "sess-abc", userId: null, targetType: "post", targetId: post.id, direction: "up" });
+    await voteRepo.vote({ sessionId: "10000000-0000-0000-0000-000000000001", userId: null, targetType: "post", targetId: post.id, direction: "up" });
 
     const deps = await createTestDeps({
       communityRepository: communityRepo,
@@ -381,7 +381,7 @@ describe("GET /api/feed my_vote 付与（#831）", () => {
     });
     const app = createApp(deps);
 
-    const res = await request(app).get(`/api/feed?sessionId=sess-abc`);
+    const res = await request(app).get(`/api/feed?sessionId=10000000-0000-0000-0000-000000000001`);
     expect(res.status).toBe(200);
     expect(res.body.posts[0].my_vote).toBe("up");
   });
@@ -399,7 +399,7 @@ describe("GET /api/feed my_vote 付与（#831）", () => {
     });
     const app = createApp(deps);
 
-    const res = await request(app).get("/api/feed?sessionId=sess-xyz");
+    const res = await request(app).get("/api/feed?sessionId=10000000-0000-0000-0000-000000000002");
     expect(res.status).toBe(200);
     expect(res.body.posts[0]).not.toHaveProperty("my_vote");
   });

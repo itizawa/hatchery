@@ -535,12 +535,12 @@ describe("GET /api/posts/:postId my_vote 付与（#831）", () => {
     const [post] = await postRepo.createMany("community-1", [
       { slotKey: "s", seq: 0, author: "w", title: "T", text: "B" },
     ]);
-    await voteRepo.vote({ sessionId: "sess-x", userId: null, targetType: "post", targetId: post.id, direction: "up" });
+    await voteRepo.vote({ sessionId: "10000000-0000-0000-0000-000000000001", userId: null, targetType: "post", targetId: post.id, direction: "up" });
 
     const deps = await createTestDeps({ postRepository: postRepo, commentRepository: commentRepo, voteRepository: voteRepo });
     const app = createApp(deps);
 
-    const res = await request(app).get(`/api/posts/${post.id}?sessionId=sess-x`);
+    const res = await request(app).get(`/api/posts/${post.id}?sessionId=10000000-0000-0000-0000-000000000001`);
     expect(res.status).toBe(200);
     expect(res.body.post.my_vote).toBe("up");
   });
@@ -556,12 +556,12 @@ describe("GET /api/posts/:postId my_vote 付与（#831）", () => {
     const [comment] = await commentRepo.createMany("community-1", [
       { postId: post.id, slotKey: "s", seq: 0, author: "w2", text: "C" },
     ]);
-    await voteRepo.vote({ sessionId: "sess-x", userId: null, targetType: "comment", targetId: comment.id, direction: "down" });
+    await voteRepo.vote({ sessionId: "10000000-0000-0000-0000-000000000001", userId: null, targetType: "comment", targetId: comment.id, direction: "down" });
 
     const deps = await createTestDeps({ postRepository: postRepo, commentRepository: commentRepo, voteRepository: voteRepo });
     const app = createApp(deps);
 
-    const res = await request(app).get(`/api/posts/${post.id}?sessionId=sess-x`);
+    const res = await request(app).get(`/api/posts/${post.id}?sessionId=10000000-0000-0000-0000-000000000001`);
     expect(res.status).toBe(200);
     expect(res.body.comments[0].my_vote).toBe("down");
   });

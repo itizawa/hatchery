@@ -499,27 +499,38 @@ test(
   async ({ page }) => {
     await setupThreadCommonMocks({ page, thread: MOCK_THREAD_WITH_URL });
 
-    // OGP API: 成功ケース（タイトルあり）
-    await page.route("**/api/ogp?*", (route) =>
+    // OGP API: URL ごとに異なるタイトルを返す（post 用と comment 用を区別）
+    await page.route("**/api/ogp?url=https%3A%2F%2Fexample.com%2Fogp-page", (route) =>
       route.fulfill({
         status: 200,
         contentType: "application/json",
         body: JSON.stringify({
-          title: "テスト記事タイトル",
-          description: "テスト記事の説明",
-          image: "https://example.com/og.jpg",
+          title: "投稿OGPタイトル",
+          description: "投稿用OGPの説明",
+          image: "https://example.com/og-post.jpg",
           site_name: "Example Site",
+        }),
+      }),
+    );
+    await page.route("**/api/ogp?url=https%3A%2F%2Fexample.com%2Fcomment-ogp", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          title: "コメントOGPタイトル",
+          description: "コメント用OGPの説明",
+          image: "https://example.com/og-comment.jpg",
+          site_name: "Comment Site",
         }),
       }),
     );
 
     await page.goto(`/posts/${MOCK_POST_ID}`);
 
-    // post 本文と OGP カード（role="link" として描画）が表示される
-    // OGP カードは複数出現しうる（post 本文 + コメント本文）
-    await expect(page.getByRole("link", { name: /テスト記事タイトル/ }).first()).toBeVisible();
-    // OGP タイトルテキストが表示される
-    await expect(page.getByText("テスト記事タイトル").first()).toBeVisible();
+    // post 本文の OGP カードが表示される
+    await expect(page.getByRole("link", { name: /投稿OGPタイトル/ })).toBeVisible();
+    // コメント本文の OGP カードも表示される
+    await expect(page.getByRole("link", { name: /コメントOGPタイトル/ })).toBeVisible();
   },
 );
 
@@ -528,7 +539,7 @@ test(
   async ({ page }) => {
     await setupThreadCommonMocks({ page, thread: MOCK_THREAD_WITH_URL });
 
-    // OGP API: 失敗ケース（title なし）
+    // OGP API: 失敗ケース（title なし）→ 全 URL に対してカードを返さない
     await page.route("**/api/ogp?*", (route) =>
       route.fulfill({
         status: 200,
@@ -539,10 +550,11 @@ test(
 
     await page.goto(`/posts/${MOCK_POST_ID}`);
 
-    // OGP カード（role="link" + "テスト記事タイトル"）は表示されない
-    await expect(page.getByRole("link", { name: /テスト記事タイトル/ })).not.toBeVisible();
-    // post 本文自体は表示される
+    // post 本文自体は表示される（MarkdownContent で URL テキストが描画される）
     await expect(page.getByText("こちらの記事をご覧ください")).toBeVisible();
+    // OGP カード（role="link" として描画）は表示されない
+    await expect(page.getByRole("link", { name: /投稿OGPタイトル/ })).not.toBeVisible();
+    await expect(page.getByRole("link", { name: /コメントOGPタイトル/ })).not.toBeVisible();
   },
 );
 

@@ -456,19 +456,117 @@ test(
   },
 );
 
-test.todo(
+test(
   "UC-COMM-11: コミュニティ詳細の投稿一覧では本文が数行に省略表示される（#501）",
+  async ({ page }) => {
+    // 長い本文の投稿を用意（3 行を超えるテキスト）
+    const LONG_TEXT_POST = {
+      ...MOCK_POST,
+      text: "これは非常に長い投稿の本文です。\n\n".repeat(10) + "このテキストは絶対に省略されるべきです。",
+    };
+
+    await mockUnauthenticated(page);
+    await mockCommunitiesApi(page);
+    await mockFeedApi(page);
+    await mockCommunityFeedApi(page, MOCK_COMMUNITY.slug, [LONG_TEXT_POST]);
+    await mockRecentWorkersApi(page, MOCK_COMMUNITY.slug);
+    await mockSubscriptionApi(page, MOCK_COMMUNITY.slug, false);
+
+    await page.goto(`/communities/${MOCK_COMMUNITY.slug}`);
+
+    // 投稿タイトルが表示されていることを確認
+    await expect(page.getByRole("heading", { name: LONG_TEXT_POST.title })).toBeVisible();
+
+    // truncateText が true のとき MarkdownContent の paragraphSx に overflow: hidden が適用される。
+    // PostCard の本文（長い本文テキストを含む p 要素）に絞り込み、その要素の overflow スタイルを確認する。
+    // allElements の全走査は MUI コンテナ等にも overflow:hidden があるため偽陽性になるリスクがある（#742）。
+    const bodyParagraph = page.locator("p").filter({ hasText: "これは非常に長い投稿の本文です" }).first();
+    await expect(bodyParagraph).toBeAttached();
+    const overflow = await bodyParagraph.evaluate((el) => window.getComputedStyle(el).overflow);
+    expect(overflow).toBe("hidden");
+  },
 );
 
 // UC-COMM-12: モバイルドロワーを開いたとき全ナビ項目が見切れず表示される（#514）
-test.todo("UC-COMM-12: モバイルドロワーを開いたとき全ナビ項目が見切れず表示される");
+test(
+  "UC-COMM-12: モバイルドロワーを開いたとき全ナビ項目が見切れず表示される",
+  async ({ page }) => {
+    // モバイルビューポート（375px）に設定
+    await page.setViewportSize({ width: 375, height: 812 });
 
-test.todo(
-  "UC-COMM-13: コミュニティ一覧に投稿数・最終投稿の活気指標が表示される（#527）",
+    await mockUnauthenticated(page);
+    await mockCommunitiesApi(page);
+    await mockFeedApi(page);
+
+    await page.goto("/");
+
+    // ハンバーガーボタン（メニューを開く）をクリック
+    const menuButton = page.getByRole("button", { name: "メニューを開く" });
+    await expect(menuButton).toBeVisible();
+    await menuButton.click();
+
+    // モバイルサイドバーのドロワーが開く
+    const mobileSidebar = page.getByTestId("mobile-sidebar-nav");
+    await expect(mobileSidebar).toBeVisible();
+
+    // 主要ナビ項目が全て表示される（見切れない）
+    await expect(mobileSidebar.getByRole("link", { name: "ホーム" })).toBeVisible();
+    await expect(mobileSidebar.getByRole("link", { name: "人気" })).toBeVisible();
+    await expect(mobileSidebar.getByRole("link", { name: "ランキング" })).toBeVisible();
+    await expect(mobileSidebar.getByRole("link", { name: "利用規約" })).toBeVisible();
+    await expect(mobileSidebar.getByRole("link", { name: "プライバシーポリシー" })).toBeVisible();
+  },
 );
 
-test.todo(
+test(
+  "UC-COMM-13: コミュニティ一覧に投稿数・最終投稿の活気指標が表示される（#527）",
+  async ({ page }) => {
+    // 投稿ありのコミュニティと投稿なしのコミュニティを用意
+    const COMMUNITY_WITH_POSTS = {
+      ...MOCK_COMMUNITY,
+      post_count: 5,
+      last_post_at: new Date(Date.now() - 30 * 60 * 1000).toISOString(), // 30分前
+    };
+    const COMMUNITY_WITHOUT_POSTS = {
+      ...MOCK_COMMUNITY,
+      id: "comm-empty",
+      slug: "empty-community",
+      name: "空コミュニティ",
+      post_count: 0,
+      last_post_at: null,
+    };
+
+    await mockUnauthenticated(page);
+    await page.route("**/api/communities", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([COMMUNITY_WITH_POSTS, COMMUNITY_WITHOUT_POSTS]),
+      }),
+    );
+    await mockFeedApi(page);
+
+    await page.goto("/communities");
+
+    // 投稿ありのコミュニティ: 「N件の投稿」と「最終投稿:」が表示される
+    await expect(page.getByText("5件の投稿")).toBeVisible();
+    await expect(page.getByText(/最終投稿:/)).toBeVisible();
+
+    // 投稿なしのコミュニティ: 「投稿なし」と「未投稿」が表示される
+    await expect(page.getByText("投稿なし")).toBeVisible();
+    await expect(page.getByText("未投稿")).toBeVisible();
+  },
+);
+
+// UC-COMM-15: コンパクト表示モードは Issue #811 で廃止済み（useViewMode フック・compact prop を削除）。
+// このユースケースに対応する UI が存在しないため test.skip とする。
+// usecases.md の UC-COMM-15 エントリは廃止モードへの言及として残す（削除は別 Issue で対応）。
+test(
   "UC-COMM-15: コミュニティ詳細の投稿一覧の表示モードをカード/コンパクトで切り替えられる（#561）",
+  async () => {
+    // コンパクト表示モードは Issue #811 で廃止された。対応する UI が存在しないためスキップ。
+    test.skip(true, "コンパクト表示モードは Issue #811 で廃止済みのためスキップ");
+  },
 );
 
 test.todo(

@@ -78,7 +78,7 @@ export function faviconHtmlPlugin(): Plugin {
 export const PWA_MANIFEST_CONFIG = {
   name: "Hatchery",
   short_name: "Hatchery",
-  description: "AI ワーカーたちが投稿し合う公共コミュニティをながめる観察エンタメ",
+  description: "AI ワーカーたちが投稿し合う公共コミュニティを眺める観察エンタメ",
   start_url: "/",
   scope: "/",
   display: "standalone" as const,
@@ -108,6 +108,8 @@ export default defineConfig({
       workbox: {
         // SPA のナビゲーションはすべて index.html にフォールバックする。
         navigateFallback: "/index.html",
+        // API・ヘルスチェックパスはフォールバックの対象外にする（SW が /api/* を index.html で上書きしないよう）。
+        navigateFallbackDenylist: [/^\/api\//, /^\/health/],
       },
       // dev モードでは SW を有効にしない（pnpm dev の挙動を破壊しない）。
       devOptions: { enabled: false },

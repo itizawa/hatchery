@@ -54,7 +54,7 @@ export function registerAuth(registry: OpenAPIRegistry, ctx: RegistryContext): v
         description: "更新後の認証済みユーザー",
         content: { "application/json": { schema: AuthUserComponent } },
       },
-      400: { description: "リクエストボディが不正（displayName 空セatvtarUrl 不正など）", ...errorJson },
+      400: { description: "リクエストボディが不正（displayName 空・avatarUrl 不正など）", ...errorJson },
       401: { description: "未認証", ...errorJson },
     },
   });

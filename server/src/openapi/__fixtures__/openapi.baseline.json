@@ -1573,7 +1573,7 @@
             }
           },
           "400": {
-            "description": "リクエストボディが不正（displayName 空setvtarUrl 不正など）",
+            "description": "リクエストボディが不正（displayName 空・avatarUrl 不正など）",
             "content": {
               "application/json": {
                 "schema": {

@@ -106,7 +106,7 @@ export const CommentCard = ({
               bottom: 0,
               width: "2px",
               bgcolor: CONNECTOR_COLOR,
-              borderRadius: "1px",
+              borderRadius: "0px",
             }}
           />
         )}

@@ -3,7 +3,7 @@
 // Node 環境でプラグインの transformIndexHtml 関数のみを直接テストする。
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { cfBeaconHtmlPlugin, faviconHtmlPlugin } from "./vite.config";
+import { PWA_MANIFEST_CONFIG, cfBeaconHtmlPlugin, faviconHtmlPlugin } from "./vite.config";
 
 /**
  * transformIndexHtml フックを直接呼んで HTML 出力を得るヘルパー。
@@ -134,5 +134,75 @@ describe("faviconHtmlPlugin（ビルド時 favicon 切り替え）", () => {
     const out = runFaviconTransform(FAVICON_TEMPLATE);
     expect(out).toContain('href="/favicon.svg"');
     expect(out).not.toContain('href="/favicon-stg.svg"');
+  });
+});
+
+describe("PWA_MANIFEST_CONFIG（Web App Manifest 設定の必須フィールド検証）", () => {
+  // 受け入れ条件 1: name フィールド
+  it("name が 'Hatchery' である", () => {
+    expect(PWA_MANIFEST_CONFIG.name).toBe("Hatchery");
+  });
+
+  // 受け入れ条件 1: short_name フィールド
+  it("short_name が定義されている", () => {
+    expect(PWA_MANIFEST_CONFIG.short_name).toBeDefined();
+    expect(typeof PWA_MANIFEST_CONFIG.short_name).toBe("string");
+    expect(PWA_MANIFEST_CONFIG.short_name.length).toBeGreaterThan(0);
+  });
+
+  // 受け入れ条件 1: description フィールド
+  it("description が定義されている", () => {
+    expect(PWA_MANIFEST_CONFIG.description).toBeDefined();
+    expect(typeof PWA_MANIFEST_CONFIG.description).toBe("string");
+    expect(PWA_MANIFEST_CONFIG.description.length).toBeGreaterThan(0);
+  });
+
+  // 受け入れ条件 1: start_url / scope
+  it("start_url が '/' である", () => {
+    expect(PWA_MANIFEST_CONFIG.start_url).toBe("/");
+  });
+
+  it("scope が '/' である", () => {
+    expect(PWA_MANIFEST_CONFIG.scope).toBe("/");
+  });
+
+  // 受け入れ条件 1: display が 'standalone'
+  it("display が 'standalone' である", () => {
+    expect(PWA_MANIFEST_CONFIG.display).toBe("standalone");
+  });
+
+  // 受け入れ条件 1: theme_color / background_color
+  it("theme_color が定義されている", () => {
+    expect(PWA_MANIFEST_CONFIG.theme_color).toBeDefined();
+    expect(typeof PWA_MANIFEST_CONFIG.theme_color).toBe("string");
+    expect(PWA_MANIFEST_CONFIG.theme_color).toMatch(/^#[0-9a-fA-F]{6}$/);
+  });
+
+  it("background_color が定義されている", () => {
+    expect(PWA_MANIFEST_CONFIG.background_color).toBeDefined();
+    expect(typeof PWA_MANIFEST_CONFIG.background_color).toBe("string");
+    expect(PWA_MANIFEST_CONFIG.background_color).toMatch(/^#[0-9a-fA-F]{6}$/);
+  });
+
+  // 受け入れ条件 1: icons に 192x192 エントリが存在する
+  it("icons に 192x192 PNG エントリが存在する", () => {
+    const icon192 = PWA_MANIFEST_CONFIG.icons.find((icon) => icon.sizes === "192x192");
+    expect(icon192).toBeDefined();
+    expect(icon192?.type).toBe("image/png");
+  });
+
+  // 受け入れ条件 1: icons に 512x512 エントリが存在する
+  it("icons に 512x512 PNG エントリが存在する", () => {
+    const icon512 = PWA_MANIFEST_CONFIG.icons.find((icon) => icon.sizes === "512x512");
+    expect(icon512).toBeDefined();
+    expect(icon512?.type).toBe("image/png");
+  });
+
+  // 受け入れ条件 1: icons の少なくとも 1 つに maskable purpose が含まれる
+  it("icons の少なくとも 1 つに purpose: 'maskable' が含まれる", () => {
+    const maskableIcon = PWA_MANIFEST_CONFIG.icons.find((icon) =>
+      icon.purpose?.includes("maskable"),
+    );
+    expect(maskableIcon).toBeDefined();
   });
 });

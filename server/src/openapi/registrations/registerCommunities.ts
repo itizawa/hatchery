@@ -270,7 +270,16 @@ export function registerCommunities(registry: OpenAPIRegistry, ctx: RegistryCont
     method: "get",
     path: "/api/communities/{slug}/feed",
     summary: "コミュニティの投稿フィードを取得（認証不要・新着順）",
-    request: { params: z.object({ slug: communitySlugParam }) },
+    request: {
+      params: z.object({ slug: communitySlugParam }),
+      query: z.object({
+        sessionId: z
+          .string()
+          .uuid()
+          .optional()
+          .openapi({ description: "セッション ID（付与すると各 post に my_vote を付与・#831）" }),
+      }),
+    },
     responses: {
       200: {
         description: "コミュニティの投稿一覧（createdAt 降順）",

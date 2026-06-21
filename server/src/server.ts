@@ -1,6 +1,7 @@
 import { createApp } from "./app.js";
 import { loadEnv } from "./config/env.js";
 import { createPrismaDeps } from "./composition/createPrismaDeps.js";
+import { registerGracefulShutdown } from "./lifecycle/gracefulShutdown.js";
 import { prisma } from "./persistence/prismaClient.js";
 import { createPgSessionStore } from "./persistence/pgSessionStore.js";
 
@@ -40,13 +41,42 @@ const app = createApp({
   },
 });
 
-const server = app.listen(env.port, () => {
-  console.log(`[server] listening on :${env.port}`);
-});
+async function main(): Promise<void> {
+  // listen より前に DB 接続を確立しておく。コールドスタート時の初回クエリに接続コストが
+  // 乗るのを防ぎ（前倒し）、接続不能なら listen せず exit(1) して Cloud Run に起動失敗を
+  // 伝える（健全な旧リビジョンが維持され、全リクエストが 500 になるインスタンスを公開しない）。
+  try {
+    await prisma.$connect();
+    console.log("[server] database connected");
+  } catch (err) {
+    console.error("[server] initial database connection failed; exiting", err);
+    process.exit(1);
+  }
 
-// http.Server レベルのタイムアウト（#34）。スロークライアント/遅い処理でコネクションが
-// 占有され続けるのを防ぐバックストップ。アプリ側ミドルウェアの 503 を先に返すため、
-// http.Server 側はミドルウェアの requestTimeoutMs より長く設定してレース（408/接続リセット
-// との競合）を避ける。headersTimeout はさらに長くする。
-server.requestTimeout = env.requestTimeoutMs + 5_000;
-server.headersTimeout = env.requestTimeoutMs + 10_000;
+  const server = app.listen(env.port, () => {
+    console.log(`[server] listening on :${env.port}`);
+  });
+
+  // listen 失敗（ポート使用中等）は 'error' イベントで飛ぶ。ハンドラが無いと
+  // 不明瞭な uncaught 例外でクラッシュするため、明示的にログして exit する。
+  server.on("error", (err) => {
+    console.error("[server] listen error", err);
+    process.exit(1);
+  });
+
+  // http.Server レベルのタイムアウト（#34）。スロークライアント/遅い処理でコネクションが
+  // 占有され続けるのを防ぐバックストップ。アプリ側ミドルウェアの 503 を先に返すため、
+  // http.Server 側はミドルウェアの requestTimeoutMs より長く設定してレース（408/接続リセット
+  // との競合）を避ける。headersTimeout はさらに長くする。
+  server.requestTimeout = env.requestTimeoutMs + 5_000;
+  server.headersTimeout = env.requestTimeoutMs + 10_000;
+
+  // Cloud Run の scale-down / デプロイ時の SIGTERM で、処理中リクエストを排出してから
+  // DB 接続を切る。これが無いとインスタンス遷移のたびに in-flight リクエストが 500 になる。
+  registerGracefulShutdown({
+    server,
+    disconnect: () => prisma.$disconnect(),
+  });
+}
+
+void main();

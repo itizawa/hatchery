@@ -1,12 +1,13 @@
 import {
   BadRequestError,
   ForbiddenError,
+  InternalServerError,
   NotFoundError,
   UnauthorizedError,
 } from "@hatchery/common";
 import express, { type Express, type RequestHandler } from "express";
 import request from "supertest";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { errorHandler } from "./errorHandler.js";
 
@@ -19,6 +20,10 @@ function appThrowing(thrower: RequestHandler): Express {
 }
 
 describe("errorHandler", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("NotFoundError は 404 と error メッセージを返す", async () => {
     const res = await request(
       // eslint-disable-next-line max-params
@@ -79,6 +84,8 @@ describe("errorHandler", () => {
   });
 
   it("その他のエラーは 500 InternalServerError を返す", async () => {
+    // 500 経路は console.error を出すため、テスト出力を汚さないようモックする。
+    vi.spyOn(console, "error").mockImplementation(() => {});
     const res = await request(
       // eslint-disable-next-line max-params
       appThrowing((_req, _res, next) => {
@@ -87,6 +94,62 @@ describe("errorHandler", () => {
     ).get("/t");
     expect(res.status).toBe(500);
     expect(res.body.error).toBe("InternalServerError");
+  });
+
+  it("500 に変換する想定外エラーは console.error で原因（メソッド/URL/例外）をログ出力する", async () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const boom = new Error("boom");
+    await request(
+      // eslint-disable-next-line max-params
+      appThrowing((_req, _res, next) => {
+        next(boom);
+      }),
+    ).get("/t");
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    // 例外オブジェクト本体が渡され、スタックトレースが追える形であること。
+    expect(spy.mock.calls[0]).toContain(boom);
+    // どのリクエストで起きたか（メソッド + パス）も出力されること。
+    const logged = spy.mock.calls[0].map(String).join(" ");
+    expect(logged).toContain("GET");
+    expect(logged).toContain("/t");
+  });
+
+  it("5xx の AppError（InternalServerError 等）も console.error でログ出力する", async () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const err = new InternalServerError("SceneGenerationFailed");
+    const res = await request(
+      // eslint-disable-next-line max-params
+      appThrowing((_req, _res, next) => {
+        next(err);
+      }),
+    ).get("/t");
+
+    expect(res.status).toBe(500);
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy.mock.calls[0]).toContain(err);
+  });
+
+  it("AppError（4xx）や 413 など想定内エラーは console.error しない", async () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    await request(
+      // eslint-disable-next-line max-params
+      appThrowing((_req, _res, next) => {
+        next(new NotFoundError("ChannelNotFound"));
+      }),
+    ).get("/t");
+    await request(
+      // eslint-disable-next-line max-params
+      appThrowing((_req, _res, next) => {
+        const err = Object.assign(new Error("too large"), {
+          status: 413,
+          type: "entity.too.large",
+        });
+        next(err);
+      }),
+    ).get("/t");
+
+    expect(spy).not.toHaveBeenCalled();
   });
 
   it("応答開始後のエラーは二重送信せず、既に送った応答を維持する", async () => {

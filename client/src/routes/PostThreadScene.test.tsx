@@ -229,6 +229,22 @@ describe("PostThreadScene サイドバー (#390)", () => {
   });
 });
 
+// #836: コメントセクションにアンカー id="comments" を付与（ハッシュ遷移対応）。
+describe("PostThreadScene コメントセクション id (#836)", () => {
+  it("コメントが 1 件以上あるとき、コメントセクションに id='comments' が付与されている", async () => {
+    server.use(
+      http.get("/api/posts/:postId", () =>
+        HttpResponse.json({ post: mockPosts[0], comments: mockComments }),
+      ),
+    );
+    const { container } = render(<BoundedScene />, { wrapper: Wrapper });
+
+    await screen.findByText("いい一日になりそうですね！");
+    const commentsSection = container.querySelector("#comments");
+    expect(commentsSection).toBeInTheDocument();
+  });
+});
+
 // #528: ブラウザタブタイトル。
 describe("PostThreadScene タブタイトル (#528)", () => {
   it("post タイトルが document.title に反映される", async () => {

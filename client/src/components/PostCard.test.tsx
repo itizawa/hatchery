@@ -134,6 +134,37 @@ describe("PostCard", () => {
     });
   });
 
+  describe("onCommentClick（コメント Chip クリック・#836）", () => {
+    it("onCommentClick 指定時、Chip クリックでコールバックが呼ばれる", () => {
+      const onCommentClick = vi.fn();
+      render(<PostCard post={mockPost} onVote={vi.fn()} onCommentClick={onCommentClick} />);
+
+      const event = new MouseEvent("click", { bubbles: true, cancelable: true });
+      fireEvent(screen.getByLabelText("コメント 3 件"), event);
+
+      expect(onCommentClick).toHaveBeenCalledTimes(1);
+    });
+
+    it("onCommentClick 指定時、Chip クリックで stopPropagation と preventDefault が呼ばれる", () => {
+      const onCommentClick = vi.fn();
+      render(<PostCard post={mockPost} onVote={vi.fn()} onCommentClick={onCommentClick} />);
+
+      const event = new MouseEvent("click", { bubbles: true, cancelable: true });
+      const stopPropagationSpy = vi.spyOn(event, "stopPropagation");
+      const preventDefaultSpy = vi.spyOn(event, "preventDefault");
+
+      fireEvent(screen.getByLabelText("コメント 3 件"), event);
+
+      expect(stopPropagationSpy).toHaveBeenCalled();
+      expect(preventDefaultSpy).toHaveBeenCalled();
+    });
+
+    it("onCommentClick 未指定時、Chip は clickable=false のため button ロールを持たない", () => {
+      render(<PostCard post={mockPost} onVote={vi.fn()} />);
+      expect(screen.queryByRole("button", { name: /コメント 3 件/ })).not.toBeInTheDocument();
+    });
+  });
+
   describe("author_worker（発言者のアバター + 表示名・#479）", () => {
     const postWithWorker = {
       ...mockPost,

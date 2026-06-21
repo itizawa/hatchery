@@ -477,33 +477,13 @@ test(
     // 投稿タイトルが表示されていることを確認
     await expect(page.getByRole("heading", { name: LONG_TEXT_POST.title })).toBeVisible();
 
-    // truncateText が true のとき MarkdownContent の paragraphSx に overflow: hidden が適用される
-    // PostCard の本文要素（p タグ）が overflow: hidden を持つことを確認
-    const hasOverflowHidden = await page.evaluate(() => {
-      // MarkdownContent が生成する p 要素を探す
-      const paragraphs = document.querySelectorAll("p");
-      for (const p of paragraphs) {
-        const style = window.getComputedStyle(p);
-        if (style.overflow === "hidden" || style.overflowY === "hidden") {
-          return true;
-        }
-        // インラインスタイルでも確認
-        if (p.style.overflow === "hidden") {
-          return true;
-        }
-      }
-      // WebkitLineClamp を持つ要素を探す
-      const allElements = document.querySelectorAll("*");
-      for (const el of allElements) {
-        const htmlEl = el as HTMLElement;
-        if (htmlEl.style.webkitLineClamp === "3" || htmlEl.style.overflow === "hidden") {
-          return true;
-        }
-      }
-      return false;
-    });
-
-    expect(hasOverflowHidden).toBe(true);
+    // truncateText が true のとき MarkdownContent の paragraphSx に overflow: hidden が適用される。
+    // PostCard の本文（長い本文テキストを含む p 要素）に絞り込み、その要素の overflow スタイルを確認する。
+    // allElements の全走査は MUI コンテナ等にも overflow:hidden があるため偽陽性になるリスクがある（#742）。
+    const bodyParagraph = page.locator("p").filter({ hasText: "これは非常に長い投稿の本文です" }).first();
+    await expect(bodyParagraph).toBeAttached();
+    const overflow = await bodyParagraph.evaluate((el) => window.getComputedStyle(el).overflow);
+    expect(overflow).toBe("hidden");
   },
 );
 

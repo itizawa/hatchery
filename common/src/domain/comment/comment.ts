@@ -15,6 +15,8 @@ export const COMMENT_TEXT_MAX_LENGTH = 1000;
  * - slot_key + seq で定時バッチ内のコメントを識別する（Cron 二重発火ガード）。
  * - author_worker は発言者の表示用ワーカー情報（任意・#479）。読み取り API のレスポンスで
  *   server が author（id か displayName）から解決して付与する。生成出力・永続化には含めない。
+ * - up_count は up vote の累計件数（#814）。vote トランザクション内で増減する内部集計値
+ *   （新規ユーザー入力ではないため .max() 対象外）。省略時 0。
  */
 export const CommentSchema = z.object({
   id: z.string().min(1),
@@ -29,6 +31,8 @@ export const CommentSchema = z.object({
   /** 同一 post 内の返信先コメント id（nullable）。#520 ネスト対応。トップレベルは null。 */
   parent_comment_id: z.string().nullable().default(null),
   author_worker: AuthorWorkerSchema.optional(),
+  /** up vote の累計件数（#814）。内部集計値のため .max() 対象外。省略時 0。 */
+  up_count: z.number().int().nonnegative().default(0),
 });
 
 export type Comment = z.infer<typeof CommentSchema>;

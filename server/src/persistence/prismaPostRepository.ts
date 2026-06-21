@@ -23,6 +23,7 @@ function toRecord(row: {
   title: string;
   text: string;
   score: number;
+  upCount: number;
   createdAt: Date;
 }): PostRecord {
   return {
@@ -34,6 +35,7 @@ function toRecord(row: {
     title: row.title,
     text: row.text,
     score: row.score,
+    upCount: row.upCount,
     createdAt: row.createdAt,
   };
 }

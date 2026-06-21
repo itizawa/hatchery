@@ -1,6 +1,6 @@
-import ExpandLess from "@mui/icons-material/ExpandLess";
-import ExpandMore from "@mui/icons-material/ExpandMore";
-import ExploreIcon from "@mui/icons-material/Explore";
+import ExpandLess from "@mui/icons-material/ExpandLessRounded";
+import ExpandMore from "@mui/icons-material/ExpandMoreRounded";
+import ExploreIcon from "@mui/icons-material/ExploreRounded";
 import {
   Avatar,
   Box,

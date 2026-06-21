@@ -346,16 +346,218 @@ test(
   },
 );
 
-test.todo("UC-HOME-15: タブ復帰時に stale なデータが自動再取得される（#675）");
+test(
+  "UC-HOME-15: タブ復帰時に stale なデータが自動再取得される（#675）",
+  async ({ page }) => {
+    // リクエストカウンターで再取得を検知する
+    let feedRequestCount = 0;
+    await page.route("**/api/feed?*", (route) => {
+      feedRequestCount++;
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ posts: [MOCK_POST, MOCK_POST_2], nextCursor: null }),
+      });
+    });
+    await page.route("**/api/workers", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(MOCK_WORKERS),
+      }),
+    );
+    await page.route("**/api/communities", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([MOCK_COMMUNITY]),
+      }),
+    );
 
-test.todo("UC-HOME-16: フィードの表示モードをカード/コンパクトで切り替えられる（#561）");
+    // ブラウザのクロックを制御下に置く（staleTime の超過を仮想的に進める）
+    await page.clock.install();
+    await page.goto("/");
 
-test.todo("UC-HOME-17: 未認証ユーザーが / を開くとようこそセクションが表示される（#482）");
+    // 初回フェッチが完了したことを確認
+    await expect(page.getByText(MOCK_POST.title)).toBeVisible();
+    const initialCount = feedRequestCount;
 
-test.todo("UC-HOME-18: 認証済みで投稿がある場合はようこそセクションが表示されない（#482）");
+    // staleTime（30 秒）を超過させる（fastForward で仮想時間を進める）
+    await page.clock.fastForward(31_000);
 
-test.todo("UC-HOME-19: 認証済みで投稿が 0 件のときはようこそセクションが表示される（#482）");
+    // visibilitychange イベントを発火してタブ復帰を疑似再現する。
+    // page.evaluate 内はブラウザコンテキストで実行されるため document / Event が利用可能。
+    // tsconfig に "dom" lib が含まれていないため @ts-expect-error で型エラーを抑制する。
+    await page.evaluate(() => {
+      // @ts-expect-error -- ブラウザ内コンテキストでは document が存在する（e2e tsconfig に dom lib が無い）
+      const doc = globalThis.document;
+      Object.defineProperty(doc, "hidden", {
+        value: false,
+        configurable: true,
+        writable: true,
+      });
+      // @ts-expect-error -- ブラウザ内コンテキストでは Event が存在する（e2e tsconfig に dom lib が無い）
+      doc.dispatchEvent(new globalThis.Event("visibilitychange"));
+    });
+
+    // refetchOnWindowFocus が機能し、フィードが再取得されることを確認
+    // （初回より多くリクエストが発生していること）
+    // expect.poll で再試行しながら待機することでフレーキーテストを防ぐ
+    await expect.poll(() => feedRequestCount, { timeout: 3000 }).toBeGreaterThan(initialCount);
+  },
+);
+
+// UC-HOME-16: コンパクト表示モードは Issue #811 で廃止済み（useViewMode フック・compact prop を削除）。
+// このユースケースに対応する UI が存在しないため test.skip とする。
+// usecases.md の UC-HOME-16 エントリは廃止モードへの言及として残す（削除は別 Issue で対応）。
+test("UC-HOME-16: フィードの表示モードをカード/コンパクトで切り替えられる（#561）", async () => {
+  // コンパクト表示モードは Issue #811 で廃止された。対応する UI が存在しないためスキップ。
+  test.skip(true, "コンパクト表示モードは Issue #811 で廃止済みのためスキップ");
+});
+
+test(
+  "UC-HOME-17: 未認証ユーザーが / を開くとようこそセクションが表示される（#482）",
+  async ({ page }) => {
+    // 未ログイン（auth/me を 401 で返す）
+    await page.route("**/api/auth/me", (route) =>
+      route.fulfill({
+        status: 401,
+        contentType: "application/json",
+        body: JSON.stringify({ message: "Unauthorized" }),
+      }),
+    );
+    // フィードに投稿あり（posts形式）
+    await page.route("**/api/feed?*", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ posts: [MOCK_POST, MOCK_POST_2], nextCursor: null }),
+      }),
+    );
+    await page.route("**/api/workers", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(MOCK_WORKERS),
+      }),
+    );
+    await page.route("**/api/communities", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([MOCK_COMMUNITY]),
+      }),
+    );
+
+    await page.goto("/");
+
+    // 未ログインの場合はようこそセクションが表示される（投稿の有無に関わらず）
+    await expect(page.getByRole("heading", { name: /Hatchery へようこそ/ })).toBeVisible();
+    // 「コミュニティを探す」ボタンも表示される
+    await expect(page.getByRole("link", { name: "コミュニティを探す" })).toBeVisible();
+  },
+);
+
+test(
+  "UC-HOME-18: 認証済みで投稿がある場合はようこそセクションが表示されない（#482）",
+  async ({ page }) => {
+    // ログイン済み
+    await page.route("**/api/auth/me", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          id: "user1",
+          name: "Test User",
+          email: "test@example.com",
+          imageUrl: null,
+          isAdmin: false,
+        }),
+      }),
+    );
+    // フィードに投稿あり（posts形式）
+    await page.route("**/api/feed?*", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ posts: [MOCK_POST, MOCK_POST_2], nextCursor: null }),
+      }),
+    );
+    await page.route("**/api/workers", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(MOCK_WORKERS),
+      }),
+    );
+    await page.route("**/api/communities", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([MOCK_COMMUNITY]),
+      }),
+    );
+
+    await page.goto("/");
+
+    // ログイン済み + 投稿ありの場合はようこそセクションが非表示になる
+    await expect(page.getByRole("heading", { name: /Hatchery へようこそ/ })).not.toBeVisible();
+    // 投稿一覧は表示される
+    await expect(page.getByText(MOCK_POST.title)).toBeVisible();
+  },
+);
+
+test(
+  "UC-HOME-19: 認証済みで投稿が 0 件のときはようこそセクションが表示される（#482）",
+  async ({ page }) => {
+    // ログイン済み
+    await page.route("**/api/auth/me", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          id: "user1",
+          name: "Test User",
+          email: "test@example.com",
+          imageUrl: null,
+          isAdmin: false,
+        }),
+      }),
+    );
+    // フィードに投稿なし（空配列・posts形式）
+    await page.route("**/api/feed?*", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ posts: [], nextCursor: null }),
+      }),
+    );
+    await page.route("**/api/workers", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(MOCK_WORKERS),
+      }),
+    );
+    await page.route("**/api/communities", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([MOCK_COMMUNITY]),
+      }),
+    );
+
+    await page.goto("/");
+
+    // ログイン済みでも投稿が 0 件の場合はようこそセクションが表示される
+    await expect(page.getByRole("heading", { name: /Hatchery へようこそ/ })).toBeVisible();
+    // 「コミュニティを探す」ボタンも表示される
+    await expect(page.getByRole("link", { name: "コミュニティを探す" })).toBeVisible();
+  },
+);
 
 test.todo("UC-HOME-20: vote ミューテーション進行中はフィードの vote ボタンが disabled になる（#748）");
 
 test.todo("UC-HOME-21: vote 済みの投稿は vote ウィジェットが塗りつぶし表示になる（#813）");
+
+test.todo("UC-HOME-22: vote ウィジェットに表示される数字は up vote の累計件数である（#814）");

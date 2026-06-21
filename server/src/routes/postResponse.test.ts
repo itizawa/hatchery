@@ -13,6 +13,7 @@ const basePost: PostRecord = {
   title: "Title",
   text: "Body",
   score: 3,
+  upCount: 0,
   createdAt: new Date("2026-06-10T09:00:00Z"),
 };
 
@@ -25,6 +26,7 @@ const baseComment: CommentRecord = {
   author: "worker-2",
   text: "Reply",
   score: 1,
+  upCount: 0,
   createdAt: new Date("2026-06-10T09:05:00Z"),
   parentCommentId: null,
 };
@@ -43,7 +45,14 @@ describe("toPostResponse", () => {
       score: 3,
       created_at: basePost.createdAt,
       comment_count: 0,
+      up_count: 0,
     });
+  });
+
+  it("upCount を渡すと up_count として出力する（#814）", () => {
+    const enriched = { ...basePost, upCount: 7 };
+    const res = toPostResponse(enriched) as Record<string, unknown>;
+    expect(res.up_count).toBe(7);
   });
 
   it("commentCount を渡すと comment_count として出力する（#500）", () => {
@@ -93,7 +102,14 @@ describe("toCommentResponse", () => {
       score: 1,
       created_at: baseComment.createdAt,
       parent_comment_id: null,
+      up_count: 0,
     });
+  });
+
+  it("upCount を渡すと up_count として出力する（#814）", () => {
+    const enriched = { ...baseComment, upCount: 5 };
+    const res = toCommentResponse(enriched) as Record<string, unknown>;
+    expect(res.up_count).toBe(5);
   });
 
   it("parentCommentId が設定されていると parent_comment_id として出力する（#520）", () => {

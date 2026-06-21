@@ -35,6 +35,8 @@ export function toPostResponse(r: EnrichedPostRecord) {
     created_at: r.createdAt,
     // コメント件数（#500）。enrich されていない場合は 0 を返す。
     comment_count: r.commentCount ?? 0,
+    // up vote 累計件数（#814）。
+    up_count: r.upCount,
   };
   return r.author_worker ? { ...base, author_worker: r.author_worker } : base;
 }
@@ -52,6 +54,8 @@ export function toCommentResponse(r: EnrichedCommentRecord) {
     score: r.score,
     created_at: r.createdAt,
     parent_comment_id: r.parentCommentId ?? null,
+    // up vote 累計件数（#814）。
+    up_count: r.upCount,
   };
   return r.author_worker ? { ...base, author_worker: r.author_worker } : base;
 }

@@ -93,7 +93,9 @@ export function useVotePost(communitySlug?: string) {
     mutationFn: ({ postId, direction }: { postId: string; direction: VoteDirection }) =>
       votePost({ postId, direction, sessionId }),
     onMutate: async ({ postId, direction }: { postId: string; direction: VoteDirection }) => {
-      // 楽観更新: スレッドキャッシュの score を direction に応じて +1 / -1
+      // 楽観更新: スレッドキャッシュの score / up_count を direction に応じて更新（#814）。
+      // up_count は up 押下で +1、down 押下で変化なし（0）とする近似値。
+      // 正確な値は onSettled の invalidate 後にサーバ応答で修正される。
       const threadKey = postThreadQueryKey(postId);
       await queryClient.cancelQueries({ queryKey: threadKey });
       const previous = queryClient.getQueryData<{ post: Post; comments: Comment[] }>(threadKey);
@@ -103,6 +105,7 @@ export function useVotePost(communitySlug?: string) {
           post: {
             ...previous.post,
             score: previous.post.score + (direction === "up" ? 1 : -1),
+            up_count: previous.post.up_count + (direction === "up" ? 1 : 0),
           },
         });
       }
@@ -147,7 +150,8 @@ export function useVoteComment(postId: string) {
       commentId: string;
       direction: VoteDirection;
     }) => {
-      // 楽観更新: スレッドキャッシュのコメント score を direction に応じて +1 / -1
+      // 楽観更新: スレッドキャッシュのコメント score / up_count を direction に応じて更新（#814）。
+      // up_count は up 押下で +1、down 押下で変化なし（0）とする近似値。
       const threadKey = postThreadQueryKey(postId);
       await queryClient.cancelQueries({ queryKey: threadKey });
       const previous = queryClient.getQueryData<{ post: Post; comments: Comment[] }>(threadKey);
@@ -156,7 +160,11 @@ export function useVoteComment(postId: string) {
           ...previous,
           comments: previous.comments.map((c) =>
             c.id === commentId
-              ? { ...c, score: c.score + (direction === "up" ? 1 : -1) }
+              ? {
+                  ...c,
+                  score: c.score + (direction === "up" ? 1 : -1),
+                  up_count: c.up_count + (direction === "up" ? 1 : 0),
+                }
               : c,
           ),
         });

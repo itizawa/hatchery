@@ -96,6 +96,20 @@ describe("PostSchema", () => {
     expect(PostSchema.safeParse({ ...validPost, comment_count: -1 }).success).toBe(false);
   });
 
+  it("up_count は省略時 0（既定）になる（#814）", () => {
+    const result = PostSchema.parse(validPost);
+    expect(result.up_count).toBe(0);
+  });
+
+  it("up_count を持てる（up vote 累計件数・非負整数・#814）", () => {
+    const result = PostSchema.parse({ ...validPost, up_count: 5 });
+    expect(result.up_count).toBe(5);
+  });
+
+  it("up_count が負数だと reject する（#814）", () => {
+    expect(PostSchema.safeParse({ ...validPost, up_count: -1 }).success).toBe(false);
+  });
+
   it("author_worker は任意で、省略しても有効（後方互換）", () => {
     const result = PostSchema.parse(validPost);
     expect(result.author_worker).toBeUndefined();

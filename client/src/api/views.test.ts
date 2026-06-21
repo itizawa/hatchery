@@ -57,6 +57,7 @@ describe("sendJsonBeacon（sendPostViewBeacon 経由）", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
+    sessionStorage.clear();
   });
 
   it("navigator.sendBeacon が true を返すとき fetch を呼ばない", () => {

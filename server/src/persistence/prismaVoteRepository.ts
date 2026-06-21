@@ -68,7 +68,7 @@ export function createPrismaVoteRepository(prisma: PrismaClient): VoteRepository
       targetId: string;
       direction: VoteDirection;
     },
-  ): Promise<{ scoreDelta: number; upCountDelta: number }> {
+  ): Promise<{ scoreDelta: number; upCountDelta: number; currentDirection: VoteDirection | null }> {
     const where = uniqueWhere({ sessionId, targetType, targetId });
     const existing = await client.vote.findUnique({ where });
 
@@ -78,16 +78,16 @@ export function createPrismaVoteRepository(prisma: PrismaClient): VoteRepository
           ? { sessionId, userId, postId: targetId, direction }
           : { sessionId, userId, commentId: targetId, direction };
       await client.vote.create({ data });
-      return { scoreDelta: direction === "up" ? 1 : -1, upCountDelta: direction === "up" ? 1 : 0 };
+      return { scoreDelta: direction === "up" ? 1 : -1, upCountDelta: direction === "up" ? 1 : 0, currentDirection: direction };
     }
 
     if (existing.direction === direction) {
       await client.vote.delete({ where });
-      return { scoreDelta: direction === "up" ? -1 : 1, upCountDelta: direction === "up" ? -1 : 0 };
+      return { scoreDelta: direction === "up" ? -1 : 1, upCountDelta: direction === "up" ? -1 : 0, currentDirection: null };
     }
 
     await client.vote.update({ where, data: { direction } });
-    return { scoreDelta: direction === "up" ? 2 : -2, upCountDelta: direction === "up" ? 1 : -1 };
+    return { scoreDelta: direction === "up" ? 2 : -2, upCountDelta: direction === "up" ? 1 : -1, currentDirection: direction };
   }
 
   return {
@@ -137,24 +137,24 @@ export function createPrismaVoteRepository(prisma: PrismaClient): VoteRepository
       targetId: string;
       direction: VoteDirection;
       applyScore: (delta: number) => Promise<number | null>;
-    }): Promise<{ scoreDelta: number; upCountDelta: number; score: number | null }> {
+    }): Promise<{ scoreDelta: number; upCountDelta: number; score: number | null; currentDirection: VoteDirection | null }> {
       // Prisma 実装は同一トランザクション内で対象 score / upCount を直接更新し原子化するため、
       // ポートの applyScore コールバック（in-memory 用の差し込み口）は使わない（#453）。
       void applyScore;
       return prisma.$transaction(async (tx) => {
-        const { scoreDelta, upCountDelta } = await applyVoteMutation(tx, { sessionId, userId, targetType, targetId, direction });
+        const { scoreDelta, upCountDelta, currentDirection } = await applyVoteMutation(tx, { sessionId, userId, targetType, targetId, direction });
         if (targetType === "post") {
           const updated = await tx.post.update({
             where: { id: targetId },
             data: { score: { increment: scoreDelta }, upCount: { increment: upCountDelta } },
           });
-          return { scoreDelta, upCountDelta, score: updated.score };
+          return { scoreDelta, upCountDelta, score: updated.score, currentDirection };
         }
         const updated = await tx.comment.update({
           where: { id: targetId },
           data: { score: { increment: scoreDelta }, upCount: { increment: upCountDelta } },
         });
-        return { scoreDelta, upCountDelta, score: updated.score };
+        return { scoreDelta, upCountDelta, score: updated.score, currentDirection };
       });
     },
 

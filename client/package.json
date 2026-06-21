@@ -49,6 +49,7 @@
     "msw-storybook-addon": "^2.0.0",
     "openapi-typescript": "^7.13.0",
     "vite": "^6.0.3",
+    "vite-plugin-pwa": "^1.3.0",
     "wrangler": "^3.90.0"
   }
 }

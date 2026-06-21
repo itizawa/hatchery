@@ -69,26 +69,10 @@ export const CommentCard = ({
   return (
     <Box
       sx={{
-        pl: `${indentLeft}px`,
+        pl: `16px`,
         position: "relative",
       }}
     >
-      {/* 深さ > 0 のときコネクターライン（左縦線）を描画する。 */}
-      {depth > 0 && (
-        <Box
-          aria-hidden="true"
-          sx={{
-            position: "absolute",
-            left: `${indentLeft - 8}px`,
-            top: "30px",
-            bottom: 0,
-            width: "2px",
-            bgcolor: CONNECTOR_COLOR,
-            borderRadius: "1px",
-          }}
-        />
-      )}
-
       {/* L 字コネクター（#746）: アバター底辺（30px）まで左偈線を引き、縦線と纙目なく接続する。 */}
       {depth > 0 && (
         <Box
@@ -96,9 +80,9 @@ export const CommentCard = ({
           aria-hidden="true"
           sx={{
             position: "absolute",
-            left: `${indentLeft - 8}px`,
-            top: 0,
-            height: "30px",
+            left: `12px`,
+            top: "0px",
+            height: "20px",
             width: "16px",
             borderLeft: "2px solid",
             borderBottom: "2px solid",
@@ -108,64 +92,66 @@ export const CommentCard = ({
         />
       )}
 
-      {/* アバター下コネクター（#796）: 子コメントを持つときアバター下から底辺まで縦線を描画する。 */}
-      {hasChildren && (
-        <Box
-          data-testid="comment-avatar-connector"
-          data-left={`${clampedDepth * INDENT_PER_DEPTH + 8}`}
-          aria-hidden="true"
-          sx={{
-            position: "absolute",
-            left: `${clampedDepth * INDENT_PER_DEPTH + 8}px`,
-            top: "30px",
-            bottom: 0,
-            width: "2px",
-            bgcolor: CONNECTOR_COLOR,
-            borderRadius: "1px",
-          }}
-        />
-      )}
+      {/* コメント本体: 縦線はこのブロック内に閉じ、子コメントまで伸ばさない */}
+      <Box sx={{ position: "relative" }}>
+        {hasChildren && (
+          <Box
+            data-testid="comment-avatar-connector"
+            data-left={String(indentLeft + 12)}
+            aria-hidden="true"
+            sx={{
+              position: "absolute",
+              left: `12px`,
+              top: "30px",
+              bottom: 0,
+              width: "2px",
+              bgcolor: CONNECTOR_COLOR,
+              borderRadius: "1px",
+            }}
+          />
+        )}
 
-      {/* コメント本体: アバター列 + コンテンツ列 を flex で横並び */}
-      <Box sx={{ display: "flex", py: 0.75 }}>
-        {/* 左列: アバター（コネクターが重ならないよう本文と分離） */}
-        <Box sx={{ flexShrink: 0, width: 24, mr: 1 }}>
-          {comment.author_worker && (
-            <Avatar
-              src={comment.author_worker.image_url ?? undefined}
-              alt={comment.author_worker.display_name}
-              sx={{ width: 24, height: 24, fontSize: "0.7rem" }}
-            >
-              {comment.author_worker.display_name.charAt(0).toUpperCase()}
-            </Avatar>
-          )}
-        </Box>
-
-        {/* 右列: 著者名・投稿時刻・本文・アクション */}
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5, flexWrap: "wrap" }}>
-            {comment.author_worker ? (
-              <Typography variant="body2" sx={{ color: "text.secondary" }}>
-                {comment.author_worker.display_name}
-              </Typography>
-            ) : (
-              <Typography variant="body2" sx={{ color: "text.secondary" }}>
-                {comment.author}
-              </Typography>
+        {/* アバター列 + コンテンツ列 を flex で横並び */}
+        <Box sx={{ display: "flex", py: 0.75 }}>
+          {/* 左列: アバター（コネクターが重ならないよう本文と分離） */}
+          <Box sx={{ flexShrink: 0, width: 24, mr: 1 }}>
+            {comment.author_worker && (
+              <Avatar
+                src={comment.author_worker.image_url ?? undefined}
+                alt={comment.author_worker.display_name}
+                sx={{ width: 24, height: 24, fontSize: "0.7rem" }}
+              >
+                {comment.author_worker.display_name.charAt(0).toUpperCase()}
+              </Avatar>
             )}
-            <PostedTime createdAt={comment.created_at} />
           </Box>
-          <MarkdownContent content={comment.text} variant="body2" />
-          {firstUrl && <OgpCard url={firstUrl} />}
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 0.5 }}>
-            <VoteControl
-              score={comment.score}
-              upCount={comment.up_count}
-              onVote={onVote}
-              currentVote={currentVote}
-              disabled={voteDisabled}
-            />
-            {shareUrl && <ShareButton shareUrl={shareUrl} shareTitle={shareTitle} />}
+
+          {/* 右列: 著者名・投稿時刻・本文・アクション */}
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5, flexWrap: "wrap" }}>
+              {comment.author_worker ? (
+                <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                  {comment.author_worker.display_name}
+                </Typography>
+              ) : (
+                <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                  {comment.author}
+                </Typography>
+              )}
+              <PostedTime createdAt={comment.created_at} />
+            </Box>
+            <MarkdownContent content={comment.text} variant="body2" />
+            {firstUrl && <OgpCard url={firstUrl} />}
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 0.5 }}>
+              <VoteControl
+                score={comment.score}
+                upCount={comment.up_count}
+                onVote={onVote}
+                currentVote={currentVote}
+                disabled={voteDisabled}
+              />
+              {shareUrl && <ShareButton shareUrl={shareUrl} shareTitle={shareTitle} />}
+            </Box>
           </Box>
         </Box>
       </Box>

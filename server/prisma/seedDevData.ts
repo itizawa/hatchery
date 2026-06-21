@@ -131,12 +131,18 @@ export async function seedDevData(prisma: SeedPrisma): Promise<SeedResult> {
     postIds.set(post.id, result.id);
   }
 
-  // サンプル Comment（communityId・postId を実 ID で解決する）
+  // サンプル Comment（communityId・postId・parentCommentId を実 ID で解決する）
+  // 配列順に挿入するため、親コメントは子より前に並んでいる必要がある（seedData.ts の並び順を維持）。
+  const commentIds = new Map<string, string>();
   for (const comment of SEED_COMMENTS) {
     const communityId = communityIdBySlug.get(comment.communitySlug);
     const postId = postIds.get(comment.postId);
     if (!communityId || !postId) continue;
-    await prisma.comment.upsert({
+    const parentCommentId =
+      "parentCommentId" in comment && comment.parentCommentId
+        ? commentIds.get(comment.parentCommentId)
+        : undefined;
+    const result = await prisma.comment.upsert({
       where: { communityId_slotKey_seq: { communityId, slotKey: comment.slotKey, seq: comment.seq } },
       update: {},
       create: {
@@ -148,8 +154,10 @@ export async function seedDevData(prisma: SeedPrisma): Promise<SeedResult> {
         author: comment.author,
         text: comment.text,
         createdAt: comment.createdAt,
+        ...(parentCommentId ? { parentCommentId } : {}),
       },
     });
+    commentIds.set(comment.id, result.id);
   }
 
   return { skipped: false };

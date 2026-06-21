@@ -418,6 +418,43 @@ describe("HomeFeedScene — ゲストも vote できる (#777)", () => {
   });
 });
 
+describe("HomeFeedScene — コメント Chip クリックでコメントセクションへ遷移（#836）", () => {
+  const post = {
+    id: "post-836",
+    community_id: "community-1",
+    slot_key: "2026-06-20-morning",
+    seq: 1,
+    author: "worker-haru",
+    title: "コメント Chip テスト投稿",
+    text: "内容",
+    score: 0,
+    comment_count: 5,
+    created_at: "2026-06-20T00:00:00Z",
+  };
+
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("コメント数 Chip をクリックすると /posts/$postId#comments へ遷移する", async () => {
+    stubFetch({ authenticated: false, feedPosts: [post] });
+    renderApp("/");
+
+    const chip = await screen.findByLabelText("コメント 5 件");
+    await userEvent.click(chip);
+
+    // スレッドページへ遷移する（コメント空状態メッセージが表示される）
+    expect(
+      await screen.findByText(/まだコメントはありません/),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /ホームフィード/ })).not.toBeInTheDocument();
+  });
+});
+
 describe("HomeFeedScene — ようこそ演出（#482）", () => {
   const sampleCommunities = [
     { id: "c-1", slug: "ai-dev", name: "AI 開発者の集い" },

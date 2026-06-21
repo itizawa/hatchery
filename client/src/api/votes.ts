@@ -130,7 +130,10 @@ export function useVotePost(communitySlug?: string) {
       const threadKey = postThreadQueryKey(postId);
       const current = queryClient.getQueryData<{ post: Post; comments: Comment[] }>(threadKey);
       if (current) {
-        queryClient.setQueryData(threadKey, { ...current, post: { ...current.post, ...serverPost } });
+        queryClient.setQueryData(threadKey, {
+          ...current,
+          post: { ...current.post, score: serverPost.score, up_count: serverPost.up_count, my_vote: serverPost.my_vote ?? null },
+        });
       }
     },
     onSettled: () => {
@@ -206,7 +209,11 @@ export function useVoteComment(postId: string) {
       if (current) {
         queryClient.setQueryData(threadKey, {
           ...current,
-          comments: current.comments.map((c) => c.id === commentId ? { ...c, ...serverComment } : c),
+          comments: current.comments.map((c) =>
+            c.id === commentId
+              ? { ...c, score: serverComment.score, up_count: serverComment.up_count, my_vote: serverComment.my_vote ?? null }
+              : c,
+          ),
         });
       }
     },

@@ -201,9 +201,9 @@ export function createPostsRouter(
               direction,
               applyScore: (delta) => commentRepo.addScore(commentId, delta).then((r) => r?.score ?? null),
             })
-            .then(({ score, currentDirection }) => {
+            .then(({ score, upCountDelta, currentDirection }) => {
               // OpenAPI 契約（snake_case）へ整形して返す（#499）。
-              res.status(200).json(toCommentResponse({ ...comment, score: score ?? comment.score, myVote: currentDirection }));
+              res.status(200).json(toCommentResponse({ ...comment, score: score ?? comment.score, upCount: comment.upCount + upCountDelta, myVote: currentDirection }));
             });
         })
         .catch(next);

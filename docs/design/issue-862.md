@@ -43,13 +43,16 @@ Cloud Run ログから判明した事実:
 
 - **テスト容易性**: シグナル/プロセス終了/DB 切断はすべて DI（`process`・`exit`・`disconnect`）で差し替え可能にし、純関数 `gracefulShutdown` と薄い `registerGracefulShutdown` に分離。実 SIGTERM やプロセス kill に依存しないユニットテストにした。
 - **shutdown 経路で throw しない**: 終了処理中の例外は `onError` に流して握り、`server.close`/`disconnect` のどちらが失敗しても残りの処理と `exit(0)` を必ず通す。
-- **想定内 4xx/413 はログしない**: ノイズを避け、調査価値のある 5xx のみ記録。
+- **drain のハング対策（レビュー反映）**: `server.close` はアイドルな keep-alive 接続があるとコールバックが発火せずハングし得る。`server.closeIdleConnections()` で確実に drain し、さらに `forceExitAfterMs`（既定 10s）超過で `exit(1)` する強制終了フォールバックを設けた（Cloud Run の強制 SIGKILL を待たない）。
+- **DB 接続は listen 前に await（レビュー反映）**: コールドスタート初回クエリの接続コスト前倒しを実際に効かせるため `prisma.$connect()` を listen 前に待つ。失敗時は listen せず `exit(1)` し、Cloud Run に起動失敗を伝える（全リクエストが 500 になるインスタンスを公開せず健全な旧リビジョンを維持）。`server.on("error")` で listen 失敗も明示ログ + exit。
+- **想定内 4xx/413 はログしない / 5xx は必ずログ（レビュー反映）**: ノイズを避けつつ、AppError でも 5xx（`InternalServerError` 等）はサーバ障害として `console.error` する。
 - **関数引数規約（#720）**: 公開関数はオブジェクト引数。Express のエラーハンドラのみ I/F 都合で `eslint-disable max-params`（既存踏襲）。
+- **ログ方式**: 既存の API サーバ側慣習（`console.*` + `[prefix]`）を踏襲。HTTP 側の構造化ログ抽象の導入はスコープ外として別 Issue #865 に切り出した。
 
 ## 5. テスト結果
 
-- 新規/変更テスト: `errorHandler.test.ts`（+2）・`lifecycle/gracefulShutdown.test.ts`（新規 5）すべて緑。
-- server 全体: 922 passed / 147 skipped（DB 必要な統合テストの skip）。typecheck・lint 緑。
+- 新規/変更テスト: `errorHandler.test.ts`（+3: 500ログ / 5xx AppErrorログ / 4xx非ログ）・`lifecycle/gracefulShutdown.test.ts`（新規 7: 順序 / 失敗継続 / closeIdle / タイムアウト強制exit 等）すべて緑。
+- server 全体: 925 passed / 147 skipped（DB 必要な統合テストの skip）。typecheck・lint 緑。
 
 ## 6. ユーザー可視の振る舞い
 

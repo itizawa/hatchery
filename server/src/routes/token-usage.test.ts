@@ -47,7 +47,7 @@ describe("GET /api/admin/token-usage", () => {
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({
       logs: [],
-      summary: { totalInputTokens: 0, totalOutputTokens: 0, totalTokens: 0 },
+      summary: { totalInputTokens: 0, totalOutputTokens: 0, totalTokens: 0, totalCostUsd: 0 },
     });
   });
 
@@ -66,5 +66,7 @@ describe("GET /api/admin/token-usage", () => {
       totalOutputTokens: 150,
       totalTokens: 450,
     });
+    expect(typeof res.body.summary.totalCostUsd).toBe("number");
+    expect(res.body.summary.totalCostUsd).toBeGreaterThan(0);
   });
 });

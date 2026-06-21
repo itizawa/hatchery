@@ -61,4 +61,26 @@ describe("createInMemoryTokenUsageLogRepository", () => {
     expect(summary.totalOutputTokens).toBe(0);
     expect(summary.totalTokens).toBe(0);
   });
+
+  it("summarize は既知モデルの totalCostUsd を計算して返す（#664）", async () => {
+    const repo = createInMemoryTokenUsageLogRepository();
+    // claude-haiku-4-5: input $1/MTok, output $5/MTok
+    // 1_000_000 input + 1_000_000 output = $6
+    await repo.create({ model: "claude-haiku-4-5", inputTokens: 1_000_000, outputTokens: 1_000_000, batchRunLogId: null });
+    const summary = await repo.summarize();
+    expect(summary.totalCostUsd).toBeCloseTo(6, 10);
+  });
+
+  it("summarize は未知モデルのコストを 0 として合算する（#664）", async () => {
+    const repo = createInMemoryTokenUsageLogRepository();
+    await repo.create({ model: "unknown-model", inputTokens: 1_000_000, outputTokens: 1_000_000, batchRunLogId: null });
+    const summary = await repo.summarize();
+    expect(summary.totalCostUsd).toBe(0);
+  });
+
+  it("summarize はログなしの場合 totalCostUsd が 0 を返す（#664）", async () => {
+    const repo = createInMemoryTokenUsageLogRepository();
+    const summary = await repo.summarize();
+    expect(summary.totalCostUsd).toBe(0);
+  });
 });

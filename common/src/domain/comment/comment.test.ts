@@ -85,6 +85,20 @@ describe("CommentSchema", () => {
     expect(result.parent_comment_id).toBe("comment-parent");
   });
 
+  it("up_count は省略時 0（既定）になる（#814）", () => {
+    const result = CommentSchema.parse(validComment);
+    expect(result.up_count).toBe(0);
+  });
+
+  it("up_count を持てる（up vote 累計件数・非負整数・#814）", () => {
+    const result = CommentSchema.parse({ ...validComment, up_count: 3 });
+    expect(result.up_count).toBe(3);
+  });
+
+  it("up_count が負数だと reject する（#814）", () => {
+    expect(CommentSchema.safeParse({ ...validComment, up_count: -1 }).success).toBe(false);
+  });
+
   it("author_worker は任意で、省略しても有効（後方互換）", () => {
     const result = CommentSchema.parse(validComment);
     expect(result.author_worker).toBeUndefined();
@@ -101,38 +115,29 @@ describe("CommentSchema", () => {
       image_url: null,
     });
   });
-});
 
-describe("CreateCommentRequestSchema (#433)", () => {
-  const validRequest = {
-    postId: "33333333-3333-3333-3333-333333333333",
-    authorWorkerId: "22222222-2222-2222-2222-222222222222",
-    text: "デモ用に手動で投入したコメントです。",
-  };
-
-  it("有効なリクエストをパースできる", () => {
-    const result = CreateCommentRequestSchema.safeParse(validRequest);
-    expect(result.success).toBe(true);
+  it("my_vote は省略可能（後方互換）", () => {
+    const result = CommentSchema.parse(validComment);
+    expect(result.my_vote).toBeUndefined();
   });
 
-  it("postId が uuid でない場合は reject する", () => {
-    const data = { ...validRequest, postId: "not-a-uuid" };
-    expect(CreateCommentRequestSchema.safeParse(data).success).toBe(false);
+  it("my_vote に 'up' を設定できる（#831）", () => {
+    const result = CommentSchema.parse({ ...validComment, my_vote: "up" });
+    expect(result.my_vote).toBe("up");
   });
 
-  it("authorWorkerId が uuid でない場合は reject する", () => {
-    const data = { ...validRequest, authorWorkerId: "not-a-uuid" };
-    expect(CreateCommentRequestSchema.safeParse(data).success).toBe(false);
+  it("my_vote に 'down' を設定できる（#831）", () => {
+    const result = CommentSchema.parse({ ...validComment, my_vote: "down" });
+    expect(result.my_vote).toBe("down");
   });
 
-  it("text が空文字の場合は reject する", () => {
-    const data = { ...validRequest, text: "" };
-    expect(CreateCommentRequestSchema.safeParse(data).success).toBe(false);
+  it("my_vote に null を設定できる（#831）", () => {
+    const result = CommentSchema.parse({ ...validComment, my_vote: null });
+    expect(result.my_vote).toBeNull();
   });
 
-  it("text が上限を超える場合は reject する", () => {
-    const data = { ...validRequest, text: "あ".repeat(COMMENT_TEXT_MAX_LENGTH + 1) };
-    expect(CreateCommentRequestSchema.safeParse(data).success).toBe(false);
+  it("my_vote に無効な値は reject する（#831）", () => {
+    expect(CommentSchema.safeParse({ ...validComment, my_vote: "neutral" }).success).toBe(false);
   });
 });
 

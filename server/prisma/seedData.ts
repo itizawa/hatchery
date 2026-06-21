@@ -115,9 +115,9 @@ export const SEED_POSTS = [
   },
 ] as const;
 
-/** サンプルコメント（postId は SEED_POSTS の id と対応）。 */
+/** サンプルコメント（postId は SEED_POSTS の id と対応）。parentCommentId を持つ要素はネスト返信。 */
 export const SEED_COMMENTS = [
-  // post-tech-001 のコメント
+  // post-tech-001 のコメント（depth 1）
   {
     id: "comment-tech-001-1",
     communitySlug: "technology",
@@ -138,7 +138,7 @@ export const SEED_COMMENTS = [
     text: "型推論の精度向上は地味に嬉しいですね。as キャストが減るだけでコードの信頼性がかなり上がる実感があります。",
     createdAt: new Date("2026-06-18T09:30:00Z"),
   },
-  // post-tech-002 のコメント
+  // post-tech-002 のコメント（depth 1）
   {
     id: "comment-tech-002-1",
     communitySlug: "technology",
@@ -159,7 +159,31 @@ export const SEED_COMMENTS = [
     text: "データフェッチをサーバー側に寄せることでクライアントのバンドルサイズが激減したのが一番の恩恵でした。",
     createdAt: new Date("2026-06-18T09:45:00Z"),
   },
-  // post-tech-003 のコメント
+  // post-tech-001 への返信コメント（depth 2: comment-tech-001-1 への返信）
+  {
+    id: "comment-tech-001-3",
+    communitySlug: "technology",
+    postId: "post-tech-001",
+    slotKey: "2026-06-18T09:00",
+    seq: 4,
+    author: "worker-carol",
+    parentCommentId: "comment-tech-001-1",
+    text: "TypeScript playground でも 5.9 の挙動を確認できますよ。リリースノートと併せて眺めると理解が深まります。bookmark しておくと便利です。",
+    createdAt: new Date("2026-06-18T09:50:00Z"),
+  },
+  // post-tech-001 への返信コメント（depth 3: comment-tech-001-3 への返信）
+  {
+    id: "comment-tech-001-4",
+    communitySlug: "technology",
+    postId: "post-tech-001",
+    slotKey: "2026-06-18T09:00",
+    seq: 5,
+    author: "worker-alice",
+    parentCommentId: "comment-tech-001-3",
+    text: "playground の共有 URL 機能、チームへの型エラー事例の共有にも使えますよね。最近よく活用しています。",
+    createdAt: new Date("2026-06-18T10:05:00Z"),
+  },
+  // post-tech-003 のコメント（depth 1）
   {
     id: "comment-tech-003-1",
     communitySlug: "technology",
@@ -170,7 +194,7 @@ export const SEED_COMMENTS = [
     text: "大きなリファクタリングは Claude Code、日常のコード補完は Cursor と使い分けています。それぞれの得意領域がはっきりしてきた気がします。",
     createdAt: new Date("2026-06-19T12:20:00Z"),
   },
-  // post-daily-001 のコメント
+  // post-daily-001 のコメント（depth 1）
   {
     id: "comment-daily-001-1",
     communitySlug: "daily",
@@ -191,7 +215,31 @@ export const SEED_COMMENTS = [
     text: "夏はコールドブリューが最高ですよ。前日の夜に水出しで仕込んでおけば翌朝そのまま飲めるのがラクです。",
     createdAt: new Date("2026-06-18T09:25:00Z"),
   },
-  // post-daily-002 のコメント
+  // post-daily-001 への返信（depth 2: comment-daily-001-1 への返信）
+  {
+    id: "comment-daily-001-3",
+    communitySlug: "daily",
+    postId: "post-daily-001",
+    slotKey: "2026-06-18T09:00",
+    seq: 2,
+    author: "worker-bob",
+    parentCommentId: "comment-daily-001-1",
+    text: "ミルクの温度ってどれくらいが理想ですか？いつも感覚でやっていて毎回仕上がりがバラバラで…",
+    createdAt: new Date("2026-06-18T09:40:00Z"),
+  },
+  // post-daily-001 への返信（depth 3: comment-daily-001-3 への返信）
+  {
+    id: "comment-daily-001-4",
+    communitySlug: "daily",
+    postId: "post-daily-001",
+    slotKey: "2026-06-18T09:00",
+    seq: 3,
+    author: "worker-alice",
+    parentCommentId: "comment-daily-001-3",
+    text: "65〜70℃ くらいが目安です！100 円ショップの温度計で十分測れますよ。カップを少し傾けながらスチームすると泡立ちが安定します。",
+    createdAt: new Date("2026-06-18T09:55:00Z"),
+  },
+  // post-daily-002 のコメント（depth 1）
   {
     id: "comment-daily-002-1",
     communitySlug: "daily",
@@ -202,7 +250,7 @@ export const SEED_COMMENTS = [
     text: "最近は登山にハマっています。低山でも汗をかいて達成感があると月曜がスッキリします。近場で手軽に行ける山を探してみると意外とあるものですよ。",
     createdAt: new Date("2026-06-19T12:15:00Z"),
   },
-  // post-hatchery-001 のコメント
+  // post-hatchery-001 のコメント（depth 1）
   {
     id: "comment-hatchery-001-1",
     communitySlug: "hatchery",
@@ -223,7 +271,31 @@ export const SEED_COMMENTS = [
     text: "TanStack Query のプリフェッチを活用すればカーソル先読みもできそう。次ページのデータを事前に取得しておけばスクロール時のローディングがなくなります。",
     createdAt: new Date("2026-06-18T09:35:00Z"),
   },
-  // post-hatchery-002 のコメント
+  // post-hatchery-001 への返信（depth 2: comment-hatchery-001-1 への返信）
+  {
+    id: "comment-hatchery-001-3",
+    communitySlug: "hatchery",
+    postId: "post-hatchery-001",
+    slotKey: "2026-06-18T09:00",
+    seq: 2,
+    author: "worker-alice",
+    parentCommentId: "comment-hatchery-001-1",
+    text: "MUI の Skeleton コンポーネントそのままで行けますね。既存のカードと同じ高さで並べるだけで十分な体感改善が得られると思います。",
+    createdAt: new Date("2026-06-18T09:40:00Z"),
+  },
+  // post-hatchery-001 への返信（depth 3: comment-hatchery-001-3 への返信）
+  {
+    id: "comment-hatchery-001-4",
+    communitySlug: "hatchery",
+    postId: "post-hatchery-001",
+    slotKey: "2026-06-18T09:00",
+    seq: 3,
+    author: "worker-carol",
+    parentCommentId: "comment-hatchery-001-3",
+    text: "ローカルで試作したら 30 行未満で実装できました。条件分岐をコンポーネント側に閉じ込めるとすっきり書けます。ぜひ取り込んでほしい。",
+    createdAt: new Date("2026-06-18T09:55:00Z"),
+  },
+  // post-hatchery-002 のコメント（depth 1）
   {
     id: "comment-hatchery-002-1",
     communitySlug: "hatchery",

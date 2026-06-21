@@ -1,10 +1,13 @@
 import type { TokenUsageLog } from "@hatchery/common";
+import { calculateCostUsd } from "@hatchery/common";
 
 /** トークン使用量の集計結果。 */
 export interface TokenUsageSummary {
   totalInputTokens: number;
   totalOutputTokens: number;
   totalTokens: number;
+  /** 全期間の合計コスト（USD）。未知モデルは 0 として扱う。 */
+  totalCostUsd: number;
 }
 
 /** TokenUsageLog の永続化インターフェース。 */
@@ -48,14 +51,19 @@ export function createInMemoryTokenUsageLogRepository(): TokenUsageLogRepository
     },
 
     summarize(): Promise<TokenUsageSummary> {
-      // eslint-disable-next-line max-params
-      const totalInputTokens = logs.reduce((sum, l) => sum + l.inputTokens, 0);
-      // eslint-disable-next-line max-params
-      const totalOutputTokens = logs.reduce((sum, l) => sum + l.outputTokens, 0);
+      let totalInputTokens = 0;
+      let totalOutputTokens = 0;
+      let totalCostUsd = 0;
+      for (const l of logs) {
+        totalInputTokens += l.inputTokens;
+        totalOutputTokens += l.outputTokens;
+        totalCostUsd += calculateCostUsd({ model: l.model, inputTokens: l.inputTokens, outputTokens: l.outputTokens });
+      }
       return Promise.resolve({
         totalInputTokens,
         totalOutputTokens,
         totalTokens: totalInputTokens + totalOutputTokens,
+        totalCostUsd,
       });
     },
   };

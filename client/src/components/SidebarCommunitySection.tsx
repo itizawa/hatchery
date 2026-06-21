@@ -1,6 +1,6 @@
-import ExpandLess from "@mui/icons-material/ExpandLess";
-import ExpandMore from "@mui/icons-material/ExpandMore";
-import ExploreIcon from "@mui/icons-material/Explore";
+import ExpandLess from "@mui/icons-material/ExpandLessRounded";
+import ExpandMore from "@mui/icons-material/ExpandMoreRounded";
+import ExploreIcon from "@mui/icons-material/ExploreRounded";
 import {
   Avatar,
   Box,
@@ -50,7 +50,7 @@ const SidebarCommunityItems = (): ReactElement => {
             </ListItemIcon>
             <ListItemText
               primary={community.name}
-              primaryTypographyProps={{ variant: "body2" }}
+              slotProps={{ primary: { variant: "body2" } }}
             />
           </ListItemButton>
         </ListItem>
@@ -79,12 +79,14 @@ export const SidebarCommunitySection = (): ReactElement => {
       >
         <ListItemText
           primary="コミュニティ"
-          primaryTypographyProps={{
-            variant: "caption",
-            sx: {
-              fontWeight: 700,
-              letterSpacing: "0.05em",
-              textTransform: "uppercase",
+          slotProps={{
+            primary: {
+              variant: "caption",
+              sx: {
+                fontWeight: 700,
+                letterSpacing: "0.05em",
+                textTransform: "uppercase",
+              },
             },
           }}
         />
@@ -110,7 +112,7 @@ export const SidebarCommunitySection = (): ReactElement => {
               </ListItemIcon>
               <ListItemText
                 primary="探す"
-                primaryTypographyProps={{ variant: "body2" }}
+                slotProps={{ primary: { variant: "body2" } }}
               />
             </ListItemButton>
           </ListItem>

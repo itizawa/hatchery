@@ -9,7 +9,7 @@ describe("formatAbsoluteTime", () => {
     );
   });
 
-  it("月・日・時・分・秒が 1 桁のときゼロパディングしない", () => {
+  it("月・日・時が 1 桁のときゼロパディングしない（分・秒は 1 桁でも 2 桁ゼロパディングする）", () => {
     expect(formatAbsoluteTime({ target: new Date("2026-01-05T03:04:05Z") })).toBe(
       "2026/1/5 3:04:05",
     );

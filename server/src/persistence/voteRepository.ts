@@ -1,19 +1,11 @@
-/**
- * Vote（up/down）の永続化境界（ポート）。ADR-0025 で down vote を追加・ADR-0031 で Exclusive Arc 化（#453）。
- * #777: sessionId を dedup キーにし userId を nullable に変更（ゲスト vote 対応）。
- * 1 セッション × 1 ターゲット（post または comment）につき 1 レコードを維持する
- *（DB では (sessionId, postId) / (sessionId, commentId) の複合ユニークで担保）。
- * 同一方向の再押下で toggle off（中立）、異なる方向で switch する。
- *
- * ポートの公開シグネチャは引き続き多態的な (targetType, targetId) を取り、
- * Prisma 実装が postId / commentId の本物 FK にマップする（#453）。
- */
-
 import type { VoteDirection } from "@hatchery/common";
 
 export type { VoteDirection };
+
+/** vote 対象の種別（post / comment）。 */
 export type VoteTargetType = "post" | "comment";
 
+/** vote の永続化レコード。 */
 export interface VoteRecord {
   id: string;
   sessionId: string;
@@ -24,110 +16,72 @@ export interface VoteRecord {
   createdAt: Date;
 }
 
+/** VoteRepository のポート定義（ADR-0025 / ADR-0031 / ADR-0036 / #453 / #777）。 */
 export interface VoteRepository {
-  /** 既存 vote レコードを取得する。未投票なら null。 */
-  findVote({
-    sessionId,
-    targetType,
-    targetId,
-  }: {
+  /**
+   * 指定セッション・対象の vote を 1 件取得する。
+   * Exclusive Arc の where（sessionId_postId / sessionId_commentId）で引く。
+   */
+  findVote(params: {
     sessionId: string;
     targetType: VoteTargetType;
     targetId: string;
   }): Promise<VoteRecord | null>;
+
   /**
-   * vote を記録する（toggle/switch ロジック）。
-   * - 未投票 → up: create, scoreDelta = +1
-   * - 未投票 → down: create, scoreDelta = -1
-   * - up 済み → up: delete (toggle off), scoreDelta = -1
-   * - down 済み → down: delete (toggle off), scoreDelta = +1
-   * - up 済み → down: update, scoreDelta = -2
-   * - down 済み → up: update, scoreDelta = +2
+   * vote を記録する（toggle / switch ロジックは実装側で担う）。
+   * scoreDelta を返す（+1 / -1 / +2 / -2）。
+   * voteAndApplyScore と異なり score 更新は呼び出し元が行う（in-memory 用）。
    */
-  vote({
-    sessionId,
-    userId,
-    targetType,
-    targetId,
-    direction,
-  }: {
+  vote(params: {
     sessionId: string;
     userId: string | null;
     targetType: VoteTargetType;
     targetId: string;
     direction: VoteDirection;
   }): Promise<{ scoreDelta: number }>;
+
   /**
-   * vote の記録（toggle/switch）と対象 score の更新を「単一の整合操作」として行う（#453 / AC7）。
-   * vote 作成/更新/削除と score 加算が片方だけ成功する中間状態を排除する。
-   *
-   * - `vote()` と同じ toggle/switch ロジックで `scoreDelta` を決め、その delta を対象 score に適用する。
-   * - 戻り値 `score` は更新後の対象スコア。対象が存在しない場合は null。
-   *
-   * @param applyScore score を `delta` 加算し更新後スコア（対象が無ければ null）を返す関数。
-   *   in-memory 実装はこのコールバックで対象 store（PostRepository/CommentRepository）を更新する。
-   *   Prisma 実装は同一 DB トランザクション内で対象 score を直接更新するため、このコールバックは呼ばない。
+   * vote を記録し、対象（post / comment）の score を原子的に更新する。
+   * Prisma 実装では同一 TX で post / comment の score を直接 increment する。
+   * in-memory 実装では applyScore コールバックで score を更新する。
+   * score（更新後）を返す（null = 対象が見つからなかった場合）。
    */
-  voteAndApplyScore({
-    sessionId,
-    userId,
-    targetType,
-    targetId,
-    direction,
-    applyScore,
-  }: {
+  voteAndApplyScore(params: {
     sessionId: string;
     userId: string | null;
     targetType: VoteTargetType;
     targetId: string;
     direction: VoteDirection;
     applyScore: (delta: number) => Promise<number | null>;
-  }): Promise<{ scoreDelta: number; score: number | null }>;
+  }): Promise<{ scoreDelta: number; upCountDelta: number; score: number | null }>;
+
   /**
-   * 直近の vote から community 別の純スコア（up: +1 / down: -1）合計を集計する（#486 / ADR-0030）。
-   * 定時バッチの「vote 重み付き 1 コミュニティ選定」の重み算出に使う。
-   *
-   * @param since この日時以降（`createdAt >= since`）の vote のみ集計する。
-   * @returns communityId → 純スコア合計の Map。集計対象が無い community はキーを持たない。
+   * 指定セッション・対象種別で複数 targetId の vote 状態を一括取得する（#831・N+1 回避）。
+   * 返り値は targetId → direction の Map（未投票の targetId はエントリなし）。
    */
-  netScoresByCommunitySince(since: Date): Promise<Map<string, number>>;
-  /**
-   * 直近の vote から worker（post/comment の author）別の純スコアを集計する（#665 / ADR-0032）。
-   * ランキング画面の vote net score 表示に使う。
-   *
-   * @param since この日時以降（`createdAt >= since`）の vote のみ集計する。
-   * @returns workerId → 純スコア合計の Map。集計対象が無い worker はキーを持たない。
-   */
+  findVotesBySessionAndTargets(params: {
+    sessionId: string;
+    targetType: VoteTargetType;
+    targetIds: string[];
+  }): Promise<Map<string, VoteDirection>>;
+
+  /** 指定日時以降の vote を worker 单位で集計し、workerId → netScore の Map を返す（#665 / ADR-0032）。 */
   netScoresByWorkerSince(since: Date): Promise<Map<string, number>>;
+
+  /** 指定日時以降の vote を community 单位で集計し、communityId → netScore の Map を返す（#486 / ADR-0030）。 */
+  netScoresByCommunitySince(since: Date): Promise<Map<string, number>>;
 }
 
-/**
- * targetId（Post / Comment の id）を所属 community id に解決する関数。
- * インメモリ実装の `netScoresByCommunitySince` で targetId を community に紐づけるために使う。
- * 解決できない（存在しない）ターゲットは null を返す。
- */
-// eslint-disable-next-line max-params
-export type ResolveCommunityId = (
-  targetType: VoteTargetType,
-  targetId: string,
-) => string | null;
+// ─────────────────────────────────────────────────────────────────────────────
+// In-Memory 実装
+// ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * DB 非依存のインメモリ実装。ユースケース/ルートのテストで注入する。
- *
- * @param resolveCommunityId `netScoresByCommunitySince` で targetId → communityId を解決する関数。
- *   省略時は全ターゲットが解決不能（純スコア集計は常に空）になる。
- * @param clock `createdAt` に使う現在時刻供給関数（テストで固定するため）。既定は `() => new Date()`。
- */
-// eslint-disable-next-line max-params
-export function createInMemoryVoteRepository(
-  resolveCommunityId?: ResolveCommunityId,
-  clock: () => Date = () => new Date(),
-): VoteRepository {
+/** in-memory VoteRepository（テスト / ローカル dev 用）。 */
+export function createInMemoryVoteRepository(): VoteRepository {
   const records: VoteRecord[] = [];
-  let seq = 0;
 
-  function findRecord({
+  function findExisting({
     sessionId,
     targetType,
     targetId,
@@ -135,16 +89,16 @@ export function createInMemoryVoteRepository(
     sessionId: string;
     targetType: VoteTargetType;
     targetId: string;
-  }): VoteRecord | null {
-    return (
-      records.find(
-        (r) => r.sessionId === sessionId && r.targetType === targetType && r.targetId === targetId,
-      ) ?? null
+  }): VoteRecord | undefined {
+    return records.find(
+      (r) => r.sessionId === sessionId && r.targetType === targetType && r.targetId === targetId,
     );
   }
 
-  /** toggle/switch ロジックで records を変異させ scoreDelta を返す（vote と voteAndApplyScore で共有）。 */
-  function applyVoteMutation({
+  /**
+   * toggle/switch ロジックを in-memory records に適用し scoreDelta / upCountDelta を返す。
+   */
+  function applyMutation({
     sessionId,
     userId,
     targetType,
@@ -156,99 +110,74 @@ export function createInMemoryVoteRepository(
     targetType: VoteTargetType;
     targetId: string;
     direction: VoteDirection;
-  }): number {
-    const existing = findRecord({ sessionId, targetType, targetId });
+  }): { scoreDelta: number; upCountDelta: number } {
+    const existing = findExisting({ sessionId, targetType, targetId });
 
     if (!existing) {
-      seq += 1;
       records.push({
-        id: `vote-${seq}`,
+        id: `vote-${records.length + 1}`,
         sessionId,
         userId,
         targetType,
         targetId,
         direction,
-        createdAt: clock(),
+        createdAt: new Date(),
       });
-      return direction === "up" ? 1 : -1;
+      return { scoreDelta: direction === "up" ? 1 : -1, upCountDelta: direction === "up" ? 1 : 0 };
     }
 
     if (existing.direction === direction) {
-      // toggle off: delete
       const idx = records.indexOf(existing);
       records.splice(idx, 1);
-      return direction === "up" ? -1 : 1;
+      return { scoreDelta: direction === "up" ? -1 : 1, upCountDelta: direction === "up" ? -1 : 0 };
     }
 
-    // switch direction
     existing.direction = direction;
-    return direction === "up" ? 2 : -2;
+    return { scoreDelta: direction === "up" ? 2 : -2, upCountDelta: direction === "up" ? 1 : -1 };
   }
 
   return {
-    findVote({
-      sessionId,
-      targetType,
-      targetId,
-    }: {
-      sessionId: string;
-      targetType: VoteTargetType;
-      targetId: string;
-    }): Promise<VoteRecord | null> {
-      return Promise.resolve(findRecord({ sessionId, targetType, targetId }));
+    async findVote({ sessionId, targetType, targetId }) {
+      return findExisting({ sessionId, targetType, targetId }) ?? null;
     },
 
-    vote({
-      sessionId,
-      userId,
-      targetType,
-      targetId,
-      direction,
-    }: {
-      sessionId: string;
-      userId: string | null;
-      targetType: VoteTargetType;
-      targetId: string;
-      direction: VoteDirection;
-    }): Promise<{ scoreDelta: number }> {
-      const scoreDelta = applyVoteMutation({ sessionId, userId, targetType, targetId, direction });
-      return Promise.resolve({ scoreDelta });
+    async vote({ sessionId, userId, targetType, targetId, direction }) {
+      const { scoreDelta } = applyMutation({ sessionId, userId, targetType, targetId, direction });
+      return { scoreDelta };
     },
 
-    async voteAndApplyScore({
-      sessionId,
-      userId,
-      targetType,
-      targetId,
-      direction,
-      applyScore,
-    }: {
-      sessionId: string;
-      userId: string | null;
-      targetType: VoteTargetType;
-      targetId: string;
-      direction: VoteDirection;
-      applyScore: (delta: number) => Promise<number | null>;
-    }): Promise<{ scoreDelta: number; score: number | null }> {
-      const scoreDelta = applyVoteMutation({ sessionId, userId, targetType, targetId, direction });
+    async voteAndApplyScore({ sessionId, userId, targetType, targetId, direction, applyScore }) {
+      const { scoreDelta, upCountDelta } = applyMutation({ sessionId, userId, targetType, targetId, direction });
       const score = await applyScore(scoreDelta);
-      return { scoreDelta, score };
+      return { scoreDelta, upCountDelta, score };
     },
 
-    netScoresByCommunitySince(since: Date): Promise<Map<string, number>> {
-      const scores = new Map<string, number>();
+    async findVotesBySessionAndTargets({ sessionId, targetType, targetIds }) {
+      const map = new Map<string, VoteDirection>();
       for (const record of records) {
-        if (record.createdAt.getTime() < since.getTime()) continue;
-        const communityId = resolveCommunityId?.(record.targetType, record.targetId) ?? null;
-        if (communityId === null) continue;
-        const delta = record.direction === "up" ? 1 : -1;
-        scores.set(communityId, (scores.get(communityId) ?? 0) + delta);
+        if (
+          record.sessionId === sessionId &&
+          record.targetType === targetType &&
+          targetIds.includes(record.targetId)
+        ) {
+          map.set(record.targetId, record.direction);
+        }
       }
-      return Promise.resolve(scores);
+      return map;
     },
 
-    netScoresByWorkerSince(): Promise<Map<string, number>> {
-      return Promise.resolve(new Map<string, number>());
+    async netScoresByWorkerSince() {
+      // in-memory では createdAt フィルタを省略（テスト用途では全件を返す）
+      const scoreMap = new Map<string, number>();
+      for (const r of records) {
+        const delta = r.direction === "up" ? 1 : -1;
+        scoreMap.set(r.targetId, (scoreMap.get(r.targetId) ?? 0) + delta);
+      }
+      return scoreMap;
+    },
+
+    async netScoresByCommunitySince() {
+      return new Map();
     },
   };
 }

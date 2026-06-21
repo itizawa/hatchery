@@ -13,7 +13,7 @@ import {
   TableRow,
   Typography,
 } from "../components/uiParts";
-import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
+import EmojiEventsIcon from "@mui/icons-material/EmojiEventsRounded";
 import type { ReactElement } from "react";
 
 import { useWorkerRanking } from "../api/workers.js";
@@ -33,7 +33,7 @@ const RankingRow = ({
       {rank}
     </TableCell>
     <TableCell>
-      <Typography variant="body2" fontWeight={600}>
+      <Typography variant="body2" sx={{ fontWeight: 600 }}>
         {item.display_name}
       </Typography>
     </TableCell>
@@ -97,7 +97,7 @@ export const WorkerRankingScene = (): ReactElement => {
     <Box component="section" sx={{ p: 3, maxWidth: 800, mx: "auto" }}>
       <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 3 }}>
         <EmojiEventsIcon sx={{ color: "warning.main" }} />
-        <Typography variant="h5" fontWeight={700}>
+        <Typography variant="h5" sx={{ fontWeight: 700 }}>
           ワーカーランキング
         </Typography>
       </Box>

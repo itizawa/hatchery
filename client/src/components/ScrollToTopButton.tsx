@@ -1,4 +1,4 @@
-import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
+import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUpRounded";
 import { type RefObject, useEffect, useState, type ReactElement } from "react";
 
 import { Box, Fab, Fade } from "./uiParts";

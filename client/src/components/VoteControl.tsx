@@ -1,5 +1,5 @@
-import ArrowDownward from "@mui/icons-material/ArrowDownward";
-import ArrowUpward from "@mui/icons-material/ArrowUpward";
+import ArrowDownward from "@mui/icons-material/ArrowDownwardRounded";
+import ArrowUpward from "@mui/icons-material/ArrowUpwardRounded";
 import { Box, IconButton, Tooltip, Typography } from "./uiParts";
 import type { ReactElement } from "react";
 import type { VoteDirection } from "@hatchery/common";
@@ -8,6 +8,8 @@ export type { VoteDirection };
 
 interface VoteControlProps {
   score: number;
+  /** up vote の累計件数（#814）。渡した場合はこの値を表示する（score は内部用途で保持）。省略時は score を表示（後方互換）。 */
+  upCount?: number;
   onVote: (direction: VoteDirection) => void;
   currentVote?: VoteDirection | null;
   disabled?: boolean;
@@ -15,16 +17,20 @@ interface VoteControlProps {
 
 /**
  * up/down vote コントロール（ADR-0025 / #747）。
- * 1 つの pill コンテナ内に up・スコア・down を横並びで表示する。
+ * 1 つの pill コンテナ内に up・up件数・down を横並びで表示する。
  * 投票済み（up/down）は Box 背景の塗りつぶしで明示（#813）。
- * down 累積数は表示しない（score のみ）。
+ * 表示数字は up vote の累計件数（up_count・#814）。down は表示数に影響しない。
+ * score（ネット値）はランキング・重み付けに使われるが表示はしない。
  */
 export const VoteControl = ({
   score,
+  upCount,
   onVote,
   currentVote = null,
   disabled = false,
 }: VoteControlProps): ReactElement => {
+  // 表示する数字: upCount が渡された場合はそちらを使い、省略時は score（後方互換）。
+  const displayCount = upCount ?? score;
   const voted = currentVote ?? "none";
   const isVoted = currentVote !== null;
 
@@ -74,7 +80,7 @@ export const VoteControl = ({
         component="span"
         sx={{ minWidth: "1.5em", textAlign: "center", userSelect: "none" }}
       >
-        {score}
+        {displayCount}
       </Typography>
       <Tooltip title="低評価">
         <span>

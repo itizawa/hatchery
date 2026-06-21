@@ -1,6 +1,6 @@
 import { Box, Skeleton, Typography } from "../components/uiParts";
 import { useParams, Link as RouterLink } from "@tanstack/react-router";
-import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeftRounded";
 import type { ReactElement } from "react";
 import { useMemo, useRef } from "react";
 import { buildCommentTree, type CommentTreeNode } from "@hatchery/common";
@@ -39,15 +39,16 @@ const SidebarColumn = ({ children }: { children: ReactElement }): ReactElement =
   </Box>
 );
 
-/** サイドバーローディング中のスケルトン（右カラム）。 */
+/**
+ * サイドバーローディング中のスケルトン（右カラム）。
+ * #807: CommunitySidebarCard の loading prop を使い、実 UI と同一の外枠レイアウトで描画する。
+ * data-testid="community-sidebar-skeleton" は既存テストとの互換性のため wrapper div に付与する。
+ */
 const SidebarSkeletonColumn = (): ReactElement => (
   <SidebarColumn>
-    <Skeleton
-      data-testid="community-sidebar-skeleton"
-      variant="rectangular"
-      height={300}
-      sx={{ borderRadius: 1 }}
-    />
+    <div data-testid="community-sidebar-skeleton">
+      <CommunitySidebarCard loading />
+    </div>
   </SidebarColumn>
 );
 
@@ -166,6 +167,7 @@ function renderCommentTree({
           depth={node.depth}
           hasChildren={node.children.length > 0}
           postId={postId}
+          currentVote={comment.my_vote ?? null}
           children={childElements && childElements.length > 0 ? <>{childElements}</> : null}
         />
       </div>,
@@ -245,6 +247,7 @@ export const PostThreadScene = (): ReactElement => {
             }
             voteDisabled={isVotingPost}
             postUrl={postUrl}
+            currentVote={post.my_vote ?? null}
             onCommentClick={comments.length > 0 ? scrollToComments : undefined}
           />
 

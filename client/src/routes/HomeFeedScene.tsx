@@ -95,6 +95,7 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
                   voteStopPropagation
                   truncateText
                   community={community}
+                  currentVote={post.my_vote ?? null}
                   onCommunityClick={
                     community
                       ? () => void navigate({ to: "/communities/$slug", params: { slug: community.slug } })
@@ -106,7 +107,7 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
           })}
           <Box ref={sentinelRef} sx={{ py: 1 }}>
             {isFetchingNextPage && (
-              <Typography variant="body2" color="text.secondary" textAlign="center">
+              <Typography variant="body2" color="text.secondary" sx={{ textAlign: "center" }}>
                 読み込み中...
               </Typography>
             )}

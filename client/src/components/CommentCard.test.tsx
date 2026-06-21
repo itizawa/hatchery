@@ -112,24 +112,24 @@ describe("CommentCard", () => {
       ).not.toBeInTheDocument();
     });
 
-    it("depth=0 かつ hasChildren=true のとき left が 8 になる", () => {
+    it("depth=0 かつ hasChildren=true のとき left が 12 になる", () => {
       const { container } = render(
         <CommentCard comment={mockComment} onVote={vi.fn()} depth={0} hasChildren={true} />,
       );
       const el = container.querySelector('[data-testid="comment-avatar-connector"]');
       expect(el).toBeInTheDocument();
-      // clampedDepth=0, INDENT_PER_DEPTH=16 → left: 0*16+8 = 8px → data-left="8"
-      expect((el as HTMLElement).dataset.left).toBe("8");
+      // clampedDepth=0, INDENT_PER_DEPTH=16 → left: 0*16+12 = 12px → data-left="12"
+      expect((el as HTMLElement).dataset.left).toBe("12");
     });
 
-    it("depth=1 かつ hasChildren=true のとき left が 24 になる", () => {
+    it("depth=1 かつ hasChildren=true のとき left が 28 になる", () => {
       const { container } = render(
         <CommentCard comment={mockComment} onVote={vi.fn()} depth={1} hasChildren={true} />,
       );
       const el = container.querySelector('[data-testid="comment-avatar-connector"]');
       expect(el).toBeInTheDocument();
-      // clampedDepth=1, INDENT_PER_DEPTH=16 → left: 1*16+8 = 24px → data-left="24"
-      expect((el as HTMLElement).dataset.left).toBe("24");
+      // clampedDepth=1, INDENT_PER_DEPTH=16 → left: 1*16+12 = 28px → data-left="28"
+      expect((el as HTMLElement).dataset.left).toBe("28");
     });
   });
 

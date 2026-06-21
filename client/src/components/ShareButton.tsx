@@ -1,5 +1,5 @@
-import ShareIcon from "@mui/icons-material/Share";
-import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import ShareIcon from "@mui/icons-material/ShareRounded";
+import ContentCopyIcon from "@mui/icons-material/ContentCopyRounded";
 import XIcon from "@mui/icons-material/X";
 import { useState, type ReactElement } from "react";
 
@@ -68,7 +68,7 @@ export const ShareButton = ({ shareUrl, shareTitle }: ShareButtonProps): ReactEl
         size="small"
         onClick={handleOpen}
         variant="outlined"
-        sx={{ height: 32,padding:"0px 8px", bgcolor: "background.paper", border:"none" }}
+        sx={{ height: 32,padding:"0px 8px", border:"none" }}
       />
       <Menu anchorEl={anchorEl} open={open} onClose={handleClose}>
         <MenuItem onClick={handleCopy}>

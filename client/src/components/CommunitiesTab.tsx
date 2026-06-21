@@ -87,7 +87,7 @@ function CreateCommunityForm(): ReactElement {
             value={field.state.value}
             onChange={(e) => field.handleChange(e.target.value)}
             onBlur={field.handleBlur}
-            inputProps={{ maxLength: COMMUNITY_SLUG_MAX_LENGTH, autoComplete: "off" }}
+            slotProps={{ htmlInput: { maxLength: COMMUNITY_SLUG_MAX_LENGTH, autoComplete: "off" } }}
             error={field.state.meta.errors.length > 0}
             helperText={
               field.state.meta.errors[0] ?? "小文字英数字とハイフンのみ（例: tech-news）"

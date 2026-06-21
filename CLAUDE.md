@@ -67,7 +67,7 @@ monorepo の 4 ワークスペース。**依存方向は client → common / ser
 
 - **`common/`** (ADR-0005) — 実行環境非依存の純粋 TypeScript。ドメインモデル・型・ドメインロジック（登場メンバー選定、あらすじ要約等の純粋関数）・**Zod スキーマ**を置く。React/MUI/DOM や Express/Prisma/Node 固有 API は置かない。ドメインロジックはここで TDD する（UI/DB 不要で高速にテスト可能）。
 - **`server/`** (ADR-0004) — Node.js 22 / Express 5 / Prisma / PostgreSQL。層分離（ルーティング / ユースケース / ドメイン[common] / 永続化[Prisma]）。リクエスト検証は common の Zod スキーマで行う。**定時バッチ（シーン生成）は Express とは別エントリポイント**のスクリプトとして実装しスケジューラから起動。
-- **`client/`** (ADR-0003) — Vite + React 19 SPA（SSR なし）/ MUI v6 + Emotion（Slack 風テーマ）/ TanStack Router / TanStack Query。**サーバ状態は TanStack Query に集約**し、グローバル状態管理ライブラリは当面入れない。
+- **`client/`** (ADR-0003) — Vite + React 19 SPA（SSR なし）/ MUI v9 + Emotion（Slack 風テーマ）/ TanStack Router / TanStack Query。**サーバ状態は TanStack Query に集約**し、グローバル状態管理ライブラリは当面入れない。
 - **`docs/`** (ADR-0007) — Storybook 8（Vite ビルダー）。client の `*.stories.tsx` と設計 MDX を集約し GitHub Pages へ静的デプロイ。ADR は `docs/adr/*.md` を正本とし、MDX は薄いラッパーで取り込む。
 
 ### client ↔ server の型共有（ADR-0006）
@@ -139,3 +139,19 @@ function foo({ a, b }: { a: string; b: number }) { ... }
 ## ADR の追加・更新
 
 技術的な決定は `docs/adr/NNNN-kebab-case-title.md`（連番 4 桁）に MADR 風フォーマットで 1 ファイル 1 決定で残す。新規は `docs/adr/template.md` をコピーし、`docs/adr/README.md` の一覧表に行を追加する。
+
+## アイコン規約（#808）
+
+**アイコンは `@mui/icons-material` の Rounded バリアントを使う（ESLint で強制・違反はレビュー指摘対象）**。
+
+```ts
+// NG: Filled（デフォルト）バリアント
+import HomeIcon from "@mui/icons-material/Home";
+
+// OK: Rounded バリアント
+import HomeIcon from "@mui/icons-material/HomeRounded";
+```
+
+- ESLint の `no-restricted-imports`（`eslint.config.mjs` client 向けブロック）で非 Rounded の `@mui/icons-material/*` import を `error` にしている。
+- **例外（Rounded バリアントが存在しないブランドアイコン）**: `@mui/icons-material/X`（旧 Twitter）・`Twitter`・`GitHub`・`Google`・`YouTube`・`Instagram`・`LinkedIn`・`Pinterest`・`WhatsApp`・`Telegram`・`Reddit`・`Apple` 等、MUI が Rounded バリアントを提供していないアイコンはそのまま使う。ESLint ルールにも除外設定済み。
+- barrel import（`import { Home } from "@mui/icons-material"`）も禁止。必ず個別パス import（`@mui/icons-material/HomeRounded`）で使う。

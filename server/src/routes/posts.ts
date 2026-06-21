@@ -9,6 +9,7 @@ import type { ViewRepository } from "../persistence/viewRepository.js";
 import type { VoteRepository } from "../persistence/voteRepository.js";
 import type { WorkerRepository } from "../persistence/workerRepository.js";
 import { buildAuthorWorkerEnricher } from "./authorWorker.js";
+import { extractSessionId } from "./extractSessionId.js";
 import { toCommentResponse, toPostResponse } from "./postResponse.js";
 
 /** vote エンドポイント専用のレート制限（#777: ゲスト対応に伴い認証不要になったため IP ベースで制限）。 */
@@ -36,6 +37,9 @@ export function createPostsRouter(
   // eslint-disable-next-line max-params
   router.get("/posts/:postId", (req, res, next) => {
     const { postId } = req.params as { postId: string };
+    // sessionId は任意クエリパラメータ。UUID 検証付きで取得し、不正・未指定は null（#831）。
+    const sessionId = extractSessionId(req);
+
     postRepo
       .findById(postId)
       .then((post) => {
@@ -52,11 +56,32 @@ export function createPostsRouter(
           const enrichedComments = enrich(comments);
           // reveal 済みコメント件数を付与する（#779: 詳細 API でも comment_count を正確に返す）。
           const postWithCount = { ...(enrichedPost ?? post), commentCount: comments.length };
-          // OpenAPI 契約（snake_case）へ整形して返す（#499）。
-          res.status(200).json({
-            post: toPostResponse(postWithCount),
-            comments: enrichedComments.map(toCommentResponse),
-          });
+
+          if (sessionId) {
+            // sessionId 付きのとき post と comments の my_vote を一括取得して付与する（#831）。
+            const [postVotes, commentVotes] = await Promise.all([
+              voteRepo.findVotesBySessionAndTargets({
+                sessionId,
+                targetType: "post",
+                targetIds: [postId],
+              }),
+              voteRepo.findVotesBySessionAndTargets({
+                sessionId,
+                targetType: "comment",
+                targetIds: comments.map((c) => c.id),
+              }),
+            ]);
+            res.status(200).json({
+              post: toPostResponse({ ...postWithCount, myVote: postVotes.get(postId) ?? null }),
+              comments: enrichedComments.map((c) => toCommentResponse({ ...c, myVote: commentVotes.get(c.id) ?? null })),
+            });
+          } else {
+            // OpenAPI 契約（snake_case）へ整形して返す（#499）。
+            res.status(200).json({
+              post: toPostResponse(postWithCount),
+              comments: enrichedComments.map(toCommentResponse),
+            });
+          }
         });
       })
       .catch(next);
@@ -131,11 +156,16 @@ export function createPostsRouter(
               direction,
               applyScore: (delta) => postRepo.addScore(postId, delta).then((r) => r?.score ?? null),
             })
-            .then(({ score }) =>
+            .then(({ score, upCountDelta }) =>
               // comment_count を vote レスポンスにも付与する（#779）。
               commentRepo.countByPostIds([postId]).then((counts) => {
                 const commentCount = counts.get(postId) ?? 0;
-                res.status(200).json(toPostResponse({ ...post, score: score ?? post.score, commentCount }));
+                res.status(200).json(toPostResponse({
+                  ...post,
+                  score: score ?? post.score,
+                  upCount: post.upCount + upCountDelta,
+                  commentCount,
+                }));
               }),
             );
         })

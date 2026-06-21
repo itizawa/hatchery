@@ -16,6 +16,11 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
     return;
   }
   if (err instanceof AppError) {
+    // AppError でも 5xx（InternalServerError 等）はサーバ側の障害なので必ずログに残す。
+    // 4xx（NotFound/BadRequest 等）は想定内なのでログしない。
+    if (err.statusCode >= 500) {
+      console.error(`[errorHandler] ${err.statusCode} ${req.method} ${req.originalUrl}`, err);
+    }
     res.status(err.statusCode).json({ error: err.message });
     return;
   }

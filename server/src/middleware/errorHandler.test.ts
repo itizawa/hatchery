@@ -1,6 +1,7 @@
 import {
   BadRequestError,
   ForbiddenError,
+  InternalServerError,
   NotFoundError,
   UnauthorizedError,
 } from "@hatchery/common";
@@ -83,6 +84,8 @@ describe("errorHandler", () => {
   });
 
   it("その他のエラーは 500 InternalServerError を返す", async () => {
+    // 500 経路は console.error を出すため、テスト出力を汚さないようモックする。
+    vi.spyOn(console, "error").mockImplementation(() => {});
     const res = await request(
       // eslint-disable-next-line max-params
       appThrowing((_req, _res, next) => {
@@ -110,6 +113,21 @@ describe("errorHandler", () => {
     const logged = spy.mock.calls[0].map(String).join(" ");
     expect(logged).toContain("GET");
     expect(logged).toContain("/t");
+  });
+
+  it("5xx の AppError（InternalServerError 等）も console.error でログ出力する", async () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const err = new InternalServerError("SceneGenerationFailed");
+    const res = await request(
+      // eslint-disable-next-line max-params
+      appThrowing((_req, _res, next) => {
+        next(err);
+      }),
+    ).get("/t");
+
+    expect(res.status).toBe(500);
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy.mock.calls[0]).toContain(err);
   });
 
   it("AppError（4xx）や 413 など想定内エラーは console.error しない", async () => {

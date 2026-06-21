@@ -6,13 +6,32 @@ import { gracefulShutdown, registerGracefulShutdown } from "./gracefulShutdown.j
 
 /** server.close(cb) を模したフェイク。close 完了で cb を呼ぶ。 */
 function fakeServer({ closeError }: { closeError?: Error } = {}) {
-  const calls = { closed: 0 };
+  const calls = { closed: 0, closedIdle: 0 };
   return {
     calls,
     close(cb?: (err?: Error) => void) {
       calls.closed += 1;
       cb?.(closeError);
       return this;
+    },
+    closeIdleConnections() {
+      calls.closedIdle += 1;
+    },
+  };
+}
+
+/** close を呼んでも cb を発火しない（keep-alive 接続でハングするケースの再現）フェイク。 */
+function hangingServer() {
+  const calls = { closed: 0, closedIdle: 0 };
+  return {
+    calls,
+    close() {
+      calls.closed += 1;
+      // cb を呼ばない = drain が完了しない。
+      return this;
+    },
+    closeIdleConnections() {
+      calls.closedIdle += 1;
     },
   };
 }
@@ -66,6 +85,12 @@ describe("gracefulShutdown", () => {
     expect(disconnect).toHaveBeenCalledTimes(1);
     expect(onError).toHaveBeenCalledWith(closeError);
   });
+
+  it("アイドル keep-alive 接続を閉じるため closeIdleConnections を呼ぶ", async () => {
+    const server = fakeServer();
+    await gracefulShutdown({ server, disconnect: async () => {} });
+    expect(server.calls.closedIdle).toBe(1);
+  });
 });
 
 describe("registerGracefulShutdown", () => {
@@ -109,5 +134,26 @@ describe("registerGracefulShutdown", () => {
     await vi.waitFor(() => expect(exit).toHaveBeenCalled());
     expect(server.calls.closed).toBe(1);
     expect(disconnect).toHaveBeenCalledTimes(1);
+  });
+
+  it("shutdown が forceExitAfterMs 内に完了しない場合は exit(1) で強制終了する", async () => {
+    const proc = new EventEmitter();
+    const server = hangingServer(); // close の cb が発火せず drain が完了しない
+    const disconnect = vi.fn(async () => {});
+    const exit = vi.fn();
+
+    registerGracefulShutdown({
+      server,
+      disconnect,
+      exit,
+      process: proc,
+      signals: ["SIGTERM"],
+      forceExitAfterMs: 20,
+    });
+
+    proc.emit("SIGTERM");
+    await vi.waitFor(() => expect(exit).toHaveBeenCalledWith(1));
+    // drain がハングしているので disconnect には到達しない。
+    expect(disconnect).not.toHaveBeenCalled();
   });
 });

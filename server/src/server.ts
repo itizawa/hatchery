@@ -1,6 +1,7 @@
 import { createApp } from "./app.js";
 import { loadEnv } from "./config/env.js";
 import { createPrismaDeps } from "./composition/createPrismaDeps.js";
+import { registerGracefulShutdown } from "./lifecycle/gracefulShutdown.js";
 import { prisma } from "./persistence/prismaClient.js";
 import { createPgSessionStore } from "./persistence/pgSessionStore.js";
 
@@ -50,3 +51,21 @@ const server = app.listen(env.port, () => {
 // との競合）を避ける。headersTimeout はさらに長くする。
 server.requestTimeout = env.requestTimeoutMs + 5_000;
 server.headersTimeout = env.requestTimeoutMs + 10_000;
+
+// Cloud Run の scale-down / デプロイ時の SIGTERM で、処理中リクエストを排出してから
+// DB 接続を切る。これが無いとインスタンス遷移のたびに in-flight リクエストが 500 になる。
+registerGracefulShutdown({
+  server,
+  disconnect: () => prisma.$disconnect(),
+});
+
+// 起動時に DB 接続を前倒しで確立する。コールドスタート時の初回クエリで接続コストが
+// 表面化するのを避け、接続不能なら早期に検知してログに残す。
+void prisma
+  .$connect()
+  .then(() => {
+    console.log("[server] database connected");
+  })
+  .catch((err: unknown) => {
+    console.error("[server] initial database connection failed", err);
+  });

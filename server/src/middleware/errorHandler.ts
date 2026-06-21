@@ -8,7 +8,7 @@ import type { ErrorRequestHandler } from "express";
  * 413 PayloadTooLarge に変換する。それ以外のユースケース/永続化の例外は 500 に変換する。
  */
 // eslint-disable-next-line max-params
-export const errorHandler: ErrorRequestHandler = (err, _req, res, next) => {
+export const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
   // 既に応答が始まっている場合（例: タイムアウトで 503 送出後に遅延ハンドラが next(err)）は
   // 二重送信で ERR_HTTP_HEADERS_SENT を投げないよう Express 既定のハンドラへ委譲する。
   if (res.headersSent) {
@@ -24,5 +24,8 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, next) => {
     res.status(413).json({ error: "PayloadTooLarge" });
     return;
   }
+  // 想定外の例外は 500 に変換する。原因追跡のため、どのリクエストで何が起きたかを
+  // 必ずログに残す（これが無いと本番の 500 がスタックトレースなしで不可視になる）。
+  console.error(`[errorHandler] 500 ${req.method} ${req.originalUrl}`, err);
   res.status(500).json({ error: "InternalServerError" });
 };

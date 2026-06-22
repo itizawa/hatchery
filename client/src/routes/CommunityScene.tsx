@@ -121,6 +121,7 @@ const CommunityContent = ({
                           truncateText
                           variant="list"
                           currentVote={post.my_vote ?? null}
+                          postUrl={`${window.location.origin}/posts/${post.id}`}
                           onCommentClick={
                             post.comment_count
                               ? () => void navigate({ to: "/posts/$postId", params: { postId: post.id }, hash: "comments" })

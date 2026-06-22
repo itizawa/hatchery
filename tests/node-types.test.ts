@@ -12,6 +12,6 @@ describe("@types/node バージョンの整合性 (#793)", () => {
       devDependencies?: Record<string, string>;
     };
     const typesNodeVersion = pkg.devDependencies?.["@types/node"] ?? "";
-    expect(typesNodeVersion).toMatch(/^\^?26/);
+    expect(typesNodeVersion).toMatch(/^\^26/);
   });
 });

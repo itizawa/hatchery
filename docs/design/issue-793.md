@@ -17,13 +17,13 @@
 **やらないこと:**
 - Node ランタイム自体のバージョン変更（既に 26）
 - CI Actions の Node バージョン変更（別途管理）
-- ワークスペース配下の `@types/node`（ルートのみ）
+- ワークスペース配下の `@types/node`（server/client/common はルートからホイスティングを受けており個別宣言なし）
 
 ## 3. 受け入れ条件（テストに落とせる粒度）
 
 1. ルート `package.json` の `@types/node` が `^26` 系（`^26.0.0`）になっている
 2. 更新に伴う型エラーが 0 件（`pnpm typecheck` 緑）
-3. `tests/node-engine.test.ts` を含むリポジトリ規約テストが緑
+3. 新規追加の `tests/node-types.test.ts` を含むリポジトリ規約テストが緑
 4. `pnpm turbo run build test lint` が緑
 
 ## 4. 設計方針
@@ -42,7 +42,7 @@
 ## 6. テスト計画（TDD）
 
 - `tests/node-types.test.ts` を新規作成: `@types/node` のバージョンが `^26` 系であることを検証するテスト
-  - ルート `package.json` の `devDependencies["@types/node"]` が `/^26/` にマッチすることをアサート
+  - ルート `package.json` の `devDependencies["@types/node"]` が `/^\^26/` にマッチすることをアサート
 - 既存 `tests/node-engine.test.ts` が引き続き緑であること
 
 ## 7. リスク・未決事項

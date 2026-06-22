@@ -94,30 +94,35 @@ const CommunityContent = ({
                   </Typography>
                 </Box>
               ) : (
-                <Box>
+                <Box sx={{ borderTop: "1px solid", borderColor: "divider" }}>
                   {posts.map((post) => (
-                    <RouterLink
+                    <Box
                       key={post.id}
-                      to="/posts/$postId"
-                      params={{ postId: post.id }}
-                      style={{ display: "block", textDecoration: "none", color: "inherit" }}
+                      sx={{ "&:hover": { bgcolor: "action.hover", borderRadius: 2, cursor: "pointer" }, transition: "background-color 150ms ease-out" }}
                     >
-                      <PostCard
-                        post={post}
-                        onVote={(direction: VoteDirection) =>
-                          votePost({ postId: post.id, direction })
-                        }
-                        voteDisabled={isVotingPost}
-                        voteStopPropagation
-                        truncateText
-                        currentVote={post.my_vote ?? null}
-                        onCommentClick={
-                          post.comment_count
-                            ? () => void navigate({ to: "/posts/$postId", params: { postId: post.id }, hash: "comments" })
-                            : undefined
-                        }
-                      />
-                    </RouterLink>
+                      <RouterLink
+                        to="/posts/$postId"
+                        params={{ postId: post.id }}
+                        style={{ display: "block", textDecoration: "none", color: "inherit" }}
+                      >
+                        <PostCard
+                          post={post}
+                          onVote={(direction: VoteDirection) =>
+                            votePost({ postId: post.id, direction })
+                          }
+                          voteDisabled={isVotingPost}
+                          voteStopPropagation
+                          truncateText
+                          variant="list"
+                          currentVote={post.my_vote ?? null}
+                          onCommentClick={
+                            post.comment_count
+                              ? () => void navigate({ to: "/posts/$postId", params: { postId: post.id }, hash: "comments" })
+                              : undefined
+                          }
+                        />
+                      </RouterLink>
+                    </Box>
                   ))}
                 </Box>
               )}

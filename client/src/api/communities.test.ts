@@ -191,8 +191,9 @@ describe("fetchRecentWorkers (GET /api/communities/:slug/recent-workers)", () =>
 
     expect(result).toHaveLength(1);
     expect(result[0].id).toBe("worker-1");
-    const [url] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toContain("/api/communities/ai-dev/recent-workers");
+    expect(init.credentials).toBe("include");
   });
 
   it("エラー応答では例外を投げる", async () => {
@@ -227,6 +228,7 @@ describe("uploadCommunityImage (POST /api/admin/communities/:id/:kind)", () => {
     expect(url).toContain("/api/admin/communities/community-1/icon");
     expect(init.method).toBe("POST");
     expect(init.body).toBeInstanceOf(FormData);
+    expect((init.body as FormData).get("image")).toBe(file);
   });
 
   it("エラー応答では例外を投げる", async () => {

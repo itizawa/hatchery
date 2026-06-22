@@ -70,7 +70,7 @@ export const VoteControl = ({
               borderRadius: "50%",
               "&:hover": {
                 color: isVoted ? "inherit" : SLACK_COLORS.voteUp,
-                bgcolor: isVoted ? "rgba(255,255,255,0.15)" : "action.hover",
+                bgcolor: isVoted ? SLACK_COLORS.voteHoverOverlay : "action.hover",
               },
             }}
           >
@@ -103,7 +103,7 @@ export const VoteControl = ({
               borderRadius: "50%",
               "&:hover": {
                 color: isVoted ? "inherit" : SLACK_COLORS.voteDown,
-                bgcolor: isVoted ? "rgba(255,255,255,0.15)" : "action.hover",
+                bgcolor: isVoted ? SLACK_COLORS.voteHoverOverlay : "action.hover",
               },
             }}
           >

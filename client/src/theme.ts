@@ -17,6 +17,8 @@ export const SLACK_COLORS = {
   voteUp: "#FF4500",
   /** Down vote 色（Reddit 青）。#854 */
   voteDown: "#7193FF",
+  /** 投票済み状態のボタン hover オーバーレイ色（半透明白）。#854 */
+  voteHoverOverlay: "rgba(255,255,255,0.15)",
 } as const;
 
 /**

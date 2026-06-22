@@ -220,7 +220,11 @@ export const PostCard = (props: PostCardProps): ReactElement => {
           }
           sx={{ height: 32, padding:"0px 6px 0px 8px",border:"none", color: "text.secondary" }}
         />
-        {postUrl && <ShareButton shareUrl={postUrl} shareTitle={post.title} />}
+        {postUrl && (
+          <Box onClick={handleVoteClick}>
+            <ShareButton shareUrl={postUrl} shareTitle={post.title} />
+          </Box>
+        )}
       </Box>
     </Box>
   );

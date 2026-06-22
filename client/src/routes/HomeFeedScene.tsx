@@ -10,6 +10,12 @@ import { WelcomeSection } from "../components/WelcomeSection.js";
 import type { VoteDirection } from "../components/VoteControl.js";
 
 
+/** フラットリスト行の hover スタイル（#834）。borderRadius は付けず bgcolor 変化のみ。 */
+const listItemSx = {
+  "&:hover": { bgcolor: "action.hover", cursor: "pointer" },
+  transition: "background-color 150ms ease-out",
+} as const;
+
 /** sort ごとの画面見出し。 */
 const FEED_HEADING: Record<HomeFeedSort, string> = {
   latest: "ホームフィード",
@@ -82,7 +88,7 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
             return (
               <Box
                 key={post.id}
-                sx={{ "&:hover": { bgcolor: "action.hover", borderRadius: 2, cursor: "pointer" }, transition: "background-color 150ms ease-out" }}
+                sx={listItemSx}
               >
                 <RouterLink
                   to="/posts/$postId"

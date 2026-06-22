@@ -33,6 +33,12 @@ const RecentWorkersPanel = ({ slug }: { slug: string }): ReactElement => {
   return <RecentWorkersSection workers={recentWorkers} />;
 };
 
+/** フラットリスト行の hover スタイル（#834）。borderRadius は付けず bgcolor 変化のみ。 */
+const listItemSx = {
+  "&:hover": { bgcolor: "action.hover", cursor: "pointer" },
+  transition: "background-color 150ms ease-out",
+} as const;
+
 /**
  * コミュニティが実在する場合のみレンダーされる内側コンポーネント。
  * useCommunityFeed など、コミュニティ存在を前提とするフックをここに集約する（#524）。
@@ -98,7 +104,7 @@ const CommunityContent = ({
                   {posts.map((post) => (
                     <Box
                       key={post.id}
-                      sx={{ "&:hover": { bgcolor: "action.hover", borderRadius: 2, cursor: "pointer" }, transition: "background-color 150ms ease-out" }}
+                      sx={listItemSx}
                     >
                       <RouterLink
                         to="/posts/$postId"

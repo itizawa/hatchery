@@ -85,14 +85,16 @@ export async function voteComment({
 type HomeFeedPage = { posts: Post[]; nextCursor: string | null };
 type HomeFeedData = { pages: HomeFeedPage[]; pageParams: unknown[] };
 
-/** post の score/up_count/my_vote を toggle off / switch を考慮して楽観更新した値を返す。 */
+type VoteFields = { score: number; up_count: number; my_vote?: "up" | "down" | null };
+
+/** score/up_count/my_vote を toggle off / switch を考慮して楽観更新した値を返す（post / comment 共通）。 */
 function calcOptimisticPostVote({
   post,
   direction,
 }: {
-  post: Pick<Post, "score" | "up_count" | "my_vote">;
+  post: VoteFields;
   direction: VoteDirection;
-}): Pick<Post, "score" | "up_count" | "my_vote"> {
+}): { score: number; up_count: number; my_vote: "up" | "down" | null } {
   const prevMyVote = post.my_vote ?? null;
   const newMyVote = prevMyVote === direction ? null : direction;
   const prevScoreVal = prevMyVote === "up" ? 1 : prevMyVote === "down" ? -1 : 0;
@@ -253,8 +255,6 @@ export function useVoteComment(postId: string) {
       commentId: string;
       direction: VoteDirection;
     }) => {
-      // 楽観更新: スレッドキャッシュのコメント score / up_count / my_vote を更新（#814 / #831）。
-      // up_count は up 押下で +1、down 押下で変化なし（0）とする近似値。
       const threadKey = postThreadQueryKey(postId);
       await queryClient.cancelQueries({ queryKey: threadKey });
       const previous = queryClient.getQueryData<{ post: Post; comments: Comment[] }>(threadKey);
@@ -263,18 +263,7 @@ export function useVoteComment(postId: string) {
           ...previous,
           comments: previous.comments.map((c) => {
             if (c.id !== commentId) return c;
-            // toggle off: 同じ方向を再度押したらニュートラル（null）に戻す（#831）。
-            const prevMyVote = c.my_vote ?? null;
-            const newMyVote = prevMyVote === direction ? null : direction;
-            // score / up_count は prevMyVote → newMyVote の遷移から正確に算出する（#831 レビュー指摘）。
-            const prevScoreVal = prevMyVote === "up" ? 1 : prevMyVote === "down" ? -1 : 0;
-            const newScoreVal = newMyVote === "up" ? 1 : newMyVote === "down" ? -1 : 0;
-            return {
-              ...c,
-              score: c.score + (newScoreVal - prevScoreVal),
-              up_count: c.up_count + (newMyVote === "up" ? 1 : 0) - (prevMyVote === "up" ? 1 : 0),
-              my_vote: newMyVote,
-            };
+            return { ...c, ...calcOptimisticPostVote({ post: c, direction }) };
           }),
         });
       }

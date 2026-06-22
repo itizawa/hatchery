@@ -153,4 +153,42 @@ describe("VoteControl", () => {
       expect(upContainer).toBe(downContainer);
     });
   });
+
+  describe("アイコン solid/outline バリアント（#854）", () => {
+    it("未投票時に up アイコンが outline バリアントでレンダリングされる", () => {
+      const { container } = render(<VoteControl score={0} onVote={vi.fn()} currentVote={null} />);
+      expect(container.querySelector('[data-testid="vote-arrow-up-outline"]')).toBeInTheDocument();
+      expect(container.querySelector('[data-testid="vote-arrow-up-solid"]')).not.toBeInTheDocument();
+    });
+
+    it("未投票時に down アイコンが outline バリアントでレンダリングされる", () => {
+      const { container } = render(<VoteControl score={0} onVote={vi.fn()} currentVote={null} />);
+      expect(container.querySelector('[data-testid="vote-arrow-down-outline"]')).toBeInTheDocument();
+      expect(container.querySelector('[data-testid="vote-arrow-down-solid"]')).not.toBeInTheDocument();
+    });
+
+    it("currentVote='up' のとき up アイコンが solid バリアントでレンダリングされる", () => {
+      const { container } = render(<VoteControl score={1} onVote={vi.fn()} currentVote="up" />);
+      expect(container.querySelector('[data-testid="vote-arrow-up-solid"]')).toBeInTheDocument();
+      expect(container.querySelector('[data-testid="vote-arrow-up-outline"]')).not.toBeInTheDocument();
+    });
+
+    it("currentVote='up' のとき down アイコンが outline バリアントでレンダリングされる", () => {
+      const { container } = render(<VoteControl score={1} onVote={vi.fn()} currentVote="up" />);
+      expect(container.querySelector('[data-testid="vote-arrow-down-outline"]')).toBeInTheDocument();
+      expect(container.querySelector('[data-testid="vote-arrow-down-solid"]')).not.toBeInTheDocument();
+    });
+
+    it("currentVote='down' のとき down アイコンが solid バリアントでレンダリングされる", () => {
+      const { container } = render(<VoteControl score={-1} onVote={vi.fn()} currentVote="down" />);
+      expect(container.querySelector('[data-testid="vote-arrow-down-solid"]')).toBeInTheDocument();
+      expect(container.querySelector('[data-testid="vote-arrow-down-outline"]')).not.toBeInTheDocument();
+    });
+
+    it("currentVote='down' のとき up アイコンが outline バリアントでレンダリングされる", () => {
+      const { container } = render(<VoteControl score={-1} onVote={vi.fn()} currentVote="down" />);
+      expect(container.querySelector('[data-testid="vote-arrow-up-outline"]')).toBeInTheDocument();
+      expect(container.querySelector('[data-testid="vote-arrow-up-solid"]')).not.toBeInTheDocument();
+    });
+  });
 });

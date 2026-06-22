@@ -66,7 +66,7 @@ Dark Factory の進行は **Issue の open/closed と develop ベース実装 PR
 monorepo の 4 ワークスペース。**依存方向は client → common / server → common の一方向のみ**（client と server は相互依存しない。common はアプリ固有パッケージに依存しない）。ESLint の import 制約でこの境界を機械的に強制する。
 
 - **`common/`** (ADR-0005) — 実行環境非依存の純粋 TypeScript。ドメインモデル・型・ドメインロジック（登場メンバー選定、あらすじ要約等の純粋関数）・**Zod スキーマ**を置く。React/MUI/DOM や Express/Prisma/Node 固有 API は置かない。ドメインロジックはここで TDD する（UI/DB 不要で高速にテスト可能）。
-- **`server/`** (ADR-0004) — Node.js 22 / Express 5 / Prisma / PostgreSQL。層分離（ルーティング / ユースケース / ドメイン[common] / 永続化[Prisma]）。リクエスト検証は common の Zod スキーマで行う。**定時バッチ（シーン生成）は Express とは別エントリポイント**のスクリプトとして実装しスケジューラから起動。
+- **`server/`** (ADR-0004) — Node.js 22 / Express 5 / Prisma / PostgreSQL。層分離（ルーティング / ユースケース / ドメイン[common] / 永続化[Prisma]）。リクエスト検証は common の Zod スキーマで行う。**定時バッチ（シーン生成）は Express とは別エントリポイント**のスクリプットとして実装しスケジューラから起動。
 - **`client/`** (ADR-0003) — Vite + React 19 SPA（SSR なし）/ MUI v9 + Emotion（Slack 風テーマ）/ TanStack Router / TanStack Query。**サーバ状態は TanStack Query に集約**し、グローバル状態管理ライブラリは当面入れない。
 - **`docs/`** (ADR-0007) — Storybook 8（Vite ビルダー）。client の `*.stories.tsx` と設計 MDX を集約し GitHub Pages へ静的デプロイ。ADR は `docs/adr/*.md` を正本とし、MDX は薄いラッパーで取り込む。
 
@@ -158,7 +158,7 @@ import HomeIcon from "@mui/icons-material/HomeRounded";
 
 ## デザインシステム（#792）
 
-**UI を実装する際は以下のデザイン方針に従うこと（違反はレビュー指摘対象）**。
+**UI を実装する際は以下のデザイン方針に従うこと（違反はレビュー指摘対象）**。なお、aesthetics プロンプト文面は Issue #783 で別途追加予定。
 
 ### フォント指針
 
@@ -167,7 +167,7 @@ import HomeIcon from "@mui/icons-material/HomeRounded";
 - **DM Sans** — 本文・UI テキスト（可読性が高く情報密度に強い）
 - **Geist** — モノスペース・コード表示（Vercel 謹製の高品位等幅フォント）
 
-**使用禁止: Inter / Roboto / Arial のみに頼ること**。無個性な汎用フォントであり、AI が何も考えずに選ぶデフォルト。明示的な理由なしに単独採用してはならない。
+**新規 UI の実装では Inter / Roboto / Arial のみに頼らないこと**。無個性な汎用フォントであり、AI が何も考えずに選ぶデフォルト。`typography.fontFamily` を明示する場合は推奨フォントを優先する。既存の MUI デフォルト（Roboto）は当面維持し、フォントの実際のインストール・適用は別 Issue で対応する。
 
 ### 禁止パターン（Generic AI スタイル）
 
@@ -201,4 +201,4 @@ import HomeIcon from "@mui/icons-material/HomeRounded";
 - アクセントカラー（`blue`）は 1 画面に 1〜2 か所に絞る（CTA ボタン・選択状態など目立つ要素のみ）
 - 新しいカラー定数を追加する場合は `SLACK_COLORS` に追記し、ハードコードを避ける
 - 既存の `SLACK_COLORS` と矛盾するカラーを新設してはならない
-- 違反（禁止パターンの使用・カラー過剰追加・フォント禁止パターン違反）はレビューで指摘対象とする
+- 違反（禁止パターンの使用・カラー過剰追加・フォント禁止パターン違反）はレビューで指托対象とする

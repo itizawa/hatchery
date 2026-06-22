@@ -63,10 +63,13 @@ async function mockFeedApi(page: Page): Promise<void> {
   );
 }
 
-async function mockRankingApi(
-  page: Page,
-  workers: unknown[] = MOCK_RANKING_WORKERS,
-): Promise<void> {
+async function mockRankingApi({
+  page,
+  workers = MOCK_RANKING_WORKERS,
+}: {
+  page: Page;
+  workers?: unknown[];
+}): Promise<void> {
   await page.route("**/api/workers/ranking", (route) =>
     route.fulfill({
       status: 200,
@@ -84,7 +87,7 @@ test("UC-RANK-01: サイドバーの「ランキング」リンクを押して /
   await mockUnauthenticated(page);
   await mockCommunitiesApi(page);
   await mockFeedApi(page);
-  await mockRankingApi(page);
+  await mockRankingApi({ page });
 
   await page.goto("/");
 
@@ -103,7 +106,7 @@ test(
   async ({ page }) => {
     await mockUnauthenticated(page);
     await mockCommunitiesApi(page);
-    await mockRankingApi(page);
+    await mockRankingApi({ page });
 
     await page.goto("/ranking");
 
@@ -153,14 +156,14 @@ test(
   async ({ page }) => {
     await mockUnauthenticated(page);
     await mockCommunitiesApi(page);
-    await mockRankingApi(page, []);
+    await mockRankingApi({ page, workers: [] });
 
     await page.goto("/ranking");
 
     // 空状態メッセージが表示されること
     await expect(page.getByText("まだランキングデータがありません。")).toBeVisible();
 
-    // テーブル行は表示されないこと
-    await expect(page.getByRole("table")).not.toBeVisible();
+    // テーブルが DOM に存在しないこと
+    await expect(page.getByRole("table")).not.toBeAttached();
   },
 );

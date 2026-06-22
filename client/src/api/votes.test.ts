@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import * as authApi from "./auth.js";
-import { communityFeedQueryKey, homeFeedQueryKeyPrefix } from "./feed.js";
+import { communityFeedQueryKey, homeFeedQueryKey, homeFeedQueryKeyPrefix } from "./feed.js";
 import { postThreadQueryKey } from "./posts.js";
 import { votePost, voteComment, useVotePost, useVoteComment } from "./votes.js";
 
@@ -214,6 +214,193 @@ describe("useVotePost (楽観更新フック)", () => {
     const d = queryClient.getQueryData<ThreadData>(postThreadQueryKey("post-1"));
     expect(d?.post.my_vote).toBe("up");
     expect(d?.post.score).toBe(6);
+  });
+});
+
+// ─── useVotePost フィードキャッシュ楽観更新 ──────────────────────────────────────────────────────────
+
+type HomeFeedPage = { posts: FeedPost[]; nextCursor: string | null };
+type HomeFeedData = { pages: HomeFeedPage[]; pageParams: unknown[] };
+type FeedPost = { id: string; score: number; up_count: number; my_vote: "up" | "down" | null | undefined };
+
+const feedBasePost: FeedPost = { id: "post-1", score: 5, up_count: 2, my_vote: null };
+
+function makeHomeFeedData(posts: FeedPost[]): HomeFeedData {
+  return { pages: [{ posts, nextCursor: null }], pageParams: [undefined] };
+}
+
+describe("useVotePost (フィードキャッシュ楽観更新)", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it("onMutate: 未 vote → up で homeFeedQueryKey の対象 post が楽観更新される", async () => {
+    vi.spyOn(authApi, "useAuth").mockReturnValue({ data: null } as ReturnType<typeof authApi.useAuth>);
+
+    let resolveFetch!: (r: Response) => void;
+    vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise<Response>((res) => { resolveFetch = res; })));
+
+    const { queryClient, wrapper } = createHookWrapper();
+    queryClient.setQueryData(
+      homeFeedQueryKey("latest"),
+      makeHomeFeedData([{ ...feedBasePost, score: 5, up_count: 2, my_vote: null }]),
+    );
+
+    const { result } = renderHook(() => useVotePost(), { wrapper });
+    act(() => { result.current.mutate({ postId: "post-1", direction: "up" }); });
+
+    await waitFor(() => {
+      const d = queryClient.getQueryData<HomeFeedData>(homeFeedQueryKey("latest"));
+      expect(d?.pages[0]?.posts[0]?.my_vote).toBe("up");
+    });
+
+    const d = queryClient.getQueryData<HomeFeedData>(homeFeedQueryKey("latest"));
+    expect(d?.pages[0]?.posts[0]?.score).toBe(6);
+    expect(d?.pages[0]?.posts[0]?.up_count).toBe(3);
+
+    resolveFetch(jsonResponse(200, { ...feedBasePost, score: 6, my_vote: "up" }));
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+  });
+
+  it("onMutate: 未 vote → up で communityFeedQueryKey の対象 post が楽観更新される", async () => {
+    vi.spyOn(authApi, "useAuth").mockReturnValue({ data: null } as ReturnType<typeof authApi.useAuth>);
+
+    let resolveFetch!: (r: Response) => void;
+    vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise<Response>((res) => { resolveFetch = res; })));
+
+    const { queryClient, wrapper } = createHookWrapper();
+    queryClient.setQueryData(
+      communityFeedQueryKey("tech"),
+      [{ ...feedBasePost, score: 5, up_count: 2, my_vote: null }],
+    );
+
+    const { result } = renderHook(() => useVotePost("tech"), { wrapper });
+    act(() => { result.current.mutate({ postId: "post-1", direction: "up" }); });
+
+    await waitFor(() => {
+      const d = queryClient.getQueryData<FeedPost[]>(communityFeedQueryKey("tech"));
+      expect(d?.[0]?.my_vote).toBe("up");
+    });
+
+    const d = queryClient.getQueryData<FeedPost[]>(communityFeedQueryKey("tech"));
+    expect(d?.[0]?.score).toBe(6);
+    expect(d?.[0]?.up_count).toBe(3);
+
+    resolveFetch(jsonResponse(200, { ...feedBasePost, score: 6, my_vote: "up" }));
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+  });
+
+  it("onMutate: up 済み → up（toggle off）で homeFeedQueryKey の post が元に戻る方向に更新される", async () => {
+    vi.spyOn(authApi, "useAuth").mockReturnValue({ data: null } as ReturnType<typeof authApi.useAuth>);
+
+    let resolveFetch!: (r: Response) => void;
+    vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise<Response>((res) => { resolveFetch = res; })));
+
+    const { queryClient, wrapper } = createHookWrapper();
+    queryClient.setQueryData(
+      homeFeedQueryKey("latest"),
+      makeHomeFeedData([{ ...feedBasePost, score: 5, up_count: 2, my_vote: "up" }]),
+    );
+
+    const { result } = renderHook(() => useVotePost(), { wrapper });
+    act(() => { result.current.mutate({ postId: "post-1", direction: "up" }); });
+
+    await waitFor(() => {
+      const d = queryClient.getQueryData<HomeFeedData>(homeFeedQueryKey("latest"));
+      expect(d?.pages[0]?.posts[0]?.my_vote).toBeNull();
+    });
+
+    const d = queryClient.getQueryData<HomeFeedData>(homeFeedQueryKey("latest"));
+    expect(d?.pages[0]?.posts[0]?.score).toBe(4);
+    expect(d?.pages[0]?.posts[0]?.up_count).toBe(1);
+
+    resolveFetch(jsonResponse(200, { ...feedBasePost, score: 4, my_vote: null }));
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+  });
+
+  it("onError: ミューテーション失敗時に homeFeedQueryKey のキャッシュがロールバックされる", async () => {
+    vi.spyOn(authApi, "useAuth").mockReturnValue({ data: null } as ReturnType<typeof authApi.useAuth>);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(500, { error: "ServerError" })));
+
+    const { queryClient, wrapper } = createHookWrapper();
+    queryClient.setQueryData(
+      homeFeedQueryKey("latest"),
+      makeHomeFeedData([{ ...feedBasePost, score: 5, up_count: 2, my_vote: null }]),
+    );
+
+    const { result } = renderHook(() => useVotePost(), { wrapper });
+    act(() => { result.current.mutate({ postId: "post-1", direction: "up" }); });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+
+    const d = queryClient.getQueryData<HomeFeedData>(homeFeedQueryKey("latest"));
+    expect(d?.pages[0]?.posts[0]?.score).toBe(5);
+    expect(d?.pages[0]?.posts[0]?.up_count).toBe(2);
+    expect(d?.pages[0]?.posts[0]?.my_vote).toBeNull();
+  });
+
+  it("onError: ミューテーション失敗時に communityFeedQueryKey のキャッシュがロールバックされる", async () => {
+    vi.spyOn(authApi, "useAuth").mockReturnValue({ data: null } as ReturnType<typeof authApi.useAuth>);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(500, { error: "ServerError" })));
+
+    const { queryClient, wrapper } = createHookWrapper();
+    queryClient.setQueryData(
+      communityFeedQueryKey("tech"),
+      [{ ...feedBasePost, score: 5, up_count: 2, my_vote: null }],
+    );
+
+    const { result } = renderHook(() => useVotePost("tech"), { wrapper });
+    act(() => { result.current.mutate({ postId: "post-1", direction: "up" }); });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+
+    const d = queryClient.getQueryData<FeedPost[]>(communityFeedQueryKey("tech"));
+    expect(d?.[0]?.score).toBe(5);
+    expect(d?.[0]?.up_count).toBe(2);
+    expect(d?.[0]?.my_vote).toBeNull();
+  });
+
+  it("onSuccess: homeFeedQueryKey の対象 post がサーバ確定値で更新される", async () => {
+    vi.spyOn(authApi, "useAuth").mockReturnValue({ data: null } as ReturnType<typeof authApi.useAuth>);
+    const serverPost = { ...feedBasePost, score: 6, my_vote: "up" as const };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(200, serverPost)));
+
+    const { queryClient, wrapper } = createHookWrapper();
+    queryClient.setQueryData(
+      homeFeedQueryKey("latest"),
+      makeHomeFeedData([{ ...feedBasePost, score: 5, up_count: 2, my_vote: null }]),
+    );
+
+    const { result } = renderHook(() => useVotePost(), { wrapper });
+    act(() => { result.current.mutate({ postId: "post-1", direction: "up" }); });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    const d = queryClient.getQueryData<HomeFeedData>(homeFeedQueryKey("latest"));
+    expect(d?.pages[0]?.posts[0]?.score).toBe(6);
+    expect(d?.pages[0]?.posts[0]?.my_vote).toBe("up");
+  });
+
+  it("onSuccess: communityFeedQueryKey の対象 post がサーバ確定値で更新される", async () => {
+    vi.spyOn(authApi, "useAuth").mockReturnValue({ data: null } as ReturnType<typeof authApi.useAuth>);
+    const serverPost = { ...feedBasePost, score: 6, my_vote: "up" as const };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(200, serverPost)));
+
+    const { queryClient, wrapper } = createHookWrapper();
+    queryClient.setQueryData(
+      communityFeedQueryKey("tech"),
+      [{ ...feedBasePost, score: 5, up_count: 2, my_vote: null }],
+    );
+
+    const { result } = renderHook(() => useVotePost("tech"), { wrapper });
+    act(() => { result.current.mutate({ postId: "post-1", direction: "up" }); });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    const d = queryClient.getQueryData<FeedPost[]>(communityFeedQueryKey("tech"));
+    expect(d?.[0]?.score).toBe(6);
+    expect(d?.[0]?.my_vote).toBe("up");
   });
 });
 

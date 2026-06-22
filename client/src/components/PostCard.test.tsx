@@ -341,6 +341,25 @@ describe("PostCard", () => {
     });
   });
 
+  describe("variant（フラットリスト表示・#834）", () => {
+    it("variant=\"list\" 時、外枠の data-variant 属性が \"list\" になる", () => {
+      const { container } = render(<PostCard post={mockPost} onVote={vi.fn()} variant="list" />);
+      expect(container.firstChild).toHaveAttribute("data-variant", "list");
+    });
+
+    it("variant 未指定（デフォルト card）時、外枠の data-variant 属性が \"card\" になる", () => {
+      const { container } = render(<PostCard post={mockPost} onVote={vi.fn()} />);
+      expect(container.firstChild).toHaveAttribute("data-variant", "card");
+    });
+
+    it("variant=\"list\" 時もタイトル・本文・コメント数は正常に表示される（描画確認）", () => {
+      render(<PostCard post={mockPost} onVote={vi.fn()} variant="list" />);
+      expect(screen.getByText("今日も元気に始めましょう")).toBeInTheDocument();
+      expect(screen.getByText("おはようございます！今日もよろしくお願いします。")).toBeInTheDocument();
+      expect(screen.getByLabelText("コメント 3 件")).toBeInTheDocument();
+    });
+  });
+
   describe("loading（Skeleton 表示・#807）", () => {
     it("loading=true のとき MUI Skeleton が描画される", () => {
       const { container } = render(<PostCard loading />);

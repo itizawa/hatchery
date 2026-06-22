@@ -66,7 +66,7 @@ Dark Factory の進行は **Issue の open/closed と develop ベース実装 PR
 monorepo の 4 ワークスペース。**依存方向は client → common / server → common の一方向のみ**（client と server は相互依存しない。common はアプリ固有パッケージに依存しない）。ESLint の import 制約でこの境界を機械的に強制する。
 
 - **`common/`** (ADR-0005) — 実行環境非依存の純粋 TypeScript。ドメインモデル・型・ドメインロジック（登場メンバー選定、あらすじ要約等の純粋関数）・**Zod スキーマ**を置く。React/MUI/DOM や Express/Prisma/Node 固有 API は置かない。ドメインロジックはここで TDD する（UI/DB 不要で高速にテスト可能）。
-- **`server/`** (ADR-0004) — Node.js 22 / Express 5 / Prisma / PostgreSQL。層分離（ルーティング / ユースケース / ドメイン[common] / 永続化[Prisma]）。リクエスト検証は common の Zod スキーマで行う。**定時バッチ（シーン生成）は Express とは別エントリポイント**のスクリプトとして実装しスケジューラから起動。
+- **`server/`** (ADR-0004) — Node.js 22 / Express 5 / Prisma / PostgreSQL。層分離（ルーティング / ユースケース / ドメイン[common] / 永続化[Prisma]）。リクエスト検証は common の Zod スキーマで行う。**定時バッチ（シーン生成）は Express とは別エントリポイント**のスクリプットとして実装しスケジューラから起動。
 - **`client/`** (ADR-0003) — Vite + React 19 SPA（SSR なし）/ MUI v9 + Emotion（Slack 風テーマ）/ TanStack Router / TanStack Query。**サーバ状態は TanStack Query に集約**し、グローバル状態管理ライブラリは当面入れない。
 - **`docs/`** (ADR-0007) — Storybook 8（Vite ビルダー）。client の `*.stories.tsx` と設計 MDX を集約し GitHub Pages へ静的デプロイ。ADR は `docs/adr/*.md` を正本とし、MDX は薄いラッパーで取り込む。
 
@@ -155,3 +155,91 @@ import HomeIcon from "@mui/icons-material/HomeRounded";
 - ESLint の `no-restricted-imports`（`eslint.config.mjs` client 向けブロック）で非 Rounded の `@mui/icons-material/*` import を `error` にしている。
 - **例外（Rounded バリアントが存在しないブランドアイコン）**: `@mui/icons-material/X`（旧 Twitter）・`Twitter`・`GitHub`・`Google`・`YouTube`・`Instagram`・`LinkedIn`・`Pinterest`・`WhatsApp`・`Telegram`・`Reddit`・`Apple` 等、MUI が Rounded バリアントを提供していないアイコンはそのまま使う。ESLint ルールにも除外設定済み。
 - barrel import（`import { Home } from "@mui/icons-material"`）も禁止。必ず個別パス import（`@mui/icons-material/HomeRounded`）で使う。
+
+## デザインシステム（#792）
+
+**UI を実装する際は以下のデザイン方針に従うこと（違反はレビュー指摘対象）**。
+
+### フォント指針
+
+推奨フォント（Reddit 風・観察エンタメの世界観に合うもの）:
+- **Plus Jakarta Sans** — タイトル・見出し（モダンで読みやすい）
+- **DM Sans** — 本文・UI テキスト（可読性が高く情報密度に強い）
+- **Geist** — モノスペース・コード表示（Vercel 謹製の高品位等幅フォント）
+
+**新規 UI の実装では Inter / Roboto / Arial のみに頼らないこと**。無個性な汎用フォントであり、AI が何も考えずに選ぶデフォルト。`typography.fontFamily` を明示する場合は推奨フォントを優先する。既存の MUI デフォルト（Roboto）は当面維持し、フォントの実際のインストール・適用は別 Issue で対応する。
+
+### 禁止パターン（Generic AI スタイル）
+
+以下は AI がデフォルトで生成しがちな汎用スタイル。明示的な指示なしに使わない:
+
+- **白紫グラデーション** (`linear-gradient(...purple...)`) — 汎用 AI スタイルの典型
+- **汎用カードシャドウ** (`box-shadow: 0 4px 6px rgba(0,0,0,0.1)` のような浮き上がり感) — 情報密度を下げる汎用レイアウト
+- **中央配置 h1 + CTA ヒーロー** — ランディングページ的構成。観察エンタメ UI に不要
+- **カラフル過多** — 1 画面にアクセントカラーを 3 色以上使うこと
+- **角丸過大** (`border-radius: 16px` 以上) — 情報密度を下げるおもちゃ感のある UI
+
+### 参照 UI（デザイン方向性の基準）
+
+このプロジェクト（Reddit 風 AI コミュニティの観察エンタメ）は以下のサービスの UI 方向性を参照する:
+
+- **Reddit** — 情報密度の高いフラットリスト・投稿形式・コミュニティ構造（直接の参照先）
+- **Linear** — クリーンで情報密度が高い SaaS UI。ホワイトスペースと余白の使い方
+- **Vercel Dashboard** — モノクロベース＋最小限アクセントの高品位 UI
+
+### カラー規律
+
+既存の `SLACK_COLORS`（`client/src/theme.ts`）が定めた 4 色が基盤:
+
+| 定数 | 値 | 用途 |
+|------|----|------|
+| `blue` | `#1164A3` | プライマリ（リンク・ボタン・アクセント） |
+| `sidebar` | `#FFFFFF` | サイドバー背景 |
+| `sidebarText` | `#1A1A1B` | サイドバーテキスト |
+| `mainBackground` | `#F6F7F8` | メイン領域背景 |
+
+- アクセントカラー（`blue`）は 1 画面に 1〜2 か所に絞る（CTA ボタン・選択状態など目立つ要素のみ）
+- 新しいカラー定数を追加する場合は `SLACK_COLORS` に追記し、ハードコードを避ける
+- 既存の `SLACK_COLORS` と矛盾するカラーを新設してはならない
+- 違反（禁止パターンの使用・カラー過剰追加・フォント禁止パターン違反）はレビューで指摘対象とする
+
+## Frontend Aesthetics（UI 生成時の指針）
+
+Anthropic Cookbook「Prompting for frontend aesthetics」の戦略をこのプロジェクト向けに適用した、フロントエンド UI を生成・レビューする際の指針。`## デザインシステム` が「何を使うか・何を禁止するか」のルール集であるのに対し、本節は **「どのようにプロンプトするか」** ― AI への指示手法 ― を定める。
+
+### 戦略 1: デザイン次元を個別に指定する
+
+UI を指示するときは「きれいにして」ではなく、次の次元を**分けて**記述する:
+
+| 次元 | 記述例 |
+|------|--------|
+| タイポグラフィ | `Plus Jakarta Sans 14px / line-height 1.6 / font-weight 500 for labels` |
+| カラー | `プライマリ #1164A3 / 背景 #F6F7F8 / テキスト #1A1A1B（SLACK_COLORS 参照）` |
+| モーション | `hover transition 150ms ease-out / skeleton fade 300ms` |
+| 背景・テクスチャ | `フラット白 / カード境界は border-bottom のみ・shadow なし` |
+| スペーシング | `8px グリッド / セクション間 24px / リスト行高 48px` |
+
+個別指定することで AI が曖昧さを埋める際のデフォルト（Generic AI スタイル）を差し込む余地を塞ぐ。
+
+### 戦略 2: 参照先を名指しする
+
+「〜風」という形で具体的な製品・サービスを参照元として挙げる。このプロジェクトの承認済み参照先:
+
+- **Reddit 風** — 情報密度の高いフラットリスト・border 区切り・投稿形式
+- **Linear 風** — クリーンで情報密度が高い SaaS UI・ホワイトスペースの質
+- **Vercel Dashboard 風** — モノクロベース + 最小限アクセント・高品位感
+
+使い方の例: `「Reddit 風の投稿リスト。カード枠なし、border-bottom 区切り、hover で背景色変化」`
+
+参照元を挙げることで AI が自分で視覚トーンを解釈する自由度を狭め、意図した方向性に収束させる。
+
+### 戦略 3: Generic なデフォルトを明示禁止する
+
+AI は指示が曖昧なとき以下のデフォルトに落ちる。プロンプトで**明示的に禁止**する（`## デザインシステム` の各指針と対応）:
+
+- `白紫グラデーション不使用`（`linear-gradient` with purple shades）
+- `Inter / Roboto / Arial フォント不使用`（無個性な汎用フォント）
+- `汎用カードシャドウ不使用`（`box-shadow: 0 4px 6px rgba(...)` の浮き上がり感）
+- `中央配置ヒーロー不使用`（h1 + CTA のランディングページ構成）
+- `角丸 16px 以上不使用`（おもちゃ感のある大きい border-radius）
+- `3 色以上のアクセント不使用`（カラフル過多）

@@ -31,6 +31,41 @@ function renderWithData(workers: WorkerRankingItem[] = mockWorkers) {
   );
 }
 
+const bigWorkers: WorkerRankingItem[] = [
+  { worker_id: "worker-big", display_name: "Charlie", view_count: 12345, vote_net_score: 10 },
+  { worker_id: "worker-neg", display_name: "Dave", view_count: 678, vote_net_score: -7 },
+];
+
+describe("WorkerRankingScene (#784) — 順位番号・閲覧数・スコア色分け", () => {
+  it("順位番号（1, 2, …）が表示される", async () => {
+    renderWithData(bigWorkers);
+    expect(await screen.findByText("1")).toBeInTheDocument();
+    expect(screen.getByText("2")).toBeInTheDocument();
+  });
+
+  it("閲覧数が toLocaleString 形式（カンマ区切り）で表示される", async () => {
+    renderWithData(bigWorkers);
+    expect(await screen.findByText("12,345")).toBeInTheDocument();
+  });
+
+  it("vote_net_score >= 0 のとき score-positive testid セルに + プレフィックス付きで表示される", async () => {
+    renderWithData(bigWorkers);
+    const cell = await screen.findByTestId("score-positive");
+    expect(cell).toHaveTextContent("+10");
+  });
+
+  it("vote_net_score < 0 のとき score-negative testid セルに符号付きで表示される", async () => {
+    renderWithData(bigWorkers);
+    const cell = await screen.findByTestId("score-negative");
+    expect(cell).toHaveTextContent("-7");
+  });
+
+  it("データが空のとき data-testid ranking-empty が表示される", async () => {
+    renderWithData([]);
+    expect(await screen.findByTestId("ranking-empty")).toBeInTheDocument();
+  });
+});
+
 describe("WorkerRankingScene (#774)", () => {
   it("テーブルの列見出しが「評価（7日）」と表示される", async () => {
     renderWithData();

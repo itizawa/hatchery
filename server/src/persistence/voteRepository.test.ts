@@ -232,4 +232,64 @@ describe("createInMemoryVoteRepository", () => {
       expect(upCountDelta).toBe(1);
     });
   });
+
+  describe("voteAndApplyScore — currentDirection (#853)", () => {
+    it("未投票 → up: currentDirection=up", async () => {
+      const repo = createInMemoryVoteRepository();
+      const { currentDirection } = await repo.voteAndApplyScore({
+        sessionId: "s1", userId: null, targetType: "post", targetId: "p1", direction: "up",
+        applyScore: async (delta) => delta,
+      });
+      expect(currentDirection).toBe("up");
+    });
+
+    it("未投票 → down: currentDirection=down", async () => {
+      const repo = createInMemoryVoteRepository();
+      const { currentDirection } = await repo.voteAndApplyScore({
+        sessionId: "s1", userId: null, targetType: "post", targetId: "p1", direction: "down",
+        applyScore: async (delta) => delta,
+      });
+      expect(currentDirection).toBe("down");
+    });
+
+    it("up 済み → up (toggle off): currentDirection=null", async () => {
+      const repo = createInMemoryVoteRepository();
+      await repo.vote({ sessionId: "s1", userId: null, targetType: "post", targetId: "p1", direction: "up" });
+      const { currentDirection } = await repo.voteAndApplyScore({
+        sessionId: "s1", userId: null, targetType: "post", targetId: "p1", direction: "up",
+        applyScore: async (delta) => delta,
+      });
+      expect(currentDirection).toBeNull();
+    });
+
+    it("down 済み → down (toggle off): currentDirection=null", async () => {
+      const repo = createInMemoryVoteRepository();
+      await repo.vote({ sessionId: "s1", userId: null, targetType: "post", targetId: "p1", direction: "down" });
+      const { currentDirection } = await repo.voteAndApplyScore({
+        sessionId: "s1", userId: null, targetType: "post", targetId: "p1", direction: "down",
+        applyScore: async (delta) => delta,
+      });
+      expect(currentDirection).toBeNull();
+    });
+
+    it("up 済み → down (switch): currentDirection=down", async () => {
+      const repo = createInMemoryVoteRepository();
+      await repo.vote({ sessionId: "s1", userId: null, targetType: "post", targetId: "p1", direction: "up" });
+      const { currentDirection } = await repo.voteAndApplyScore({
+        sessionId: "s1", userId: null, targetType: "post", targetId: "p1", direction: "down",
+        applyScore: async (delta) => delta,
+      });
+      expect(currentDirection).toBe("down");
+    });
+
+    it("down 済み → up (switch): currentDirection=up", async () => {
+      const repo = createInMemoryVoteRepository();
+      await repo.vote({ sessionId: "s1", userId: null, targetType: "post", targetId: "p1", direction: "down" });
+      const { currentDirection } = await repo.voteAndApplyScore({
+        sessionId: "s1", userId: null, targetType: "post", targetId: "p1", direction: "up",
+        applyScore: async (delta) => delta,
+      });
+      expect(currentDirection).toBe("up");
+    });
+  });
 });

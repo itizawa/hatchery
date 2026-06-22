@@ -360,6 +360,40 @@ describe("PostCard", () => {
     });
   });
 
+  describe("ShareButton stopPropagation（voteStopPropagation=true 時・#838）", () => {
+    it("voteStopPropagation=true + postUrl あり → 共有ボタンクリックで stopPropagation と preventDefault が呼ばれる", () => {
+      render(
+        <PostCard
+          post={mockPost}
+          onVote={vi.fn()}
+          voteStopPropagation={true}
+          postUrl="https://example.com/posts/post-1"
+        />,
+      );
+
+      const event = new MouseEvent("click", { bubbles: true, cancelable: true });
+      const stopPropagationSpy = vi.spyOn(event, "stopPropagation");
+      const preventDefaultSpy = vi.spyOn(event, "preventDefault");
+
+      fireEvent(screen.getByRole("button", { name: /共有/i }), event);
+
+      expect(stopPropagationSpy).toHaveBeenCalled();
+      expect(preventDefaultSpy).toHaveBeenCalled();
+    });
+
+    it("voteStopPropagation=false（デフォルト）+ postUrl あり → 共有ボタンは表示されるが Box の stopPropagation handler は呼ばれない（wrapper なし）", () => {
+      render(
+        <PostCard
+          post={mockPost}
+          onVote={vi.fn()}
+          postUrl="https://example.com/posts/post-1"
+        />,
+      );
+
+      expect(screen.getByRole("button", { name: /共有/i })).toBeInTheDocument();
+    });
+  });
+
   describe("loading（Skeleton 表示・#807）", () => {
     it("loading=true のとき MUI Skeleton が描画される", () => {
       const { container } = render(<PostCard loading />);

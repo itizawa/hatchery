@@ -106,6 +106,7 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
                     variant="list"
                     community={community}
                     currentVote={post.my_vote ?? null}
+                    postUrl={`${window.location.origin}/posts/${post.id}`}
                     onCommunityClick={
                       community
                         ? () => void navigate({ to: "/communities/$slug", params: { slug: community.slug } })

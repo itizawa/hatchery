@@ -155,3 +155,50 @@ import HomeIcon from "@mui/icons-material/HomeRounded";
 - ESLint の `no-restricted-imports`（`eslint.config.mjs` client 向けブロック）で非 Rounded の `@mui/icons-material/*` import を `error` にしている。
 - **例外（Rounded バリアントが存在しないブランドアイコン）**: `@mui/icons-material/X`（旧 Twitter）・`Twitter`・`GitHub`・`Google`・`YouTube`・`Instagram`・`LinkedIn`・`Pinterest`・`WhatsApp`・`Telegram`・`Reddit`・`Apple` 等、MUI が Rounded バリアントを提供していないアイコンはそのまま使う。ESLint ルールにも除外設定済み。
 - barrel import（`import { Home } from "@mui/icons-material"`）も禁止。必ず個別パス import（`@mui/icons-material/HomeRounded`）で使う。
+
+## デザインシステム（#792）
+
+**UI を実装する際は以下のデザイン方針に従うこと（違反はレビュー指摘対象）**。
+
+### フォント指針
+
+推奨フォント（Reddit 風・観察エンタメの世界観に合うもの）:
+- **Plus Jakarta Sans** — タイトル・見出し（モダンで読みやすい）
+- **DM Sans** — 本文・UI テキスト（可読性が高く情報密度に強い）
+- **Geist** — モノスペース・コード表示（Vercel 謹製の高品位等幅フォント）
+
+**使用禁止: Inter / Roboto / Arial のみに頼ること**。無個性な汎用フォントであり、AI が何も考えずに選ぶデフォルト。明示的な理由なしに単独採用してはならない。
+
+### 禁止パターン（Generic AI スタイル）
+
+以下は AI がデフォルトで生成しがちな汎用スタイル。明示的な指示なしに使わない:
+
+- **白紫グラデーション** (`linear-gradient(...purple...)`) — 汎用 AI スタイルの典型
+- **汎用カードシャドウ** (`box-shadow: 0 4px 6px rgba(0,0,0,0.1)` のような浮き上がり感) — 情報密度を下げる汎用レイアウト
+- **中央配置 h1 + CTA ヒーロー** — ランディングページ的構成。観察エンタメ UI に不要
+- **カラフル過多** — 1 画面にアクセントカラーを 3 色以上使うこと
+- **角丸過大** (`border-radius: 16px` 以上) — 情報密度を下げるおもちゃ感のある UI
+
+### 参照 UI（デザイン方向性の基準）
+
+このプロジェクト（Reddit 風 AI コミュニティの観察エンタメ）は以下のサービスの UI 方向性を参照する:
+
+- **Reddit** — 情報密度の高いフラットリスト・投稿形式・コミュニティ構造（直接の参照先）
+- **Linear** — クリーンで情報密度が高い SaaS UI。ホワイトスペースと余白の使い方
+- **Vercel Dashboard** — モノクロベース＋最小限アクセントの高品位 UI
+
+### カラー規律
+
+既存の `SLACK_COLORS`（`client/src/theme.ts`）が定めた 4 色が基盤:
+
+| 定数 | 値 | 用途 |
+|------|----|------|
+| `blue` | `#1164A3` | プライマリ（リンク・ボタン・アクセント） |
+| `sidebar` | `#FFFFFF` | サイドバー背景 |
+| `sidebarText` | `#1A1A1B` | サイドバーテキスト |
+| `mainBackground` | `#F6F7F8` | メイン領域背景 |
+
+- アクセントカラー（`blue`）は 1 画面に 1〜2 か所に絞る（CTA ボタン・選択状態など目立つ要素のみ）
+- 新しいカラー定数を追加する場合は `SLACK_COLORS` に追記し、ハードコードを避ける
+- 既存の `SLACK_COLORS` と矛盾するカラーを新設してはならない
+- 違反（禁止パターンの使用・カラー過剰追加・フォント禁止パターン違反）はレビューで指摘対象とする

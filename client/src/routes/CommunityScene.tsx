@@ -33,6 +33,12 @@ const RecentWorkersPanel = ({ slug }: { slug: string }): ReactElement => {
   return <RecentWorkersSection workers={recentWorkers} />;
 };
 
+/** フラットリスト行の hover スタイル（#834）。borderRadius は付けず bgcolor 変化のみ。 */
+const listItemSx = {
+  "&:hover": { bgcolor: "action.hover", cursor: "pointer" },
+  transition: "background-color 150ms ease-out",
+} as const;
+
 /**
  * コミュニティが実在する場合のみレンダーされる内側コンポーネント。
  * useCommunityFeed など、コミュニティ存在を前提とするフックをここに集約する（#524）。
@@ -94,30 +100,35 @@ const CommunityContent = ({
                   </Typography>
                 </Box>
               ) : (
-                <Box>
+                <Box sx={{ borderTop: "1px solid", borderColor: "divider" }}>
                   {posts.map((post) => (
-                    <RouterLink
+                    <Box
                       key={post.id}
-                      to="/posts/$postId"
-                      params={{ postId: post.id }}
-                      style={{ display: "block", textDecoration: "none", color: "inherit" }}
+                      sx={listItemSx}
                     >
-                      <PostCard
-                        post={post}
-                        onVote={(direction: VoteDirection) =>
-                          votePost({ postId: post.id, direction })
-                        }
-                        voteDisabled={isVotingPost}
-                        voteStopPropagation
-                        truncateText
-                        currentVote={post.my_vote ?? null}
-                        onCommentClick={
-                          post.comment_count
-                            ? () => void navigate({ to: "/posts/$postId", params: { postId: post.id }, hash: "comments" })
-                            : undefined
-                        }
-                      />
-                    </RouterLink>
+                      <RouterLink
+                        to="/posts/$postId"
+                        params={{ postId: post.id }}
+                        style={{ display: "block", textDecoration: "none", color: "inherit" }}
+                      >
+                        <PostCard
+                          post={post}
+                          onVote={(direction: VoteDirection) =>
+                            votePost({ postId: post.id, direction })
+                          }
+                          voteDisabled={isVotingPost}
+                          voteStopPropagation
+                          truncateText
+                          variant="list"
+                          currentVote={post.my_vote ?? null}
+                          onCommentClick={
+                            post.comment_count
+                              ? () => void navigate({ to: "/posts/$postId", params: { postId: post.id }, hash: "comments" })
+                              : undefined
+                          }
+                        />
+                      </RouterLink>
+                    </Box>
                   ))}
                 </Box>
               )}

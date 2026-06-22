@@ -10,6 +10,12 @@ import { WelcomeSection } from "../components/WelcomeSection.js";
 import type { VoteDirection } from "../components/VoteControl.js";
 
 
+/** フラットリスト行の hover スタイル（#834）。borderRadius は付けず bgcolor 変化のみ。 */
+const listItemSx = {
+  "&:hover": { bgcolor: "action.hover", cursor: "pointer" },
+  transition: "background-color 150ms ease-out",
+} as const;
+
 /** sort ごとの画面見出し。 */
 const FEED_HEADING: Record<HomeFeedSort, string> = {
   latest: "ホームフィード",
@@ -76,38 +82,43 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
         <WelcomeSection communities={Array.isArray(communities) ? communities : []} />
       )}
       {hasPosts && (
-        <Box>
+        <Box sx={{ borderTop: "1px solid", borderColor: "divider" }}>
           {posts.map((post) => {
             const community = communityById.get(post.community_id);
             return (
-              <RouterLink
+              <Box
                 key={post.id}
-                to="/posts/$postId"
-                params={{ postId: post.id }}
-                style={{ display: "block", textDecoration: "none", color: "inherit" }}
+                sx={listItemSx}
               >
-                <PostCard
-                  post={post}
-                  onVote={(direction: VoteDirection) =>
-                    votePost({ postId: post.id, direction })
-                  }
-                  voteDisabled={isVotingPost}
-                  voteStopPropagation
-                  truncateText
-                  community={community}
-                  currentVote={post.my_vote ?? null}
-                  onCommunityClick={
-                    community
-                      ? () => void navigate({ to: "/communities/$slug", params: { slug: community.slug } })
-                      : undefined
-                  }
-                  onCommentClick={
-                    post.comment_count
-                      ? () => void navigate({ to: "/posts/$postId", params: { postId: post.id }, hash: "comments" })
-                      : undefined
-                  }
-                />
-              </RouterLink>
+                <RouterLink
+                  to="/posts/$postId"
+                  params={{ postId: post.id }}
+                  style={{ display: "block", textDecoration: "none", color: "inherit" }}
+                >
+                  <PostCard
+                    post={post}
+                    onVote={(direction: VoteDirection) =>
+                      votePost({ postId: post.id, direction })
+                    }
+                    voteDisabled={isVotingPost}
+                    voteStopPropagation
+                    truncateText
+                    variant="list"
+                    community={community}
+                    currentVote={post.my_vote ?? null}
+                    onCommunityClick={
+                      community
+                        ? () => void navigate({ to: "/communities/$slug", params: { slug: community.slug } })
+                        : undefined
+                    }
+                    onCommentClick={
+                      post.comment_count
+                        ? () => void navigate({ to: "/posts/$postId", params: { postId: post.id }, hash: "comments" })
+                        : undefined
+                    }
+                  />
+                </RouterLink>
+              </Box>
             );
           })}
           <Box ref={sentinelRef} sx={{ py: 1 }}>

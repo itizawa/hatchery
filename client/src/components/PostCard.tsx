@@ -52,6 +52,12 @@ type PostCardProps =
       onCommunityClick?: () => void;
       /** コメント数 Chip クリック時のコールバック。指定時はクリック可能になる。 */
       onCommentClick?: () => void;
+      /**
+       * カード表示（デフォルト）またはフラットリスト表示を選択する（#834）。
+       * "card": 現行スタイル（border + bgcolor: background.paper + borderRadius + mb）。
+       * "list": 外枠カードスタイルを除去し、border-bottom のみの区切り線スタイル。
+       */
+      variant?: "card" | "list";
     };
 
 /**
@@ -91,14 +97,21 @@ const CommunityByline = ({
   );
 };
 
-/** 外枠 Box のスタイル（loading / 通常で共通）。 */
-const outerBoxSx = {
+/** 外枠 Box のスタイル — card バリアント（デフォルト / loading Skeleton でも使用）。 */
+const cardBoxSx = {
   border: "1px solid",
   borderColor: "divider",
   borderRadius: 1,
   p: 2,
   bgcolor: "background.paper",
   mb: 1,
+} as const;
+
+/** 外枠 Box のスタイル — list バリアント（フラットリスト・#834）。 */
+const listBoxSx = {
+  borderBottom: "1px solid",
+  borderColor: "divider",
+  p: 2,
 } as const;
 
 /**
@@ -110,7 +123,7 @@ const outerBoxSx = {
 export const PostCard = (props: PostCardProps): ReactElement => {
   if (props.loading) {
     return (
-      <Box sx={outerBoxSx}>
+      <Box sx={cardBoxSx}>
         {/* タイトル相当 */}
         <Skeleton variant="text" width="70%" sx={{ mb: 0.5 }} />
         {/* byline 相当 */}
@@ -136,6 +149,7 @@ export const PostCard = (props: PostCardProps): ReactElement => {
     community,
     onCommunityClick,
     onCommentClick,
+    variant = "card",
   } = props;
 
   // comment_count はサーバ集計値（#500）。未指定（後方互換）は 0 として扱う。
@@ -150,7 +164,7 @@ export const PostCard = (props: PostCardProps): ReactElement => {
     : undefined;
 
   return (
-    <Box sx={outerBoxSx}>
+    <Box sx={variant === "list" ? listBoxSx : cardBoxSx} data-variant={variant}>
       <Typography
         variant="h6"
         component="h3"

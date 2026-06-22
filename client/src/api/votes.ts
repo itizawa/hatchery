@@ -82,7 +82,29 @@ export async function voteComment({
   return data;
 }
 
-/** post への vote ミューテーションフック。楽観更新 + キャッシュ無効化（ADR-0025 / #777）。 */
+type HomeFeedPage = { posts: Post[]; nextCursor: string | null };
+type HomeFeedData = { pages: HomeFeedPage[]; pageParams: unknown[] };
+
+/** post の score/up_count/my_vote を toggle off / switch を考慮して楽観更新した値を返す。 */
+function calcOptimisticPostVote({
+  post,
+  direction,
+}: {
+  post: Pick<Post, "score" | "up_count" | "my_vote">;
+  direction: VoteDirection;
+}): Pick<Post, "score" | "up_count" | "my_vote"> {
+  const prevMyVote = post.my_vote ?? null;
+  const newMyVote = prevMyVote === direction ? null : direction;
+  const prevScoreVal = prevMyVote === "up" ? 1 : prevMyVote === "down" ? -1 : 0;
+  const newScoreVal = newMyVote === "up" ? 1 : newMyVote === "down" ? -1 : 0;
+  return {
+    score: post.score + (newScoreVal - prevScoreVal),
+    up_count: post.up_count + (newMyVote === "up" ? 1 : 0) - (prevMyVote === "up" ? 1 : 0),
+    my_vote: newMyVote,
+  };
+}
+
+/** post への vote ミューテーションフック。楽観更新 + キャッシュ無効化（ADR-0025 / #777 / #872）。 */
 export function useVotePost(communitySlug?: string) {
   const queryClient = useQueryClient();
   const { data: authUser } = useAuth();
@@ -93,51 +115,114 @@ export function useVotePost(communitySlug?: string) {
     mutationFn: ({ postId, direction }: { postId: string; direction: VoteDirection }) =>
       votePost({ postId, direction, sessionId }),
     onMutate: async ({ postId, direction }: { postId: string; direction: VoteDirection }) => {
-      // 楽観更新: スレッドキャッシュの score / up_count / my_vote を更新（#814 / #831）。
-      // up_count は up 押下で +1、down 押下で変化なし（0）とする近似値。
-      // 正確な値は onSettled の invalidate 後にサーバ応答で修正される。
       const threadKey = postThreadQueryKey(postId);
-      await queryClient.cancelQueries({ queryKey: threadKey });
-      const previous = queryClient.getQueryData<{ post: Post; comments: Comment[] }>(threadKey);
-      if (previous) {
-        // toggle off: 同じ方向を再度押したらニュートラル（null）に戻す（#831）。
-        const prevMyVote = previous.post.my_vote ?? null;
-        const newMyVote = prevMyVote === direction ? null : direction;
-        // score / up_count は prevMyVote → newMyVote の遷移から正確に算出する（#831 レビュー指摘）。
-        const prevScoreVal = prevMyVote === "up" ? 1 : prevMyVote === "down" ? -1 : 0;
-        const newScoreVal = newMyVote === "up" ? 1 : newMyVote === "down" ? -1 : 0;
+      const homeFeedPrefix = homeFeedQueryKeyPrefix();
+      await Promise.all([
+        queryClient.cancelQueries({ queryKey: threadKey }),
+        queryClient.cancelQueries({ queryKey: homeFeedPrefix }),
+        ...(communitySlug ? [queryClient.cancelQueries({ queryKey: communityFeedQueryKey(communitySlug) })] : []),
+      ]);
+
+      // スレッドキャッシュを楽観更新（#814 / #831）。
+      const previousThread = queryClient.getQueryData<{ post: Post; comments: Comment[] }>(threadKey);
+      if (previousThread) {
+        const optimistic = calcOptimisticPostVote({ post: previousThread.post, direction });
         queryClient.setQueryData(threadKey, {
-          ...previous,
-          post: {
-            ...previous.post,
-            score: previous.post.score + (newScoreVal - prevScoreVal),
-            up_count: previous.post.up_count + (newMyVote === "up" ? 1 : 0) - (prevMyVote === "up" ? 1 : 0),
-            my_vote: newMyVote,
-          },
+          ...previousThread,
+          post: { ...previousThread.post, ...optimistic },
         });
       }
-      return { previous, postId };
+
+      // ホームフィードキャッシュを楽観更新（#872）。全 sort キーを一括更新。
+      const previousHomeFeedEntries = queryClient.getQueriesData<HomeFeedData>({ queryKey: homeFeedPrefix });
+      for (const [queryKey, data] of previousHomeFeedEntries) {
+        if (!data) continue;
+        queryClient.setQueryData<HomeFeedData>(queryKey, {
+          ...data,
+          pages: data.pages.map((page) => ({
+            ...page,
+            posts: page.posts.map((p) =>
+              p.id === postId ? { ...p, ...calcOptimisticPostVote({ post: p, direction }) } : p,
+            ),
+          })),
+        });
+      }
+
+      // コミュニティフィードキャッシュを楽観更新（#872）。
+      const previousCommunityFeed = communitySlug
+        ? queryClient.getQueryData<Post[]>(communityFeedQueryKey(communitySlug))
+        : undefined;
+      if (communitySlug && previousCommunityFeed) {
+        queryClient.setQueryData<Post[]>(
+          communityFeedQueryKey(communitySlug),
+          previousCommunityFeed.map((p) =>
+            p.id === postId ? { ...p, ...calcOptimisticPostVote({ post: p, direction }) } : p,
+          ),
+        );
+      }
+
+      return { previousThread, previousHomeFeedEntries, previousCommunityFeed, postId };
     },
     // eslint-disable-next-line max-params
     onError: (_err, { postId }, context) => {
-      if (context?.previous) {
-        queryClient.setQueryData(postThreadQueryKey(postId), context.previous);
+      if (context?.previousThread) {
+        queryClient.setQueryData(postThreadQueryKey(postId), context.previousThread);
+      }
+      if (context?.previousHomeFeedEntries) {
+        for (const [queryKey, data] of context.previousHomeFeedEntries) {
+          queryClient.setQueryData(queryKey, data);
+        }
+      }
+      if (communitySlug && context?.previousCommunityFeed !== undefined) {
+        queryClient.setQueryData(communityFeedQueryKey(communitySlug), context.previousCommunityFeed);
       }
     },
     // eslint-disable-next-line max-params
     onSuccess: (serverPost, { postId }) => {
-      // POST vote レスポンス（my_vote 込みの確定値）でスレッドキャッシュを更新する（#853）。
+      // スレッドキャッシュをサーバ確定値で更新する（#853）。
       const threadKey = postThreadQueryKey(postId);
-      const current = queryClient.getQueryData<{ post: Post; comments: Comment[] }>(threadKey);
-      if (current) {
+      const currentThread = queryClient.getQueryData<{ post: Post; comments: Comment[] }>(threadKey);
+      if (currentThread) {
         queryClient.setQueryData(threadKey, {
-          ...current,
-          post: { ...current.post, score: serverPost.score, up_count: serverPost.up_count, my_vote: serverPost.my_vote ?? null },
+          ...currentThread,
+          post: { ...currentThread.post, score: serverPost.score, up_count: serverPost.up_count, my_vote: serverPost.my_vote ?? null },
         });
+      }
+
+      // ホームフィードキャッシュをサーバ確定値で更新する（#872）。
+      const homeFeedEntries = queryClient.getQueriesData<HomeFeedData>({ queryKey: homeFeedQueryKeyPrefix() });
+      for (const [queryKey, data] of homeFeedEntries) {
+        if (!data) continue;
+        queryClient.setQueryData<HomeFeedData>(queryKey, {
+          ...data,
+          pages: data.pages.map((page) => ({
+            ...page,
+            posts: page.posts.map((p) =>
+              p.id === postId
+                ? { ...p, score: serverPost.score, up_count: serverPost.up_count, my_vote: serverPost.my_vote ?? null }
+                : p,
+            ),
+          })),
+        });
+      }
+
+      // コミュニティフィードキャッシュをサーバ確定値で更新する（#872）。
+      if (communitySlug) {
+        const currentCommunityFeed = queryClient.getQueryData<Post[]>(communityFeedQueryKey(communitySlug));
+        if (currentCommunityFeed) {
+          queryClient.setQueryData<Post[]>(
+            communityFeedQueryKey(communitySlug),
+            currentCommunityFeed.map((p) =>
+              p.id === postId
+                ? { ...p, score: serverPost.score, up_count: serverPost.up_count, my_vote: serverPost.my_vote ?? null }
+                : p,
+            ),
+          );
+        }
       }
     },
     onSettled: () => {
-      // postThreadQueryKey は onSuccess で確定値を直接書き込む（#853）。feed/community は invalidate を維持。
+      // postThreadQueryKey は onSuccess で確定値を直接書き込む（#853 / #872）。feed/community は invalidate を維持。
       if (communitySlug) {
         void queryClient.invalidateQueries({ queryKey: communityFeedQueryKey(communitySlug) });
       }

@@ -61,6 +61,7 @@ export const CommunityHeader = ({ community, actions }: CommunityHeaderProps): R
           sx={{
             width: ICON_SIZE,
             height: ICON_SIZE,
+            flexShrink: 0,
             border: "4px solid",
             borderColor: "background.default",
             bgcolor: "primary.main",
@@ -76,7 +77,6 @@ export const CommunityHeader = ({ community, actions }: CommunityHeaderProps): R
         )}
       </Box>
 
-      {/* コミュニティ名・説明（カバー画像の下に配置し可読性を確保） */}
       <Box
         data-testid="community-name-section"
         sx={{ px: { xs: 1, sm: 2 }, pt: 1 }}

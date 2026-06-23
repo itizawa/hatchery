@@ -256,9 +256,9 @@ describe("runPostBatch (#672)", () => {
     expect(updatedCount).toBeGreaterThan(0);
   });
 
-  it("POST_COUNT_MIN / POST_COUNT_MAX の定数が 1 / 3 である", () => {
+  it("POST_COUNT_MIN / POST_COUNT_MAX の定数が 1 / 1 である（コミュニティごとに 1 件固定）", () => {
     expect(POST_COUNT_MIN).toBe(1);
-    expect(POST_COUNT_MAX).toBe(3);
+    expect(POST_COUNT_MAX).toBe(1);
   });
 
   it("DEFAULT_POST_DRIP_WINDOW_MS は 24h（86400000ms）である", () => {

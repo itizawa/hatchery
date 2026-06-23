@@ -29,8 +29,8 @@ import { assignDripTimestamps } from "./assignDripTimestamps.js";
 /** 1 定時あたりの post 最小件数（#672）。 */
 export const POST_COUNT_MIN = 1;
 
-/** 1 定時あたりの post 最大件数（#672）。 */
-export const POST_COUNT_MAX = 3;
+/** 1 定時あたりの post 最大件数（#672）。コミュニティごとに必ず 1 件のみ生成する。 */
+export const POST_COUNT_MAX = 1;
 
 /**
  * post バッチのデフォルトドリップ窓（ms）（#672）。

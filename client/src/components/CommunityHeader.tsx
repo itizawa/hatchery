@@ -1,6 +1,6 @@
 import type { ReactElement, ReactNode } from "react";
 
-import { Avatar, Box, Stack, Typography } from "./uiParts";
+import { Avatar, Box, Typography } from "./uiParts";
 import type { Community } from "../api/communities.js";
 
 interface CommunityHeaderProps {
@@ -14,10 +14,10 @@ const ICON_SIZE = 88;
 
 /**
  * コミュニティ詳細の Reddit 風ヘッダー（#457）。
- * 上部にカバー画像を表示し、その左下に丸いアイコンを重ねて name を並べる。
+ * 上部にカバー画像を表示し、その左下に丸いアイコンを重ねる。
+ * コミュニティ名・説明はアイコン行の下（カバー画像と重ならない位置）に配置する（#870）。
  * - coverUrl 未設定: テーマ色のプレースホルダ矩形。
  * - iconUrl 未設定: name 頭文字の MUI Avatar フォールバック。
- * いずれの未設定パターンでもレイアウトが崩れない。
  */
 export const CommunityHeader = ({ community, actions }: CommunityHeaderProps): ReactElement => {
   const { name, iconUrl, coverUrl, description } = community;
@@ -45,51 +45,53 @@ export const CommunityHeader = ({ community, actions }: CommunityHeaderProps): R
         )}
       </Box>
 
-      {/* アイコン（カバーの左下に重ねる）＋ name ＋ アクション */}
+      {/* アイコン（カバーの左下に重ねる）＋ アクション */}
       <Box
         sx={{
           display: "flex",
           alignItems: "flex-end",
           justifyContent: "space-between",
-          gap: 2,
           px: { xs: 1, sm: 2 },
           mt: `-${ICON_SIZE / 2}px`,
         }}
       >
-        <Stack direction="row" spacing={2} sx={{ alignItems: "flex-end", minWidth: 0 }}>
-          <Avatar
-            src={iconUrl ?? undefined}
-            alt={name}
-            sx={{
-              width: ICON_SIZE,
-              height: ICON_SIZE,
-              border: "4px solid",
-              borderColor: "background.default",
-              bgcolor: "primary.main",
-              fontSize: 32,
-            }}
-          >
-            {name[0]}
-          </Avatar>
-          <Box sx={{ minWidth: 0, pb: 0.5 }}>
-            <Typography variant="h5" component="h1" sx={{ wordBreak: "break-word" }}>
-              {name}
-            </Typography>
-            {description && (
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{ display: { xs: "none", sm: "block" } }}
-              >
-                {description}
-              </Typography>
-            )}
-          </Box>
-        </Stack>
+        <Avatar
+          src={iconUrl ?? undefined}
+          alt={name}
+          sx={{
+            width: ICON_SIZE,
+            height: ICON_SIZE,
+            border: "4px solid",
+            borderColor: "background.default",
+            bgcolor: "primary.main",
+            fontSize: 32,
+          }}
+        >
+          {name[0]}
+        </Avatar>
         {actions && (
           <Box sx={{ flexShrink: 0, pb: 0.5 }}>
             {actions}
           </Box>
+        )}
+      </Box>
+
+      {/* コミュニティ名・説明（カバー画像の下に配置し可読性を確保） */}
+      <Box
+        data-testid="community-name-section"
+        sx={{ px: { xs: 1, sm: 2 }, pt: 1 }}
+      >
+        <Typography variant="h5" component="h1" sx={{ wordBreak: "break-word" }}>
+          {name}
+        </Typography>
+        {description && (
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={{ display: { xs: "none", sm: "block" } }}
+          >
+            {description}
+          </Typography>
         )}
       </Box>
     </Box>

@@ -386,3 +386,53 @@ describe("PostThreadScene コミュニティパンくず アイコン追加 (#78
     expect(link).toHaveAttribute("href", "/communities/$slug");
   });
 });
+
+// #861: コメントリンクをクリップボードにコピー＆自動スクロール。
+describe("PostThreadScene コメントアンカー＆自動スクロール (#861)", () => {
+  it("コメントの wrapper div に id='comment-{comment.id}' が付与されている", async () => {
+    server.use(
+      http.get("/api/posts/:postId", () =>
+        HttpResponse.json({ post: mockPosts[0], comments: mockComments }),
+      ),
+    );
+    const { container } = render(<BoundedScene />, { wrapper: Wrapper });
+
+    await screen.findByText("いい一日になりそうですね！");
+    expect(container.querySelector("#comment-comment-1")).toBeInTheDocument();
+    expect(container.querySelector("#comment-comment-2")).toBeInTheDocument();
+  });
+
+  it("URL ハッシュが #comment-{id} のとき、コメントロード後に scrollIntoView が呼ばれる", async () => {
+    const scrollIntoViewMock = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoViewMock;
+    const originalHash = window.location.hash;
+    window.location.hash = "#comment-comment-1";
+
+    server.use(
+      http.get("/api/posts/:postId", () =>
+        HttpResponse.json({ post: mockPosts[0], comments: mockComments }),
+      ),
+    );
+    render(<BoundedScene />, { wrapper: Wrapper });
+
+    await screen.findByText("いい一日になりそうですね！");
+    expect(scrollIntoViewMock).toHaveBeenCalledWith({ behavior: "smooth", block: "center" });
+
+    window.location.hash = originalHash;
+  });
+
+  it("URL ハッシュが #comment-{存在しない id} のとき、エラーを throw しない", async () => {
+    const originalHash = window.location.hash;
+    window.location.hash = "#comment-no-such-id";
+
+    server.use(
+      http.get("/api/posts/:postId", () =>
+        HttpResponse.json({ post: mockPosts[0], comments: mockComments }),
+      ),
+    );
+    render(<BoundedScene />, { wrapper: Wrapper });
+    await screen.findByText("いい一日になりそうですね！");
+
+    window.location.hash = originalHash;
+  });
+});

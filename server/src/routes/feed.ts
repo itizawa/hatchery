@@ -50,8 +50,8 @@ export function createFeedRouter({
     fetchPage
       .then(async (result) => {
         const enriched = await attachAuthorWorker(result.posts, workerRepo);
-        // 各 post にコメント件数を付与する（N+1 回避・#500）。
-        const withCounts = await attachCommentCount(enriched, commentRepo);
+        // 各 post にコメント件数を付与する（N+1 回避・#500 / reveal フィルタ #875）。
+        const withCounts = await attachCommentCount(enriched, commentRepo, { now });
         // sessionId があれば投票状態を一括取得して付与する（#831）。
         if (sessionId) {
           const voteMap = await voteRepo.findVotesBySessionAndTargets({

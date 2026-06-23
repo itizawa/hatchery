@@ -91,6 +91,45 @@ describe("createInMemoryCommentRepository", () => {
       expect(counts.get("post-1")).toBe(1);
       expect(counts.has("post-other")).toBe(false);
     });
+
+    it("now を渡すと createdAt > now のコメントは件数に含まれない（#875）", async () => {
+      const repo = createInMemoryCommentRepository();
+      const past = new Date(Date.now() - 10_000);
+      const future = new Date(Date.now() + 60_000);
+      await repo.createMany("community-1", [
+        { postId: "post-1", slotKey: "s", seq: 0, author: "w", text: "past", createdAt: past },
+        { postId: "post-1", slotKey: "s", seq: 1, author: "w", text: "future", createdAt: future },
+      ]);
+      const now = new Date();
+      const counts = await repo.countByPostIds(["post-1"], { now });
+      expect(counts.get("post-1")).toBe(1);
+    });
+
+    it("now を渡さないと全件集計（後方互換・#875）", async () => {
+      const repo = createInMemoryCommentRepository();
+      const future = new Date(Date.now() + 60_000);
+      await repo.createMany("community-1", [
+        { postId: "post-1", slotKey: "s", seq: 0, author: "w", text: "c1" },
+        { postId: "post-1", slotKey: "s", seq: 1, author: "w", text: "future", createdAt: future },
+      ]);
+      const counts = await repo.countByPostIds(["post-1"]);
+      expect(counts.get("post-1")).toBe(2);
+    });
+
+    it("過去・未来混在の複数 post に対して now フィルタが正確に適用される（#875）", async () => {
+      const repo = createInMemoryCommentRepository();
+      const past = new Date(Date.now() - 10_000);
+      const future = new Date(Date.now() + 60_000);
+      await repo.createMany("community-1", [
+        { postId: "post-1", slotKey: "s", seq: 0, author: "w", text: "p1-past", createdAt: past },
+        { postId: "post-1", slotKey: "s", seq: 1, author: "w", text: "p1-future", createdAt: future },
+        { postId: "post-2", slotKey: "s", seq: 2, author: "w", text: "p2-future", createdAt: future },
+      ]);
+      const now = new Date();
+      const counts = await repo.countByPostIds(["post-1", "post-2"], { now });
+      expect(counts.get("post-1")).toBe(1);
+      expect(counts.has("post-2")).toBe(false);
+    });
   });
 
   describe("findById", () => {

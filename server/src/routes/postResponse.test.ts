@@ -12,7 +12,6 @@ const basePost: PostRecord = {
   title: "テスト投稿",
   text: "本文",
   score: 3,
-  upCount: 5,
   createdAt: new Date("2026-06-01T09:00:00Z"),
 };
 
@@ -25,7 +24,6 @@ const baseComment: CommentRecord = {
   author: "worker-2",
   text: "コメント本文",
   score: 1,
-  upCount: 2,
   createdAt: new Date("2026-06-01T09:01:00Z"),
   parentCommentId: null,
 };
@@ -36,11 +34,6 @@ describe("toPostResponse", () => {
     expect(result.id).toBe("post-1");
     expect(result.community_id).toBe("comm-1");
     expect(result.score).toBe(3);
-  });
-
-  it("up_count を返す（#814）", () => {
-    const result = toPostResponse(basePost);
-    expect(result.up_count).toBe(5);
   });
 
   it("my_vote='up' のとき my_vote フィールドを含む（#831）", () => {
@@ -70,11 +63,6 @@ describe("toCommentResponse", () => {
     expect(result.id).toBe("comment-1");
     expect(result.post_id).toBe("post-1");
     expect(result.score).toBe(1);
-  });
-
-  it("up_count を返す（#814）", () => {
-    const result = toCommentResponse(baseComment);
-    expect(result.up_count).toBe(2);
   });
 
   it("my_vote='up' のとき my_vote フィールドを含む（#831）", () => {

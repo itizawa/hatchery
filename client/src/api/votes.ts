@@ -85,23 +85,22 @@ export async function voteComment({
 type HomeFeedPage = { posts: Post[]; nextCursor: string | null };
 type HomeFeedData = { pages: HomeFeedPage[]; pageParams: unknown[] };
 
-type VoteFields = { score: number; up_count: number; my_vote?: "up" | "down" | null };
+type VoteFields = { score: number; my_vote?: "up" | "down" | null };
 
-/** score/up_count/my_vote を toggle off / switch を考慮して楽観更新した値を返す（post / comment 共通）。 */
+/** score/my_vote を toggle off / switch を考慮して楽観更新した値を返す（post / comment 共通）。 */
 function calcOptimisticPostVote({
   post,
   direction,
 }: {
   post: VoteFields;
   direction: VoteDirection;
-}): { score: number; up_count: number; my_vote: "up" | "down" | null } {
+}): { score: number; my_vote: "up" | "down" | null } {
   const prevMyVote = post.my_vote ?? null;
   const newMyVote = prevMyVote === direction ? null : direction;
   const prevScoreVal = prevMyVote === "up" ? 1 : prevMyVote === "down" ? -1 : 0;
   const newScoreVal = newMyVote === "up" ? 1 : newMyVote === "down" ? -1 : 0;
   return {
     score: post.score + (newScoreVal - prevScoreVal),
-    up_count: post.up_count + (newMyVote === "up" ? 1 : 0) - (prevMyVote === "up" ? 1 : 0),
     my_vote: newMyVote,
   };
 }
@@ -187,7 +186,7 @@ export function useVotePost(communitySlug?: string) {
       if (currentThread) {
         queryClient.setQueryData(threadKey, {
           ...currentThread,
-          post: { ...currentThread.post, score: serverPost.score, up_count: serverPost.up_count, my_vote: serverPost.my_vote ?? null },
+          post: { ...currentThread.post, score: serverPost.score, my_vote: serverPost.my_vote ?? null },
         });
       }
 
@@ -201,7 +200,7 @@ export function useVotePost(communitySlug?: string) {
             ...page,
             posts: page.posts.map((p) =>
               p.id === postId
-                ? { ...p, score: serverPost.score, up_count: serverPost.up_count, my_vote: serverPost.my_vote ?? null }
+                ? { ...p, score: serverPost.score, my_vote: serverPost.my_vote ?? null }
                 : p,
             ),
           })),
@@ -216,7 +215,7 @@ export function useVotePost(communitySlug?: string) {
             communityFeedQueryKey(communitySlug),
             currentCommunityFeed.map((p) =>
               p.id === postId
-                ? { ...p, score: serverPost.score, up_count: serverPost.up_count, my_vote: serverPost.my_vote ?? null }
+                ? { ...p, score: serverPost.score, my_vote: serverPost.my_vote ?? null }
                 : p,
             ),
           );
@@ -285,7 +284,7 @@ export function useVoteComment(postId: string) {
           ...current,
           comments: current.comments.map((c) =>
             c.id === commentId
-              ? { ...c, score: serverComment.score, up_count: serverComment.up_count, my_vote: serverComment.my_vote ?? null }
+              ? { ...c, score: serverComment.score, my_vote: serverComment.my_vote ?? null }
               : c,
           ),
         });

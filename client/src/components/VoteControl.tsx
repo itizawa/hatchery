@@ -8,8 +8,6 @@ export type { VoteDirection };
 
 interface VoteControlProps {
   score: number;
-  /** up vote の累計件数（#814）。渡した場合はこの値を表示する（score は内部用途で保持）。省略時は score を表示（後方互換）。 */
-  upCount?: number;
   onVote: (direction: VoteDirection) => void;
   currentVote?: VoteDirection | null;
   disabled?: boolean;
@@ -17,21 +15,19 @@ interface VoteControlProps {
 
 /**
  * up/down vote コントロール（ADR-0025 / #747）。
- * 1 つの pill コンテナ内に up・up件数・down を横並びで表示する。
+ * 1 つの pill コンテナ内に up・ネットスコア・down を横並びで表示する。
  * 投票済み（up/down）は Box 背景の塗りつぶしで明示（#813）。
  * 配色は Reddit 準拠: up=赤（#FF4500）/ down=青（#7193FF）（#854）。
  * アイコンは投票方向が solid、非投票方向が outline の自前 SVG を使用（#854）。
- * 表示数字は up vote の累計件数（up_count・#814）。down は表示数に影響しない。
- * score（ネット値）はランキング・重み付けに使われるが表示はしない。
+ * 表示数字は up − down のネットスコア（score・#856）。負値も表示する。
  */
 export const VoteControl = ({
   score,
-  upCount,
   onVote,
   currentVote = null,
   disabled = false,
 }: VoteControlProps): ReactElement => {
-  const displayCount = upCount ?? score;
+  const displayCount = score;
   const voted = currentVote ?? "none";
   const isVoted = currentVote !== null;
 

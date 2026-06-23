@@ -55,7 +55,7 @@ export interface VoteRepository {
     targetId: string;
     direction: VoteDirection;
     applyScore: (delta: number) => Promise<number | null>;
-  }): Promise<{ scoreDelta: number; upCountDelta: number; score: number | null; currentDirection: VoteDirection | null }>;
+  }): Promise<{ scoreDelta: number; score: number | null; currentDirection: VoteDirection | null }>;
 
   /**
    * 指定セッション・対象種別で複数 targetId の vote 状態を一括取得する（#831・N+1 回避）。
@@ -97,7 +97,7 @@ export function createInMemoryVoteRepository(): VoteRepository {
   }
 
   /**
-   * toggle/switch ロジックを in-memory records に適用し scoreDelta / upCountDelta / currentDirection を返す。
+   * toggle/switch ロジックを in-memory records に適用し scoreDelta / currentDirection を返す。
    * currentDirection: 操作後の vote 方向（toggle off 時は null）（#853）。
    */
   function applyMutation({
@@ -112,7 +112,7 @@ export function createInMemoryVoteRepository(): VoteRepository {
     targetType: VoteTargetType;
     targetId: string;
     direction: VoteDirection;
-  }): { scoreDelta: number; upCountDelta: number; currentDirection: VoteDirection | null } {
+  }): { scoreDelta: number; currentDirection: VoteDirection | null } {
     const existing = findExisting({ sessionId, targetType, targetId });
 
     if (!existing) {
@@ -125,17 +125,17 @@ export function createInMemoryVoteRepository(): VoteRepository {
         direction,
         createdAt: new Date(),
       });
-      return { scoreDelta: direction === "up" ? 1 : -1, upCountDelta: direction === "up" ? 1 : 0, currentDirection: direction };
+      return { scoreDelta: direction === "up" ? 1 : -1, currentDirection: direction };
     }
 
     if (existing.direction === direction) {
       const idx = records.indexOf(existing);
       records.splice(idx, 1);
-      return { scoreDelta: direction === "up" ? -1 : 1, upCountDelta: direction === "up" ? -1 : 0, currentDirection: null };
+      return { scoreDelta: direction === "up" ? -1 : 1, currentDirection: null };
     }
 
     existing.direction = direction;
-    return { scoreDelta: direction === "up" ? 2 : -2, upCountDelta: direction === "up" ? 1 : -1, currentDirection: direction };
+    return { scoreDelta: direction === "up" ? 2 : -2, currentDirection: direction };
   }
 
   return {
@@ -149,9 +149,9 @@ export function createInMemoryVoteRepository(): VoteRepository {
     },
 
     async voteAndApplyScore({ sessionId, userId, targetType, targetId, direction, applyScore }) {
-      const { scoreDelta, upCountDelta, currentDirection } = applyMutation({ sessionId, userId, targetType, targetId, direction });
+      const { scoreDelta, currentDirection } = applyMutation({ sessionId, userId, targetType, targetId, direction });
       const score = await applyScore(scoreDelta);
-      return { scoreDelta, upCountDelta, score, currentDirection };
+      return { scoreDelta, score, currentDirection };
     },
 
     async findVotesBySessionAndTargets({ sessionId, targetType, targetIds }) {

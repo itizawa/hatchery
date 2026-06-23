@@ -151,8 +151,6 @@ model Post {
   text        String
   /// up vote の累積数（ADR-0019）。生成出力には含めない。
   score       Int       @default(0)
-  /// up vote の累計件数（#814）。vote トランザクション内で増減する内部集計値。生成出力には含めない。
-  upCount     Int       @default(0)
   /// 累積閲覧数（#665 / ADR-0032）。PageView の新規挿入時に +1 する。
   viewCount   Int       @default(0)
   createdAt   DateTime  @default(now())
@@ -184,8 +182,6 @@ model Comment {
   text        String
   /// up vote の累積数（ADR-0019）。生成出力には含めない。
   score       Int       @default(0)
-  /// up vote の累計件数（#814）。vote トランザクション内で増減する内部集計値。生成出力には含めない。
-  upCount     Int       @default(0)
   /// 累積閲覧数（#665 / ADR-0032）。PageView の新規挿入時に +1 する。
   viewCount   Int       @default(0)
   createdAt   DateTime  @default(now())

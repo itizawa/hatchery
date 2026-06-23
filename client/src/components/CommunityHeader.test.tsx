@@ -22,6 +22,18 @@ describe("CommunityHeader（#457 Reddit 風ヘッダー）", () => {
     expect(screen.getByRole("heading", { name: "テクノロジー" })).toBeInTheDocument();
   });
 
+  it("コミュニティ名は community-name-section コンテナ内に配置される（カバー画像と重ならない）", () => {
+    render(<CommunityHeader community={baseCommunity} />);
+    const section = screen.getByTestId("community-name-section");
+    const heading = screen.getByRole("heading", { name: "テクノロジー" });
+    expect(section).toContainElement(heading);
+  });
+
+  it("actions が指定されたときコンテナ内にレンダリングされる", () => {
+    render(<CommunityHeader community={baseCommunity} actions={<button>購読</button>} />);
+    expect(screen.getByRole("button", { name: "購読" })).toBeInTheDocument();
+  });
+
   it("iconUrl があればアイコン画像を表示する", () => {
     render(
       <CommunityHeader

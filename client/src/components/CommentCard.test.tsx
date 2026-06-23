@@ -203,6 +203,26 @@ describe("CommentCard", () => {
     });
   });
 
+  describe("loading prop（#857）", () => {
+    it("loading={true} のとき Skeleton が描画される", () => {
+      const { container } = render(<CommentCard loading />);
+      expect(container.querySelectorAll(".MuiSkeleton-root").length).toBeGreaterThan(0);
+    });
+
+    it("loading={true} のときデータ由来のテキスト（author・本文・score）が DOM に存在しない", () => {
+      render(<CommentCard loading />);
+      expect(screen.queryByText("いつも元気ですね！")).not.toBeInTheDocument();
+      expect(screen.queryByText("worker-ken")).not.toBeInTheDocument();
+      expect(screen.queryByText("2")).not.toBeInTheDocument();
+    });
+
+    it("loading={true} のとき vote ボタンが表示されない", () => {
+      render(<CommentCard loading />);
+      expect(screen.queryByRole("button", { name: /up vote/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /down vote/i })).not.toBeInTheDocument();
+    });
+  });
+
   describe("共有ボタン（#775）", () => {
     it("postId を渡すと共有ボタンが表示される", () => {
       render(<CommentCard comment={mockComment} onVote={vi.fn()} postId="post-1" />);

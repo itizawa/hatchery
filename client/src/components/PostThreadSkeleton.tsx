@@ -2,27 +2,17 @@ import { Box, Skeleton } from "./uiParts";
 import type { ReactElement } from "react";
 import { PostCard } from "./PostCard.js";
 import { CommunitySidebarCard } from "./CommunitySidebarCard.js";
+import { CommentCard } from "./CommentCard.js";
 
 /**
- * 投稿スレッド（/posts/$postId）のローディングスケルトン（#409 / #462 / #692 / #807）。
+ * 投稿スレッド（/posts/$postId）のローディングスケルトン（#409 / #462 / #692 / #807 / #857）。
  * usePostThread の Suspense fallback として PostThreadScene の 2 カラム構造を維持したまま表示する。
  * `data-testid="post-thread-skeleton"` でテストから検出できる。
  * #692: PostThreadScene の実 UI レイアウトと一致させ、ローディング中の CLS を最小化する。
  * #807: PostCard / CommunitySidebarCard の loading prop を使い、Skeleton 専用の手書きレイアウトを廃止。
  *       レイアウトの単一情報源を実 UI コンポーネントに統一する。
+ * #857: CommentCard の loading prop を使い、手書き CommentCardSkeleton を廃止。
  */
-
-/**
- * コメントカード相当のスケルトン 1 件。
- * CommentCard は #807 のスコープ外のため、PostCard / CommunitySidebarCard と異なり
- * loading prop を持たない。CommentCard に loading prop を追加する場合は別 Issue で対応する。
- */
-const CommentCardSkeleton = (): ReactElement => (
-  <Box sx={{ mb: 1 }}>
-    <Skeleton variant="rectangular" height={80} sx={{ borderRadius: 1, mb: 0.5 }} />
-    <Skeleton variant="text" width="60%" />
-  </Box>
-);
 
 export const PostThreadSkeleton = (): ReactElement => (
   <Box
@@ -37,11 +27,11 @@ export const PostThreadSkeleton = (): ReactElement => (
         <Skeleton variant="text" width={80} sx={{ mb: 1 }} />
         {/* PostCard（loading 状態）相当（#692 受け入れ条件 2 / #807） */}
         <PostCard loading />
-        {/* コメントセクション相当（#692 受け入れ条件 3） */}
+        {/* コメントセクション相当（#692 受け入れ条件 3 / #857） */}
         <Box sx={{ mt: 2 }}>
           <Skeleton variant="text" width={80} sx={{ mb: 1 }} />
-          <CommentCardSkeleton />
-          <CommentCardSkeleton />
+          <CommentCard loading />
+          <CommentCard loading />
         </Box>
       </Box>
       {/* 右カラム: CommunitySidebarCard（loading 状態）相当（#692 受け入れ条件 4 / #807） */}

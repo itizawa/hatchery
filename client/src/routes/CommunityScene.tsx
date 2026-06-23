@@ -26,7 +26,7 @@ import type { Community } from "../api/communities.js";
 /**
  * 最近投稿したワーカーパネル（#207）。
  * #462: useRecentWorkers は Suspense 化。ローディング/エラーは局所 QueryBoundary に委譲し、
- * コミュニティ本体（feed など）と独立して描画する。
+ * コミュニティ本体（feed 等）と独立して描画する。
  */
 const RecentWorkersPanel = ({ slug }: { slug: string }): ReactElement => {
   const { data: recentWorkers } = useRecentWorkers(slug);
@@ -41,7 +41,7 @@ const listItemSx = {
 
 /**
  * コミュニティが実在する場合のみレンダーされる内側コンポーネント。
- * useCommunityFeed など、コミュニティ存在を前提とするフックをここに集約する（#524）。
+ * useCommunityFeed 等、コミュニティ存在を前提とするフックをここに集約する（#524）。
  * 存在しない slug の場合は CommunityScene が早期リターンしてこのコンポーネントはレンダーされない。
  * #748: useVotePost の isPending を voteDisabled に渡し連打防止。
  */
@@ -58,7 +58,7 @@ const CommunityContent = ({
 
   const { mutate: subscribe, isPending: isSubscribing } = useSubscribe(communitySlug);
   const { mutate: unsubscribe, isPending: isUnsubscribing } = useUnsubscribe(communitySlug);
-  const { mutate: votePost, isPending: isVotingPost } = useVotePost(communitySlug);
+  const { mutate: votePost, isPending: isVotingPost, variables: votingPostVars } = useVotePost(communitySlug);
 
   const isSubscriptionPending = isSubscribing || isUnsubscribing;
 
@@ -116,7 +116,8 @@ const CommunityContent = ({
                           onVote={(direction: VoteDirection) =>
                             votePost({ postId: post.id, direction })
                           }
-                          voteDisabled={isVotingPost}
+                          upVoteDisabled={isVotingPost && votingPostVars?.direction === "up"}
+                          downVoteDisabled={isVotingPost && votingPostVars?.direction === "down"}
                           voteStopPropagation
                           truncateText
                           variant="list"
@@ -159,7 +160,7 @@ const CommunityContent = ({
                   最近投稿したワーカー
                 </Typography>
                 {/* #462: useRecentWorkers は Suspense 化。サイドバー内の局所 QueryBoundary で
-                    ローディング/エラーを分離し、ページ本体（feed など）と独立して描画する。 */}
+                    ローディング/エラーを分離し、ページ本体（feed 等）と独立して描画する。 */}
                 <Box sx={{ mb: 2 }}>
                   <QueryBoundary
                     fallback={
@@ -191,7 +192,7 @@ const CommunityContent = ({
  * ADR-0018 / Issue #370。
  * #462: usePublicCommunities・useCommunityFeed は Suspense 化（ローディング/エラーは router の QueryBoundary に委譲）。
  * useRecentWorkers はサイドバーの局所 QueryBoundary に委譲する。
- * #481: ゲストの vote 押下は guardVote で握りつぶさずログイン誘導する。
+ * #481: ゲストの vote 押下は guardVote で握りつぶさずログイン誦導する。
  * #524: 存在しない slug のとき「コミュニティが見つかりません」を表示する。
  * #748: vote 連打防止（isPending → voteDisabled）。
  */

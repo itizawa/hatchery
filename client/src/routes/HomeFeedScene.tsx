@@ -38,7 +38,7 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
   // ローディング/エラーは router の QueryBoundary に委譲する。
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteHomeFeed(sort);
   const { data: user } = useAuth();
-  const { mutate: votePost, isPending: isVotingPost } = useVotePost();
+  const { mutate: votePost, isPending: isVotingPost, variables: votingPostVars } = useVotePost();
   const navigate = useNavigate();
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
@@ -100,7 +100,8 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
                     onVote={(direction: VoteDirection) =>
                       votePost({ postId: post.id, direction })
                     }
-                    voteDisabled={isVotingPost}
+                    upVoteDisabled={isVotingPost && votingPostVars?.direction === "up"}
+                    downVoteDisabled={isVotingPost && votingPostVars?.direction === "down"}
                     voteStopPropagation
                     truncateText
                     variant="list"

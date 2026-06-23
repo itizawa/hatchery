@@ -196,7 +196,6 @@ export const PostCard = (props: PostCardProps): ReactElement => {
         <Box onClick={handleVoteClick}>
           <VoteControl
             score={post.score}
-            upCount={post.up_count}
             onVote={onVote}
             currentVote={currentVote}
             disabled={voteDisabled}

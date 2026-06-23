@@ -5,23 +5,17 @@ import { describe, expect, it, vi } from "vitest";
 import { VoteControl } from "./VoteControl";
 
 describe("VoteControl", () => {
-  it("up_count を中央に表示する（score ではなく up 件数を表示・#814）", () => {
-    render(<VoteControl score={-2} upCount={5} onVote={vi.fn()} />);
-    expect(screen.getByText("5")).toBeInTheDocument();
-    expect(screen.queryByText("-2")).not.toBeInTheDocument();
-  });
-
-  it("up_count が 0 でも表示する（#814）", () => {
-    render(<VoteControl score={3} upCount={0} onVote={vi.fn()} />);
-    expect(screen.getByText("0")).toBeInTheDocument();
-  });
-
-  it("score を中央に表示する（後方互換: upCount 省略時は score を表示）", () => {
+  it("score を中央に表示する", () => {
     render(<VoteControl score={5} onVote={vi.fn()} />);
     expect(screen.getByText("5")).toBeInTheDocument();
   });
 
-  it("score が負数でも表示する（後方互換）", () => {
+  it("score が負数（-2）でも表示する（#856）", () => {
+    render(<VoteControl score={-2} onVote={vi.fn()} />);
+    expect(screen.getByText("-2")).toBeInTheDocument();
+  });
+
+  it("score が負数（-3）でも表示する（#856）", () => {
     render(<VoteControl score={-3} onVote={vi.fn()} />);
     expect(screen.getByText("-3")).toBeInTheDocument();
   });

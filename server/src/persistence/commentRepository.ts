@@ -14,8 +14,6 @@ export interface CommentRecord {
   author: string;
   text: string;
   score: number;
-  /** up vote の累計件数（#814）。vote トランザクション内で増減する内部集計値。 */
-  upCount: number;
   createdAt: Date;
   /** 返信先コメント id（nullable）。#520 ネスト対応。トップレベルは null。 */
   parentCommentId: string | null;
@@ -120,7 +118,6 @@ export function createInMemoryCommentRepository(): CommentRepository {
           author: input.author,
           text: input.text,
           score: 0,
-          upCount: 0,
           createdAt: input.createdAt ?? new Date(),
           parentCommentId: input.parentCommentId ?? null,
         };

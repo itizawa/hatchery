@@ -14,8 +14,6 @@ export interface PostRecord {
   title: string;
   text: string;
   score: number;
-  /** up vote の累計件数（#814）。vote トランザクション内で増減する内部集計値。 */
-  upCount: number;
   createdAt: Date;
 }
 
@@ -232,7 +230,6 @@ export function createInMemoryPostRepository(): PostRepository {
           title: input.title,
           text: input.text,
           score: 0,
-          upCount: 0,
           createdAt: input.createdAt ?? new Date(),
         };
         records.push(record);

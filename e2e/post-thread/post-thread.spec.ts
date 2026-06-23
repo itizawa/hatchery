@@ -608,7 +608,7 @@ test.todo(
 );
 
 test.todo(
-  "UC-POST-21: vote ウィジェットに表示される数字は up vote の累計件数である（#814）",
+  "UC-POST-21: vote ウィジェットに表示される数字は up − down のネットスコアである（#856）",
 );
 
 test.todo(

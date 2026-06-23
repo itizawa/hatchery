@@ -31,7 +31,7 @@ export interface HomeFeedSceneProps {
  * ホームフィード（/ = 新着順 / /popular = 人気順）。
  * 購読状態・認証状態に関わらず全 community の post を表示する（ADR-0020 更新）。
  * #367: 無限スクロール（カーソルページネーション）対応。#435: 並び順パラメータ化。
- * #748: useVotePost の isPending を voteDisabled に渡し連打防止。
+ * #748: vote 連打防止。#890: 押した方向のみ disabled にし、反対方向は操作可能にする。
  */
 export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactElement => {
   // #462: useInfiniteHomeFeed は Suspense 化。data は non-undefined。

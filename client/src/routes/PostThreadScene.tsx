@@ -53,7 +53,7 @@ const SidebarSkeletonColumn = (): ReactElement => (
 );
 
 /**
- * 投稿スレッド左カラム上部のコミュニティパンくりリンク。
+ * 投稿スレッド左カラム上部のコミュニティパンくずりリンク。
  * usePublicCommunities は Suspense クエリのため QueryBoundary で包んで使う。
  * コミュニティが特定できない場合は null を返す。
  */
@@ -91,7 +91,7 @@ const CommunityBreadcrumb = ({ communityId }: { communityId: string }): ReactEle
  * 右サイドバー（post の所属コミュニティ詳細）。
  * #462: usePublicCommunities は Suspense 化。本文（usePostThread）と独立して描画できるよう
  * このコンポーネントを局所 QueryBoundary（fallback=サイドバースケルトン）で包む。
- * 所属コミュニティを特定できない場合は右カラムごと描画しない（従来振る舞いを維持）。
+ * 所属コミュニティを特定できない場合は右カラムごと描画しない（従来挙動を維持）。
  */
 const PostThreadSidebar = ({ communityId }: { communityId: string }): ReactElement | null => {
   const { data: communities } = usePublicCommunities();
@@ -131,15 +131,15 @@ const PostThreadSidebar = ({ communityId }: { communityId: string }): ReactEleme
 /**
  * コメントのツリーノードを再帰的に CommentCard としてレンダリングする（#520）。
  * depth に応じてコネクター線 + インデントが付く。
- * commentRef ラッパー div で IntersectionObserver による閉覧計測を行う（#665）。
+ * commentRef ラッパー div で IntersectionObserver による閲覧計測を行う（#665）。
  */
 function renderCommentTree({
   nodes,
   commentMap,
   onVote,
   commentRef,
-  upVoteDisabled,
-  downVoteDisabled,
+  pendingVoteCommentId,
+  pendingVoteDirection,
   postId,
 }: {
   nodes: CommentTreeNode[];
@@ -147,8 +147,8 @@ function renderCommentTree({
   // eslint-disable-next-line max-params
   onVote: (commentId: string, direction: VoteDirection) => void;
   commentRef: (commentId: string) => (el: HTMLElement | null) => void;
-  upVoteDisabled?: boolean;
-  downVoteDisabled?: boolean;
+  pendingVoteCommentId?: string;
+  pendingVoteDirection?: VoteDirection | null;
   postId: string;
 }): ReactElement[] {
   return nodes.flatMap((node) => {
@@ -157,7 +157,7 @@ function renderCommentTree({
 
     const childElements =
       node.children.length > 0
-        ? renderCommentTree({ nodes: node.children, commentMap, onVote, commentRef, upVoteDisabled, downVoteDisabled, postId })
+        ? renderCommentTree({ nodes: node.children, commentMap, onVote, commentRef, pendingVoteCommentId, pendingVoteDirection, postId })
         : null;
 
     return [
@@ -165,8 +165,8 @@ function renderCommentTree({
         <CommentCard
           comment={comment}
           onVote={(direction: VoteDirection) => onVote(comment.id, direction)}
-          upVoteDisabled={upVoteDisabled}
-          downVoteDisabled={downVoteDisabled}
+          upVoteDisabled={pendingVoteCommentId === comment.id && pendingVoteDirection === "up"}
+          downVoteDisabled={pendingVoteCommentId === comment.id && pendingVoteDirection === "down"}
           depth={node.depth}
           hasChildren={node.children.length > 0}
           postId={postId}
@@ -186,9 +186,9 @@ function renderCommentTree({
  * #462: usePostThread は Suspense 化（ローディングは router の QueryBoundary が post-thread-skeleton を表示、
  * エラーは ErrorBoundary フォールバック）。所属コミュニティ取得（usePublicCommunities）は右サイドバーの
  * 局所 QueryBoundary に委譲し、post 本文は先に描画する。
- * #481: ゲストの post / comment vote 押下は guardVote で握りつぶさずログイン誦導する。
+ * #481: ゲストの post / comment vote 押下は guardVote で握りつぶさずログイン誘導する。
  * #520: コメントを buildCommentTree でツリー化し Reddit 風コネクター線表示する。
- * #748: useVotePost / useVoteComment の isPending を voteDisabled に渡し連打防止。
+ * #748: vote 連打防止。#890: 押した方向のみ disabled にし、反対方向は操作可能にする。
  */
 export const PostThreadScene = (): ReactElement => {
   const { postId } = useParams({ strict: false });
@@ -198,7 +198,7 @@ export const PostThreadScene = (): ReactElement => {
   const { mutate: votePost, isPending: isVotingPost, variables: votingPostVars } = useVotePost();
   const { mutate: voteComment, isPending: isVotingComment, variables: votingCommentVars } = useVoteComment(id);
 
-  // 閉覧計測（#665 / ADR-0032）
+  // 閲覧計測（#665 / ADR-0032）
   usePostViewBeacon(id);
   const { commentRef } = useCommentImpressions(id);
 
@@ -275,8 +275,8 @@ export const PostThreadScene = (): ReactElement => {
                 // eslint-disable-next-line max-params
                 onVote: (commentId, direction) => voteComment({ commentId, direction }),
                 commentRef,
-                upVoteDisabled: isVotingComment && votingCommentVars?.direction === "up",
-                downVoteDisabled: isVotingComment && votingCommentVars?.direction === "down",
+                pendingVoteCommentId: isVotingComment ? votingCommentVars?.commentId : undefined,
+                pendingVoteDirection: isVotingComment ? votingCommentVars?.direction : undefined,
                 postId: post.id,
               })}
             </Box>

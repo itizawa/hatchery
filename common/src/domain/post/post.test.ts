@@ -1,1 +1,201 @@
-aW1wb3J0IHsgZGVzY3JpYmUsIGV4cGVjdCwgaXQgfSBmcm9tICJ2aXRlc3QiOwoKaW1wb3J0IHsKICBidWlsZE1hbnVhbFNsb3RLZXksCiAgQ3JlYXRlUG9zdFJlcXVlc3RTY2hlbWEsCiAgTUFOVUFMX1NMT1RfS0VZX1BSRUZJWCwKICBQb3N0U2NoZW1hLAogIFBPU1RfVEVYVF9NQVhfTEVOR1RILAogIFBPU1RfVElUTEVfTUFYX0xFTkdUSCwKfSBmcm9tICIuL3Bvc3QuanMiOwoKZGVzY3JpYmUoIlBvc3RTY2hlbWEiLCAoKSA9PiB7CiAgY29uc3QgdmFsaWRQb3N0ID0gewogICAgaWQ6ICJwb3N0LTEiLAogICAgY29tbXVuaXR5X2lkOiAiY29tbS0xIiwKICAgIHNsb3Rfa2V5OiAiMjAyNi0wNi0xMFQwOTowMDowMC4wMDBaIiwKICAgIHNlcTogMCwKICAgIGF1dGhvcjogIndvcmtlci1oYXJ1IiwKICAgIHRpdGxlOiAi5LuK5pel44Gu5LuV5LqL44Gr44Gk44GE44GmIiwKICAgIHRleHQ6ICLku4rml6Xjga/jgarjgpPjgYvlpInjgarjg5DjgrDjgavmgqnjgb7jgZXjgozjgZ/jgogiLAogICAgc2NvcmU6IDAsCiAgICBjcmVhdGVkX2F0OiBuZXcgRGF0ZSgiMjAyNi0wNi0xMFQwOTowNTowMC4wMDBaIiksCiAgfTsKCiAgaXQoIuacieWKueOBquaKleeov+OCkuODkeODvOOCueOBp+OBjeOCiyIsICgpID0+IHsKICAgIGNvbnN0IHJlc3VsdCA9IFBvc3RTY2hlbWEuc2FmZVBhcnNlKHZhbGlkUG9zdCk7CiAgICBleHBlY3QocmVzdWx0LnN1Y2Nlc3MpLnRvQmUodHJ1ZSk7CiAgfSk7CgogIGl0KCJpZCDjgpLmjIHjgaQiLCAoKSA9PiB7CiAgICBjb25zdCByZXN1bHQgPSBQb3N0U2NoZW1hLnBhcnNlKHZhbGlkUG9zdCk7CiAgICBleHBlY3QocmVzdWx0LmlkKS50b0JlKCJwb3N0LTEiKTsKICB9KTsKCiAgaXQoImNvbW11bml0eV9pZCDjgpLmjIHjgaQiLCAoKSA9PiB7CiAgICBjb25zdCByZXN1bHQgPSBQb3N0U2NoZW1hLnBhcnNlKHZhbGlkUG9zdCk7CiAgICBleHBlY3QocmVzdWx0LmNvbW11bml0eV9pZCkudG9CZSgiY29tbS0xIik7CiAgfSk7CgogIGl0KCJzbG90X2tleSDjgpLmjIHjgaQiLCAoKSA9PiB7CiAgICBjb25zdCByZXN1bHQgPSBQb3N0U2NoZW1hLnBhcnNlKHZhbGlkUG9zdCk7CiAgICBleHBlY3QocmVzdWx0LnNsb3Rfa2V5KS50b0JlKCIyMDI2LTA2LTEwVDA5OjAwOjAwLjAwMFoiKTsKICB9KTsKCiAgaXQoInNlcSDjgpLmjIHjgaTvvIjpnZ7osqDmlbTmlbDvvIkiLCAoKSA9PiB7CiAgICBjb25zdCByZXN1bHQgPSBQb3N0U2NoZW1hLnBhcnNlKHZhbGlkUG9zdCk7CiAgICBleHBlY3QocmVzdWx0LnNlcSkudG9CZSgwKTsKICB9KTsKCiAgaXQoImF1dGhvcu+8iHdvcmtlcklk77yJ44KS5oyB44GkIiwgKCkgPT4gewogICAgY29uc3QgcmVzdWx0ID0gUG9zdFNjaGVtYS5wYXJzZSh2YWxpZFBvc3QpOwogICAgZXhwZWN0KHJlc3VsdC5hdXRob3IpLnRvQmUoIndvcmtlci1oYXJ1Iik7CiAgfSk7CgogIGl0KCJ0aXRsZSDjgpLmjIHjgaTvvIjmnIDlpKcxMDDmloflrZfvvIkiLCAoKSA9PiB7CiAgICBjb25zdCByZXN1bHQgPSBQb3N0U2NoZW1hLnBhcnNlKHZhbGlkUG9zdCk7CiAgICBleHBlY3QocmVzdWx0LnRpdGxlKS50b0JlKCLku4rml6Xjga7ku5XkuovjgavjgaTjgYTjgaYiKTsKICB9KTsKCiAgaXQoInRpdGxlIOOBjCAxMDAg5paH5a2X44KS6LaF44GI44KL44GoIHJlamVjdCDjgZnjgosiLCAoKSA9PiB7CiAgICBjb25zdCBkYXRhID0geyAuLi52YWxpZFBvc3QsIHRpdGxlOiAi44GCIi5yZXBlYXQoMTAxKSB9OwogICAgZXhwZWN0KFBvc3RTY2hlbWEuc2FmZVBhcnNlKGRhdGEpLnN1Y2Nlc3MpLnRvQmUoZmFsc2UpOwogIH0pOwoKICBpdCgidGV4dCDjgpLmjIHjgaTvvIjmnIDlpKcxMDAw5paH5a2X77yJIiwgKCkgPT4gewogICAgY29uc3QgcmVzdWx0ID0gUG9zdFNjaGVtYS5wYXJzZSh2YWxpZFBvc3QpOwogICAgZXhwZWN0KHJlc3VsdC50ZXh0KS50b0JlKCLku4rml6Xjga/jgarjgpPjgYvlpInjgarjg5DjgrDjgavmgqnjgb7jgZXjgozjgZ/jgogiKTsKICB9KTsKCiAgaXQoInRleHQg44GMIDEwMDAg5paH5a2X44KS6LaF44GI44KL44GoIHJlamVjdCDjgZnjgosiLCAoKSA9PiB7CiAgICBjb25zdCBkYXRhID0geyAuLi52YWxpZFBvc3QsIHRleHQ6ICLjgYIiLnJlcGVhdCgxMDAxKSB9OwogICAgZXhwZWN0KFBvc3RTY2hlbWEuc2FmZVBhcnNlKGRhdGEpLnN1Y2Nlc3MpLnRvQmUoZmFsc2UpOwogIH0pOwoKICBpdCgic2NvcmUg44KS5oyB44Gk77yI6Z2e6LKg5pW05pWw77yJIiwgKCkgPT4gewogICAgY29uc3QgcmVzdWx0ID0gUG9zdFNjaGVtYS5wYXJzZSh2YWxpZFBvc3QpOwogICAgZXhwZWN0KHJlc3VsdC5zY29yZSkudG9CZSgwKTsKICB9KTsKCiAgaXQoImNyZWF0ZWRfYXQg44KS5oyB44GkIiwgKCkgPT4gewogICAgY29uc3QgcmVzdWx0ID0gUG9zdFNjaGVtYS5wYXJzZSh2YWxpZFBvc3QpOwogICAgZXhwZWN0KHJlc3VsdC5jcmVhdGVkX2F0KS50b0JlSW5zdGFuY2VPZihEYXRlKTsKICB9KTsKCiAgaXQoImNvbW1lbnRfY291bnQg44Gv55yB55Wl5pmCIDDvvIjml6LlrprvvInjgavjgarjgovvvIgjNTAw77yJIiwgKCkgPT4gewogICAgY29uc3QgcmVzdWx0ID0gUG9zdFNjaGVtYS5wYXJzZSh2YWxpZFBvc3QpOwogICAgZXhwZWN0KHJlc3VsdC5jb21tZW50X2NvdW50KS50b0JlKDApOwogIH0pOwoKICBpdCgiY29tbWVudF9jb3VudCDjgpLmjIHjgabjgovvvIjjgrPjg6Hjg7Pjg4jku7bmlbDjg7vpnZ7osqDmlbTmlbDjg7sjNTAw77yJIiwgKCkgPT4gewogICAgY29uc3QgcmVzdWx0ID0gUG9zdFNjaGVtYS5wYXJzZSh7IC4uLnZhbGlkUG9zdCwgY29tbWVudF9jb3VudDogNyB9KTsKICAgIGV4cGVjdChyZXN1bHQuY29tbWVudF9jb3VudCkudG9CZSg3KTsKICB9KTsKCiAgaXQoImNvbW1lbnRfY291bnQg44GM6LKg5pWw44Gg44GoIHJlamVjdCDjgZnjgovvvIgjNTAw77yJIiwgKCkgPT4gewogICAgZXhwZWN0KFBvc3RTY2hlbWEuc2FmZVBhcnNlKHsgLi4udmFsaWRQb3N0LCBjb21tZW50X2NvdW50OiAtMSB9KS5zdWNjZXNzKS50b0JlKGZhbHNlKTsKICB9KTsKCiAgaXQoImF1dGhvcl93b3JrZXIg44Gv5Lu75oSP44Gn44CB55yB55Wl44GX44Gm44KC5pyJ5Yq577yI5b6M5pa55LqS5o+b77yJIiwgKCkgPT4gewogICAgY29uc3QgcmVzdWx0ID0gUG9zdFNjaGVtYS5wYXJzZSh2YWxpZFBvc3QpOwogICAgZXhwZWN0KHJlc3VsdC5hdXRob3Jfd29ya2VyKS50b0JlVW5kZWZpbmVkKCk7CiAgfSk7CgogIGl0KCJhdXRob3Jfd29ya2VyIOOCkuaMgeOBpuOCi++8iOeZuuiogOiAheOBruihqOekuueUqOODr+ODvOOCq+ODvOaDheWgseODuyM0NznvvIkiLCAoKSA9PiB7CiAgICBjb25zdCByZXN1bHQgPSBQb3N0U2NoZW1hLnBhcnNlKHsKICAgICAgLi4udmFsaWRQb3N0LAogICAgICBhdXRob3Jfd29ya2VyOiB7IGlkOiAidXVpZC1oYXJ1IiwgZGlzcGxheV9uYW1lOiAiaGFydSIsIGltYWdlX3VybDogImh0dHBzOi8vZXhhbXBsZS5jb20vaGFydS5wbmciIH0sCiAgICB9KTsKICAgIGV4cGVjdChyZXN1bHQuYXV0aG9yX3dvcmtlcikudG9FcXVhbCh7CiAgICAgIGlkOiAidXVpZC1oYXJ1IiwKICAgICAgZGlzcGxheV9uYW1lOiAiaGFydSIsCiAgICAgIGltYWdlX3VybDogImh0dHBzOi8vZXhhbXBsZS5jb20vaGFydS5wbmciLAogICAgfSk7CiAgfSk7CgogIGl0KCJteV92b3RlIOOBr+ecgeeVpeWPr+iDve+8iOW+jOaWueS6kuaPm++8iSIsICgpID0+IHsKICAgIGNvbnN0IHJlc3VsdCA9IFBvc3RTY2hlbWEucGFyc2UodmFsaWRQb3N0KTsKICAgIGV4cGVjdChyZXN1bHQubXlfdm90ZSkudG9CZVVuZGVmaW5lZCgpOwogIH0pOwoKICBpdCgibXlfdm90ZSDjgasgJ3VwJyDjgpLoqK3lrprjgafjgY3jgovvvIgjODMx77yJIiwgKCkgPT4gewogICAgY29uc3QgcmVzdWx0ID0gUG9zdFNjaGVtYS5wYXJzZSh7IC4uLnZhbGlkUG9zdCwgbXlfdm90ZTogInVwIiB9KTsKICAgIGV4cGVjdChyZXN1bHQubXlfdm90ZSkudG9CZSgidXAiKTsKICB9KTsKCiAgaXQoIm15X3ZvdGUg44GrICdkb3duJyDjgpLoqK3lrprjgafjgY3jgovvvIgjODMx77yJIiwgKCkgPT4gewogICAgY29uc3QgcmVzdWx0ID0gUG9zdFNjaGVtYS5wYXJzZSh7IC4uLnZhbGlkUG9zdCwgbXlfdm90ZTogImRvd24iIH0pOwogICAgZXhwZWN0KHJlc3VsdC5teV92b3RlKS50b0JlKCJkb3duIik7CiAgfSk7CgogIGl0KCJteV92b3RlIOOBqyBudWxsIOOCkuioreWumuOBp+OBjeOCi++8iCM4MzHvvIkiLCAoKSA9PiB7CiAgICBjb25zdCByZXN1bHQgPSBQb3N0U2NoZW1hLnBhcnNlKHsgLi4udmFsaWRQb3N0LCBteV92b3RlOiBudWxsIH0pOwogICAgZXhwZWN0KHJlc3VsdC5teV92b3RlKS50b0JlTnVsbCgpOwogIH0pOwoKICBpdCgibXlfdm90ZSDjgavnhKHlirnjgarlgKTjga8gcmVqZWN0IOOBmeOCi++8iCM4MzHvvIkiLCAoKSA9PiB7CiAgICBleHBlY3QoUG9zdFNjaGVtYS5zYWZlUGFyc2UoeyAuLi52YWxpZFBvc3QsIG15X3ZvdGU6ICJuZXV0cmFsIiB9KS5zdWNjZXNzKS50b0JlKGZhbHNlKTsKICB9KTsKfSk7CgpkZXNjcmliZSgiQ3JlYXRlUG9zdFJlcXVlc3RTY2hlbWEgKCM0MzMpIiwgKCkgPT4gewogIGNvbnN0IHZhbGlkUmVxdWVzdCA9IHsKICAgIGNvbW11bml0eUlkOiAiMTExMTExMTEtMTExMS0xMTExLTExMTEtMTExMTExMTExMTExIiwKICAgIGF1dGhvcldvcmtlcklkOiAiMjIyMjIyMjItMjIyMi0yMjIyLTIyMjItMjIyMjIyMjIyMjIyIiwKICAgIHRpdGxlOiAi566h55CG6ICF44Gr44KI44KL5omL5YuV5oqV56i/IiwKICAgIHRleHQ6ICLjg4fjg6LnlKjjgavmiYvli5XjgafmipXlhaXjgZfjgZ/jg53jgrnjg4jjgafjgZnjgIIiLAogIH07CgogIGl0KCLmnInlirnjgarjg6rjgq/jgqjjgrnjg4jjgpLjg5Hjg7zjgrnjgafjgY3jgosiLCAoKSA9PiB7CiAgICBjb25zdCByZXN1bHQgPSBDcmVhdGVQb3N0UmVxdWVzdFNjaGVtYS5zYWZlUGFyc2UodmFsaWRSZXF1ZXN0KTsKICAgIGV4cGVjdChyZXN1bHQuc3VjY2VzcykudG9CZSh0cnVlKTsKICB9KTsKCiAgaXQoImNvbW11bml0eUlkIOOBjCB1dWlkIOOBp+OBquOBhOWgtOWQiOOBryByZWplY3Qg44GZ44KLIiwgKCkgPT4gewogICAgY29uc3QgZGF0YSA9IHsgLi4udmFsaWRSZXF1ZXN0LCBjb21tdW5pdHlJZDogIm5vdC1hLXV1aWQiIH07CiAgICBleHBlY3QoQ3JlYXRlUG9zdFJlcXVlc3RTY2hlbWEuc2FmZVBhcnNlKGRhdGEpLnN1Y2Nlc3MpLnRvQmUoZmFsc2UpOwogIH0pOwoKICBpdCgiYXV0aG9yV29ya2VySWQg44GMIHV1aWQg44Gn44Gq44GE5aC05ZCI44GvIHJlamVjdCDjgZnjgosiLCAoKSA9PiB7CiAgICBjb25zdCBkYXRhID0geyAuLi52YWxpZFJlcXVlc3QsIGF1dGhvcldvcmtlcklkOiAibm90LWEtdXVpZCIgfTsKICAgIGV4cGVjdChDcmVhdGVQb3N0UmVxdWVzdFNjaGVtYS5zYWZlUGFyc2UoZGF0YSkuc3VjY2VzcykudG9CZShmYWxzZSk7CiAgfSk7CgogIGl0KCJ0aXRsZSDjgYznqbrmloflrZfjga7loLTlkIjjga8gcmVqZWN0IOOBmeOCiyIsICgpID0+IHsKICAgIGNvbnN0IGRhdGEgPSB7IC4uLnZhbGlkUmVxdWVzdCwgdGl0bGU6ICIiIH07CiAgICBleHBlY3QoQ3JlYXRlUG9zdFJlcXVlc3RTY2hlbWEuc2FmZVBhcnNlKGRhdGEpLnN1Y2Nlc3MpLnRvQmUoZmFsc2UpOwogIH0pOwoKICBpdCgidGl0bGUg44GM5LiK6ZmQ44KS6LaF44GI44KL5aC05ZCI44GvIHJlamVjdCDjgZnjgosiLCAoKSA9PiB7CiAgICBjb25zdCBkYXRhID0geyAuLi52YWxpZFJlcXVlc3QsIHRpdGxlOiAi44GCIi5yZXBlYXQoUE9TVF9USVRMRV9NQVhfTEVOR1RIICsgMSkgfTsKICAgIGV4cGVjdChDcmVhdGVQb3N0UmVxdWVzdFNjaGVtYS5zYWZlUGFyc2UoZGF0YSkuc3VjY2VzcykudG9CZShmYWxzZSk7CiAgfSk7CgogIGl0KCJ0ZXh0IOOBjOepuuaWh+Wtl+OBruWgtOWQiOOBryByZWplY3Qg44GZ44KLIiwgKCkgPT4gewogICAgY29uc3QgZGF0YSA9IHsgLi4udmFsaWRSZXF1ZXN0LCB0ZXh0OiAiIiB9OwogICAgZXhwZWN0KENyZWF0ZVBvc3RSZXF1ZXN0U2NoZW1hLnNhZmVQYXJzZShkYXRhKS5zdWNjZXNzKS50b0JlKGZhbHNlKTsKICB9KTsKCiAgaXQoInRleHQg44GM5LiK6ZmQ44KS6LaF44GI44KL5aC05ZCI44GvIHJlamVjdCDjgZnjgosiLCAoKSA9PiB7CiAgICBjb25zdCBkYXRhID0geyAuLi52YWxpZFJlcXVlc3QsIHRleHQ6ICLjgYIiLnJlcGVhdChQT1NUX1RFWFRfTUFYX0xFTkdUSCArIDEpIH07CiAgICBleHBlY3QoQ3JlYXRlUG9zdFJlcXVlc3RTY2hlbWEuc2FmZVBhcnNlKGRhdGEpLnN1Y2Nlc3MpLnRvQmUoZmFsc2UpOwogIH0pOwoKICBpdCgi5L2Z5YiG44Gq44OV44Kj44O844Or44OJ44Gv54Sh6KaW44GV44KM44KL77yI5pyq55+l44Kt44O844Gv6JC944Go44GZ77yJIiwgKCkgPT4gewogICAgY29uc3QgcmVzdWx0ID0gQ3JlYXRlUG9zdFJlcXVlc3RTY2hlbWEucGFyc2UoeyAuLi52YWxpZFJlcXVlc3QsIHNsb3RLZXk6ICJ4IiB9KTsKICAgIGV4cGVjdChyZXN1bHQpLm5vdC50b0hhdmVQcm9wZXJ0eSgic2xvdEtleSIpOwogIH0pOwp9KTsKCmRlc2NyaWJlKCJidWlsZE1hbnVhbFNsb3RLZXkgKCM0MzMpIiwgKCkgPT4gewogIGl0KCJtYW51YWw6IOODl+ODrOODleOCo+ODg+OCr+OCueS7mOOBjeOBriBzbG90S2V5IOOCkui/lOOBmSIsICgpID0+IHsKICAgIGNvbnN0IHNsb3RLZXkgPSBidWlsZE1hbnVhbFNsb3RLZXkoImFiYy0xMjMiKTsKICAgIGV4cGVjdChzbG90S2V5KS50b0JlKGAke01BTlVBTF9TTE9UX0tFWV9QUkVGSVh9YWJjLTEyM2ApOwogIH0pOwoKICBpdCgi5a6a5pmC44OQ44OD44OB5b2i5byP77yIWVlZWS1NTS1ERFRISDpNTe+8ieOBqOaxuuOBl+OBpuS4gOiHtOOBl+OBquOBhCIsICgpID0+IHsKICAgIGNvbnN0IHNsb3RLZXkgPSBidWlsZE1hbnVhbFNsb3RLZXkoIjIwMjYtMDYtMTNUMDk6MDAiKTsKICAgIGV4cGVjdChzbG90S2V5LnN0YXJ0c1dpdGgoTUFOVUFMX1NMT1RfS0VZX1BSRUZJWCkpLnRvQmUodHJ1ZSk7CiAgICBleHBlY3Qoc2xvdEtleSkubm90LnRvQmUoIjIwMjYtMDYtMTNUMDk6MDAiKTsKICB9KTsKfSk7Cg==
+import { describe, expect, it } from "vitest";
+
+import {
+  buildManualSlotKey,
+  CreatePostRequestSchema,
+  MANUAL_SLOT_KEY_PREFIX,
+  PostSchema,
+  POST_TEXT_MAX_LENGTH,
+  POST_TITLE_MAX_LENGTH,
+} from "./post.js";
+
+describe("PostSchema", () => {
+  const validPost = {
+    id: "post-1",
+    community_id: "comm-1",
+    slot_key: "2026-06-10T09:00:00.000Z",
+    seq: 0,
+    author: "worker-haru",
+    title: "今日の仕事について",
+    text: "今日はなんか変なバグに悩まされたよ",
+    score: 0,
+    created_at: new Date("2026-06-10T09:05:00.000Z"),
+  };
+
+  it("有効な投稿をパースできる", () => {
+    const result = PostSchema.safeParse(validPost);
+    expect(result.success).toBe(true);
+  });
+
+  it("id を持つ", () => {
+    const result = PostSchema.parse(validPost);
+    expect(result.id).toBe("post-1");
+  });
+
+  it("community_id を持つ", () => {
+    const result = PostSchema.parse(validPost);
+    expect(result.community_id).toBe("comm-1");
+  });
+
+  it("slot_key を持つ", () => {
+    const result = PostSchema.parse(validPost);
+    expect(result.slot_key).toBe("2026-06-10T09:00:00.000Z");
+  });
+
+  it("seq を持つ（非負整数）", () => {
+    const result = PostSchema.parse(validPost);
+    expect(result.seq).toBe(0);
+  });
+
+  it("author（workerId）を持つ", () => {
+    const result = PostSchema.parse(validPost);
+    expect(result.author).toBe("worker-haru");
+  });
+
+  it("title を持つ（最大100文字）", () => {
+    const result = PostSchema.parse(validPost);
+    expect(result.title).toBe("今日の仕事について");
+  });
+
+  it("title が 100 文字を超えると reject する", () => {
+    const data = { ...validPost, title: "あ".repeat(101) };
+    expect(PostSchema.safeParse(data).success).toBe(false);
+  });
+
+  it("text を持つ（最大1000文字）", () => {
+    const result = PostSchema.parse(validPost);
+    expect(result.text).toBe("今日はなんか変なバグに悩まされたよ");
+  });
+
+  it("text が 1000 文字を超えると reject する", () => {
+    const data = { ...validPost, text: "あ".repeat(1001) };
+    expect(PostSchema.safeParse(data).success).toBe(false);
+  });
+
+  it("score を持つ（非負整数）", () => {
+    const result = PostSchema.parse(validPost);
+    expect(result.score).toBe(0);
+  });
+
+  it("created_at を持つ", () => {
+    const result = PostSchema.parse(validPost);
+    expect(result.created_at).toBeInstanceOf(Date);
+  });
+
+  it("comment_count は省略時 0（既定）になる（#500）", () => {
+    const result = PostSchema.parse(validPost);
+    expect(result.comment_count).toBe(0);
+  });
+
+  it("comment_count を持てる（コメント件数・非負整数・#500）", () => {
+    const result = PostSchema.parse({ ...validPost, comment_count: 7 });
+    expect(result.comment_count).toBe(7);
+  });
+
+  it("comment_count が負数だと reject する（#500）", () => {
+    expect(PostSchema.safeParse({ ...validPost, comment_count: -1 }).success).toBe(false);
+  });
+
+  it("author_worker は任意で、省略しても有効（後方互換）", () => {
+    const result = PostSchema.parse(validPost);
+    expect(result.author_worker).toBeUndefined();
+  });
+
+  it("author_worker を持てる（発言者の表示用ワーカー情報・#479）", () => {
+    const result = PostSchema.parse({
+      ...validPost,
+      author_worker: { id: "uuid-haru", display_name: "haru", image_url: "https://example.com/haru.png" },
+    });
+    expect(result.author_worker).toEqual({
+      id: "uuid-haru",
+      display_name: "haru",
+      image_url: "https://example.com/haru.png",
+    });
+  });
+
+  it("my_vote は省略可能（後方互換）", () => {
+    const result = PostSchema.parse(validPost);
+    expect(result.my_vote).toBeUndefined();
+  });
+
+  it("my_vote に 'up' を設定できる（#831）", () => {
+    const result = PostSchema.parse({ ...validPost, my_vote: "up" });
+    expect(result.my_vote).toBe("up");
+  });
+
+  it("my_vote に 'down' を設定できる（#831）", () => {
+    const result = PostSchema.parse({ ...validPost, my_vote: "down" });
+    expect(result.my_vote).toBe("down");
+  });
+
+  it("my_vote に null を設定できる（#831）", () => {
+    const result = PostSchema.parse({ ...validPost, my_vote: null });
+    expect(result.my_vote).toBeNull();
+  });
+
+  it("my_vote に無効な値は reject する（#831）", () => {
+    expect(PostSchema.safeParse({ ...validPost, my_vote: "neutral" }).success).toBe(false);
+  });
+});
+
+describe("CreatePostRequestSchema (#433)", () => {
+  const validRequest = {
+    communityId: "11111111-1111-1111-1111-111111111111",
+    authorWorkerId: "22222222-2222-2222-2222-222222222222",
+    title: "管理者による手動投稿",
+    text: "デモ用に手動で投入したポストです。",
+  };
+
+  it("有効なリクエストをパースできる", () => {
+    const result = CreatePostRequestSchema.safeParse(validRequest);
+    expect(result.success).toBe(true);
+  });
+
+  it("communityId が uuid でない場合は reject する", () => {
+    const data = { ...validRequest, communityId: "not-a-uuid" };
+    expect(CreatePostRequestSchema.safeParse(data).success).toBe(false);
+  });
+
+  it("authorWorkerId が uuid でない場合は reject する", () => {
+    const data = { ...validRequest, authorWorkerId: "not-a-uuid" };
+    expect(CreatePostRequestSchema.safeParse(data).success).toBe(false);
+  });
+
+  it("title が空文字の場合は reject する", () => {
+    const data = { ...validRequest, title: "" };
+    expect(CreatePostRequestSchema.safeParse(data).success).toBe(false);
+  });
+
+  it("title が上限を超える場合は reject する", () => {
+    const data = { ...validRequest, title: "あ".repeat(POST_TITLE_MAX_LENGTH + 1) };
+    expect(CreatePostRequestSchema.safeParse(data).success).toBe(false);
+  });
+
+  it("text が空文字の場合は reject する", () => {
+    const data = { ...validRequest, text: "" };
+    expect(CreatePostRequestSchema.safeParse(data).success).toBe(false);
+  });
+
+  it("text が上限を超える場合は reject する", () => {
+    const data = { ...validRequest, text: "あ".repeat(POST_TEXT_MAX_LENGTH + 1) };
+    expect(CreatePostRequestSchema.safeParse(data).success).toBe(false);
+  });
+
+  it("余分なフィールドは無視される（未知キーは落とす）", () => {
+    const result = CreatePostRequestSchema.parse({ ...validRequest, slotKey: "x" });
+    expect(result).not.toHaveProperty("slotKey");
+  });
+});
+
+describe("buildManualSlotKey (#433)", () => {
+  it("manual: プレフィックス付きの slotKey を返す", () => {
+    const slotKey = buildManualSlotKey("abc-123");
+    expect(slotKey).toBe(`${MANUAL_SLOT_KEY_PREFIX}abc-123`);
+  });
+
+  it("定時バッチ形式（YYYY-MM-DDTHH:MM）と決して一致しない", () => {
+    const slotKey = buildManualSlotKey("2026-06-13T09:00");
+    expect(slotKey.startsWith(MANUAL_SLOT_KEY_PREFIX)).toBe(true);
+    expect(slotKey).not.toBe("2026-06-13T09:00");
+  });
+});

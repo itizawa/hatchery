@@ -1,4 +1,4 @@
-import { Avatar, Box, Typography } from "./uiParts";
+import { Avatar, Box, Skeleton, Typography } from "./uiParts";
 import type { ReactElement } from "react";
 import type { Comment } from "../api/communities.js";
 import { extractFirstUrl } from "@hatchery/common";
@@ -18,40 +18,68 @@ const INDENT_PER_DEPTH = 16;
 /** 最大インデント深さ。これ以上深くなっても INDENT_PER_DEPTH * MAX_DEPTH 以上には広がらない。 */
 export const MAX_COMMENT_DEPTH = 6;
 
-interface CommentCardProps {
-  comment: Comment;
-  onVote: (direction: VoteDirection) => void;
-  currentVote?: VoteDirection | null;
-  voteDisabled?: boolean;
-  /** ネスト深さ（0 = トップレベル）。Reddit 風インデントに使う。#520。 */
-  depth?: number;
-  /** 子コメント（再帰表示用）。 */
-  children?: ReactElement | null;
-  /** 子コメントを持つかどうか。true のときアバター下に縦線を描画する（#796）。 */
-  hasChildren?: boolean;
-  /**
-   * 共有ボタン用の postId（#775）。指定時のみ ShareButton を表示する。
-   * shareUrl は内部で `${origin}/posts/${postId}#comment-${comment.id}` に組み立てる。
-   */
-  postId?: string;
-}
+/**
+ * CommentCard の props。loading=true のとき comment / onVote 等は不要（#857）。
+ * discriminated union で loading 時にデータ系 prop を必須にしない形にする（PostCard と同様）。
+ */
+type CommentCardProps =
+  | { loading: true }
+  | {
+      loading?: false;
+      comment: Comment;
+      onVote: (direction: VoteDirection) => void;
+      currentVote?: VoteDirection | null;
+      voteDisabled?: boolean;
+      /** ネスト深さ（0 = トップレベル）。Reddit 風インデントに使う。#520。 */
+      depth?: number;
+      /** 子コメント（再帰表示用）。 */
+      children?: ReactElement | null;
+      /** 子コメントを持つかどうか。true のときアバター下に縦線を描画する（#796）。 */
+      hasChildren?: boolean;
+      /**
+       * 共有ボタン用の postId（#775）。指定時のみ ShareButton を表示する。
+       * shareUrl は内部で `${origin}/posts/${postId}#comment-${comment.id}` に組み立てる。
+       */
+      postId?: string;
+    };
 
 /**
  * コメントカード。本文・author・score・up/down vote ボタンを表示する（ADR-0019 / ADR-0025）。
  * コメント入力欄は持たない（ユーザーはコメントしない・ADR-0020）。
  * #520: Reddit 風コネクター線（スレッドライン）+ 深さに応じたインデントに対応。
  * #775: postId 指定時、アクションバーに ShareButton を追加する。
+ * #857: loading={true} のとき実 UI と同一骨格の Skeleton を描画する。
  */
-export const CommentCard = ({
-  comment,
-  onVote,
-  currentVote = null,
-  voteDisabled = false,
-  depth = 0,
-  children = null,
-  hasChildren = false,
-  postId,
-}: CommentCardProps): ReactElement => {
+export const CommentCard = (props: CommentCardProps): ReactElement => {
+  if (props.loading) {
+    return (
+      <Box sx={{ pl: "16px", position: "relative" }}>
+        <Box sx={{ display: "flex", py: 0.75 }}>
+          <Box sx={{ flexShrink: 0, width: 24, mr: 1 }}>
+            <Skeleton variant="circular" width={24} height={24} />
+          </Box>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Skeleton variant="text" width="40%" sx={{ mb: 0.5 }} />
+            <Skeleton variant="text" width="90%" />
+            <Skeleton variant="text" width="70%" />
+            <Skeleton variant="text" width="30%" sx={{ mt: 0.5 }} />
+          </Box>
+        </Box>
+      </Box>
+    );
+  }
+
+  const {
+    comment,
+    onVote,
+    currentVote = null,
+    voteDisabled = false,
+    depth = 0,
+    children = null,
+    hasChildren = false,
+    postId,
+  } = props;
+
   const clampedDepth = Math.min(depth, MAX_COMMENT_DEPTH);
   const indentLeft = clampedDepth * INDENT_PER_DEPTH;
 
@@ -73,7 +101,7 @@ export const CommentCard = ({
         position: "relative",
       }}
     >
-      {/* L 字コネクター（#746）: アバター底辺（30px）まで左偈線を引き、縦線と纙目なく接続する。 */}
+      {/* L 字コネクター（#746）: アバター底辺（30px）まで左偉線を引き、縦線と繍目なく接続する。 */}
       {depth > 0 && (
         <Box
           data-testid="comment-l-connector"

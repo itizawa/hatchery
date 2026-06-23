@@ -64,10 +64,28 @@ describe("VoteControl", () => {
     expect(screen.getByRole("button", { name: /down vote/i })).toHaveAttribute("aria-pressed", "false");
   });
 
-  it("disabled=true のとき両ボタンが無効化される", () => {
-    render(<VoteControl score={0} onVote={vi.fn()} disabled />);
+  it("upDisabled=true のとき up ボタンのみ disabled、down は enabled（#890）", () => {
+    render(<VoteControl score={0} onVote={vi.fn()} upDisabled />);
+    expect(screen.getByRole("button", { name: /up vote/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /down vote/i })).not.toBeDisabled();
+  });
+
+  it("downDisabled=true のとき down ボタンのみ disabled、up は enabled（#890）", () => {
+    render(<VoteControl score={0} onVote={vi.fn()} downDisabled />);
+    expect(screen.getByRole("button", { name: /up vote/i })).not.toBeDisabled();
+    expect(screen.getByRole("button", { name: /down vote/i })).toBeDisabled();
+  });
+
+  it("upDisabled=true かつ downDisabled=true のとき両ボタンが disabled（#890）", () => {
+    render(<VoteControl score={0} onVote={vi.fn()} upDisabled downDisabled />);
     expect(screen.getByRole("button", { name: /up vote/i })).toBeDisabled();
     expect(screen.getByRole("button", { name: /down vote/i })).toBeDisabled();
+  });
+
+  it("upDisabled・downDisabled 未指定（デフォルト）のとき両ボタンが enabled（#890）", () => {
+    render(<VoteControl score={0} onVote={vi.fn()} />);
+    expect(screen.getByRole("button", { name: /up vote/i })).not.toBeDisabled();
+    expect(screen.getByRole("button", { name: /down vote/i })).not.toBeDisabled();
   });
 
   it("down 累積数は表示しない", () => {

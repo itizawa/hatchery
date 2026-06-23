@@ -43,7 +43,7 @@ const listItemSx = {
  * コミュニティが実在する場合のみレンダーされる内側コンポーネント。
  * useCommunityFeed など、コミュニティ存在を前提とするフックをここに集約する（#524）。
  * 存在しない slug の場合は CommunityScene が早期リターンしてこのコンポーネントはレンダーされない。
- * #748: useVotePost の isPending を voteDisabled に渡し連打防止。
+ * #748: vote 連打防止。#890: 押した方向のみ disabled にし、反対方向は操作可能にする。
  */
 const CommunityContent = ({
   community,
@@ -58,7 +58,7 @@ const CommunityContent = ({
 
   const { mutate: subscribe, isPending: isSubscribing } = useSubscribe(communitySlug);
   const { mutate: unsubscribe, isPending: isUnsubscribing } = useUnsubscribe(communitySlug);
-  const { mutate: votePost, isPending: isVotingPost } = useVotePost(communitySlug);
+  const { mutate: votePost, isPending: isVotingPost, variables: votingPostVars } = useVotePost(communitySlug);
 
   const isSubscriptionPending = isSubscribing || isUnsubscribing;
 
@@ -116,7 +116,8 @@ const CommunityContent = ({
                           onVote={(direction: VoteDirection) =>
                             votePost({ postId: post.id, direction })
                           }
-                          voteDisabled={isVotingPost}
+                          upVoteDisabled={isVotingPost && votingPostVars?.direction === "up"}
+                          downVoteDisabled={isVotingPost && votingPostVars?.direction === "down"}
                           voteStopPropagation
                           truncateText
                           variant="list"
@@ -193,7 +194,7 @@ const CommunityContent = ({
  * useRecentWorkers はサイドバーの局所 QueryBoundary に委譲する。
  * #481: ゲストの vote 押下は guardVote で握りつぶさずログイン誘導する。
  * #524: 存在しない slug のとき「コミュニティが見つかりません」を表示する。
- * #748: vote 連打防止（isPending → voteDisabled）。
+ * #748: vote 連打防止。#890: 押した方向のみ disabled にし、反対方向は操作可能にする。
  */
 export const CommunityScene = (): ReactElement => {
   const { slug } = useParams({ strict: false });

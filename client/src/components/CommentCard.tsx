@@ -29,7 +29,8 @@ type CommentCardProps =
       comment: Comment;
       onVote: (direction: VoteDirection) => void;
       currentVote?: VoteDirection | null;
-      voteDisabled?: boolean;
+      upVoteDisabled?: boolean;
+      downVoteDisabled?: boolean;
       /** ネスト深さ（0 = トップレベル）。Reddit 風インデントに使う。#520。 */
       depth?: number;
       /** 子コメント（再帰表示用）。 */
@@ -73,7 +74,8 @@ export const CommentCard = (props: CommentCardProps): ReactElement => {
     comment,
     onVote,
     currentVote = null,
-    voteDisabled = false,
+    upVoteDisabled = false,
+    downVoteDisabled = false,
     depth = 0,
     children = null,
     hasChildren = false,
@@ -101,7 +103,7 @@ export const CommentCard = (props: CommentCardProps): ReactElement => {
         position: "relative",
       }}
     >
-      {/* L 字コネクター（#746）: アバター底辺（30px）まで左偉線を引き、縦線と繍目なく接続する。 */}
+      {/* L 字コネクター（#746）: アバター底辺（30px）まで左偏線を引き、縦線と縫目なく接続する。 */}
       {depth > 0 && (
         <Box
           data-testid="comment-l-connector"
@@ -175,7 +177,8 @@ export const CommentCard = (props: CommentCardProps): ReactElement => {
                 score={comment.score}
                 onVote={onVote}
                 currentVote={currentVote}
-                disabled={voteDisabled}
+                upDisabled={upVoteDisabled}
+                downDisabled={downVoteDisabled}
               />
               {shareUrl && <ShareButton shareUrl={shareUrl} shareTitle={shareTitle} />}
             </Box>

@@ -10,7 +10,8 @@ interface VoteControlProps {
   score: number;
   onVote: (direction: VoteDirection) => void;
   currentVote?: VoteDirection | null;
-  disabled?: boolean;
+  upDisabled?: boolean;
+  downDisabled?: boolean;
 }
 
 /**
@@ -20,12 +21,14 @@ interface VoteControlProps {
  * 配色は Reddit 準拠: up=赤（#FF4500）/ down=青（#7193FF）（#854）。
  * アイコンは投票方向が solid、非投票方向が outline の自前 SVG を使用（#854）。
  * 表示数字は up − down のネットスコア（score・#856）。負値も表示する。
+ * #890: upDisabled / downDisabled で方向別に disabled を制御する。
  */
 export const VoteControl = ({
   score,
   onVote,
   currentVote = null,
-  disabled = false,
+  upDisabled = false,
+  downDisabled = false,
 }: VoteControlProps): ReactElement => {
   const displayCount = score;
   const voted = currentVote ?? "none";
@@ -57,7 +60,7 @@ export const VoteControl = ({
             aria-label="up vote"
             aria-pressed={currentVote === "up"}
             onClick={() => onVote("up")}
-            disabled={disabled}
+            disabled={upDisabled}
             size="small"
             sx={{
               color: isVoted ? "inherit" : "action.active",
@@ -90,7 +93,7 @@ export const VoteControl = ({
             aria-label="down vote"
             aria-pressed={currentVote === "down"}
             onClick={() => onVote("down")}
-            disabled={disabled}
+            disabled={downDisabled}
             size="small"
             sx={{
               color: isVoted ? "inherit" : "action.active",

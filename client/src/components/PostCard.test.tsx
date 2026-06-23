@@ -323,18 +323,26 @@ describe("PostCard", () => {
     });
   });
 
-  describe("voteDisabled（ミューテーション進行中の連打防止・#748）", () => {
-    it("voteDisabled=true のとき up vote ボタンが disabled になる", () => {
-      render(<PostCard post={mockPost} onVote={vi.fn()} voteDisabled />);
+  describe("upVoteDisabled / downVoteDisabled（方向別ペンディング・#890）", () => {
+    it("upVoteDisabled=true のとき up ボタンのみ disabled、down は enabled", () => {
+      render(<PostCard post={mockPost} onVote={vi.fn()} upVoteDisabled />);
       expect(screen.getByRole("button", { name: /up vote/i })).toBeDisabled();
+      expect(screen.getByRole("button", { name: /down vote/i })).not.toBeDisabled();
     });
 
-    it("voteDisabled=true のとき down vote ボタンが disabled になる", () => {
-      render(<PostCard post={mockPost} onVote={vi.fn()} voteDisabled />);
+    it("downVoteDisabled=true のとき down ボタンのみ disabled、up は enabled", () => {
+      render(<PostCard post={mockPost} onVote={vi.fn()} downVoteDisabled />);
+      expect(screen.getByRole("button", { name: /up vote/i })).not.toBeDisabled();
       expect(screen.getByRole("button", { name: /down vote/i })).toBeDisabled();
     });
 
-    it("voteDisabled 未指定（デフォルト false）のとき vote ボタンは有効のまま", () => {
+    it("upVoteDisabled=true かつ downVoteDisabled=true のとき両ボタンが disabled", () => {
+      render(<PostCard post={mockPost} onVote={vi.fn()} upVoteDisabled downVoteDisabled />);
+      expect(screen.getByRole("button", { name: /up vote/i })).toBeDisabled();
+      expect(screen.getByRole("button", { name: /down vote/i })).toBeDisabled();
+    });
+
+    it("upVoteDisabled・downVoteDisabled 未指定（デフォルト false）のとき vote ボタンは有効のまま", () => {
       render(<PostCard post={mockPost} onVote={vi.fn()} />);
       expect(screen.getByRole("button", { name: /up vote/i })).not.toBeDisabled();
       expect(screen.getByRole("button", { name: /down vote/i })).not.toBeDisabled();

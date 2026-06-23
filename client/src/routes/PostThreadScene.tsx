@@ -2,7 +2,7 @@ import { Box, Skeleton, Typography } from "../components/uiParts";
 import { useParams, Link as RouterLink } from "@tanstack/react-router";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeftRounded";
 import type { ReactElement } from "react";
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { buildCommentTree, type CommentTreeNode } from "@hatchery/common";
 
 import {
@@ -159,7 +159,7 @@ function renderCommentTree({
         : null;
 
     return [
-      <div key={comment.id} ref={commentRef(comment.id)}>
+      <div key={comment.id} id={`comment-${comment.id}`} ref={commentRef(comment.id)}>
         <CommentCard
           comment={comment}
           onVote={(direction: VoteDirection) => onVote(comment.id, direction)}
@@ -208,6 +208,15 @@ export const PostThreadScene = (): ReactElement => {
   const scrollToComments = () => {
     commentSectionRef.current?.scrollIntoView({ behavior: "smooth" });
   };
+
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (!hash.startsWith("#comment-")) return;
+    const el = document.getElementById(hash.slice(1));
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [comments]);
 
   const commentTree = useMemo(
     () =>

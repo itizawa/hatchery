@@ -1,6 +1,7 @@
 import { type ReactElement } from "react";
 import { Avatar, Box, CircularProgress, Tooltip } from "./uiParts";
 
+import { resolveWorkerImageUrl } from "@hatchery/common";
 import { useUploadWorkerImage } from "../api/workers.js";
 import { useImageUpload, ACCEPTED_MIME } from "../hooks/useImageUpload.js";
 
@@ -52,7 +53,7 @@ export const WorkerImageUpload = ({
         onKeyDown={handleKeyDown}
       >
         <Avatar
-          src={currentImageUrl ?? undefined}
+          src={resolveWorkerImageUrl({ id: workerId, imageUrl: currentImageUrl })}
           alt={displayName}
           sx={{
             width: AVATAR_SIZE,

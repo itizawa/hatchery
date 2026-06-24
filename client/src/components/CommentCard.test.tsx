@@ -166,16 +166,16 @@ describe("CommentCard", () => {
       expect(screen.queryByText("uuid-ken")).not.toBeInTheDocument();
     });
 
-    it("image_url が null のときは画像を出さずフォールバック（頭文字）＋表示名を表示する", () => {
+    it("image_url が null のとき DiceBear アバター画像と display_name を表示する (#884)", () => {
       const comment = {
         ...mockComment,
         author: "uuid-mei",
         author_worker: { id: "uuid-mei", display_name: "mei", image_url: null },
       };
       render(<CommentCard comment={comment} onVote={vi.fn()} />);
-      expect(screen.queryByRole("img")).not.toBeInTheDocument();
       expect(screen.getByText("mei")).toBeInTheDocument();
-      expect(screen.getByText("M")).toBeInTheDocument();
+      const img = screen.getByRole("img", { name: "mei" });
+      expect(img).toHaveAttribute("src", expect.stringContaining("api.dicebear.com"));
     });
 
     it("author_worker が無いときは生の author 文字列を表示する（フォールバック・破綻しない）", () => {

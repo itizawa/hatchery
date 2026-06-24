@@ -5,6 +5,7 @@ import { createApp } from "../app.js";
 import { createInMemoryViewRepository } from "../persistence/viewRepository.js";
 import { createInMemoryVoteRepository } from "../persistence/voteRepository.js";
 import { createInMemoryWorkerRepository } from "../persistence/workerRepository.js";
+import { createInMemoryPostRepository } from "../persistence/postRepository.js";
 import { createTestUserRepository } from "../persistence/userRepository.js";
 import { createTestDeps } from "../testing/createTestDeps.js";
 
@@ -185,6 +186,129 @@ describe("GET /api/workers（Bot Worker 一覧 / #240）", () => {
     const res = await request(app).get("/api/workers?includeDeleted=true");
     expect(res.status).toBe(200);
     expect(res.body.workers.map((w: { id: string }) => w.id).sort()).toEqual(["bot1", "bot2"]);
+  });
+});
+
+describe("GET /api/workers/:workerId（ワーカー詳細・#929）", () => {
+  it("存在するワーカー ID で 200 + ワーカー詳細を返す", async () => {
+    const workerRepo = createInMemoryWorkerRepository([
+      { id: "worker-abc", displayName: "あおい", role: "データサイエンティスト", personality: "論理的" },
+    ]);
+    const deps = createTestDeps({ workerRepository: workerRepo });
+    const app = createApp(deps);
+
+    const res = await request(app).get("/api/workers/worker-abc");
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      id: "worker-abc",
+      displayName: "あおい",
+      role: "データサイエンティスト",
+      personality: "論理的",
+    });
+  });
+
+  it("存在しないワーカー ID で 404 を返す", async () => {
+    const deps = createTestDeps({ workerRepository: createInMemoryWorkerRepository([]) });
+    const app = createApp(deps);
+
+    const res = await request(app).get("/api/workers/nonexistent");
+    expect(res.status).toBe(404);
+  });
+
+  it("論理削除済みワーカーは 404 を返す", async () => {
+    const workerRepo = createInMemoryWorkerRepository([
+      { id: "deleted-w", displayName: "削除済み", role: null, personality: null, deletedAt: new Date("2026-01-01") },
+    ]);
+    const deps = createTestDeps({ workerRepository: workerRepo });
+    const app = createApp(deps);
+
+    const res = await request(app).get("/api/workers/deleted-w");
+    expect(res.status).toBe(404);
+  });
+});
+
+describe("GET /api/workers/:workerId/posts（ワーカー投稿一覧・#929）", () => {
+  it("存在するワーカーの投稿を新着順で返す", async () => {
+    const workerRepo = createInMemoryWorkerRepository([
+      { id: "worker-1", displayName: "あおい", role: null, personality: null },
+    ]);
+    const postRepo = createInMemoryPostRepository();
+    await postRepo.createMany("community-1", [
+      {
+        slotKey: "2026-06-10T09:00",
+        seq: 0,
+        author: "worker-1",
+        title: "新しい投稿",
+        text: "テキスト",
+        createdAt: new Date("2026-06-10T09:00:00Z"),
+      },
+      {
+        slotKey: "2026-06-09T09:00",
+        seq: 0,
+        author: "worker-1",
+        title: "古い投稿",
+        text: "テキスト",
+        createdAt: new Date("2026-06-09T09:00:00Z"),
+      },
+      {
+        slotKey: "2026-06-10T09:00",
+        seq: 1,
+        author: "other-worker",
+        title: "別ワーカーの投稿",
+        text: "テキスト",
+        createdAt: new Date("2026-06-10T09:01:00Z"),
+      },
+    ]);
+    const deps = createTestDeps({ workerRepository: workerRepo, postRepository: postRepo });
+    const app = createApp(deps);
+
+    const res = await request(app).get("/api/workers/worker-1/posts");
+    expect(res.status).toBe(200);
+    expect(res.body.posts).toHaveLength(2);
+    expect(res.body.posts[0].title).toBe("新しい投稿");
+    expect(res.body.posts[1].title).toBe("古い投稿");
+  });
+
+  it("reveal フィルタ: 未来の createdAt を持つ post は除外される", async () => {
+    const now = new Date();
+    const futureDate = new Date(now.getTime() + 60 * 60 * 1000);
+    const pastDate = new Date(now.getTime() - 60 * 60 * 1000);
+
+    const workerRepo = createInMemoryWorkerRepository([
+      { id: "worker-1", displayName: "あおい", role: null, personality: null },
+    ]);
+    const postRepo = createInMemoryPostRepository();
+    await postRepo.createMany("community-1", [
+      { slotKey: "slot-past", seq: 0, author: "worker-1", title: "過去の投稿", text: "テキスト", createdAt: pastDate },
+      { slotKey: "slot-future", seq: 0, author: "worker-1", title: "未来の投稿", text: "テキスト", createdAt: futureDate },
+    ]);
+    const deps = createTestDeps({ workerRepository: workerRepo, postRepository: postRepo });
+    const app = createApp(deps);
+
+    const res = await request(app).get("/api/workers/worker-1/posts");
+    expect(res.status).toBe(200);
+    expect(res.body.posts).toHaveLength(1);
+    expect(res.body.posts[0].title).toBe("過去の投稿");
+  });
+
+  it("存在しないワーカーで 404 を返す", async () => {
+    const deps = createTestDeps({ workerRepository: createInMemoryWorkerRepository([]) });
+    const app = createApp(deps);
+
+    const res = await request(app).get("/api/workers/nonexistent/posts");
+    expect(res.status).toBe(404);
+  });
+
+  it("ワーカーに投稿がない場合は空配列を返す", async () => {
+    const workerRepo = createInMemoryWorkerRepository([
+      { id: "worker-1", displayName: "あおい", role: null, personality: null },
+    ]);
+    const deps = createTestDeps({ workerRepository: workerRepo });
+    const app = createApp(deps);
+
+    const res = await request(app).get("/api/workers/worker-1/posts");
+    expect(res.status).toBe(200);
+    expect(res.body.posts).toHaveLength(0);
   });
 });
 

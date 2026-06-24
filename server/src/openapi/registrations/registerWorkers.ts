@@ -12,6 +12,8 @@ import { z } from "zod";
 
 import { type RegistryContext, workerPathIdParam } from "./shared.js";
 
+const workerIdParam = z.string().openapi({ param: { name: "workerId", in: "path" } });
+
 /**
  * Worker CRUD（#38 / #329）と admin worker 作成・削除（#217 / #218 / #337）、
  * ワーカーの参加コミュニティ編集（#490）の OpenAPI 登録（#535）。
@@ -83,6 +85,40 @@ export function registerWorkers(registry: OpenAPIRegistry, ctx: RegistryContext)
         },
       },
       400: { description: "バリデーションエラー（page/limit が範囲外）", ...errorJson },
+    },
+  });
+
+  // ワーカー詳細（認証不要・#929）
+  registry.registerPath({
+    method: "get",
+    path: "/api/workers/{workerId}",
+    summary: "ワーカー詳細を取得（認証不要・#929）",
+    request: { params: z.object({ workerId: workerIdParam }) },
+    responses: {
+      200: {
+        description: "ワーカー詳細",
+        content: { "application/json": { schema: WorkerComponent } },
+      },
+      404: { description: "Worker が存在しない", ...errorJson },
+    },
+  });
+
+  // ワーカーの最新投稿一覧（認証不要・reveal フィルタ適用・#929）
+  registry.registerPath({
+    method: "get",
+    path: "/api/workers/{workerId}/posts",
+    summary: "ワーカーの最新投稿一覧を取得（認証不要・reveal フィルタ・#929）",
+    request: { params: z.object({ workerId: workerIdParam }) },
+    responses: {
+      200: {
+        description: "ワーカーの投稿一覧（新着順・reveal フィルタ済み）",
+        content: {
+          "application/json": {
+            schema: z.object({ posts: z.array(ctx.PostComponent!) }),
+          },
+        },
+      },
+      404: { description: "Worker が存在しない", ...errorJson },
     },
   });
 

@@ -57,12 +57,13 @@ function buildRegistry(): OpenAPIRegistry {
 
   // 分割前の registry.ts のセクション順を維持してモジュールを呼ぶ。
   // registerCommunities が Post / Comment component を ctx に代入するため、
-  // registerFeed / registerPosts はその後で呼ぶ必要がある。
-  registerWorkers(registry, ctx);
+  // registerFeed / registerPosts / registerWorkers（#929: /:workerId/posts で PostComponent 参照）は
+  // その後で呼ぶ必要がある。
   registerAuth(registry, ctx);
   registerAdmin(registry, ctx);
   registerHealth(registry);
   registerCommunities(registry, ctx);
+  registerWorkers(registry, ctx);
   registerFeed(registry, ctx);
   registerPosts(registry, ctx);
   registerOgp(registry);

@@ -124,7 +124,7 @@ describe("AdminWorkerTab（useSuspenseQuery + QueryBoundary）", () => {
   it("imageUrl 未設定の worker は DiceBear アバター画像を表示する (#884)", async () => {
     stubWorkers(200, [{ id: "mei", displayName: "mei", role: "新人" }] as Worker[]);
     renderWithClient(<AdminWorkerTab />);
-    expect(await screen.findByText("m")).toBeInTheDocument();
+    expect(await screen.findByText("mei")).toBeInTheDocument();
     const img = screen.getByRole("img", { name: "mei" });
     expect(img).toHaveAttribute("src", expect.stringContaining("api.dicebear.com"));
   });

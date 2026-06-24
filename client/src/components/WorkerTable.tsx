@@ -153,23 +153,25 @@ export const WorkerTable = ({
           onClose={() => setEditingWorker(null)}
         />
       )}
-      <Dialog open={confirmTarget !== null} onClose={handleCancel}>
-        <DialogTitle>ワーカーの削除</DialogTitle>
-        <DialogContent>
-          <Typography>
-            「{confirmTarget?.displayName}」を削除しますか？
-            これまでのメッセージは残りますが、表示名が「》削除済み《{confirmTarget?.displayName}」になります。
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCancel} disabled={isDeleting}>
-            キャンセル
-          </Button>
-          <Button onClick={handleConfirm} color="error" variant="contained" disabled={isDeleting}>
-            削除する
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {confirmTarget !== null && (
+        <Dialog open onClose={handleCancel}>
+          <DialogTitle>ワーカーの削除</DialogTitle>
+          <DialogContent>
+            <Typography>
+              「{confirmTarget.displayName}」を削除しますか？
+              これまでのメッセージは残りますが、表示名が「》削除済み《{confirmTarget.displayName}」になります。
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCancel} disabled={isDeleting}>
+              キャンセル
+            </Button>
+            <Button onClick={handleConfirm} color="error" variant="contained" disabled={isDeleting}>
+              削除する
+            </Button>
+          </DialogActions>
+        </Dialog>
+      )}
     </>
   );
 };

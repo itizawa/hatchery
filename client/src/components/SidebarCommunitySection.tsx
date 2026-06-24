@@ -109,7 +109,7 @@ export const SidebarCommunitySection = (): ReactElement => {
               sx={{ color: SLACK_COLORS.sidebarText, py: 0.25 }}
             >
               <ListItemIcon sx={SIDEBAR_ICON_SX}>
-                <ExploreIcon sx={{ fontSize: SIDEBAR_ICON_SIZE }} />
+                <ExploreIcon fontSize="small" />
               </ListItemIcon>
               <ListItemText
                 primary="探す"

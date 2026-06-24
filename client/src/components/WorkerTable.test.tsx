@@ -100,19 +100,19 @@ describe("WorkerTable", () => {
   });
 
   describe("削除機能（#219）", () => {
-    it("isDeletable=true のとき削除ボタンが表示される", () => {
-      renderWithClient(<WorkerTable isDeletable />);
+    it("onDelete が指定されたとき削除ボタンが表示される", () => {
+      renderWithClient(<WorkerTable onDelete={vi.fn()} />);
       const deleteButtons = screen.getAllByRole("button", { name: /削除/ });
       expect(deleteButtons).toHaveLength(DEFAULT_WORKERS.length);
     });
 
-    it("isDeletable が未指定（false）のとき削除ボタンは表示されない", () => {
+    it("onDelete が未指定のとき削除ボタンは表示されない", () => {
       renderWithClient(<WorkerTable />);
       expect(screen.queryByRole("button", { name: /削除/ })).not.toBeInTheDocument();
     });
 
     it("削除ボタンをクリックするとダイアログが表示される", async () => {
-      renderWithClient(<WorkerTable isDeletable />);
+      renderWithClient(<WorkerTable onDelete={vi.fn()} />);
       const deleteButtons = screen.getAllByRole("button", { name: /削除/ });
       await userEvent.click(deleteButtons[0]);
       expect(screen.getByRole("dialog")).toBeInTheDocument();
@@ -120,24 +120,24 @@ describe("WorkerTable", () => {
 
     it("ダイアログの確定ボタンをクリックすると onDelete コールバックが呼ばれる", async () => {
       const onDelete = vi.fn().mockResolvedValue(undefined);
-      renderWithClient(<WorkerTable isDeletable onDelete={onDelete} />);
+      renderWithClient(<WorkerTable onDelete={onDelete} />);
       const deleteButtons = screen.getAllByRole("button", { name: /削除/ });
       await userEvent.click(deleteButtons[0]);
-      const confirmButton = screen.getByRole("button", { name: /実行/ });
+      const confirmButton = screen.getByRole("button", { name: "削除する" });
       await userEvent.click(confirmButton);
       expect(onDelete).toHaveBeenCalledTimes(1);
       expect(onDelete).toHaveBeenCalledWith(DEFAULT_WORKERS[0].id);
     });
 
     it("削除ダイアログにワーカー名が表示される", async () => {
-      renderWithClient(<WorkerTable isDeletable />);
+      renderWithClient(<WorkerTable onDelete={vi.fn()} />);
       const deleteButtons = screen.getAllByRole("button", { name: /削除/ });
       await userEvent.click(deleteButtons[0]);
       expect(screen.getByText(DEFAULT_WORKERS[0].displayName)).toBeInTheDocument();
     });
 
     it("削除ダイアログのキャンセルボタンでダイアログが閉じる", async () => {
-      renderWithClient(<WorkerTable isDeletable />);
+      renderWithClient(<WorkerTable onDelete={vi.fn()} />);
       const deleteButtons = screen.getAllByRole("button", { name: /削除/ });
       await userEvent.click(deleteButtons[0]);
       const cancelButton = screen.getByRole("button", { name: /キャンセル/ });
@@ -147,7 +147,7 @@ describe("WorkerTable", () => {
 
     it("削除済みワーカーは》削除済み《プレフィックス付きダイアログメッセージを表示する (#884)", async () => {
       const deletedWorker = { id: "del", displayName: "削除ワーカー", deletedAt: "2024-01-01T00:00:00.000Z" };
-      renderWithClient(<WorkerTable isDeletable workers={[deletedWorker]} />);
+      renderWithClient(<WorkerTable onDelete={vi.fn()} workers={[deletedWorker]} />);
       const deleteButtons = screen.getAllByRole("button", { name: /削除/ });
       await userEvent.click(deleteButtons[0]);
       expect(screen.getByText("》削除済み《削除ワーカー")).toBeInTheDocument();

@@ -85,7 +85,7 @@ export type BatchModel = (typeof ALLOWED_BATCH_MODELS)[number];
 /** バッチモデルの既定値（#389 AC1）。 */
 export const DEFAULT_BATCH_MODEL: BatchModel = "claude-sonnet-4-6";
 
-/** 直近ログ件数の既定値（#389 AC2）。runPostBatch / runCommentBatch の recentLimit 既定値と一致させる。 */
+/** 直近ログ件数の既定値（#389 AC2）。runPostBatch の recentLimit 既定値と一致させる。 */
 export const DEFAULT_BATCH_RECENT_LIMIT = 30;
 
 /** 直近ログ件数の許容範囲（#389 AC2）。表示・トークン・DB 負荷を踏まえた上下限。 */

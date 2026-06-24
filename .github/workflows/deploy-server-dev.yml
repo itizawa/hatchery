@@ -90,9 +90,11 @@ jobs:
             --set-env-vars="GCS_BUCKET_NAME=${{ secrets.GCS_BUCKET_NAME }}" \
             --set-env-vars="NODE_ENV=production"
 
-      - name: Update batch job image (dev)
+      - name: Update batch job images (dev)
         run: |
-          gcloud run jobs update hatchery-batch \
+          gcloud run jobs update hatchery-batch-post \
             --image=${{ env.IMAGE }} \
-            --args="dist/batch/communityBatchIndex.js" \
+            --region=${{ env.REGION }}
+          gcloud run jobs update hatchery-batch-comment \
+            --image=${{ env.IMAGE }} \
             --region=${{ env.REGION }}

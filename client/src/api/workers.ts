@@ -3,7 +3,6 @@ import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-q
 
 import { clientEnv } from "../config/env.js";
 import { openApiClient, unwrap } from "./client.js";
-import { buildApiErrorMessage } from "./errors.js";
 
 export const BOT_WORKERS_QUERY_KEY = ["workers", "bots"] as const;
 export const WORKER_RANKING_QUERY_KEY = ["workers", "ranking"] as const;
@@ -40,16 +39,12 @@ export function useUpdateWorker() {
       id: string;
       body: { displayName?: string; role?: string; personality?: string; verbosity?: "concise" | "standard" | "detailed" };
     }) => {
-      const { data, error, response } = await openApiClient.PATCH("/api/workers/{id}", {
+      const result = await openApiClient.PATCH("/api/workers/{id}", {
         params: { path: { id } },
         body,
         credentials: "include",
       });
-      // 失敗時はサーバが返す { error } メッセージを Error に乗せ、UI で原因を提示できるようにする（#476）。
-      if (!response.ok || !data) {
-        throw new Error(buildApiErrorMessage(error, response.status, "ワーカーの更新に失敗しました"));
-      }
-      return data;
+      return unwrap(result, "PATCH /api/workers/{id}");
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: BOT_WORKERS_QUERY_KEY }),
   });

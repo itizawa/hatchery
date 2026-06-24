@@ -165,4 +165,9 @@ describe("buildCommentBatchPrompt", () => {
     });
     expect(prompt).toContain("コミュニティのあらすじ");
   });
+
+  it("注意事項に URL をコメント本文に含めない禁止指示が含まれる（#927）", () => {
+    const { prompt } = buildCommentBatchPrompt({ community, workers, recentLog: [], targetPosts });
+    expect(prompt).toMatch(/URL.*含めない|含めない.*URL/);
+  });
 });

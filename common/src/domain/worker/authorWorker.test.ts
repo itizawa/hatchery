@@ -51,19 +51,18 @@ describe("buildAuthorWorkerResolver", () => {
     });
   });
 
-  it("画像未設定のワーカーは image_url が null になる", () => {
+  it("画像未設定のワーカーは DiceBear URL が image_url に設定される (#884)", () => {
     const resolve = buildAuthorWorkerResolver(workers);
-    expect(resolve("ken")).toEqual({
-      id: "d89954ec-uuid",
-      display_name: "ken",
-      image_url: null,
-    });
-    // imageUrl プロパティ自体が無いワーカーも null に正規化する
-    expect(resolve("mei")).toEqual({
-      id: "e0000000-uuid",
-      display_name: "mei",
-      image_url: null,
-    });
+    const kenResult = resolve("ken");
+    expect(kenResult).toBeDefined();
+    expect(kenResult?.image_url).toContain("api.dicebear.com");
+    expect(kenResult?.image_url).toContain("seed=d89954ec-uuid");
+
+    // imageUrl プロパティ自体が無いワーカーも DiceBear URL に正規化する
+    const meiResult = resolve("mei");
+    expect(meiResult).toBeDefined();
+    expect(meiResult?.image_url).toContain("api.dicebear.com");
+    expect(meiResult?.image_url).toContain("seed=e0000000-uuid");
   });
 
   it("解決できない author は undefined を返す", () => {

@@ -377,7 +377,7 @@ describe("WorkerVerbositySchema (#625)", () => {
 });
 
 describe("WorkerSchema: verbosity フィールド (#625)", () => {
-  it("verbosity を略略しても parse 成功する（任意フィールド）", () => {
+  it("verbosity を省略しても parse 成功する（任意フィールド）", () => {
     expect(WorkerSchema.safeParse({ id: "haru", displayName: "haru" }).success).toBe(true);
   });
 
@@ -405,7 +405,7 @@ describe("WorkerSchema: verbosity フィールド (#625)", () => {
 });
 
 describe("UpdateWorkerSchema: verbosity フィールド (#625)", () => {
-  it("verbosity を略略しても valid（任意）", () => {
+  it("verbosity を省略しても valid（任意）", () => {
     expect(UpdateWorkerSchema.safeParse({}).success).toBe(true);
   });
 
@@ -421,7 +421,7 @@ describe("UpdateWorkerSchema: verbosity フィールド (#625)", () => {
 });
 
 describe("CreateWorkerSchema: verbosity フィールド (#625)", () => {
-  it("verbosity を略略しても parse 成功する（任意）", () => {
+  it("verbosity を省略しても parse 成功する（任意）", () => {
     expect(CreateWorkerSchema.safeParse({ displayName: "ワーカーA" }).success).toBe(true);
   });
 
@@ -449,7 +449,7 @@ describe("WorkerSchema: deletedAt フィールド（#372 HTTP 境界型整合）
     expect(WorkerSchema.safeParse({ id: "w1", displayName: "Alice", deletedAt: null }).success).toBe(true);
   });
 
-  it("deletedAt を略略しても parse 成功する（optional）", () => {
+  it("deletedAt を省略しても parse 成功する（optional）", () => {
     expect(WorkerSchema.safeParse({ id: "w1", displayName: "Alice" }).success).toBe(true);
   });
 });

@@ -23,11 +23,11 @@ describe("AuthorByline", () => {
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
   });
 
-  it("authorWorker.image_url が null のとき display_name の頭文字（大文字）を表示し img は表示しない", () => {
+  it("authorWorker.image_url が null のとき DiceBear アバター画像と display_name を表示する (#884)", () => {
     render(<AuthorByline author="uuid-mei" authorWorker={workerWithoutImage} />);
-    expect(screen.getByText("M")).toBeInTheDocument();
     expect(screen.getByText("mei")).toBeInTheDocument();
-    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+    const img = screen.getByRole("img", { name: "mei" });
+    expect(img).toHaveAttribute("src", expect.stringContaining("api.dicebear.com"));
   });
 
   it("authorWorker.image_url があるとき img の src にその URL が適用される", () => {

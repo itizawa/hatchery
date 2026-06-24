@@ -22,7 +22,7 @@ export const WorkerSchema = z.object({
   displayName: z.string().min(1).max(WORKER_DISPLAY_NAME_MAX_LENGTH),
   role: z.string().min(1).max(WORKER_ROLE_MAX_LENGTH).optional(),
   personality: z.string().max(WORKER_PERSONALITY_MAX_LENGTH).optional(),
-  /** 文章量設定（#625）。略略時は standard 相当。 */
+  /** 文章量設定（#625）。省略時は standard 相当。 */
   verbosity: WorkerVerbositySchema.optional(),
   imageUrl: z.string().url().max(WORKER_IMAGE_URL_MAX_LENGTH).optional(),
   deletedAt: z.string().datetime().nullable().optional(),
@@ -34,7 +34,7 @@ export const UpdateWorkerSchema = z.object({
   displayName: z.string().min(1).max(WORKER_DISPLAY_NAME_MAX_LENGTH).optional(),
   role: z.string().min(1).max(WORKER_ROLE_MAX_LENGTH).optional(),
   personality: z.string().max(WORKER_PERSONALITY_MAX_LENGTH).optional(),
-  /** 文章量設定（#625）。略略時は変更なし。 */
+  /** 文章量設定（#625）。省略時は変更なし。 */
   verbosity: WorkerVerbositySchema.optional(),
 });
 
@@ -44,7 +44,7 @@ export const CreateWorkerSchema = z.object({
   displayName: z.string().min(1).max(WORKER_DISPLAY_NAME_MAX_LENGTH),
   role: z.string().min(1).max(WORKER_ROLE_MAX_LENGTH).optional(),
   personality: z.string().max(WORKER_PERSONALITY_MAX_LENGTH).optional(),
-  /** 文章量設定（#625）。略略時は standard 相当。 */
+  /** 文章量設定（#625）。省略時は standard 相当。 */
   verbosity: WorkerVerbositySchema.optional(),
 });
 

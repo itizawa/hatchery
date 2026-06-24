@@ -18,6 +18,9 @@ export interface SubscriptionRepository {
   listCommunityIdsByUser(userId: string): Promise<string[]>;
   /** ユーザーが特定の community を購読しているか確認する。 */
   hasSubscription(userId: string, communityId: string): Promise<boolean>;
+
+  /** コミュニティ別購読者数（communityId → count）を返す（#761）。 */
+  subscriberCountPerCommunity(): Promise<Map<string, number>>;
 }
 
 /** DB 非依存のインメモリ実装。ユースケース/ルートのテストで注入する。 */
@@ -52,6 +55,14 @@ export function createInMemorySubscriptionRepository(): SubscriptionRepository {
     hasSubscription(userId: string, communityId: string): Promise<boolean> {
       const exists = records.some((r) => r.userId === userId && r.communityId === communityId);
       return Promise.resolve(exists);
+    },
+
+    subscriberCountPerCommunity(): Promise<Map<string, number>> {
+      const counts = new Map<string, number>();
+      for (const r of records) {
+        counts.set(r.communityId, (counts.get(r.communityId) ?? 0) + 1);
+      }
+      return Promise.resolve(counts);
     },
   };
 }

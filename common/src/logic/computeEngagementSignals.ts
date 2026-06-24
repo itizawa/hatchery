@@ -18,6 +18,7 @@ export function computeVoteShares({
     id,
     count: Math.max(0, raw),
   }));
+  // eslint-disable-next-line max-params
   const total = entries.reduce((sum, e) => sum + e.count, 0);
   return entries
     .map((e) => ({
@@ -25,6 +26,7 @@ export function computeVoteShares({
       count: e.count,
       sharePercent: total > 0 ? (e.count / total) * 100 : 0,
     }))
+    // eslint-disable-next-line max-params
     .sort((a, b) => b.count - a.count);
 }
 
@@ -46,6 +48,7 @@ export function computeLoyaltyScore({
   for (const votesMap of userVotesByCommunity.values()) {
     const counts = Array.from(votesMap.values()).filter((c) => c > 0);
     if (counts.length === 0) continue;
+    // eslint-disable-next-line max-params
     const total = counts.reduce((s, c) => s + c, 0);
     const maxCount = Math.max(...counts);
     totalMaxShare += maxCount / total;

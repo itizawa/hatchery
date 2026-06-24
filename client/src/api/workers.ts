@@ -44,7 +44,7 @@ export function useUpdateWorker() {
         body,
         credentials: "include",
       });
-      return unwrap(result, "PATCH /api/workers/{id}");
+      return unwrap(result, "ワーカーの更新に失敗しました");
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: BOT_WORKERS_QUERY_KEY }),
   });

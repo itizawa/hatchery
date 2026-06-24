@@ -10,8 +10,7 @@ import { fetchPostThread } from "./posts.js";
 import { subscribeCommunity, unsubscribeCommunity } from "./subscriptions.js";
 import { voteComment, votePost } from "./votes.js";
 
-// eslint-disable-next-line max-params
-function jsonResponse(status: number, body?: unknown): Response {
+function jsonResponse({ status, body }: { status: number; body?: unknown }): Response {
   return new Response(body === undefined ? null : JSON.stringify(body), {
     status,
     headers: { "Content-Type": "application/json" },
@@ -22,7 +21,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-// ─── votePost ───────────────────────────────────────────────────────────────────────────────
+// ─── votePost ─────────────────────────────────────────────────────────────────
 
 describe("votePost", () => {
   const mockPost = {
@@ -37,20 +36,20 @@ describe("votePost", () => {
   };
 
   it("200 のとき Post を返す（AC9）", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(200, mockPost)));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ status: 200, body: mockPost })));
     const result = await votePost({ postId: "p1", direction: "up", sessionId: "s1" });
     expect(result).toEqual(mockPost);
   });
 
   it('500 のとき "POST /api/posts/p1/vote (500)" 形式で throw する（AC1）', async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(500)));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ status: 500 })));
     await expect(votePost({ postId: "p1", direction: "up", sessionId: "s1" })).rejects.toThrow(
       "POST /api/posts/p1/vote (500)",
     );
   });
 });
 
-// ─── voteComment ────────────────────────────────────────────────────────────────────────────
+// ─── voteComment ──────────────────────────────────────────────────────────────
 
 describe("voteComment", () => {
   const mockComment = {
@@ -64,20 +63,20 @@ describe("voteComment", () => {
   };
 
   it("200 のとき Comment を返す（AC9）", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(200, mockComment)));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ status: 200, body: mockComment })));
     const result = await voteComment({ commentId: "c1", direction: "up", sessionId: "s1" });
     expect(result).toEqual(mockComment);
   });
 
   it('500 のとき "POST /api/comments/c1/vote (500)" 形式で throw する（AC2）', async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(500)));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ status: 500 })));
     await expect(
       voteComment({ commentId: "c1", direction: "up", sessionId: "s1" }),
     ).rejects.toThrow("POST /api/comments/c1/vote (500)");
   });
 });
 
-// ─── fetchCommunityFeed ────────────────────────────────────────────────────────────────────────
+// ─── fetchCommunityFeed ───────────────────────────────────────────────────────
 
 describe("fetchCommunityFeed", () => {
   const mockPosts = [
@@ -94,20 +93,20 @@ describe("fetchCommunityFeed", () => {
   ];
 
   it("200 のとき Post[] を返す（AC9）", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(200, mockPosts)));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ status: 200, body: mockPosts })));
     const result = await fetchCommunityFeed({ slug: "tech" });
     expect(result).toEqual(mockPosts);
   });
 
   it('500 のとき "GET /api/communities/tech/feed (500)" 形式で throw する（AC3）', async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(500)));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ status: 500 })));
     await expect(fetchCommunityFeed({ slug: "tech" })).rejects.toThrow(
       "GET /api/communities/tech/feed (500)",
     );
   });
 });
 
-// ─── fetchHomeFeedPage ──────────────────────────────────────────────────────────────────────────
+// ─── fetchHomeFeedPage ────────────────────────────────────────────────────────
 
 describe("fetchHomeFeedPage", () => {
   const mockFeedPage = {
@@ -116,53 +115,53 @@ describe("fetchHomeFeedPage", () => {
   };
 
   it("200 のとき pages を返す（AC9）", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(200, mockFeedPage)));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ status: 200, body: mockFeedPage })));
     const result = await fetchHomeFeedPage();
     expect(result).toEqual(mockFeedPage);
   });
 
   it('500 のとき "GET /api/feed (500)" 形式で throw する（AC4）', async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(500)));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ status: 500 })));
     await expect(fetchHomeFeedPage()).rejects.toThrow("GET /api/feed (500)");
   });
 });
 
-// ─── subscribeCommunity ─────────────────────────────────────────────────────────────────────────
+// ─── subscribeCommunity ───────────────────────────────────────────────────────
 
 describe("subscribeCommunity", () => {
   const mockSubscription = { userId: "u1", communityId: "c1" };
 
   it("200 のとき data を返す（AC9）", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(200, mockSubscription)));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ status: 200, body: mockSubscription })));
     const result = await subscribeCommunity("tech");
     expect(result).toEqual(mockSubscription);
   });
 
   it('500 のとき "POST /api/communities/tech/subscribe (500)" 形式で throw する（AC5）', async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(500)));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ status: 500 })));
     await expect(subscribeCommunity("tech")).rejects.toThrow(
       "POST /api/communities/tech/subscribe (500)",
     );
   });
 });
 
-// ─── unsubscribeCommunity ─────────────────────────────────────────────────────────────────────────
+// ─── unsubscribeCommunity ─────────────────────────────────────────────────────
 
 describe("unsubscribeCommunity", () => {
   it("204 のとき throw しない（AC6）", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(204)));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ status: 204 })));
     await expect(unsubscribeCommunity("tech")).resolves.toBeUndefined();
   });
 
   it('500 のとき "DELETE /api/communities/tech/subscribe (500)" 形式で throw する（AC7）', async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(500)));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ status: 500 })));
     await expect(unsubscribeCommunity("tech")).rejects.toThrow(
       "DELETE /api/communities/tech/subscribe (500)",
     );
   });
 });
 
-// ─── fetchPostThread ─────────────────────────────────────────────────────────────────────────────
+// ─── fetchPostThread ──────────────────────────────────────────────────────────
 
 describe("fetchPostThread", () => {
   const mockThread = {
@@ -180,13 +179,13 @@ describe("fetchPostThread", () => {
   };
 
   it("200 のとき thread を返す（AC9）", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(200, mockThread)));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ status: 200, body: mockThread })));
     const result = await fetchPostThread({ postId: "p1" });
     expect(result).toEqual(mockThread);
   });
 
   it('500 のとき "GET /api/posts/p1 (500)" 形式で throw する（AC8）', async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(500)));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ status: 500 })));
     await expect(fetchPostThread({ postId: "p1" })).rejects.toThrow("GET /api/posts/p1 (500)");
   });
 });

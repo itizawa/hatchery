@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { http, HttpResponse, delay } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -208,5 +209,126 @@ describe("CommunityScene", () => {
     expect(await screen.findByText("コミュニティフィード ShareButton テスト")).toBeInTheDocument();
     const shareButtons = await screen.findAllByRole("button", { name: /共有/i });
     expect(shareButtons.length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe("CommunityScene — vote 楽観的更新（#924）", () => {
+  const votePost = {
+    id: "post-924",
+    community_id: "community-1",
+    slot_key: "2026-06-20-morning",
+    seq: 1,
+    author: "worker-haru",
+    title: "楽観的更新テスト投稿",
+    text: "内容",
+    score: 5,
+    my_vote: null as "up" | "down" | null,
+    comment_count: 0,
+    created_at: "2026-06-20T00:00:00Z",
+  };
+
+  function renderVoteScene(postOverrides: Partial<typeof votePost> = {}) {
+    const post = { ...votePost, ...postOverrides };
+    const qc = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    });
+    qc.setQueryData(["communities"], [mockCommunity]);
+    qc.setQueryData(communityFeedQueryKey("ai-dev"), [post]);
+    qc.setQueryData(communitySubscriptionQueryKey("ai-dev"), { subscribed: false });
+    qc.setQueryData(AUTH_ME_QUERY_KEY, null);
+    qc.setQueryData(communityRecentWorkersQueryKey("ai-dev"), mockRecentWorkers);
+    render(
+      <QueryClientProvider client={qc}>
+        <QueryBoundary fallback={<MainContentSkeleton />}>
+          <CommunityScene />
+        </QueryBoundary>
+      </QueryClientProvider>,
+    );
+  }
+
+  it("up vote 後にアイコンが楽観的更新される（aria-pressed が true になる）", async () => {
+    server.use(
+      http.post("/api/posts/:postId/vote", async () => {
+        await delay("infinite");
+        return HttpResponse.json({});
+      }),
+    );
+    renderVoteScene();
+    await screen.findByText("楽観的更新テスト投稿");
+
+    const upBtn = screen.getByRole("button", { name: /up vote/i });
+    expect(upBtn).toHaveAttribute("aria-pressed", "false");
+
+    await userEvent.click(upBtn);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /up vote/i })).toHaveAttribute("aria-pressed", "true");
+    });
+  });
+
+  it("up vote 後にスコアが楽観的更新される（+1）", async () => {
+    server.use(
+      http.post("/api/posts/:postId/vote", async () => {
+        await delay("infinite");
+        return HttpResponse.json({});
+      }),
+    );
+    renderVoteScene();
+    await screen.findByText("楽観的更新テスト投稿");
+
+    await userEvent.click(screen.getByRole("button", { name: /up vote/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /up vote/i })).toHaveAttribute("aria-pressed", "true");
+      expect(screen.getByText("6")).toBeInTheDocument();
+    });
+  });
+
+  it("up 済み → 同方向クリックで toggle off される（aria-pressed が false になる）", async () => {
+    server.use(
+      http.post("/api/posts/:postId/vote", async () => {
+        await delay("infinite");
+        return HttpResponse.json({});
+      }),
+    );
+    renderVoteScene({ score: 10, my_vote: "up" });
+    await screen.findByText("楽観的更新テスト投稿");
+
+    const upBtn = screen.getByRole("button", { name: /up vote/i });
+    expect(upBtn).toHaveAttribute("aria-pressed", "true");
+
+    await userEvent.click(upBtn);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /up vote/i })).toHaveAttribute("aria-pressed", "false");
+      expect(screen.getByText("9")).toBeInTheDocument();
+    });
+  });
+
+  it("API エラー時に aria-pressed がロールバックされる", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    server.use(
+      http.post("/api/posts/:postId/vote", async () => {
+        await delay(50);
+        return new HttpResponse(null, { status: 500 });
+      }),
+      // invalidateQueries によるリフェッチで投稿が消えないよう元データを返す
+      http.get("/api/communities/:slug/feed", () =>
+        HttpResponse.json([{ ...votePost, my_vote: null }]),
+      ),
+    );
+    renderVoteScene({ my_vote: null });
+    await screen.findByText("楽観的更新テスト投稿");
+
+    await userEvent.click(screen.getByRole("button", { name: /up vote/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /up vote/i })).toHaveAttribute("aria-pressed", "true");
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /up vote/i })).toHaveAttribute("aria-pressed", "false");
+    });
+    errorSpy.mockRestore();
   });
 });

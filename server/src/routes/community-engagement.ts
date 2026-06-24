@@ -10,7 +10,7 @@ import { requireAuth } from "../middleware/requireAuth.js";
 import type { SubscriptionRepository } from "../persistence/subscriptionRepository.js";
 import type { VoteRepository } from "../persistence/voteRepository.js";
 
-/** 集計ウィンドウ（日数）。ADR-0030 の VOTE_WEIGHT_WINDOW_DAYS に偃い名前付き定数で切り出す（#761）。 */
+/** 集計ウィンドウ（日数）。ADR-0030 の VOTE_WEIGHT_WINDOW_DAYS に倣い名前付き定数で切り出す（#761）。 */
 export const ENGAGEMENT_WINDOW_DAYS = 30;
 
 export function createCommunityEngagementRouter({
@@ -28,13 +28,20 @@ export function createCommunityEngagementRouter({
     try {
       const since = new Date(Date.now() - ENGAGEMENT_WINDOW_DAYS * 24 * 60 * 60 * 1000);
 
-      const [communityCounts, workerCounts, userVotesByCommunity, subscriberCounts] =
+      const [workerCounts, userVotesByCommunity, subscriberCounts] =
         await Promise.all([
-          voteRepository.netScoresByCommunitySince(since),
-          voteRepository.netScoresByWorkerSince(since),
+          voteRepository.rawVoteCountsByWorkerSince(since),
           voteRepository.voteCountsPerUserPerCommunitySince(since),
           subscriptionRepository.subscriberCountPerCommunity(),
         ]);
+
+      // コミュニティ別の生 vote 数は userVotesByCommunity から無コストで導出する
+      const communityCounts = new Map<string, number>();
+      for (const userMap of userVotesByCommunity.values()) {
+        for (const [communityId, cnt] of userMap) {
+          communityCounts.set(communityId, (communityCounts.get(communityId) ?? 0) + cnt);
+        }
+      }
 
       // コミュニティ別・ワーカー別 vote シェアを計算する（純粋ロジック in common）
       const communityVoteShares = computeVoteShares({ counts: communityCounts });

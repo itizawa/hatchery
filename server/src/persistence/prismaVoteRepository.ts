@@ -247,5 +247,29 @@ export function createPrismaVoteRepository(prisma: PrismaClient): VoteRepository
       }
       return result;
     },
+
+    async rawVoteCountsByWorkerSince(since: Date): Promise<Map<string, number>> {
+      const rows = await prisma.$queryRaw<{ workerId: string; cnt: bigint }[]>(Prisma.sql`
+        SELECT "workerId", COUNT(*) AS "cnt"
+        FROM (
+          SELECT p."author" AS "workerId"
+          FROM "Vote" v
+          JOIN "Post" p ON p."id" = v."postId"
+          WHERE v."postId" IS NOT NULL AND v."createdAt" >= ${since}
+          UNION ALL
+          SELECT c."author" AS "workerId"
+          FROM "Vote" v
+          JOIN "Comment" c ON c."id" = v."commentId"
+          WHERE v."commentId" IS NOT NULL AND v."createdAt" >= ${since}
+        ) AS resolved
+        GROUP BY "workerId"
+      `);
+
+      const result = new Map<string, number>();
+      for (const row of rows) {
+        result.set(row.workerId, Number(row.cnt));
+      }
+      return result;
+    },
   };
 }

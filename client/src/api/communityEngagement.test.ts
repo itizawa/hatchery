@@ -2,8 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { fetchCommunityEngagement } from "./communityEngagement.js";
 
-// eslint-disable-next-line max-params
-function jsonResponse(status: number, body?: unknown): Response {
+function jsonResponse({ status, body }: { status: number; body?: unknown }): Response {
   return new Response(body === undefined ? null : JSON.stringify(body), {
     status,
     headers: { "Content-Type": "application/json" },
@@ -24,7 +23,7 @@ describe("communityEngagement API（openApiClient 経由）", () => {
   });
 
   it("fetchCommunityEngagement は openApiClient 経由で /admin/community-engagement を GET する", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, sampleResponse));
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ status: 200, body: sampleResponse }));
     vi.stubGlobal("fetch", fetchMock);
 
     await fetchCommunityEngagement();
@@ -36,7 +35,7 @@ describe("communityEngagement API（openApiClient 経由）", () => {
   });
 
   it("fetchCommunityEngagement は CommunityEngagementSchema で検証し正しい型を返す", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(200, sampleResponse)));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ status: 200, body: sampleResponse })));
 
     const result = await fetchCommunityEngagement();
     expect(result.windowDays).toBe(30);
@@ -48,7 +47,7 @@ describe("communityEngagement API（openApiClient 経由）", () => {
   });
 
   it("fetchCommunityEngagement は非 2xx で例外を投げる", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(401, { error: "Unauthorized" })));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ status: 401, body: { error: "Unauthorized" } })));
     await expect(fetchCommunityEngagement()).rejects.toThrow();
   });
 });

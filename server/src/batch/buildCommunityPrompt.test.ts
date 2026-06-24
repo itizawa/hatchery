@@ -611,9 +611,31 @@ describe("buildCommunityPrompt: feedArticles の注入（#491 / ADR-0035）", ()
       ],
     });
     expect(prompt).toContain("TypeScript 5.0 の新機能");
-    expect(prompt).toContain("https://zenn.dev/articles/ts50");
+    expect(prompt).not.toContain("https://zenn.dev/articles/ts50"); // URL は含めない（#927）
     expect(prompt).toContain("TS5.0 の概要。");
     expect(prompt).toContain("yamada");
+  });
+
+  it("feedArticles の URL はプロンプトに含まれない（#927）", () => {
+    const { prompt } = buildCommunityPrompt({
+      community,
+      workers,
+      recentLog: [],
+      feedArticles: [
+        { title: "ある記事", url: "https://b.hatena.ne.jp/hotentry/general", summary: "概要テキスト", author: null },
+        { title: "別の記事", url: "https://b.hatena.ne.jp/hotentry/it", summary: null, author: "author-a" },
+      ],
+    });
+    expect(prompt).not.toContain("https://b.hatena.ne.jp/hotentry/general");
+    expect(prompt).not.toContain("https://b.hatena.ne.jp/hotentry/it");
+    expect(prompt).toContain("ある記事");
+    expect(prompt).toContain("別の記事");
+    expect(prompt).toContain("概要テキスト");
+  });
+
+  it("注意事項に URL を本文に含めない禁止指示が含まれる（#927）", () => {
+    const { prompt } = buildCommunityPrompt({ community, workers, recentLog: [] });
+    expect(prompt).toMatch(/URL.*含めない|含めない.*URL/);
   });
 
   it("feedArticles が省略された場合はプロンプトに変化なし（フィード関連テキストなし）", () => {

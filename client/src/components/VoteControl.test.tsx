@@ -198,41 +198,30 @@ describe("VoteControl", () => {
     });
   });
 
-  describe("アイコン solid/outline バリアント（#854）", () => {
-    it("未投票時に up アイコンが outline バリアントでレンダリングされる", () => {
+  describe("MUI アイコンレンダリング（#912）", () => {
+    it("未投票時に up ボタン内に ArrowUpwardRoundedIcon がレンダリングされる", () => {
       const { container } = render(<VoteControl score={0} onVote={vi.fn()} currentVote={null} />);
-      expect(container.querySelector('[data-testid="vote-arrow-up-outline"]')).toBeInTheDocument();
-      expect(container.querySelector('[data-testid="vote-arrow-up-solid"]')).not.toBeInTheDocument();
+      expect(container.querySelector('[data-testid="ArrowUpwardRoundedIcon"]')).toBeInTheDocument();
     });
 
-    it("未投票時に down アイコンが outline バリアントでレンダリングされる", () => {
+    it("未投票時に down ボタン内に ArrowDownwardRoundedIcon がレンダリングされる", () => {
       const { container } = render(<VoteControl score={0} onVote={vi.fn()} currentVote={null} />);
-      expect(container.querySelector('[data-testid="vote-arrow-down-outline"]')).toBeInTheDocument();
-      expect(container.querySelector('[data-testid="vote-arrow-down-solid"]')).not.toBeInTheDocument();
+      expect(container.querySelector('[data-testid="ArrowDownwardRoundedIcon"]')).toBeInTheDocument();
     });
 
-    it("currentVote='up' のとき up アイコンが solid バリアントでレンダリングされる", () => {
+    it("currentVote='up' でも up ボタン内に ArrowUpwardRoundedIcon がレンダリングされる（solid 切り替えなし）", () => {
       const { container } = render(<VoteControl score={1} onVote={vi.fn()} currentVote="up" />);
-      expect(container.querySelector('[data-testid="vote-arrow-up-solid"]')).toBeInTheDocument();
-      expect(container.querySelector('[data-testid="vote-arrow-up-outline"]')).not.toBeInTheDocument();
+      expect(container.querySelector('[data-testid="ArrowUpwardRoundedIcon"]')).toBeInTheDocument();
     });
 
-    it("currentVote='up' のとき down アイコンが outline バリアントでレンダリングされる", () => {
+    it("currentVote='up' でも down ボタン内に ArrowDownwardRoundedIcon がレンダリングされる", () => {
       const { container } = render(<VoteControl score={1} onVote={vi.fn()} currentVote="up" />);
-      expect(container.querySelector('[data-testid="vote-arrow-down-outline"]')).toBeInTheDocument();
-      expect(container.querySelector('[data-testid="vote-arrow-down-solid"]')).not.toBeInTheDocument();
+      expect(container.querySelector('[data-testid="ArrowDownwardRoundedIcon"]')).toBeInTheDocument();
     });
 
-    it("currentVote='down' のとき down アイコンが solid バリアントでレンダリングされる", () => {
-      const { container } = render(<VoteControl score={-1} onVote={vi.fn()} currentVote="down" />);
-      expect(container.querySelector('[data-testid="vote-arrow-down-solid"]')).toBeInTheDocument();
-      expect(container.querySelector('[data-testid="vote-arrow-down-outline"]')).not.toBeInTheDocument();
-    });
-
-    it("currentVote='down' のとき up アイコンが outline バリアントでレンダリングされる", () => {
-      const { container } = render(<VoteControl score={-1} onVote={vi.fn()} currentVote="down" />);
-      expect(container.querySelector('[data-testid="vote-arrow-up-outline"]')).toBeInTheDocument();
-      expect(container.querySelector('[data-testid="vote-arrow-up-solid"]')).not.toBeInTheDocument();
+    it("旧 VoteArrow の data-testid（vote-arrow-*）が存在しない（#912）", () => {
+      const { container } = render(<VoteControl score={0} onVote={vi.fn()} currentVote={null} />);
+      expect(container.querySelector('[data-testid^="vote-arrow-"]')).not.toBeInTheDocument();
     });
   });
 });

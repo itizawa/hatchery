@@ -1,5 +1,6 @@
+import ArrowDownwardRounded from "@mui/icons-material/ArrowDownwardRounded";
+import ArrowUpwardRounded from "@mui/icons-material/ArrowUpwardRounded";
 import { Box, IconButton, Tooltip, Typography } from "./uiParts";
-import { VoteArrow } from "./icons/VoteArrow";
 import { SLACK_COLORS } from "../theme";
 import type { ReactElement } from "react";
 import type { VoteDirection } from "@hatchery/common";
@@ -19,7 +20,7 @@ interface VoteControlProps {
  * 1 つの pill コンテナ内に up・ネットスコア・down を横並びで表示する。
  * 投票済み（up/down）は Box 背景の塗りつぶしで明示（#813）。
  * 配色は Reddit 準拠: up=赤（#FF4500）/ down=青（#7193FF）（#854）。
- * アイコンは投票方向が solid、非投票方向が outline の自前 SVG を使用（#854）。
+ * アイコンは MUI ArrowUpwardRounded / ArrowDownwardRounded（#912）。
  * 表示数字は up − down のネットスコア（score・#856）。負値も表示する。
  * #890: upDisabled / downDisabled で方向別に disabled を制御する。
  */
@@ -74,10 +75,7 @@ export const VoteControl = ({
               },
             }}
           >
-            <VoteArrow
-              direction="up"
-              variant={currentVote === "up" ? "solid" : "outline"}
-            />
+            <ArrowUpwardRounded fontSize="small" />
           </IconButton>
         </span>
       </Tooltip>
@@ -108,10 +106,7 @@ export const VoteControl = ({
               },
             }}
           >
-            <VoteArrow
-              direction="down"
-              variant={currentVote === "down" ? "solid" : "outline"}
-            />
+            <ArrowDownwardRounded fontSize="small" />
           </IconButton>
         </span>
       </Tooltip>

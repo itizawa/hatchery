@@ -80,4 +80,9 @@ describe("buildPostPrompt", () => {
     const { prompt } = buildPostPrompt({ community, workers, recentLog: [] });
     expect(prompt).toContain('"replies": []');
   });
+
+  it("注意事項に URL を本文に含めない禁止指示が含まれる（#927）", () => {
+    const { prompt } = buildPostPrompt({ community, workers, recentLog: [] });
+    expect(prompt).toMatch(/URL.*含めない|含めない.*URL/);
+  });
 });

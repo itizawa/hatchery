@@ -39,7 +39,7 @@ interface EditWorkerDialogProps {
   worker: Worker;
   /** ダイアログの開閉状態 */
   open: boolean;
-  /** ダイアログを閃じるコールバック */
+  /** ダイアログを閉じるコールバック */
   onClose: () => void;
 }
 
@@ -246,12 +246,17 @@ export function EditWorkerDialog({ worker, open, onClose }: EditWorkerDialogProp
       <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
         <DialogTitle>ワーカー編集</DialogTitle>
         {isInitializing ? (
-          <DialogContent>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <CircularProgress size={16} />
-              参加コミュニティを読み込み中…
-            </Box>
-          </DialogContent>
+          <>
+            <DialogContent>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <CircularProgress size={16} />
+                参加コミュニティを読み込み中…
+              </Box>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={onClose}>キャンセル</Button>
+            </DialogActions>
+          </>
         ) : (
           <EditWorkerFormContent
             worker={worker}

@@ -272,6 +272,6 @@ describe("fetchRecentContext (#716)", () => {
       popularPostsLimit: 3,
     });
 
-    expect(result.recentLog.length).toBeLessThanOrEqual(3);
+    expect(result.recentLog).toHaveLength(3);
   });
 });

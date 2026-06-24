@@ -26,11 +26,13 @@ export async function fetchWorkerCommunities(workerId: string): Promise<string[]
 }
 
 /** PUT /api/admin/workers/:id/communities — 参加コミュニティを communityIds で置き換える。 */
-// eslint-disable-next-line max-params
-export async function setWorkerCommunities(
-  workerId: string,
-  communityIds: string[],
-): Promise<string[]> {
+export async function setWorkerCommunities({
+  workerId,
+  communityIds,
+}: {
+  workerId: string;
+  communityIds: string[];
+}): Promise<string[]> {
   // 失敗時はサーバが返す { error } メッセージを Error に乗せ、無ければフォールバック文言を使う（#476）。
   const result = await openApiClient.PUT("/api/admin/workers/{id}/communities", {
     params: { path: { id: workerId } },
@@ -61,7 +63,7 @@ export function useSetWorkerCommunities() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ workerId, communityIds }: { workerId: string; communityIds: string[] }) =>
-      setWorkerCommunities(workerId, communityIds),
+      setWorkerCommunities({ workerId, communityIds }),
     // eslint-disable-next-line max-params
     onSuccess: (_data, { workerId }) => {
       void queryClient.invalidateQueries({ queryKey: workerCommunitiesQueryKey(workerId) });

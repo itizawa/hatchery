@@ -67,11 +67,12 @@ describe("attachAuthorWorker", () => {
     expect(result[0].id).toBe("post-1");
   });
 
-  it("imageUrl=null のワーカーは image_url=null になる", async () => {
+  it("imageUrl=null のワーカーは image_url に DiceBear URL が設定される（#884）", async () => {
     const repo = makeRepo([workerB]);
     const posts = [{ id: "post-1", author: "worker-uuid-2" }];
     const result = await attachAuthorWorker(posts, repo);
-    expect(result[0].author_worker?.image_url).toBeNull();
+    expect(result[0].author_worker?.image_url).toContain("api.dicebear.com");
+    expect(result[0].author_worker?.image_url).toContain("worker-uuid-2");
   });
 
   it("解決できる author と解決できない author が混在する配列を正しく処理する", async () => {

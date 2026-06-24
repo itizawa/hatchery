@@ -2,6 +2,7 @@ import { Avatar, Box, Typography } from "./uiParts";
 import type { ReactElement } from "react";
 
 import type { components } from "../api/openapi.gen.js";
+import { resolveWorkerImageUrl } from "@hatchery/common";
 
 /** post / comment の発言者の表示用ワーカー情報（#479）。openapi.gen.ts の Post.author_worker と同型。 */
 export type AuthorWorker = NonNullable<components["schemas"]["Post"]["author_worker"]>;
@@ -30,7 +31,7 @@ export const AuthorByline = ({ author, authorWorker }: AuthorBylineProps): React
   return (
     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
       <Avatar
-        src={authorWorker.image_url ?? undefined}
+        src={resolveWorkerImageUrl({ id: authorWorker.id, imageUrl: authorWorker.image_url })}
         alt={authorWorker.display_name}
         sx={{ width: 24, height: 24, fontSize: "0.7rem" }}
       >

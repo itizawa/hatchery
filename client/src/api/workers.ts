@@ -44,7 +44,7 @@ export function useUpdateWorker() {
         body,
         credentials: "include",
       });
-      return unwrap(result, "ワーカーの更新に失敗しました");
+      return unwrap({ result, label: "ワーカーの更新に失敗しました" });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: BOT_WORKERS_QUERY_KEY }),
   });
@@ -106,7 +106,7 @@ export function useWorkerRanking() {
     queryKey: WORKER_RANKING_QUERY_KEY,
     queryFn: async (): Promise<WorkerRankingItem[]> => {
       const result = await openApiClient.GET("/api/workers/ranking");
-      const data = unwrap(result, "GET /api/workers/ranking");
+      const data = unwrap({ result, label: "GET /api/workers/ranking" });
       return (data.workers ?? []) as WorkerRankingItem[];
     },
     staleTime: 60_000,

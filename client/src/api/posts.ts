@@ -35,7 +35,7 @@ export async function fetchPostThread({
     },
     credentials: "include",
   });
-  return unwrap(result, `GET /api/posts/${postId}`);
+  return unwrap({ result, label: `GET /api/posts/${postId}` });
 }
 
 /**

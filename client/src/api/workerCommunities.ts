@@ -21,7 +21,7 @@ export async function fetchWorkerCommunities(workerId: string): Promise<string[]
     params: { path: { id: workerId } },
     credentials: "include",
   });
-  const data = unwrap(result, `GET /api/admin/workers/${workerId}/communities`);
+  const data = unwrap({ result, label: `GET /api/admin/workers/${workerId}/communities` });
   return data.communityIds;
 }
 
@@ -37,7 +37,7 @@ export async function setWorkerCommunities(
     body: { communityIds },
     credentials: "include",
   });
-  const data = unwrap(result, "参加コミュニティの更新に失敗しました");
+  const data = unwrap({ result, label: "参加コミュニティの更新に失敗しました" });
   return data.communityIds;
 }
 

@@ -168,13 +168,13 @@ describe("sendCommentViewsBeacon", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     // 初回: comment-1 と comment-2 を送信 → 既読マーク
-    sendCommentViewsBeacon("post-1", ["comment-1", "comment-2"]);
+    sendCommentViewsBeacon({ postId: "post-1", commentIds: ["comment-1", "comment-2"] });
     expect(fetchMock).toHaveBeenCalledOnce();
     fetchMock.mockClear();
     fetchBodies.length = 0;
 
     // 2 回目: comment-2 は既送、comment-3 は未送 → comment-3 だけ送信される
-    sendCommentViewsBeacon("post-1", ["comment-2", "comment-3"]);
+    sendCommentViewsBeacon({ postId: "post-1", commentIds: ["comment-2", "comment-3"] });
     expect(fetchMock).toHaveBeenCalledOnce();
     const body = JSON.parse(fetchBodies[0]) as { commentIds: string[] };
     expect(body.commentIds).toEqual(["comment-3"]);
@@ -187,12 +187,12 @@ describe("sendCommentViewsBeacon", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     // 初回送信で既送にマーク
-    sendCommentViewsBeacon("post-1", ["comment-1"]);
+    sendCommentViewsBeacon({ postId: "post-1", commentIds: ["comment-1"] });
     sendBeaconMock.mockClear();
     fetchMock.mockClear();
 
     // 再送 → 全て既送なので何も呼ばれない
-    sendCommentViewsBeacon("post-1", ["comment-1"]);
+    sendCommentViewsBeacon({ postId: "post-1", commentIds: ["comment-1"] });
     expect(sendBeaconMock).not.toHaveBeenCalled();
     expect(fetchMock).not.toHaveBeenCalled();
   });

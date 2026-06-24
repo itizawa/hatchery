@@ -54,7 +54,7 @@ export async function votePost({
     body: { direction, sessionId },
     credentials: "include",
   });
-  return unwrap(result, `POST /api/posts/${postId}/vote`);
+  return unwrap({ result, label: `POST /api/posts/${postId}/vote` });
 }
 
 /**
@@ -75,7 +75,7 @@ export async function voteComment({
     body: { direction, sessionId },
     credentials: "include",
   });
-  return unwrap(result, `POST /api/comments/${commentId}/vote`);
+  return unwrap({ result, label: `POST /api/comments/${commentId}/vote` });
 }
 
 type HomeFeedPage = { posts: Post[]; nextCursor: string | null };

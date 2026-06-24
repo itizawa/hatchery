@@ -14,7 +14,7 @@ export async function deleteWorker(id: string): Promise<{ id: string; deletedAt:
     params: { path: { id } },
     credentials: "include",
   });
-  return unwrap(result, `DELETE /api/admin/workers/${id}`);
+  return unwrap({ result, label: `DELETE /api/admin/workers/${id}` });
 }
 
 /** Worker 論理削除の useMutation フック（#218 / #329）。成功時はワーカー一覧のキャッシュを無効化する。 */
@@ -43,7 +43,7 @@ export async function fetchAdminWorkers(
     params: { query: { page, limit } },
     credentials: "include",
   });
-  const data = ensureOk(result, "GET /api/workers");
+  const data = ensureOk({ result, label: "GET /api/workers" });
   if (!data) throw new Error("GET /api/workers: empty response");
   return data as WorkerListResponse;
 }
@@ -58,7 +58,7 @@ export async function createAdminWorker(input: {
     body: input,
     credentials: "include",
   });
-  return unwrap(result, "POST /api/admin/workers");
+  return unwrap({ result, label: "POST /api/admin/workers" });
 }
 
 /**

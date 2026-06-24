@@ -18,7 +18,7 @@ export async function fetchBatchLogs(): Promise<BatchRunLog[]> {
   const result = await openApiClient.GET("/api/admin/batch-logs", {
     credentials: "include",
   });
-  return BatchRunLogSchema.array().parse(ensureOk(result, "GET /api/admin/batch-logs") ?? []);
+  return BatchRunLogSchema.array().parse(ensureOk({ result, label: "GET /api/admin/batch-logs" }) ?? []);
 }
 
 /**

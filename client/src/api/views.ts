@@ -34,8 +34,7 @@ function getOrCreateSessionId(): string {
  * sendBeacon でエンドポイントに JSON を送信する。
  * sendBeacon が使えない環境では fetch(keepalive) にフォールバックする。
  */
-// eslint-disable-next-line max-params
-function sendJsonBeacon(url: string, body: unknown): void {
+function sendJsonBeacon({ url, body }: { url: string; body: unknown }): void {
   const json = JSON.stringify(body);
   const blob = new Blob([json], { type: "application/json" });
 
@@ -61,7 +60,7 @@ function sendJsonBeacon(url: string, body: unknown): void {
 /** post 閲覧ビーコンを送信する（#665 / ADR-0032）。 */
 export function sendPostViewBeacon(postId: string): void {
   const sessionId = getOrCreateSessionId();
-  sendJsonBeacon(`${apiBaseUrl}/api/posts/${postId}/view`, { sessionId });
+  sendJsonBeacon({ url: `${apiBaseUrl}/api/posts/${postId}/view`, body: { sessionId } });
 }
 
 /**
@@ -105,18 +104,14 @@ function hasCommentBeenViewed(commentId: string): boolean {
  * コメント閲覧ビーコンをバッチ送信する（#665 / ADR-0032）。
  * sessionStorage で既送済みのコメントを除外する。
  */
-// eslint-disable-next-line max-params
-export function sendCommentViewsBeacon(postId: string, commentIds: string[]): void {
+export function sendCommentViewsBeacon({ postId, commentIds }: { postId: string; commentIds: string[] }): void {
   const unseen = commentIds.filter((id) => !hasCommentBeenViewed(id));
   if (unseen.length === 0) return;
 
   for (const id of unseen) markCommentViewed(id);
 
   const sessionId = getOrCreateSessionId();
-  sendJsonBeacon(`${apiBaseUrl}/api/posts/${postId}/comment-views`, {
-    sessionId,
-    commentIds: unseen,
-  });
+  sendJsonBeacon({ url: `${apiBaseUrl}/api/posts/${postId}/comment-views`, body: { sessionId, commentIds: unseen } });
 }
 
 /**
@@ -135,7 +130,7 @@ export function useCommentImpressions(postId: string) {
 
   const flush = useCallback(
     (commentIds: string[]) => {
-      if (commentIds.length > 0) sendCommentViewsBeacon(postId, commentIds);
+      if (commentIds.length > 0) sendCommentViewsBeacon({ postId, commentIds });
     },
     [postId],
   );

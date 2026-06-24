@@ -23,7 +23,7 @@ export async function subscribeCommunity(
     params: { path: { slug } },
     credentials: "include",
   });
-  return unwrap(result, `POST /api/communities/${slug}/subscribe`);
+  return unwrap({ result, label: `POST /api/communities/${slug}/subscribe` });
 }
 
 /**
@@ -34,7 +34,7 @@ export async function unsubscribeCommunity(slug: string): Promise<void> {
     params: { path: { slug } },
     credentials: "include",
   });
-  ensureOk(result, `DELETE /api/communities/${slug}/subscribe`);
+  ensureOk({ result, label: `DELETE /api/communities/${slug}/subscribe` });
 }
 
 /**

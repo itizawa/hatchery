@@ -244,6 +244,27 @@ describe("EditWorkerDialog（#181 / #329 / #490）", () => {
     });
   });
 
+  it("参加コミュニティ取得中はフォームフィールドを表示せず読み込みインジケーターとキャンセルボタンを表示する（#832）", () => {
+    const onClose = vi.fn();
+    stubAll();
+    vi.mocked(useWorkerCommunities).mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      isSuccess: false,
+      isError: false,
+    } as ReturnType<typeof useWorkerCommunities>);
+
+    renderWithClient(<EditWorkerDialog worker={mockWorker} open onClose={onClose} />);
+
+    expect(screen.getByText(/読み込み中/)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/表示名/)).not.toBeInTheDocument();
+    // ローディング中もキャンセルボタンは表示される（旧コードからの退行を防ぐ）
+    const cancelButton = screen.getByRole("button", { name: /キャンセル/ });
+    expect(cancelButton).toBeInTheDocument();
+    fireEvent.click(cancelButton);
+    expect(onClose).toHaveBeenCalled();
+  });
+
   it("参加コミュニティ取得が失敗しても名前・役割は編集・保存でき、置換 API は呼ばれない（#490）", async () => {
     const updateMutateAsync = vi.fn().mockResolvedValue(undefined);
     const setMutateAsync = vi.fn().mockResolvedValue([]);

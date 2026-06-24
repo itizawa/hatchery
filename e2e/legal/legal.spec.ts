@@ -1,14 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "../support/test.js";
 
-/**
- * legal e2e テスト（Issue #739）。
- *
- * e2e/legal/usecases.md の UC-LEGAL-01〜04 に対応する実テスト。
- * page.route() で API をモックし、バックエンドなしでブラウザ側の法的ページを検証する。
- */
-
-/** /api/auth/me を未認証（401）にモックする。 */
 async function mockUnauthenticated(page: Page): Promise<void> {
   await page.route("**/api/auth/me", (route) =>
     route.fulfill({
@@ -19,7 +11,6 @@ async function mockUnauthenticated(page: Page): Promise<void> {
   );
 }
 
-/** /api/communities をモックして空リストを返す（サイドバー縮退防止）。 */
 async function mockCommunities(page: Page): Promise<void> {
   await page.route("**/api/communities", (route) =>
     route.fulfill({

@@ -5,15 +5,15 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 
 import { useAuth } from "./auth.js";
-import { openApiClient } from "./client.js";
+import { openApiClient, unwrap } from "./client.js";
 import type { components } from "./openapi.gen.js";
 import { getOrCreateGuestId } from "./votes.js";
 
-// ─── 公開 API 向け型定義（openapi.gen.ts より）────────────────────────────────────
+// ─── 公開 API 向け型定義（openapi.gen.ts より）─────────────────────────────────────────────────────
 export type Post = components["schemas"]["Post"];
 export type Comment = components["schemas"]["Comment"];
 
-// ─── Query Keys ──────────────────────────────────────────────────────────────
+// ─── Query Keys ─────────────────────────────────────────────────────────────────────────────
 export const postThreadQueryKey = (postId: string) => ["posts", postId] as const;
 
 /**
@@ -28,16 +28,14 @@ export async function fetchPostThread({
   sessionId?: string;
 }): Promise<{ post: Post; comments: Comment[] }> {
   const query = sessionId ? { sessionId } : undefined;
-  const { data, response } = await openApiClient.GET("/api/posts/{postId}", {
+  const result = await openApiClient.GET("/api/posts/{postId}", {
     params: {
       path: { postId },
       query: query as Record<string, string> | undefined,
     },
     credentials: "include",
   });
-  if (!response.ok || !data)
-    throw new Error(`GET /api/posts/${postId} failed: ${response.status}`);
-  return data;
+  return unwrap(result, `GET /api/posts/${postId}`);
 }
 
 /**

@@ -6,10 +6,10 @@
  */
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { openApiClient } from "./client.js";
+import { ensureOk, openApiClient, unwrap } from "./client.js";
 import { homeFeedQueryKeyPrefix } from "./feed.js";
 
-// ─── Query Keys ──────────────────────────────────────────────────────────────
+// ─── Query Keys ─────────────────────────────────────────────────────────────────────────────
 export const communitySubscriptionQueryKey = (slug: string) =>
   ["communities", slug, "subscription"] as const;
 
@@ -19,25 +19,22 @@ export const communitySubscriptionQueryKey = (slug: string) =>
 export async function subscribeCommunity(
   slug: string,
 ): Promise<{ userId: string; communityId: string }> {
-  const { data, response } = await openApiClient.POST("/api/communities/{slug}/subscribe", {
+  const result = await openApiClient.POST("/api/communities/{slug}/subscribe", {
     params: { path: { slug } },
     credentials: "include",
   });
-  if (!response.ok || !data)
-    throw new Error(`POST /api/communities/${slug}/subscribe failed: ${response.status}`);
-  return data;
+  return unwrap(result, `POST /api/communities/${slug}/subscribe`);
 }
 
 /**
  * DELETE /api/communities/{slug}/subscribe — コミュニティの購読を解除する。
  */
 export async function unsubscribeCommunity(slug: string): Promise<void> {
-  const { response } = await openApiClient.DELETE("/api/communities/{slug}/subscribe", {
+  const result = await openApiClient.DELETE("/api/communities/{slug}/subscribe", {
     params: { path: { slug } },
     credentials: "include",
   });
-  if (!response.ok && response.status !== 204)
-    throw new Error(`DELETE /api/communities/${slug}/subscribe failed: ${response.status}`);
+  ensureOk(result, `DELETE /api/communities/${slug}/subscribe`);
 }
 
 /**

@@ -9,7 +9,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { VoteDirection } from "@hatchery/common";
 
 import { useAuth } from "./auth.js";
-import { openApiClient } from "./client.js";
+import { openApiClient, unwrap } from "./client.js";
 import { postThreadQueryKey, type Post, type Comment } from "./posts.js";
 import { communityFeedQueryKey, homeFeedQueryKeyPrefix } from "./feed.js";
 
@@ -20,7 +20,7 @@ const GUEST_ID_KEY = "hatchery:guestId";
 
 /**
  * ゲスト用の永続化 UUID を取得または生成する（#777）。
- * localStorage に保存し、タブを閉じても同じ guestId が使われる。
+ * localStorage に保存し、タブを閑じても同じ guestId が使われる。
  * localStorage が使えない環境（プライベートモード等）では都度生成する（toggle/switch は機能しない）。
  */
 export function getOrCreateGuestId(): string {
@@ -49,14 +49,12 @@ export async function votePost({
   direction: VoteDirection;
   sessionId: string;
 }): Promise<Post> {
-  const { data, response } = await openApiClient.POST("/api/posts/{postId}/vote", {
+  const result = await openApiClient.POST("/api/posts/{postId}/vote", {
     params: { path: { postId } },
     body: { direction, sessionId },
     credentials: "include",
   });
-  if (!response.ok || !data)
-    throw new Error(`POST /api/posts/${postId}/vote failed: ${response.status}`);
-  return data;
+  return unwrap(result, `POST /api/posts/${postId}/vote`);
 }
 
 /**
@@ -72,14 +70,12 @@ export async function voteComment({
   direction: VoteDirection;
   sessionId: string;
 }): Promise<Comment> {
-  const { data, response } = await openApiClient.POST("/api/comments/{commentId}/vote", {
+  const result = await openApiClient.POST("/api/comments/{commentId}/vote", {
     params: { path: { commentId } },
     body: { direction, sessionId },
     credentials: "include",
   });
-  if (!response.ok || !data)
-    throw new Error(`POST /api/comments/${commentId}/vote failed: ${response.status}`);
-  return data;
+  return unwrap(result, `POST /api/comments/${commentId}/vote`);
 }
 
 type HomeFeedPage = { posts: Post[]; nextCursor: string | null };

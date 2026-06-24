@@ -1,6 +1,6 @@
 /**
  * @hatchery/common — 実行環境非依存の純粋 TypeScript。
- * client / server が共有するドメインモデル・型・Zod スキーマ・ドメインロジック（純粋関数）の単一情報源（ADR-0005）。
+ * client / server が共有するドメインモデル・型・ Zod スキーマ・ドメインロジック（純粋関数）の単一情報源（ADR-0005）。
  * Scene は ADR-0009（#27）で廃止。旧 Channel/Message/Task/ChannelMembership は ADR-0019（#330）で削除済み。
  */
 
@@ -14,9 +14,10 @@ export * from "./domain/worldState/index.js";
 export * from "./domain/generation/index.js";
 export * from "./domain/view/index.js";
 
-// ── 共通ドメイン ───────────────────────────────────────
+// ── 共通ドメイン ───────────────────────────────────
 export * from "./domain/batchRunLog/index.js";
 export * from "./domain/tokenUsageLog/index.js";
+export * from "./domain/communityEngagement/index.js";
 export * from "./domain/auth/index.js";
 export * from "./domain/worker/index.js";
 export * from "./domain/ogp/index.js";
@@ -33,6 +34,7 @@ export * from "./logic/calcPostedAtOffsets.js";
 export * from "./logic/formatRelativeTime.js";
 export * from "./logic/formatAbsoluteTime.js";
 export * from "./logic/ogp.js";
+export * from "./logic/computeEngagementSignals.js";
 
 // ── リリースノート（#602）───────────────────────────
 export * from "./releaseNotes/index.js";

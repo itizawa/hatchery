@@ -23,13 +23,13 @@ export async function fetchMe(): Promise<AuthUser | null> {
   const result = await openApiClient.GET("/api/auth/me", { credentials: "include" });
   // 未ログイン（401）は throw せず null を返す。それ以外の失敗は ensureOk が throw する。
   if (result.response.status === 401) return null;
-  return ensureOk(result, "GET /api/auth/me") ?? null;
+  return ensureOk({ result, label: "GET /api/auth/me" }) ?? null;
 }
 
 /** POST /auth/logout を呼び出す。openApiClient 経由で baseUrl を解決する。 */
 export async function logout(): Promise<void> {
   const result = await openApiClient.POST("/api/auth/logout", { credentials: "include" });
-  ensureOk(result, "POST /api/auth/logout");
+  ensureOk({ result, label: "POST /api/auth/logout" });
 }
 
 /**
@@ -63,7 +63,7 @@ export async function updateProfile(body: UpdateProfile): Promise<AuthUser> {
     body,
     credentials: "include",
   });
-  return unwrap(result, "PATCH /api/auth/me");
+  return unwrap({ result, label: "PATCH /api/auth/me" });
 }
 
 /** プロフィール更新ミューテーションフック。成功後に auth キャッシュを直接更新する（再フェッチ不要）。 */

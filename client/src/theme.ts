@@ -13,6 +13,14 @@ export const SLACK_COLORS = {
   sidebarText: "#1A1A1B",
   /** メイン領域背景（薄グレー）。Reddit 風配色（Issue #272）。 */
   mainBackground: "#F6F7F8",
+  /** Up vote 色（Reddit オレンジ赤）。#854 */
+  voteUp: "#FF4500",
+  /** Down vote 色（Reddit 青）。#854 */
+  voteDown: "#7193FF",
+  /** 投票済み状態のボタン hover オーバーレイ色（半透明白）。#854 */
+  voteHoverOverlay: "rgba(255,255,255,0.15)",
+  /** 投票済み状態の非選択ボタン色（半透明白・着色見え）。#891 */
+  voteDimmed: "rgba(255,255,255,0.4)",
 } as const;
 
 /**

@@ -86,7 +86,7 @@ export async function fetchAdminCommunities(): Promise<AdminCommunity[]> {
   const result = await openApiClient.GET("/api/admin/communities", {
     credentials: "include",
   });
-  const data = unwrap(result, "GET /api/admin/communities");
+  const data = unwrap({ result, label: "GET /api/admin/communities" });
   return AdminCommunitySchema.array().parse(
     data.map((c) => ({
       ...c,
@@ -104,7 +104,7 @@ export async function createCommunity(input: CreateCommunityInput): Promise<Admi
     body: input,
     credentials: "include",
   });
-  const data = unwrap(result, "POST /api/admin/communities");
+  const data = unwrap({ result, label: "POST /api/admin/communities" });
   return AdminCommunitySchema.parse({
     ...data,
     created_at: new Date(data.created_at),
@@ -122,7 +122,7 @@ export async function updateCommunity(
     body: input,
     credentials: "include",
   });
-  const data = unwrap(result, `PATCH /api/admin/communities/${id}`);
+  const data = unwrap({ result, label: `PATCH /api/admin/communities/${id}` });
   return AdminCommunitySchema.parse({
     ...data,
     created_at: new Date(data.created_at),
@@ -219,7 +219,7 @@ export async function fetchPublicCommunities(): Promise<Community[]> {
   const result = await openApiClient.GET("/api/communities", {
     credentials: "include",
   });
-  return unwrap(result, "GET /api/communities");
+  return unwrap({ result, label: "GET /api/communities" });
 }
 
 /**

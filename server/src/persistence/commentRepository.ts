@@ -14,8 +14,6 @@ export interface CommentRecord {
   author: string;
   text: string;
   score: number;
-  /** up vote の累計件数（#814）。vote トランザクション内で増減する内部集計値。 */
-  upCount: number;
   createdAt: Date;
   /** 返信先コメント id（nullable）。#520 ネスト対応。トップレベルは null。 */
   parentCommentId: string | null;
@@ -72,8 +70,10 @@ export interface CommentRepository {
    * 複数 post のコメント件数をまとめて集計する（フィードの N+1 回避・#500）。
    * postId → 件数の Map を返す。コメントが 0 件の postId は Map に現れない
    * （呼び出し側で 0 とみなす）。空配列を渡したら空 Map を返す。
+   * options.now を渡すと `createdAt <= now` の reveal フィルタが有効になる（#875）。
+   * 省略時はフィルタなし（後方互換）。
    */
-  countByPostIds(postIds: string[]): Promise<Map<string, number>>;
+  countByPostIds(postIds: string[], options?: RevealFilterOptions): Promise<Map<string, number>>;
   /**
    * comment の score に delta を加算する。
    * 存在しない場合は null を返す。
@@ -120,7 +120,6 @@ export function createInMemoryCommentRepository(): CommentRepository {
           author: input.author,
           text: input.text,
           score: 0,
-          upCount: 0,
           createdAt: input.createdAt ?? new Date(),
           parentCommentId: input.parentCommentId ?? null,
         };
@@ -160,14 +159,17 @@ export function createInMemoryCommentRepository(): CommentRepository {
       return Promise.resolve(found ? cloneRecord(found) : null);
     },
 
-    countByPostIds(postIds: string[]): Promise<Map<string, number>> {
+    // eslint-disable-next-line max-params
+    countByPostIds(postIds: string[], options?: RevealFilterOptions): Promise<Map<string, number>> {
       const counts = new Map<string, number>();
       if (postIds.length === 0) return Promise.resolve(counts);
       const target = new Set(postIds);
+      const now = options?.now;
       for (const r of records) {
-        if (target.has(r.postId)) {
-          counts.set(r.postId, (counts.get(r.postId) ?? 0) + 1);
-        }
+        if (!target.has(r.postId)) continue;
+        // reveal フィルタ（#875）: now が渡された場合、createdAt > now のコメントを除外する。
+        if (now !== undefined && r.createdAt.getTime() > now.getTime()) continue;
+        counts.set(r.postId, (counts.get(r.postId) ?? 0) + 1);
       }
       return Promise.resolve(counts);
     },

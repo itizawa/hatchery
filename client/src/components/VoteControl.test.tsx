@@ -5,23 +5,17 @@ import { describe, expect, it, vi } from "vitest";
 import { VoteControl } from "./VoteControl";
 
 describe("VoteControl", () => {
-  it("up_count を中央に表示する（score ではなく up 件数を表示・#814）", () => {
-    render(<VoteControl score={-2} upCount={5} onVote={vi.fn()} />);
-    expect(screen.getByText("5")).toBeInTheDocument();
-    expect(screen.queryByText("-2")).not.toBeInTheDocument();
-  });
-
-  it("up_count が 0 でも表示する（#814）", () => {
-    render(<VoteControl score={3} upCount={0} onVote={vi.fn()} />);
-    expect(screen.getByText("0")).toBeInTheDocument();
-  });
-
-  it("score を中央に表示する（後方互換: upCount 省略時は score を表示）", () => {
+  it("score を中央に表示する", () => {
     render(<VoteControl score={5} onVote={vi.fn()} />);
     expect(screen.getByText("5")).toBeInTheDocument();
   });
 
-  it("score が負数でも表示する（後方互換）", () => {
+  it("score が負数（-2）でも表示する（#856）", () => {
+    render(<VoteControl score={-2} onVote={vi.fn()} />);
+    expect(screen.getByText("-2")).toBeInTheDocument();
+  });
+
+  it("score が負数（-3）でも表示する（#856）", () => {
     render(<VoteControl score={-3} onVote={vi.fn()} />);
     expect(screen.getByText("-3")).toBeInTheDocument();
   });
@@ -70,10 +64,28 @@ describe("VoteControl", () => {
     expect(screen.getByRole("button", { name: /down vote/i })).toHaveAttribute("aria-pressed", "false");
   });
 
-  it("disabled=true のとき両ボタンが無効化される", () => {
-    render(<VoteControl score={0} onVote={vi.fn()} disabled />);
+  it("upDisabled=true のとき up ボタンのみ disabled、down は enabled（#890）", () => {
+    render(<VoteControl score={0} onVote={vi.fn()} upDisabled />);
+    expect(screen.getByRole("button", { name: /up vote/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /down vote/i })).not.toBeDisabled();
+  });
+
+  it("downDisabled=true のとき down ボタンのみ disabled、up は enabled（#890）", () => {
+    render(<VoteControl score={0} onVote={vi.fn()} downDisabled />);
+    expect(screen.getByRole("button", { name: /up vote/i })).not.toBeDisabled();
+    expect(screen.getByRole("button", { name: /down vote/i })).toBeDisabled();
+  });
+
+  it("upDisabled=true かつ downDisabled=true のとき両ボタンが disabled（#890）", () => {
+    render(<VoteControl score={0} onVote={vi.fn()} upDisabled downDisabled />);
     expect(screen.getByRole("button", { name: /up vote/i })).toBeDisabled();
     expect(screen.getByRole("button", { name: /down vote/i })).toBeDisabled();
+  });
+
+  it("upDisabled・downDisabled 未指定（デフォルト）のとき両ボタンが enabled（#890）", () => {
+    render(<VoteControl score={0} onVote={vi.fn()} />);
+    expect(screen.getByRole("button", { name: /up vote/i })).not.toBeDisabled();
+    expect(screen.getByRole("button", { name: /down vote/i })).not.toBeDisabled();
   });
 
   it("down 累積数は表示しない", () => {
@@ -151,6 +163,65 @@ describe("VoteControl", () => {
       const downContainer = downEl?.closest(".MuiBox-root");
       expect(upContainer).toBeTruthy();
       expect(upContainer).toBe(downContainer);
+    });
+  });
+
+  describe("選択状態の色区別（#891）", () => {
+    it("currentVote='up' のとき up ボタンが selected 状態になる", () => {
+      render(<VoteControl score={1} onVote={vi.fn()} currentVote="up" />);
+      expect(screen.getByRole("button", { name: /up vote/i })).toHaveAttribute("data-color-state", "selected");
+    });
+
+    it("currentVote='up' のとき down ボタンが unselected 状態になる", () => {
+      render(<VoteControl score={1} onVote={vi.fn()} currentVote="up" />);
+      expect(screen.getByRole("button", { name: /down vote/i })).toHaveAttribute("data-color-state", "unselected");
+    });
+
+    it("currentVote='down' のとき down ボタンが selected 状態になる", () => {
+      render(<VoteControl score={-1} onVote={vi.fn()} currentVote="down" />);
+      expect(screen.getByRole("button", { name: /down vote/i })).toHaveAttribute("data-color-state", "selected");
+    });
+
+    it("currentVote='down' のとき up ボタンが unselected 状態になる", () => {
+      render(<VoteControl score={-1} onVote={vi.fn()} currentVote="down" />);
+      expect(screen.getByRole("button", { name: /up vote/i })).toHaveAttribute("data-color-state", "unselected");
+    });
+
+    it("currentVote=null（未投票）のとき up ボタンが unvoted 状態になる", () => {
+      render(<VoteControl score={0} onVote={vi.fn()} currentVote={null} />);
+      expect(screen.getByRole("button", { name: /up vote/i })).toHaveAttribute("data-color-state", "unvoted");
+    });
+
+    it("currentVote=null（未投票）のとき down ボタンが unvoted 状態になる", () => {
+      render(<VoteControl score={0} onVote={vi.fn()} currentVote={null} />);
+      expect(screen.getByRole("button", { name: /down vote/i })).toHaveAttribute("data-color-state", "unvoted");
+    });
+  });
+
+  describe("MUI アイコンレンダリング（#912）", () => {
+    it("未投票時に up ボタン内に ArrowUpwardRoundedIcon がレンダリングされる", () => {
+      const { container } = render(<VoteControl score={0} onVote={vi.fn()} currentVote={null} />);
+      expect(container.querySelector('[data-testid="ArrowUpwardRoundedIcon"]')).toBeInTheDocument();
+    });
+
+    it("未投票時に down ボタン内に ArrowDownwardRoundedIcon がレンダリングされる", () => {
+      const { container } = render(<VoteControl score={0} onVote={vi.fn()} currentVote={null} />);
+      expect(container.querySelector('[data-testid="ArrowDownwardRoundedIcon"]')).toBeInTheDocument();
+    });
+
+    it("currentVote='up' でも up ボタン内に ArrowUpwardRoundedIcon がレンダリングされる（solid 切り替えなし）", () => {
+      const { container } = render(<VoteControl score={1} onVote={vi.fn()} currentVote="up" />);
+      expect(container.querySelector('[data-testid="ArrowUpwardRoundedIcon"]')).toBeInTheDocument();
+    });
+
+    it("currentVote='up' でも down ボタン内に ArrowDownwardRoundedIcon がレンダリングされる", () => {
+      const { container } = render(<VoteControl score={1} onVote={vi.fn()} currentVote="up" />);
+      expect(container.querySelector('[data-testid="ArrowDownwardRoundedIcon"]')).toBeInTheDocument();
+    });
+
+    it("旧 VoteArrow の data-testid（vote-arrow-*）が存在しない（#912）", () => {
+      const { container } = render(<VoteControl score={0} onVote={vi.fn()} currentVote={null} />);
+      expect(container.querySelector('[data-testid^="vote-arrow-"]')).not.toBeInTheDocument();
     });
   });
 });

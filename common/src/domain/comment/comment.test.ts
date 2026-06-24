@@ -85,20 +85,6 @@ describe("CommentSchema", () => {
     expect(result.parent_comment_id).toBe("comment-parent");
   });
 
-  it("up_count は省略時 0（既定）になる（#814）", () => {
-    const result = CommentSchema.parse(validComment);
-    expect(result.up_count).toBe(0);
-  });
-
-  it("up_count を持てる（up vote 累計件数・非負整数・#814）", () => {
-    const result = CommentSchema.parse({ ...validComment, up_count: 3 });
-    expect(result.up_count).toBe(3);
-  });
-
-  it("up_count が負数だと reject する（#814）", () => {
-    expect(CommentSchema.safeParse({ ...validComment, up_count: -1 }).success).toBe(false);
-  });
-
   it("author_worker は任意で、省略しても有効（後方互換）", () => {
     const result = CommentSchema.parse(validComment);
     expect(result.author_worker).toBeUndefined();

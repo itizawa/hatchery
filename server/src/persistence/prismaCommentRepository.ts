@@ -16,7 +16,6 @@ function toRecord(row: {
   author: string;
   text: string;
   score: number;
-  upCount: number;
   createdAt: Date;
   parentCommentId: string | null;
 }): CommentRecord {
@@ -29,7 +28,6 @@ function toRecord(row: {
     author: row.author,
     text: row.text,
     score: row.score,
-    upCount: row.upCount,
     createdAt: row.createdAt,
     parentCommentId: row.parentCommentId,
   };
@@ -102,13 +100,19 @@ export function createPrismaCommentRepository(prisma: PrismaClient): CommentRepo
       return row ? toRecord(row) : null;
     },
 
-    async countByPostIds(postIds: string[]): Promise<Map<string, number>> {
+    // eslint-disable-next-line max-params
+    async countByPostIds(postIds: string[], options?: RevealFilterOptions): Promise<Map<string, number>> {
       const counts = new Map<string, number>();
       if (postIds.length === 0) return counts;
+      const now = options?.now;
       // N+1 回避: groupBy で 1 クエリにまとめて集計する（#500）。
+      // reveal フィルタ（#875）: now が渡された場合、createdAt > now のコメントを除外する。
       const grouped = await prisma.comment.groupBy({
         by: ["postId"],
-        where: { postId: { in: postIds } },
+        where: {
+          postId: { in: postIds },
+          ...(now !== undefined ? { createdAt: { lte: now } } : {}),
+        },
         _count: { _all: true },
       });
       for (const g of grouped) {

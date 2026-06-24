@@ -1,6 +1,7 @@
-import ArrowDownward from "@mui/icons-material/ArrowDownwardRounded";
-import ArrowUpward from "@mui/icons-material/ArrowUpwardRounded";
+import ArrowDownwardRounded from "@mui/icons-material/ArrowDownwardRounded";
+import ArrowUpwardRounded from "@mui/icons-material/ArrowUpwardRounded";
 import { Box, IconButton, Tooltip, Typography } from "./uiParts";
+import { SLACK_COLORS } from "../theme";
 import type { ReactElement } from "react";
 import type { VoteDirection } from "@hatchery/common";
 
@@ -8,31 +9,38 @@ export type { VoteDirection };
 
 interface VoteControlProps {
   score: number;
-  /** up vote の累計件数（#814）。渡した場合はこの値を表示する（score は内部用途で保持）。省略時は score を表示（後方互換）。 */
-  upCount?: number;
   onVote: (direction: VoteDirection) => void;
   currentVote?: VoteDirection | null;
-  disabled?: boolean;
+  upDisabled?: boolean;
+  downDisabled?: boolean;
 }
 
 /**
  * up/down vote コントロール（ADR-0025 / #747）。
- * 1 つの pill コンテナ内に up・up件数・down を横並びで表示する。
+ * 1 つの pill コンテナ内に up・ネットスコア・down を横並びで表示する。
  * 投票済み（up/down）は Box 背景の塗りつぶしで明示（#813）。
- * 表示数字は up vote の累計件数（up_count・#814）。down は表示数に影響しない。
- * score（ネット値）はランキング・重み付けに使われるが表示はしない。
+ * 配色は Reddit 準拠: up=赤（#FF4500）/ down=青（#7193FF）（#854）。
+ * アイコンは MUI ArrowUpwardRounded / ArrowDownwardRounded（#912）。
+ * 表示数字は up − down のネットスコア（score・#856）。負値も表示する。
+ * #890: upDisabled / downDisabled で方向別に disabled を制御する。
  */
 export const VoteControl = ({
   score,
-  upCount,
   onVote,
   currentVote = null,
-  disabled = false,
+  upDisabled = false,
+  downDisabled = false,
 }: VoteControlProps): ReactElement => {
-  // 表示する数字: upCount が渡された場合はそちらを使い、省略時は score（後方互換）。
-  const displayCount = upCount ?? score;
+  const displayCount = score;
   const voted = currentVote ?? "none";
   const isVoted = currentVote !== null;
+
+  const bgColor =
+    currentVote === "up"
+      ? SLACK_COLORS.voteUp
+      : currentVote === "down"
+        ? SLACK_COLORS.voteDown
+        : "transparent";
 
   return (
     <Box
@@ -43,12 +51,7 @@ export const VoteControl = ({
         height: 32,
         borderRadius: "999px",
         overflow: "hidden",
-        bgcolor:
-          currentVote === "up"
-            ? "primary.main"
-            : currentVote === "down"
-              ? "error.main"
-              : "transparent",
+        bgcolor: bgColor,
         color: isVoted ? "primary.contrastText" : "inherit",
       }}
     >
@@ -57,21 +60,22 @@ export const VoteControl = ({
           <IconButton
             aria-label="up vote"
             aria-pressed={currentVote === "up"}
+            data-color-state={isVoted ? (currentVote === "up" ? "selected" : "unselected") : "unvoted"}
             onClick={() => onVote("up")}
-            disabled={disabled}
+            disabled={upDisabled}
             size="small"
             sx={{
-              color: isVoted ? "inherit" : currentVote === "up" ? "primary.main" : "action.active",
+              color: isVoted ? (currentVote === "up" ? "inherit" : SLACK_COLORS.voteDimmed) : "action.active",
               height: 32,
               width: 32,
               borderRadius: "50%",
               "&:hover": {
-                color: isVoted ? "inherit" : "primary.main",
-                bgcolor: isVoted ? "rgba(255,255,255,0.15)" : "action.hover",
+                color: isVoted ? "inherit" : SLACK_COLORS.voteUp,
+                bgcolor: isVoted ? SLACK_COLORS.voteHoverOverlay : "action.hover",
               },
             }}
           >
-            <ArrowUpward fontSize="small" />
+            <ArrowUpwardRounded fontSize="small" />
           </IconButton>
         </span>
       </Tooltip>
@@ -87,21 +91,22 @@ export const VoteControl = ({
           <IconButton
             aria-label="down vote"
             aria-pressed={currentVote === "down"}
+            data-color-state={isVoted ? (currentVote === "down" ? "selected" : "unselected") : "unvoted"}
             onClick={() => onVote("down")}
-            disabled={disabled}
+            disabled={downDisabled}
             size="small"
             sx={{
-              color: isVoted ? "inherit" : currentVote === "down" ? "error.main" : "action.active",
+              color: isVoted ? (currentVote === "down" ? "inherit" : SLACK_COLORS.voteDimmed) : "action.active",
               height: 32,
               width: 32,
               borderRadius: "50%",
               "&:hover": {
-                color: isVoted ? "inherit" : "error.main",
-                bgcolor: isVoted ? "rgba(255,255,255,0.15)" : "action.hover",
+                color: isVoted ? "inherit" : SLACK_COLORS.voteDown,
+                bgcolor: isVoted ? SLACK_COLORS.voteHoverOverlay : "action.hover",
               },
             }}
           >
-            <ArrowDownward fontSize="small" />
+            <ArrowDownwardRounded fontSize="small" />
           </IconButton>
         </span>
       </Tooltip>

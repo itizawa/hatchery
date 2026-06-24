@@ -32,7 +32,8 @@ type PostCardProps =
       post: Post;
       onVote: (direction: VoteDirection) => void;
       currentVote?: VoteDirection | null;
-      voteDisabled?: boolean;
+      upVoteDisabled?: boolean;
+      downVoteDisabled?: boolean;
       /** up/down vote ボタンのクリック時に親へのイベント伝播を止め、リンクのデフォルト遷移も抑止する（RouterLink との共存に使用）。 */
       voteStopPropagation?: boolean;
       /** 共有ボタンに使う post の URL。指定時のみ ShareButton を表示する。 */
@@ -142,7 +143,8 @@ export const PostCard = (props: PostCardProps): ReactElement => {
     post,
     onVote,
     currentVote = null,
-    voteDisabled = false,
+    upVoteDisabled = false,
+    downVoteDisabled = false,
     voteStopPropagation = false,
     postUrl,
     truncateText = false,
@@ -196,10 +198,10 @@ export const PostCard = (props: PostCardProps): ReactElement => {
         <Box onClick={handleVoteClick}>
           <VoteControl
             score={post.score}
-            upCount={post.up_count}
             onVote={onVote}
             currentVote={currentVote}
-            disabled={voteDisabled}
+            upDisabled={upVoteDisabled}
+            downDisabled={downVoteDisabled}
           />
         </Box>
         <Chip
@@ -220,7 +222,11 @@ export const PostCard = (props: PostCardProps): ReactElement => {
           }
           sx={{ height: 32, padding:"0px 6px 0px 8px",border:"none", color: "text.secondary" }}
         />
-        {postUrl && <ShareButton shareUrl={postUrl} shareTitle={post.title} />}
+        {postUrl && (
+          <Box onClick={handleVoteClick}>
+            <ShareButton shareUrl={postUrl} shareTitle={post.title} />
+          </Box>
+        )}
       </Box>
     </Box>
   );

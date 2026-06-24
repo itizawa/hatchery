@@ -64,8 +64,8 @@ export function createCommunitiesRouter(
         return postRepo.listByCommunity(community.id, undefined, { now });
       })
       .then((posts) => attachAuthorWorker(posts, workerRepo))
-      // 各 post にコメント件数を付与する（N+1 回避・#500）。
-      .then((posts) => attachCommentCount(posts, commentRepo))
+      // 各 post にコメント件数を付与する（N+1 回避・#500 / reveal フィルタ #875）。
+      .then((posts) => attachCommentCount(posts, commentRepo, { now }))
       .then(async (posts) => {
         if (sessionId) {
           const voteMap = await voteRepo.findVotesBySessionAndTargets({

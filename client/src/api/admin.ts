@@ -14,7 +14,7 @@ export async function deleteWorker(id: string): Promise<{ id: string; deletedAt:
     params: { path: { id } },
     credentials: "include",
   });
-  return unwrap(result, `DELETE /api/admin/workers/${id}`);
+  return unwrap({ result, label: `DELETE /api/admin/workers/${id}` });
 }
 
 /** Worker 論理削除の useMutation フック（#218 / #329）。成功時はワーカー一覧のキャッシュを無効化する。 */
@@ -34,16 +34,18 @@ export function useDeleteWorker() {
  * GET /api/workers をページネーションパラメータ付きで取得する（管理画面用・#545）。
  * page と limit を指定し、{ workers, total, page, limit } 形式のレスポンスを返す。
  */
-// eslint-disable-next-line max-params
-export async function fetchAdminWorkers(
-  page: number,
-  limit: number,
-): Promise<WorkerListResponse> {
+export async function fetchAdminWorkers({
+  page,
+  limit,
+}: {
+  page: number;
+  limit: number;
+}): Promise<WorkerListResponse> {
   const result = await openApiClient.GET("/api/workers", {
     params: { query: { page, limit } },
     credentials: "include",
   });
-  const data = ensureOk(result, "GET /api/workers");
+  const data = ensureOk({ result, label: "GET /api/workers" });
   if (!data) throw new Error("GET /api/workers: empty response");
   return data as WorkerListResponse;
 }
@@ -58,7 +60,7 @@ export async function createAdminWorker(input: {
     body: input,
     credentials: "include",
   });
-  return unwrap(result, "POST /api/admin/workers");
+  return unwrap({ result, label: "POST /api/admin/workers" });
 }
 
 /**
@@ -69,7 +71,7 @@ export async function createAdminWorker(input: {
 export function useAdminWorkers(page = 1) {
   return useSuspenseQuery({
     queryKey: [...ADMIN_WORKERS_QUERY_KEY, page] as const,
-    queryFn: () => fetchAdminWorkers(page, ADMIN_WORKERS_PAGE_SIZE),
+    queryFn: () => fetchAdminWorkers({ page, limit: ADMIN_WORKERS_PAGE_SIZE }),
   });
 }
 

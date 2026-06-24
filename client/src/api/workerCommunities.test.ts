@@ -42,7 +42,7 @@ describe("setWorkerCommunities (PUT /api/admin/workers/:id/communities) (#490)",
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, { communityIds: ["c1"] }));
     vi.stubGlobal("fetch", fetchMock);
 
-    const result = await setWorkerCommunities("haru", ["c1"]);
+    const result = await setWorkerCommunities({ workerId: "haru", communityIds: ["c1"] });
     expect(result).toEqual(["c1"]);
     const request = fetchMock.mock.calls[0][0] as Request;
     expect(request.url).toContain("/api/admin/workers/haru/communities");
@@ -51,6 +51,6 @@ describe("setWorkerCommunities (PUT /api/admin/workers/:id/communities) (#490)",
 
   it("エラー応答では例外を投げる", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(400)));
-    await expect(setWorkerCommunities("haru", ["bad"])).rejects.toThrow();
+    await expect(setWorkerCommunities({ workerId: "haru", communityIds: ["bad"] })).rejects.toThrow();
   });
 });

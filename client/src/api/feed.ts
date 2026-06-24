@@ -7,11 +7,11 @@ import { useSuspenseQuery, useSuspenseInfiniteQuery } from "@tanstack/react-quer
 import type { HomeFeedSort } from "@hatchery/common";
 
 import { useAuth } from "./auth.js";
-import { openApiClient } from "./client.js";
+import { openApiClient, unwrap } from "./client.js";
 import type { Post } from "./posts.js";
 import { getOrCreateGuestId } from "./votes.js";
 
-// ─── Query Keys ──────────────────────────────────────────────────────────────
+// ─── Query Keys ─────────────────────────────────────────────────────────────────────────────
 export const communityFeedQueryKey = (slug: string) => ["communities", slug, "feed"] as const;
 /** ホームフィードのキャッシュキープレフィックス。全 sort をまとめて無効化する際に使う。 */
 export const homeFeedQueryKeyPrefix = () => ["feed"] as const;
@@ -30,13 +30,11 @@ export async function fetchCommunityFeed({
   sessionId?: string;
 }): Promise<Post[]> {
   const query = sessionId ? { sessionId } : undefined;
-  const { data, response } = await openApiClient.GET("/api/communities/{slug}/feed", {
+  const result = await openApiClient.GET("/api/communities/{slug}/feed", {
     params: { path: { slug }, query: query as Record<string, string> | undefined },
     credentials: "include",
   });
-  if (!response.ok || !data)
-    throw new Error(`GET /api/communities/${slug}/feed failed: ${response.status}`);
-  return data;
+  return unwrap({ result, label: `GET /api/communities/${slug}/feed` });
 }
 
 /**
@@ -59,12 +57,11 @@ export async function fetchHomeFeedPage({
   if (cursor) query.cursor = cursor;
   if (sort === "popular") query.sort = sort;
   if (sessionId) query.sessionId = sessionId;
-  const { data, response } = await openApiClient.GET("/api/feed", {
+  const result = await openApiClient.GET("/api/feed", {
     params: { query: query as Record<string, string | number | undefined> },
     credentials: "include",
   });
-  if (!response.ok || !data) throw new Error(`GET /api/feed failed: ${response.status}`);
-  return data as { posts: Post[]; nextCursor: string | null };
+  return unwrap({ result, label: "GET /api/feed" }) as { posts: Post[]; nextCursor: string | null };
 }
 
 /**

@@ -115,7 +115,7 @@ describe("CommunityScene", () => {
     expect(screen.getAllByText("AI ワーカーが日常を語る community").length).toBeGreaterThan(0);
   });
 
-  it("サイドバーに作成日が「YYYY年M月D日 作成」フォーマットで表示される", async () => {
+  it("サイドバーに作成日が『YYYY年M月D日 作成』フォーマットで表示される", async () => {
     renderScene();
     await screen.findByRole("heading", { level: 1 });
     expect(screen.getByText("2026年6月1日 作成")).toBeInTheDocument();
@@ -173,5 +173,40 @@ describe("CommunityScene", () => {
     renderScene();
     await screen.findByRole("heading", { level: 1 });
     expect(screen.getByText("このコミュニティにはまだ投稿がありません。")).toBeInTheDocument();
+  });
+
+  it("フィードに投稿がある場合、各 PostCard に共有ボタンが表示される（#838）", async () => {
+    const mockPost = {
+      id: "post-838",
+      community_id: "community-1",
+      slot_key: "2026-06-20-morning",
+      seq: 1,
+      author: "worker-haru",
+      title: "コミュニティフィード ShareButton テスト",
+      text: "内容",
+      score: 0,
+      created_at: "2026-06-20T00:00:00Z",
+      comment_count: 0,
+    };
+    const qc = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    });
+    qc.setQueryData(["communities"], [mockCommunity]);
+    qc.setQueryData(communityFeedQueryKey("ai-dev"), [mockPost]);
+    qc.setQueryData(communitySubscriptionQueryKey("ai-dev"), { subscribed: false });
+    qc.setQueryData(AUTH_ME_QUERY_KEY, null);
+    qc.setQueryData(communityRecentWorkersQueryKey("ai-dev"), mockRecentWorkers);
+
+    render(
+      <QueryClientProvider client={qc}>
+        <QueryBoundary fallback={<MainContentSkeleton />}>
+          <CommunityScene />
+        </QueryBoundary>
+      </QueryClientProvider>,
+    );
+
+    expect(await screen.findByText("コミュニティフィード ShareButton テスト")).toBeInTheDocument();
+    const shareButtons = await screen.findAllByRole("button", { name: /共有/i });
+    expect(shareButtons.length).toBeGreaterThanOrEqual(2);
   });
 });

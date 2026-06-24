@@ -3,7 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import { SidebarCommunitySection } from "./SidebarCommunitySection";
+import { SIDEBAR_ICON_SIZE, SidebarCommunitySection } from "./SidebarCommunitySection";
 import type { Community } from "../api/communities";
 import type React from "react";
 
@@ -55,6 +55,12 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
       <a href={to}>{children}</a>
     ),
   };
+});
+
+describe("SIDEBAR_ICON_SIZE", () => {
+  it("SIDEBAR_ICON_SIZE が 20 で export されている", () => {
+    expect(SIDEBAR_ICON_SIZE).toBe(20);
+  });
 });
 
 describe("SidebarCommunitySection", () => {
@@ -136,6 +142,26 @@ describe("SidebarCommunitySection", () => {
     await screen.findByText("AI 開発者の集い");
     // "コーディング日常" の先頭文字 "コ" がフォールバック表示される
     expect(screen.getByText("コ")).toBeInTheDocument();
+  });
+
+  it("コミュニティ Avatar が SIDEBAR_ICON_SIZE と同じ width/height の style で表示される（iconUrl なし）", async () => {
+    render(<SidebarCommunitySection />, { wrapper: Wrapper });
+    await screen.findByText("AI 開発者の集い");
+    // イニシャル表示の Avatar（iconUrl なし: コーディング日常）のコンテナを取得
+    const initial = screen.getByText("コ");
+    const avatarRoot = initial.closest(".MuiAvatar-root") as HTMLElement | null;
+    expect(avatarRoot).not.toBeNull();
+    expect(avatarRoot).toHaveStyle({ width: `${SIDEBAR_ICON_SIZE}px`, height: `${SIDEBAR_ICON_SIZE}px` });
+  });
+
+  it("コミュニティ Avatar が SIDEBAR_ICON_SIZE と同じ width/height の style で表示される（iconUrl あり）", async () => {
+    render(<SidebarCommunitySection />, { wrapper: Wrapper });
+    await screen.findByText("AI 開発者の集い");
+    // iconUrl がある Avatar（AI 開発者の集い）のコンテナを取得
+    const img = screen.getByRole("img", { name: "AI 開発者の集い" });
+    const avatarRoot = img.closest(".MuiAvatar-root") as HTMLElement | null;
+    expect(avatarRoot).not.toBeNull();
+    expect(avatarRoot).toHaveStyle({ width: `${SIDEBAR_ICON_SIZE}px`, height: `${SIDEBAR_ICON_SIZE}px` });
   });
 
   it("「探す」リンクのアイコンが MuiListItemIcon-root クラスを持つ要素でレンダリングされる (#732)", async () => {

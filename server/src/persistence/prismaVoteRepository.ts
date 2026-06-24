@@ -45,19 +45,6 @@ function toRecord(row: VoteRow): VoteRecord {
 
 /** VoteRepository の Prisma / PostgreSQL 実装（ADR-0019 / ADR-0025 / ADR-0031 #453 / #777）。 */
 export function createPrismaVoteRepository(prisma: PrismaClient): VoteRepository {
-  /**
-   * toggle/switch ロジックを Prisma クライアント（または同一トランザクションの tx）上で実行し
-   * scoreDelta と upCountDelta を返す。voteAndApplyScore では tx を渡して vote / score / upCount
-   * 更新を原子化する（#814）。
-   *
-   * upCountDelta のルール:
-   * - 未投票 → up: +1
-   * - up → 未投票（toggle off）: -1
-   * - 未投票 → down: 0
-   * - down → 未投票（toggle off）: 0
-   * - up → down（switch）: -1
-   * - down → up（switch）: +1
-   */
   // eslint-disable-next-line max-params
   async function applyVoteMutation(
     client: Prisma.TransactionClient,
@@ -68,7 +55,7 @@ export function createPrismaVoteRepository(prisma: PrismaClient): VoteRepository
       targetId: string;
       direction: VoteDirection;
     },
-  ): Promise<{ scoreDelta: number; upCountDelta: number; currentDirection: VoteDirection | null }> {
+  ): Promise<{ scoreDelta: number; currentDirection: VoteDirection | null }> {
     const where = uniqueWhere({ sessionId, targetType, targetId });
     const existing = await client.vote.findUnique({ where });
 
@@ -78,16 +65,16 @@ export function createPrismaVoteRepository(prisma: PrismaClient): VoteRepository
           ? { sessionId, userId, postId: targetId, direction }
           : { sessionId, userId, commentId: targetId, direction };
       await client.vote.create({ data });
-      return { scoreDelta: direction === "up" ? 1 : -1, upCountDelta: direction === "up" ? 1 : 0, currentDirection: direction };
+      return { scoreDelta: direction === "up" ? 1 : -1, currentDirection: direction };
     }
 
     if (existing.direction === direction) {
       await client.vote.delete({ where });
-      return { scoreDelta: direction === "up" ? -1 : 1, upCountDelta: direction === "up" ? -1 : 0, currentDirection: null };
+      return { scoreDelta: direction === "up" ? -1 : 1, currentDirection: null };
     }
 
     await client.vote.update({ where, data: { direction } });
-    return { scoreDelta: direction === "up" ? 2 : -2, upCountDelta: direction === "up" ? 1 : -1, currentDirection: direction };
+    return { scoreDelta: direction === "up" ? 2 : -2, currentDirection: direction };
   }
 
   return {
@@ -137,24 +124,24 @@ export function createPrismaVoteRepository(prisma: PrismaClient): VoteRepository
       targetId: string;
       direction: VoteDirection;
       applyScore: (delta: number) => Promise<number | null>;
-    }): Promise<{ scoreDelta: number; upCountDelta: number; score: number | null; currentDirection: VoteDirection | null }> {
-      // Prisma 実装は同一トランザクション内で対象 score / upCount を直接更新し原子化するため、
+    }): Promise<{ scoreDelta: number; score: number | null; currentDirection: VoteDirection | null }> {
+      // Prisma 実装は同一トランザクション内で対象 score を直接更新し原子化するため、
       // ポートの applyScore コールバック（in-memory 用の差し込み口）は使わない（#453）。
       void applyScore;
       return prisma.$transaction(async (tx) => {
-        const { scoreDelta, upCountDelta, currentDirection } = await applyVoteMutation(tx, { sessionId, userId, targetType, targetId, direction });
+        const { scoreDelta, currentDirection } = await applyVoteMutation(tx, { sessionId, userId, targetType, targetId, direction });
         if (targetType === "post") {
           const updated = await tx.post.update({
             where: { id: targetId },
-            data: { score: { increment: scoreDelta }, upCount: { increment: upCountDelta } },
+            data: { score: { increment: scoreDelta } },
           });
-          return { scoreDelta, upCountDelta, score: updated.score, currentDirection };
+          return { scoreDelta, score: updated.score, currentDirection };
         }
         const updated = await tx.comment.update({
           where: { id: targetId },
-          data: { score: { increment: scoreDelta }, upCount: { increment: upCountDelta } },
+          data: { score: { increment: scoreDelta } },
         });
-        return { scoreDelta, upCountDelta, score: updated.score, currentDirection };
+        return { scoreDelta, score: updated.score, currentDirection };
       });
     },
 

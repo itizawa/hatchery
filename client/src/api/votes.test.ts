@@ -86,12 +86,12 @@ describe("voteComment (POST /api/comments/{commentId}/vote)", () => {
 
 // ─── フックテスト共通 ────────────────────────────────────────────────────────────────────────────
 
-type ThreadPost = { id: string; score: number; up_count: number; my_vote: "up" | "down" | null | undefined };
-type ThreadComment = { id: string; score: number; up_count: number; my_vote: "up" | "down" | null | undefined };
+type ThreadPost = { id: string; score: number; my_vote: "up" | "down" | null | undefined };
+type ThreadComment = { id: string; score: number; my_vote: "up" | "down" | null | undefined };
 type ThreadData = { post: ThreadPost; comments: ThreadComment[] };
 
-const basePost: ThreadPost = { id: "post-1", score: 5, up_count: 2, my_vote: null };
-const baseComment: ThreadComment = { id: "comment-1", score: 2, up_count: 2, my_vote: null };
+const basePost: ThreadPost = { id: "post-1", score: 5, my_vote: null };
+const baseComment: ThreadComment = { id: "comment-1", score: 2, my_vote: null };
 
 function createHookWrapper() {
   const queryClient = new QueryClient({
@@ -112,14 +112,14 @@ describe("useVotePost (楽観更新フック)", () => {
     vi.unstubAllGlobals();
   });
 
-  it("onMutate: 未 vote → up で score/up_count/my_vote が楽観的に更新される", async () => {
+  it("onMutate: 未 vote → up で score/my_vote が楽観的に更新される", async () => {
     vi.spyOn(authApi, "useAuth").mockReturnValue({ data: null } as ReturnType<typeof authApi.useAuth>);
 
     let resolveFetch!: (r: Response) => void;
     vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise<Response>((res) => { resolveFetch = res; })));
 
     const { queryClient, wrapper } = createHookWrapper();
-    queryClient.setQueryData(postThreadQueryKey("post-1"), { post: { ...basePost, score: 5, up_count: 2, my_vote: null }, comments: [] } satisfies ThreadData);
+    queryClient.setQueryData(postThreadQueryKey("post-1"), { post: { ...basePost, score: 5, my_vote: null }, comments: [] } satisfies ThreadData);
 
     const { result } = renderHook(() => useVotePost(), { wrapper });
     act(() => { result.current.mutate({ postId: "post-1", direction: "up" }); });
@@ -131,20 +131,19 @@ describe("useVotePost (楽観更新フック)", () => {
 
     const d = queryClient.getQueryData<ThreadData>(postThreadQueryKey("post-1"));
     expect(d?.post.score).toBe(6);
-    expect(d?.post.up_count).toBe(3);
 
     resolveFetch(jsonResponse(200, { ...basePost, score: 6 }));
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
   });
 
-  it("onMutate: up 済み → up（toggle off）で score/up_count/my_vote が元に戻る方向に更新される", async () => {
+  it("onMutate: up 済み → up（toggle off）で score/my_vote が元に戻る方向に更新される", async () => {
     vi.spyOn(authApi, "useAuth").mockReturnValue({ data: null } as ReturnType<typeof authApi.useAuth>);
 
     let resolveFetch!: (r: Response) => void;
     vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise<Response>((res) => { resolveFetch = res; })));
 
     const { queryClient, wrapper } = createHookWrapper();
-    queryClient.setQueryData(postThreadQueryKey("post-1"), { post: { ...basePost, score: 5, up_count: 2, my_vote: "up" }, comments: [] } satisfies ThreadData);
+    queryClient.setQueryData(postThreadQueryKey("post-1"), { post: { ...basePost, score: 5, my_vote: "up" }, comments: [] } satisfies ThreadData);
 
     const { result } = renderHook(() => useVotePost(), { wrapper });
     act(() => { result.current.mutate({ postId: "post-1", direction: "up" }); });
@@ -156,7 +155,6 @@ describe("useVotePost (楽観更新フック)", () => {
 
     const d = queryClient.getQueryData<ThreadData>(postThreadQueryKey("post-1"));
     expect(d?.post.score).toBe(4);
-    expect(d?.post.up_count).toBe(1);
 
     resolveFetch(jsonResponse(200, { ...basePost, score: 4 }));
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
@@ -167,7 +165,7 @@ describe("useVotePost (楽観更新フック)", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(500, { error: "ServerError" })));
 
     const { queryClient, wrapper } = createHookWrapper();
-    queryClient.setQueryData(postThreadQueryKey("post-1"), { post: { ...basePost, score: 5, up_count: 2, my_vote: null }, comments: [] } satisfies ThreadData);
+    queryClient.setQueryData(postThreadQueryKey("post-1"), { post: { ...basePost, score: 5, my_vote: null }, comments: [] } satisfies ThreadData);
 
     const { result } = renderHook(() => useVotePost(), { wrapper });
     act(() => { result.current.mutate({ postId: "post-1", direction: "up" }); });
@@ -176,7 +174,6 @@ describe("useVotePost (楽観更新フック)", () => {
 
     const d = queryClient.getQueryData<ThreadData>(postThreadQueryKey("post-1"));
     expect(d?.post.score).toBe(5);
-    expect(d?.post.up_count).toBe(2);
     expect(d?.post.my_vote).toBeNull();
   });
 
@@ -221,9 +218,9 @@ describe("useVotePost (楽観更新フック)", () => {
 
 type HomeFeedPage = { posts: FeedPost[]; nextCursor: string | null };
 type HomeFeedData = { pages: HomeFeedPage[]; pageParams: unknown[] };
-type FeedPost = { id: string; score: number; up_count: number; my_vote: "up" | "down" | null | undefined };
+type FeedPost = { id: string; score: number; my_vote: "up" | "down" | null | undefined };
 
-const feedBasePost: FeedPost = { id: "post-1", score: 5, up_count: 2, my_vote: null };
+const feedBasePost: FeedPost = { id: "post-1", score: 5, my_vote: null };
 
 function makeHomeFeedData(posts: FeedPost[]): HomeFeedData {
   return { pages: [{ posts, nextCursor: null }], pageParams: [undefined] };
@@ -244,7 +241,7 @@ describe("useVotePost (フィードキャッシュ楽観更新)", () => {
     const { queryClient, wrapper } = createHookWrapper();
     queryClient.setQueryData(
       homeFeedQueryKey("latest"),
-      makeHomeFeedData([{ ...feedBasePost, score: 5, up_count: 2, my_vote: null }]),
+      makeHomeFeedData([{ ...feedBasePost, score: 5, my_vote: null }]),
     );
 
     const { result } = renderHook(() => useVotePost(), { wrapper });
@@ -257,7 +254,6 @@ describe("useVotePost (フィードキャッシュ楽観更新)", () => {
 
     const d = queryClient.getQueryData<HomeFeedData>(homeFeedQueryKey("latest"));
     expect(d?.pages[0]?.posts[0]?.score).toBe(6);
-    expect(d?.pages[0]?.posts[0]?.up_count).toBe(3);
 
     resolveFetch(jsonResponse(200, { ...feedBasePost, score: 6, my_vote: "up" }));
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
@@ -272,7 +268,7 @@ describe("useVotePost (フィードキャッシュ楽観更新)", () => {
     const { queryClient, wrapper } = createHookWrapper();
     queryClient.setQueryData(
       communityFeedQueryKey("tech"),
-      [{ ...feedBasePost, score: 5, up_count: 2, my_vote: null }],
+      [{ ...feedBasePost, score: 5, my_vote: null }],
     );
 
     const { result } = renderHook(() => useVotePost("tech"), { wrapper });
@@ -285,7 +281,6 @@ describe("useVotePost (フィードキャッシュ楽観更新)", () => {
 
     const d = queryClient.getQueryData<FeedPost[]>(communityFeedQueryKey("tech"));
     expect(d?.[0]?.score).toBe(6);
-    expect(d?.[0]?.up_count).toBe(3);
 
     resolveFetch(jsonResponse(200, { ...feedBasePost, score: 6, my_vote: "up" }));
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
@@ -300,7 +295,7 @@ describe("useVotePost (フィードキャッシュ楽観更新)", () => {
     const { queryClient, wrapper } = createHookWrapper();
     queryClient.setQueryData(
       homeFeedQueryKey("latest"),
-      makeHomeFeedData([{ ...feedBasePost, score: 5, up_count: 2, my_vote: "up" }]),
+      makeHomeFeedData([{ ...feedBasePost, score: 5, my_vote: "up" }]),
     );
 
     const { result } = renderHook(() => useVotePost(), { wrapper });
@@ -313,7 +308,6 @@ describe("useVotePost (フィードキャッシュ楽観更新)", () => {
 
     const d = queryClient.getQueryData<HomeFeedData>(homeFeedQueryKey("latest"));
     expect(d?.pages[0]?.posts[0]?.score).toBe(4);
-    expect(d?.pages[0]?.posts[0]?.up_count).toBe(1);
 
     resolveFetch(jsonResponse(200, { ...feedBasePost, score: 4, my_vote: null }));
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
@@ -326,7 +320,7 @@ describe("useVotePost (フィードキャッシュ楽観更新)", () => {
     const { queryClient, wrapper } = createHookWrapper();
     queryClient.setQueryData(
       homeFeedQueryKey("latest"),
-      makeHomeFeedData([{ ...feedBasePost, score: 5, up_count: 2, my_vote: null }]),
+      makeHomeFeedData([{ ...feedBasePost, score: 5, my_vote: null }]),
     );
 
     const { result } = renderHook(() => useVotePost(), { wrapper });
@@ -336,7 +330,6 @@ describe("useVotePost (フィードキャッシュ楽観更新)", () => {
 
     const d = queryClient.getQueryData<HomeFeedData>(homeFeedQueryKey("latest"));
     expect(d?.pages[0]?.posts[0]?.score).toBe(5);
-    expect(d?.pages[0]?.posts[0]?.up_count).toBe(2);
     expect(d?.pages[0]?.posts[0]?.my_vote).toBeNull();
   });
 
@@ -347,7 +340,7 @@ describe("useVotePost (フィードキャッシュ楽観更新)", () => {
     const { queryClient, wrapper } = createHookWrapper();
     queryClient.setQueryData(
       communityFeedQueryKey("tech"),
-      [{ ...feedBasePost, score: 5, up_count: 2, my_vote: null }],
+      [{ ...feedBasePost, score: 5, my_vote: null }],
     );
 
     const { result } = renderHook(() => useVotePost("tech"), { wrapper });
@@ -357,7 +350,6 @@ describe("useVotePost (フィードキャッシュ楽観更新)", () => {
 
     const d = queryClient.getQueryData<FeedPost[]>(communityFeedQueryKey("tech"));
     expect(d?.[0]?.score).toBe(5);
-    expect(d?.[0]?.up_count).toBe(2);
     expect(d?.[0]?.my_vote).toBeNull();
   });
 
@@ -369,7 +361,7 @@ describe("useVotePost (フィードキャッシュ楽観更新)", () => {
     const { queryClient, wrapper } = createHookWrapper();
     queryClient.setQueryData(
       homeFeedQueryKey("latest"),
-      makeHomeFeedData([{ ...feedBasePost, score: 5, up_count: 2, my_vote: null }]),
+      makeHomeFeedData([{ ...feedBasePost, score: 5, my_vote: null }]),
     );
 
     const { result } = renderHook(() => useVotePost(), { wrapper });
@@ -390,7 +382,7 @@ describe("useVotePost (フィードキャッシュ楽観更新)", () => {
     const { queryClient, wrapper } = createHookWrapper();
     queryClient.setQueryData(
       communityFeedQueryKey("tech"),
-      [{ ...feedBasePost, score: 5, up_count: 2, my_vote: null }],
+      [{ ...feedBasePost, score: 5, my_vote: null }],
     );
 
     const { result } = renderHook(() => useVotePost("tech"), { wrapper });
@@ -412,7 +404,7 @@ describe("useVoteComment (楽観更新フック)", () => {
     vi.unstubAllGlobals();
   });
 
-  it("onMutate: 未 vote → up で対象コメントの score/up_count/my_vote が楽観的に更新される", async () => {
+  it("onMutate: 未 vote → up で対象コメントの score/my_vote が楽観的に更新される", async () => {
     vi.spyOn(authApi, "useAuth").mockReturnValue({ data: null } as ReturnType<typeof authApi.useAuth>);
 
     let resolveFetch!: (r: Response) => void;
@@ -421,7 +413,7 @@ describe("useVoteComment (楽観更新フック)", () => {
     const { queryClient, wrapper } = createHookWrapper();
     queryClient.setQueryData(postThreadQueryKey("post-1"), {
       post: { ...basePost },
-      comments: [{ ...baseComment, score: 2, up_count: 2, my_vote: null }],
+      comments: [{ ...baseComment, score: 2, my_vote: null }],
     } satisfies ThreadData);
 
     const { result } = renderHook(() => useVoteComment("post-1"), { wrapper });
@@ -434,7 +426,6 @@ describe("useVoteComment (楽観更新フック)", () => {
 
     const d = queryClient.getQueryData<ThreadData>(postThreadQueryKey("post-1"));
     expect(d?.comments[0]?.score).toBe(3);
-    expect(d?.comments[0]?.up_count).toBe(3);
 
     resolveFetch(jsonResponse(200, { ...baseComment, score: 3 }));
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
@@ -447,7 +438,7 @@ describe("useVoteComment (楽観更新フック)", () => {
     const { queryClient, wrapper } = createHookWrapper();
     queryClient.setQueryData(postThreadQueryKey("post-1"), {
       post: { ...basePost },
-      comments: [{ ...baseComment, score: 2, up_count: 2, my_vote: null }],
+      comments: [{ ...baseComment, score: 2, my_vote: null }],
     } satisfies ThreadData);
 
     const { result } = renderHook(() => useVoteComment("post-1"), { wrapper });
@@ -457,7 +448,6 @@ describe("useVoteComment (楽観更新フック)", () => {
 
     const d = queryClient.getQueryData<ThreadData>(postThreadQueryKey("post-1"));
     expect(d?.comments[0]?.score).toBe(2);
-    expect(d?.comments[0]?.up_count).toBe(2);
     expect(d?.comments[0]?.my_vote).toBeNull();
   });
 
@@ -469,7 +459,7 @@ describe("useVoteComment (楽観更新フック)", () => {
     const { queryClient, wrapper } = createHookWrapper();
     queryClient.setQueryData(postThreadQueryKey("post-1"), {
       post: { ...basePost },
-      comments: [{ ...baseComment, score: 2, up_count: 2, my_vote: null }],
+      comments: [{ ...baseComment, score: 2, my_vote: null }],
     } satisfies ThreadData);
 
     const { result } = renderHook(() => useVoteComment("post-1"), { wrapper });
@@ -489,7 +479,7 @@ describe("useVoteComment (楽観更新フック)", () => {
     const { queryClient, wrapper } = createHookWrapper();
     queryClient.setQueryData(postThreadQueryKey("post-1"), {
       post: { ...basePost },
-      comments: [{ ...baseComment, score: 2, up_count: 2, my_vote: null }],
+      comments: [{ ...baseComment, score: 2, my_vote: null }],
     } satisfies ThreadData);
 
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");

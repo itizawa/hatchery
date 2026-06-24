@@ -126,11 +126,11 @@ describe("createInMemoryVoteRepository", () => {
     });
   });
 
-  describe("voteAndApplyScore（toggle / switch / upCountDelta）", () => {
-    it("未投票 → up: scoreDelta=+1, upCountDelta=+1, score が applyScore で更新される", async () => {
+  describe("voteAndApplyScore（toggle / switch / score 更新）", () => {
+    it("未投票 → up: scoreDelta=+1, score が applyScore で更新される", async () => {
       const repo = createInMemoryVoteRepository();
       let appliedDelta: number | undefined;
-      const { scoreDelta, upCountDelta, score } = await repo.voteAndApplyScore({
+      const { scoreDelta, score } = await repo.voteAndApplyScore({
         sessionId: "s1",
         userId: null,
         targetType: "post",
@@ -139,15 +139,14 @@ describe("createInMemoryVoteRepository", () => {
         applyScore: async (delta) => { appliedDelta = delta; return 10 + delta; },
       });
       expect(scoreDelta).toBe(1);
-      expect(upCountDelta).toBe(1);
       expect(appliedDelta).toBe(1);
       expect(score).toBe(11);
     });
 
-    it("up → toggle off: scoreDelta=-1, upCountDelta=-1", async () => {
+    it("up → toggle off: scoreDelta=-1", async () => {
       const repo = createInMemoryVoteRepository();
       await repo.vote({ sessionId: "s1", userId: null, targetType: "post", targetId: "p1", direction: "up" });
-      const { scoreDelta, upCountDelta } = await repo.voteAndApplyScore({
+      const { scoreDelta } = await repo.voteAndApplyScore({
         sessionId: "s1",
         userId: null,
         targetType: "post",
@@ -156,12 +155,11 @@ describe("createInMemoryVoteRepository", () => {
         applyScore: async (delta) => delta,
       });
       expect(scoreDelta).toBe(-1);
-      expect(upCountDelta).toBe(-1);
     });
 
-    it("未投票 → down: scoreDelta=-1, upCountDelta=0", async () => {
+    it("未投票 → down: scoreDelta=-1", async () => {
       const repo = createInMemoryVoteRepository();
-      const { scoreDelta, upCountDelta } = await repo.voteAndApplyScore({
+      const { scoreDelta } = await repo.voteAndApplyScore({
         sessionId: "s1",
         userId: null,
         targetType: "post",
@@ -170,13 +168,12 @@ describe("createInMemoryVoteRepository", () => {
         applyScore: async (delta) => delta,
       });
       expect(scoreDelta).toBe(-1);
-      expect(upCountDelta).toBe(0);
     });
 
-    it("down → toggle off: scoreDelta=+1, upCountDelta=0", async () => {
+    it("down → toggle off: scoreDelta=+1", async () => {
       const repo = createInMemoryVoteRepository();
       await repo.vote({ sessionId: "s1", userId: null, targetType: "post", targetId: "p1", direction: "down" });
-      const { scoreDelta, upCountDelta } = await repo.voteAndApplyScore({
+      const { scoreDelta } = await repo.voteAndApplyScore({
         sessionId: "s1",
         userId: null,
         targetType: "post",
@@ -185,13 +182,12 @@ describe("createInMemoryVoteRepository", () => {
         applyScore: async (delta) => delta,
       });
       expect(scoreDelta).toBe(1);
-      expect(upCountDelta).toBe(0);
     });
 
-    it("up → down switch: scoreDelta=-2, upCountDelta=-1", async () => {
+    it("up → down switch: scoreDelta=-2", async () => {
       const repo = createInMemoryVoteRepository();
       await repo.vote({ sessionId: "s1", userId: null, targetType: "post", targetId: "p1", direction: "up" });
-      const { scoreDelta, upCountDelta } = await repo.voteAndApplyScore({
+      const { scoreDelta } = await repo.voteAndApplyScore({
         sessionId: "s1",
         userId: null,
         targetType: "post",
@@ -200,13 +196,12 @@ describe("createInMemoryVoteRepository", () => {
         applyScore: async (delta) => delta,
       });
       expect(scoreDelta).toBe(-2);
-      expect(upCountDelta).toBe(-1);
     });
 
-    it("down → up switch: scoreDelta=+2, upCountDelta=+1", async () => {
+    it("down → up switch: scoreDelta=+2", async () => {
       const repo = createInMemoryVoteRepository();
       await repo.vote({ sessionId: "s1", userId: null, targetType: "post", targetId: "p1", direction: "down" });
-      const { scoreDelta, upCountDelta } = await repo.voteAndApplyScore({
+      const { scoreDelta } = await repo.voteAndApplyScore({
         sessionId: "s1",
         userId: null,
         targetType: "post",
@@ -215,12 +210,11 @@ describe("createInMemoryVoteRepository", () => {
         applyScore: async (delta) => delta,
       });
       expect(scoreDelta).toBe(2);
-      expect(upCountDelta).toBe(1);
     });
 
-    it("comment 対象でも upCountDelta が正しく返る", async () => {
+    it("comment 対象でも scoreDelta が正しく返る", async () => {
       const repo = createInMemoryVoteRepository();
-      const { scoreDelta, upCountDelta } = await repo.voteAndApplyScore({
+      const { scoreDelta } = await repo.voteAndApplyScore({
         sessionId: "s1",
         userId: null,
         targetType: "comment",
@@ -229,7 +223,6 @@ describe("createInMemoryVoteRepository", () => {
         applyScore: async (delta) => delta,
       });
       expect(scoreDelta).toBe(1);
-      expect(upCountDelta).toBe(1);
     });
   });
 

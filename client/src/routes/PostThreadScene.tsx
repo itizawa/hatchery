@@ -2,7 +2,7 @@ import { Box, Skeleton, Typography } from "../components/uiParts";
 import { useParams, Link as RouterLink } from "@tanstack/react-router";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeftRounded";
 import type { ReactElement } from "react";
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { buildCommentTree, type CommentTreeNode } from "@hatchery/common";
 
 import {
@@ -131,14 +131,15 @@ const PostThreadSidebar = ({ communityId }: { communityId: string }): ReactEleme
 /**
  * コメントのツリーノードを再帰的に CommentCard としてレンダリングする（#520）。
  * depth に応じてコネクター線 + インデントが付く。
- * commentRef ラッパー div で IntersectionObserver による閉覧計測を行う（#665）。
+ * commentRef ラッパー div で IntersectionObserver による閲覧計測を行う（#665）。
  */
 function renderCommentTree({
   nodes,
   commentMap,
   onVote,
   commentRef,
-  voteDisabled,
+  pendingVoteCommentId,
+  pendingVoteDirection,
   postId,
 }: {
   nodes: CommentTreeNode[];
@@ -146,7 +147,8 @@ function renderCommentTree({
   // eslint-disable-next-line max-params
   onVote: (commentId: string, direction: VoteDirection) => void;
   commentRef: (commentId: string) => (el: HTMLElement | null) => void;
-  voteDisabled?: boolean;
+  pendingVoteCommentId?: string;
+  pendingVoteDirection?: VoteDirection | null;
   postId: string;
 }): ReactElement[] {
   return nodes.flatMap((node) => {
@@ -155,15 +157,16 @@ function renderCommentTree({
 
     const childElements =
       node.children.length > 0
-        ? renderCommentTree({ nodes: node.children, commentMap, onVote, commentRef, voteDisabled, postId })
+        ? renderCommentTree({ nodes: node.children, commentMap, onVote, commentRef, pendingVoteCommentId, pendingVoteDirection, postId })
         : null;
 
     return [
-      <div key={comment.id} ref={commentRef(comment.id)}>
+      <div key={comment.id} id={`comment-${comment.id}`} ref={commentRef(comment.id)}>
         <CommentCard
           comment={comment}
           onVote={(direction: VoteDirection) => onVote(comment.id, direction)}
-          voteDisabled={voteDisabled}
+          upVoteDisabled={pendingVoteCommentId === comment.id && pendingVoteDirection === "up"}
+          downVoteDisabled={pendingVoteCommentId === comment.id && pendingVoteDirection === "down"}
           depth={node.depth}
           hasChildren={node.children.length > 0}
           postId={postId}
@@ -185,17 +188,17 @@ function renderCommentTree({
  * 局所 QueryBoundary に委譲し、post 本文は先に描画する。
  * #481: ゲストの post / comment vote 押下は guardVote で握りつぶさずログイン誘導する。
  * #520: コメントを buildCommentTree でツリー化し Reddit 風コネクター線表示する。
- * #748: useVotePost / useVoteComment の isPending を voteDisabled に渡し連打防止。
+ * #748: vote 連打防止。#890: 押した方向のみ disabled にし、反対方向は操作可能にする。
  */
 export const PostThreadScene = (): ReactElement => {
   const { postId } = useParams({ strict: false });
   const id = postId ?? "";
 
   const { data } = usePostThread(id);
-  const { mutate: votePost, isPending: isVotingPost } = useVotePost();
-  const { mutate: voteComment, isPending: isVotingComment } = useVoteComment(id);
+  const { mutate: votePost, isPending: isVotingPost, variables: votingPostVars } = useVotePost();
+  const { mutate: voteComment, isPending: isVotingComment, variables: votingCommentVars } = useVoteComment(id);
 
-  // 閉覧計測（#665 / ADR-0032）
+  // 閲覧計測（#665 / ADR-0032）
   usePostViewBeacon(id);
   const { commentRef } = useCommentImpressions(id);
 
@@ -208,6 +211,15 @@ export const PostThreadScene = (): ReactElement => {
   const scrollToComments = () => {
     commentSectionRef.current?.scrollIntoView({ behavior: "smooth" });
   };
+
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (!hash.startsWith("#comment-")) return;
+    const el = document.getElementById(hash.slice(1));
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [comments]);
 
   const commentTree = useMemo(
     () =>
@@ -245,7 +257,8 @@ export const PostThreadScene = (): ReactElement => {
             onVote={(direction: VoteDirection) =>
               votePost({ postId: post.id, direction })
             }
-            voteDisabled={isVotingPost}
+            upVoteDisabled={isVotingPost && votingPostVars?.direction === "up"}
+            downVoteDisabled={isVotingPost && votingPostVars?.direction === "down"}
             postUrl={postUrl}
             currentVote={post.my_vote ?? null}
             onCommentClick={comments.length > 0 ? scrollToComments : undefined}
@@ -262,7 +275,8 @@ export const PostThreadScene = (): ReactElement => {
                 // eslint-disable-next-line max-params
                 onVote: (commentId, direction) => voteComment({ commentId, direction }),
                 commentRef,
-                voteDisabled: isVotingComment,
+                pendingVoteCommentId: isVotingComment ? votingCommentVars?.commentId : undefined,
+                pendingVoteDirection: isVotingComment ? votingCommentVars?.direction : undefined,
                 postId: post.id,
               })}
             </Box>

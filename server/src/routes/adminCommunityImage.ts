@@ -1,5 +1,4 @@
 import { NotFoundError } from "@hatchery/common";
-import multer from "multer";
 import { Router } from "express";
 
 import { requireAdmin } from "../middleware/requireAdmin.js";
@@ -7,10 +6,10 @@ import { requireAuth } from "../middleware/requireAuth.js";
 import type { CommunityRepository } from "../persistence/communityRepository.js";
 import {
   ALLOWED_IMAGE_MIME_TYPES,
-  MAX_IMAGE_SIZE_BYTES,
   type CommunityImageKind,
   type StorageService,
 } from "../services/storageService.js";
+import { singleImageUpload } from "../middleware/imageUpload.js";
 
 /**
  * admin 管理者向けコミュニティ画像アップロードルーター（#457 / ADR-0022 流用）。
@@ -28,39 +27,12 @@ export function createAdminCommunityImageRouter(
 ): Router {
   const router = Router();
 
-  const upload = multer({
-    storage: multer.memoryStorage(),
-    // eslint-disable-next-line max-params
-    fileFilter(_req, file, callback) {
-      const allowedMimes: readonly string[] = ALLOWED_IMAGE_MIME_TYPES;
-      if (allowedMimes.includes(file.mimetype)) {
-        callback(null, true);
-      } else {
-        callback(null, false);
-      }
-    },
-    limits: { fileSize: MAX_IMAGE_SIZE_BYTES },
-  });
-
   function registerUpload(kind: CommunityImageKind) {
     router.post(
       `/communities/:id/${kind}`,
       requireAuth,
       requireAdmin,
-      // eslint-disable-next-line max-params
-      (req, res, next) => {
-        upload.single("image")(req, res, (err) => {
-          if (err instanceof multer.MulterError && err.code === "LIMIT_FILE_SIZE") {
-            res.status(400).json({ error: "FileTooLarge: image must be 5MB or less" });
-            return;
-          }
-          if (err) {
-            next(err);
-            return;
-          }
-          next();
-        });
-      },
+      singleImageUpload,
       // eslint-disable-next-line max-params
       async (req, res, next) => {
         try {

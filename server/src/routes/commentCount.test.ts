@@ -40,7 +40,7 @@ describe("attachCommentCount", () => {
     const posts = [{ id: "p1" }, { id: "p2" }, { id: "p3" }];
     await attachCommentCount(posts, repo);
     expect(repo.countByPostIds).toHaveBeenCalledTimes(1);
-    expect(repo.countByPostIds).toHaveBeenCalledWith(["p1", "p2", "p3"]);
+    expect(repo.countByPostIds).toHaveBeenCalledWith(["p1", "p2", "p3"], undefined);
   });
 
   it("元のレコードの他フィールドが保持される", async () => {
@@ -48,5 +48,22 @@ describe("attachCommentCount", () => {
     const posts = [{ id: "post-1", title: "Hello", score: 10 }];
     const result = await attachCommentCount(posts, repo);
     expect(result[0]).toEqual({ id: "post-1", title: "Hello", score: 10, commentCount: 7 });
+  });
+
+  it("options を渡すと countByPostIds へ透過的に渡される（#875）", async () => {
+    const now = new Date();
+    const countByPostIds = vi.fn().mockResolvedValue(new Map([["post-1", 1]]));
+    const repo = { countByPostIds } as unknown as CommentRepository;
+    const posts = [{ id: "post-1" }];
+    await attachCommentCount(posts, repo, { now });
+    expect(countByPostIds).toHaveBeenCalledWith(["post-1"], { now });
+  });
+
+  it("options を渡さないと countByPostIds は options なしで呼ばれる（後方互換・#875）", async () => {
+    const countByPostIds = vi.fn().mockResolvedValue(new Map([["post-1", 1]]));
+    const repo = { countByPostIds } as unknown as CommentRepository;
+    const posts = [{ id: "post-1" }];
+    await attachCommentCount(posts, repo);
+    expect(countByPostIds).toHaveBeenCalledWith(["post-1"], undefined);
   });
 });

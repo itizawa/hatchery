@@ -323,18 +323,26 @@ describe("PostCard", () => {
     });
   });
 
-  describe("voteDisabled（ミューテーション進行中の連打防止・#748）", () => {
-    it("voteDisabled=true のとき up vote ボタンが disabled になる", () => {
-      render(<PostCard post={mockPost} onVote={vi.fn()} voteDisabled />);
+  describe("upVoteDisabled / downVoteDisabled（方向別ペンディング・#890）", () => {
+    it("upVoteDisabled=true のとき up ボタンのみ disabled、down は enabled", () => {
+      render(<PostCard post={mockPost} onVote={vi.fn()} upVoteDisabled />);
       expect(screen.getByRole("button", { name: /up vote/i })).toBeDisabled();
+      expect(screen.getByRole("button", { name: /down vote/i })).not.toBeDisabled();
     });
 
-    it("voteDisabled=true のとき down vote ボタンが disabled になる", () => {
-      render(<PostCard post={mockPost} onVote={vi.fn()} voteDisabled />);
+    it("downVoteDisabled=true のとき down ボタンのみ disabled、up は enabled", () => {
+      render(<PostCard post={mockPost} onVote={vi.fn()} downVoteDisabled />);
+      expect(screen.getByRole("button", { name: /up vote/i })).not.toBeDisabled();
       expect(screen.getByRole("button", { name: /down vote/i })).toBeDisabled();
     });
 
-    it("voteDisabled 未指定（デフォルト false）のとき vote ボタンは有効のまま", () => {
+    it("upVoteDisabled=true かつ downVoteDisabled=true のとき両ボタンが disabled", () => {
+      render(<PostCard post={mockPost} onVote={vi.fn()} upVoteDisabled downVoteDisabled />);
+      expect(screen.getByRole("button", { name: /up vote/i })).toBeDisabled();
+      expect(screen.getByRole("button", { name: /down vote/i })).toBeDisabled();
+    });
+
+    it("upVoteDisabled・downVoteDisabled 未指定（デフォルト false）のとき vote ボタンは有効のまま", () => {
       render(<PostCard post={mockPost} onVote={vi.fn()} />);
       expect(screen.getByRole("button", { name: /up vote/i })).not.toBeDisabled();
       expect(screen.getByRole("button", { name: /down vote/i })).not.toBeDisabled();
@@ -357,6 +365,40 @@ describe("PostCard", () => {
       expect(screen.getByText("今日も元気に始めましょう")).toBeInTheDocument();
       expect(screen.getByText("おはようございます！今日もよろしくお願いします。")).toBeInTheDocument();
       expect(screen.getByLabelText("コメント 3 件")).toBeInTheDocument();
+    });
+  });
+
+  describe("ShareButton stopPropagation（voteStopPropagation=true 時・#838）", () => {
+    it("voteStopPropagation=true + postUrl あり → 共有ボタンクリックで stopPropagation と preventDefault が呼ばれる", () => {
+      render(
+        <PostCard
+          post={mockPost}
+          onVote={vi.fn()}
+          voteStopPropagation={true}
+          postUrl="https://example.com/posts/post-1"
+        />,
+      );
+
+      const event = new MouseEvent("click", { bubbles: true, cancelable: true });
+      const stopPropagationSpy = vi.spyOn(event, "stopPropagation");
+      const preventDefaultSpy = vi.spyOn(event, "preventDefault");
+
+      fireEvent(screen.getByRole("button", { name: /共有/i }), event);
+
+      expect(stopPropagationSpy).toHaveBeenCalled();
+      expect(preventDefaultSpy).toHaveBeenCalled();
+    });
+
+    it("voteStopPropagation=false（デフォルト）+ postUrl あり → 共有ボタンは表示されるが Box の stopPropagation handler は呼ばれない（wrapper なし）", () => {
+      render(
+        <PostCard
+          post={mockPost}
+          onVote={vi.fn()}
+          postUrl="https://example.com/posts/post-1"
+        />,
+      );
+
+      expect(screen.getByRole("button", { name: /共有/i })).toBeInTheDocument();
     });
   });
 

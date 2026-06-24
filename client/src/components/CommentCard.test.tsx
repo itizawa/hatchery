@@ -185,21 +185,49 @@ describe("CommentCard", () => {
     });
   });
 
-  describe("voteDisabled（ミューテーション進行中の連打防止・#748）", () => {
-    it("voteDisabled=true のとき up vote ボタンが disabled になる", () => {
-      render(<CommentCard comment={mockComment} onVote={vi.fn()} voteDisabled />);
+  describe("upVoteDisabled / downVoteDisabled（方向別ペンディング・#890）", () => {
+    it("upVoteDisabled=true のとき up ボタンのみ disabled、down は enabled", () => {
+      render(<CommentCard comment={mockComment} onVote={vi.fn()} upVoteDisabled />);
       expect(screen.getByRole("button", { name: /up vote/i })).toBeDisabled();
+      expect(screen.getByRole("button", { name: /down vote/i })).not.toBeDisabled();
     });
 
-    it("voteDisabled=true のとき down vote ボタンが disabled になる", () => {
-      render(<CommentCard comment={mockComment} onVote={vi.fn()} voteDisabled />);
+    it("downVoteDisabled=true のとき down ボタンのみ disabled、up は enabled", () => {
+      render(<CommentCard comment={mockComment} onVote={vi.fn()} downVoteDisabled />);
+      expect(screen.getByRole("button", { name: /up vote/i })).not.toBeDisabled();
       expect(screen.getByRole("button", { name: /down vote/i })).toBeDisabled();
     });
 
-    it("voteDisabled 未指定（デフォルト false）のとき vote ボタンは有効のまま", () => {
+    it("upVoteDisabled=true かつ downVoteDisabled=true のとき両ボタンが disabled", () => {
+      render(<CommentCard comment={mockComment} onVote={vi.fn()} upVoteDisabled downVoteDisabled />);
+      expect(screen.getByRole("button", { name: /up vote/i })).toBeDisabled();
+      expect(screen.getByRole("button", { name: /down vote/i })).toBeDisabled();
+    });
+
+    it("upVoteDisabled・downVoteDisabled 未指定（デフォルト false）のとき vote ボタンは有効のまま", () => {
       render(<CommentCard comment={mockComment} onVote={vi.fn()} />);
       expect(screen.getByRole("button", { name: /up vote/i })).not.toBeDisabled();
       expect(screen.getByRole("button", { name: /down vote/i })).not.toBeDisabled();
+    });
+  });
+
+  describe("loading prop（#857）", () => {
+    it("loading={true} のとき Skeleton が描画される", () => {
+      const { container } = render(<CommentCard loading />);
+      expect(container.querySelectorAll(".MuiSkeleton-root").length).toBeGreaterThan(0);
+    });
+
+    it("loading={true} のときデータ由来のテキスト（author・本文・score）が DOM に存在しない", () => {
+      render(<CommentCard loading />);
+      expect(screen.queryByText("いつも元気ですね！")).not.toBeInTheDocument();
+      expect(screen.queryByText("worker-ken")).not.toBeInTheDocument();
+      expect(screen.queryByText("2")).not.toBeInTheDocument();
+    });
+
+    it("loading={true} のとき vote ボタンが表示されない", () => {
+      render(<CommentCard loading />);
+      expect(screen.queryByRole("button", { name: /up vote/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /down vote/i })).not.toBeInTheDocument();
     });
   });
 

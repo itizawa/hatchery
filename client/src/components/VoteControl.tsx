@@ -64,7 +64,7 @@ export const VoteControl = ({
             disabled={upDisabled}
             size="small"
             sx={{
-              color: isVoted ? (currentVote === "up" ? "inherit" : "rgba(255,255,255,0.4)") : "action.active",
+              color: isVoted ? (currentVote === "up" ? "inherit" : SLACK_COLORS.voteDimmed) : "action.active",
               height: 32,
               width: 32,
               borderRadius: "50%",
@@ -98,7 +98,7 @@ export const VoteControl = ({
             disabled={downDisabled}
             size="small"
             sx={{
-              color: isVoted ? (currentVote === "down" ? "inherit" : "rgba(255,255,255,0.4)") : "action.active",
+              color: isVoted ? (currentVote === "down" ? "inherit" : SLACK_COLORS.voteDimmed) : "action.active",
               height: 32,
               width: 32,
               borderRadius: "50%",

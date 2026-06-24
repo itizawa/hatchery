@@ -19,6 +19,8 @@ export const SLACK_COLORS = {
   voteDown: "#7193FF",
   /** 投票済み状態のボタン hover オーバーレイ色（半透明白）。#854 */
   voteHoverOverlay: "rgba(255,255,255,0.15)",
+  /** 投票済み状態の非選択ボタン色（半透明白・着色見え）。#891 */
+  voteDimmed: "rgba(255,255,255,0.4)",
 } as const;
 
 /**

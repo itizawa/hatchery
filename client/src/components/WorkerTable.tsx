@@ -14,7 +14,7 @@ import {
   TableRow,
   Typography,
 } from "./uiParts";
-import { DEFAULT_WORKERS, type Worker } from "@hatchery/common";
+import { DEFAULT_WORKERS, resolveWorkerImageUrl, type Worker } from "@hatchery/common";
 
 import { type ReactElement, useState } from "react";
 
@@ -104,7 +104,7 @@ export const WorkerTable = ({
                   <TableRow key={worker.id}>
                     <TableCell>
                       <Avatar
-                        src={worker.imageUrl}
+                        src={resolveWorkerImageUrl({ id: worker.id, imageUrl: worker.imageUrl })}
                         alt={worker.displayName}
                         sx={{ width: AVATAR_SIZE, height: AVATAR_SIZE }}
                       >
@@ -155,7 +155,7 @@ export const WorkerTable = ({
         <DialogContent>
           <Typography>
             「{confirmTarget?.displayName}」を削除しますか？
-            これまでのメッセージは残りますが、表示名が「【削除済み】{confirmTarget?.displayName}」になります。
+            これまでのメッセージは残りますが、表示名が「》削除済み《{confirmTarget?.displayName}」になります。
           </Typography>
         </DialogContent>
         <DialogActions>

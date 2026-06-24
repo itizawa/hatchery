@@ -8,6 +8,8 @@ import {
   WORKER_ROLE_MAX_LENGTH,
   createDisplayNameResolver,
   createAvatarUrlResolver,
+  generateWorkerAvatarUrl,
+  resolveWorkerImageUrl,
   CreateWorkerSchema,
   DEFAULT_WORKERS,
   WorkerSchema,
@@ -37,7 +39,7 @@ describe("WorkerSchema (A-1 / A-2)", () => {
     expect(WorkerSchema.safeParse({ id: "haru", displayName: "" }).success).toBe(false);
   });
 
-  // #331: ADR-0020 後処理。Worker は AI 投稿者のみとなり isBot 概念を撒廃した。
+  // #331: ADR-0020 後処理。Worker は AI 投稿者のみとなり isBot 概念を撤廃した。
   it("isBot フィールドを持たない（#331）", () => {
     const parsed = WorkerSchema.parse({ id: "haru", displayName: "haru" });
     expect(parsed).not.toHaveProperty("isBot");
@@ -272,6 +274,59 @@ describe("createDisplayNameResolver", () => {
   });
 });
 
+describe("generateWorkerAvatarUrl (#884)", () => {
+  it("DiceBear bottts-neutral の SVG URL を返す", () => {
+    const url = generateWorkerAvatarUrl({ id: "haru" });
+    expect(url).toContain("api.dicebear.com");
+    expect(url).toContain("bottts-neutral");
+    expect(url).toContain("svg");
+  });
+
+  it("URL の seed パラメータにワーカー ID を含む", () => {
+    const url = generateWorkerAvatarUrl({ id: "haru" });
+    expect(url).toContain("seed=haru");
+  });
+
+  it("同じ worker ID は常に同じ URL を返す（決定論的）", () => {
+    expect(generateWorkerAvatarUrl({ id: "haru" })).toBe(generateWorkerAvatarUrl({ id: "haru" }));
+  });
+
+  it("異なる worker ID は異なる URL を返す", () => {
+    expect(generateWorkerAvatarUrl({ id: "haru" })).not.toBe(generateWorkerAvatarUrl({ id: "ken" }));
+  });
+
+  it("特殊文字を含む ID は URL エンコードされる", () => {
+    const url = generateWorkerAvatarUrl({ id: "worker with spaces" });
+    expect(url).not.toContain(" ");
+  });
+});
+
+describe("resolveWorkerImageUrl (#884)", () => {
+  it("imageUrl が設定されていればそのまま返す", () => {
+    expect(resolveWorkerImageUrl({ id: "haru", imageUrl: "https://example.com/haru.png" })).toBe(
+      "https://example.com/haru.png",
+    );
+  });
+
+  it("imageUrl が null のとき DiceBear URL を返す", () => {
+    const url = resolveWorkerImageUrl({ id: "haru", imageUrl: null });
+    expect(url).toContain("api.dicebear.com");
+    expect(url).toContain("seed=haru");
+  });
+
+  it("imageUrl が undefined のとき DiceBear URL を返す", () => {
+    const url = resolveWorkerImageUrl({ id: "haru", imageUrl: undefined });
+    expect(url).toContain("api.dicebear.com");
+    expect(url).toContain("seed=haru");
+  });
+
+  it("imageUrl を省略したとき DiceBear URL を返す", () => {
+    const url = resolveWorkerImageUrl({ id: "ken" });
+    expect(url).toContain("api.dicebear.com");
+    expect(url).toContain("seed=ken");
+  });
+});
+
 describe("createAvatarUrlResolver (#300)", () => {
   const workers = [
     { id: "haru", displayName: "ハル", imageUrl: "https://example.com/haru.png" },
@@ -283,9 +338,12 @@ describe("createAvatarUrlResolver (#300)", () => {
     expect(resolve("haru")).toBe("https://example.com/haru.png");
   });
 
-  it("imageUrl が未設定の worker ID は undefined を返す", () => {
+  it("imageUrl が未設定の既知ワーカーは DiceBear URL を返す (#884)", () => {
     const resolve = createAvatarUrlResolver(workers);
-    expect(resolve("ken")).toBeUndefined();
+    const url = resolve("ken");
+    expect(url).toBeDefined();
+    expect(url).toContain("api.dicebear.com");
+    expect(url).toContain("seed=ken");
   });
 
   it("未解決の worker ID は undefined を返す", () => {
@@ -293,9 +351,12 @@ describe("createAvatarUrlResolver (#300)", () => {
     expect(resolve("unknown-id")).toBeUndefined();
   });
 
-  it("引数省略時は DEFAULT_WORKERS で解決する（全員 imageUrl 未設定 → undefined）", () => {
+  it("引数省略時は DEFAULT_WORKERS で解決する（imageUrl 未設定 → DiceBear URL）(#884)", () => {
     const resolve = createAvatarUrlResolver();
-    expect(resolve("haru")).toBeUndefined();
+    const url = resolve("haru");
+    expect(url).toBeDefined();
+    expect(url).toContain("api.dicebear.com");
+    expect(url).toContain("seed=haru");
   });
 });
 
@@ -316,7 +377,7 @@ describe("WorkerVerbositySchema (#625)", () => {
 });
 
 describe("WorkerSchema: verbosity フィールド (#625)", () => {
-  it("verbosity を策略しても parse 成功する（任意フィールド）", () => {
+  it("verbosity を省略しても parse 成功する（任意フィールド）", () => {
     expect(WorkerSchema.safeParse({ id: "haru", displayName: "haru" }).success).toBe(true);
   });
 
@@ -344,7 +405,7 @@ describe("WorkerSchema: verbosity フィールド (#625)", () => {
 });
 
 describe("UpdateWorkerSchema: verbosity フィールド (#625)", () => {
-  it("verbosity を策略しても valid（任意）", () => {
+  it("verbosity を省略しても valid（任意）", () => {
     expect(UpdateWorkerSchema.safeParse({}).success).toBe(true);
   });
 
@@ -360,7 +421,7 @@ describe("UpdateWorkerSchema: verbosity フィールド (#625)", () => {
 });
 
 describe("CreateWorkerSchema: verbosity フィールド (#625)", () => {
-  it("verbosity を策略しても parse 成功する（任意）", () => {
+  it("verbosity を省略しても parse 成功する（任意）", () => {
     expect(CreateWorkerSchema.safeParse({ displayName: "ワーカーA" }).success).toBe(true);
   });
 
@@ -388,7 +449,7 @@ describe("WorkerSchema: deletedAt フィールド（#372 HTTP 境界型整合）
     expect(WorkerSchema.safeParse({ id: "w1", displayName: "Alice", deletedAt: null }).success).toBe(true);
   });
 
-  it("deletedAt を策略しても parse 成功する（optional）", () => {
+  it("deletedAt を省略しても parse 成功する（optional）", () => {
     expect(WorkerSchema.safeParse({ id: "w1", displayName: "Alice" }).success).toBe(true);
   });
 });

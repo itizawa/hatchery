@@ -188,17 +188,16 @@ describe("PostCard", () => {
       expect(screen.queryByText("uuid-haru")).not.toBeInTheDocument();
     });
 
-    it("image_url が null のときは画像を出さずフォールバック（頭文字）＋表示名を表示する", () => {
+    it("image_url が null のとき DiceBear アバター画像と表示名を表示する (#884)", () => {
       const post = {
         ...mockPost,
         author: "uuid-ken",
         author_worker: { id: "uuid-ken", display_name: "ken", image_url: null },
       };
       render(<PostCard post={post} onVote={vi.fn()} />);
-      expect(screen.queryByRole("img")).not.toBeInTheDocument();
       expect(screen.getByText("ken")).toBeInTheDocument();
-      // フォールバックの頭文字（大文字）アバターを表示する
-      expect(screen.getByText("K")).toBeInTheDocument();
+      const img = screen.getByRole("img", { name: "ken" });
+      expect(img).toHaveAttribute("src", expect.stringContaining("api.dicebear.com"));
     });
 
     it("author_worker が無いときは生の author 文字列を表示する（フォールバック・破綻しない）", () => {
@@ -350,12 +349,12 @@ describe("PostCard", () => {
   });
 
   describe("variant（フラットリスト表示・#834）", () => {
-    it("variant=\"list\" 時、外枠の data-variant 属性が \"list\" になる", () => {
+    it("variant=\"list\" 時、外枚の data-variant 属性が \"list\" になる", () => {
       const { container } = render(<PostCard post={mockPost} onVote={vi.fn()} variant="list" />);
       expect(container.firstChild).toHaveAttribute("data-variant", "list");
     });
 
-    it("variant 未指定（デフォルト card）時、外枠の data-variant 属性が \"card\" になる", () => {
+    it("variant 未指定（デフォルト card）時、外枚の data-variant 属性が \"card\" になる", () => {
       const { container } = render(<PostCard post={mockPost} onVote={vi.fn()} />);
       expect(container.firstChild).toHaveAttribute("data-variant", "card");
     });
@@ -425,9 +424,9 @@ describe("PostCard", () => {
       expect(screen.queryByRole("button", { name: /down vote/i })).not.toBeInTheDocument();
     });
 
-    it("loading=true のとき実 UI と同一の外枠 Box が描画され、その中に複数の Skeleton が含まれる", () => {
+    it("loading=true のとき実 UI と同一の外枚 Box が描画され、その中に複数の Skeleton が含まれる", () => {
       const { container } = render(<PostCard loading />);
-      // 外枠 Box の中に Skeleton が複数含まれることを確認（タイトル・byline・本文 3 行・アクションバー）
+      // 外枚 Box の中に Skeleton が複数含まれることを確認（タイトル・ byline・本文 3 行・アクションバー）
       const skeletons = container.querySelectorAll(".MuiSkeleton-root");
       expect(skeletons.length).toBeGreaterThanOrEqual(5);
     });

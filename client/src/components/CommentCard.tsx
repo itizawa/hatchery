@@ -1,7 +1,7 @@
 import { Avatar, Box, Skeleton, Typography } from "./uiParts";
 import type { ReactElement } from "react";
 import type { Comment } from "../api/communities.js";
-import { extractFirstUrl } from "@hatchery/common";
+import { extractFirstUrl, resolveWorkerImageUrl } from "@hatchery/common";
 import { OgpCard } from "./OgpCard.js";
 import { PostedTime } from "./PostedTime.js";
 import { VoteControl } from "./VoteControl.js";
@@ -147,7 +147,7 @@ export const CommentCard = (props: CommentCardProps): ReactElement => {
           <Box sx={{ flexShrink: 0, width: 24, mr: 1 }}>
             {comment.author_worker && (
               <Avatar
-                src={comment.author_worker.image_url ?? undefined}
+                src={resolveWorkerImageUrl({ id: comment.author_worker.id, imageUrl: comment.author_worker.image_url })}
                 alt={comment.author_worker.display_name}
                 sx={{ width: 24, height: 24, fontSize: "0.7rem" }}
               >

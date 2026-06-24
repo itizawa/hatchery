@@ -22,7 +22,7 @@ export const WorkerSchema = z.object({
   displayName: z.string().min(1).max(WORKER_DISPLAY_NAME_MAX_LENGTH),
   role: z.string().min(1).max(WORKER_ROLE_MAX_LENGTH).optional(),
   personality: z.string().max(WORKER_PERSONALITY_MAX_LENGTH).optional(),
-  /** 文章量設定（#625）。策略時は standard 相当。 */
+  /** 文章量設定（#625）。省略時は standard 相当。 */
   verbosity: WorkerVerbositySchema.optional(),
   imageUrl: z.string().url().max(WORKER_IMAGE_URL_MAX_LENGTH).optional(),
   deletedAt: z.string().datetime().nullable().optional(),
@@ -34,7 +34,7 @@ export const UpdateWorkerSchema = z.object({
   displayName: z.string().min(1).max(WORKER_DISPLAY_NAME_MAX_LENGTH).optional(),
   role: z.string().min(1).max(WORKER_ROLE_MAX_LENGTH).optional(),
   personality: z.string().max(WORKER_PERSONALITY_MAX_LENGTH).optional(),
-  /** 文章量設定（#625）。策略時は変更なし。 */
+  /** 文章量設定（#625）。省略時は変更なし。 */
   verbosity: WorkerVerbositySchema.optional(),
 });
 
@@ -44,7 +44,7 @@ export const CreateWorkerSchema = z.object({
   displayName: z.string().min(1).max(WORKER_DISPLAY_NAME_MAX_LENGTH),
   role: z.string().min(1).max(WORKER_ROLE_MAX_LENGTH).optional(),
   personality: z.string().max(WORKER_PERSONALITY_MAX_LENGTH).optional(),
-  /** 文章量設定（#625）。策略時は standard 相当。 */
+  /** 文章量設定（#625）。省略時は standard 相当。 */
   verbosity: WorkerVerbositySchema.optional(),
 });
 
@@ -97,9 +97,28 @@ export const createDisplayNameResolver = (
   return (workerId: string): string => displayNameById.get(workerId) ?? workerId;
 };
 
+const DICEBEAR_BASE_URL = "https://api.dicebear.com/9.x/bottts-neutral/svg";
+
+/** ワーカー ID をシードとした DiceBear 自動生成アバター URL を返す（#884）。 */
+export function generateWorkerAvatarUrl({ id }: { id: string }): string {
+  return `${DICEBEAR_BASE_URL}?seed=${encodeURIComponent(id)}`;
+}
+
+/**
+ * imageUrl が設定されていればそれを返し、未設定なら DiceBear 自動生成 URL を返す（#884）。
+ * 画面表示で Avatar の src に渡す単一情報源として使う。
+ */
+export function resolveWorkerImageUrl({ id, imageUrl }: { id: string; imageUrl?: string | null }): string {
+  return imageUrl ?? generateWorkerAvatarUrl({ id });
+}
+
 export const createAvatarUrlResolver = (
   workers: readonly Worker[] = DEFAULT_WORKERS,
 ): ((workerId: string) => string | undefined) => {
-  const imageUrlById = new Map(workers.map((w) => [w.id, w.imageUrl]));
-  return (workerId: string): string | undefined => imageUrlById.get(workerId);
+  const workerById = new Map(workers.map((w) => [w.id, w]));
+  return (workerId: string): string | undefined => {
+    const worker = workerById.get(workerId);
+    if (!worker) return undefined;
+    return resolveWorkerImageUrl({ id: workerId, imageUrl: worker.imageUrl });
+  };
 };

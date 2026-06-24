@@ -50,7 +50,8 @@ export function computeLoyaltyScore({
     if (counts.length === 0) continue;
     // eslint-disable-next-line max-params
     const total = counts.reduce((s, c) => s + c, 0);
-    const maxCount = Math.max(...counts);
+    // eslint-disable-next-line max-params
+    const maxCount = counts.reduce((a, b) => (a > b ? a : b), 0);
     totalMaxShare += maxCount / total;
     userCount++;
   }

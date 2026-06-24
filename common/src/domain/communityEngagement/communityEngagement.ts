@@ -2,7 +2,7 @@ import { z } from "zod";
 
 /** community 別 vote 集計エントリ */
 export const CommunityVoteEntrySchema = z.object({
-  communityId: z.string(),
+  communityId: z.string().max(100),
   count: z.number().int().nonnegative(),
   sharePercent: z.number(),
 });
@@ -10,7 +10,7 @@ export type CommunityVoteEntry = z.infer<typeof CommunityVoteEntrySchema>;
 
 /** worker 別 vote 集計エントリ */
 export const WorkerVoteEntrySchema = z.object({
-  workerId: z.string(),
+  workerId: z.string().max(100),
   count: z.number().int().nonnegative(),
   sharePercent: z.number(),
 });

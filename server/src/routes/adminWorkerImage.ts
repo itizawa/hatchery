@@ -8,7 +8,7 @@ import {
   ALLOWED_IMAGE_MIME_TYPES,
   type StorageService,
 } from "../services/storageService.js";
-import { singleImageUpload } from "./imageUpload.js";
+import { singleImageUpload } from "../middleware/imageUpload.js";
 
 /**
  * admin 管理者向けワーカー画像アップロードルーター（#204 / ADR-0022）。

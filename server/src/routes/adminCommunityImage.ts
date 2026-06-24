@@ -9,7 +9,7 @@ import {
   type CommunityImageKind,
   type StorageService,
 } from "../services/storageService.js";
-import { singleImageUpload } from "./imageUpload.js";
+import { singleImageUpload } from "../middleware/imageUpload.js";
 
 /**
  * admin 管理者向けコミュニティ画像アップロードルーター（#457 / ADR-0022 流用）。

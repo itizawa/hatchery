@@ -1,5 +1,4 @@
 import { NotFoundError } from "@hatchery/common";
-import multer from "multer";
 import { Router } from "express";
 
 import { requireAdmin } from "../middleware/requireAdmin.js";
@@ -7,9 +6,9 @@ import { requireAuth } from "../middleware/requireAuth.js";
 import type { WorkerRepository } from "../persistence/workerRepository.js";
 import {
   ALLOWED_IMAGE_MIME_TYPES,
-  MAX_IMAGE_SIZE_BYTES,
   type StorageService,
 } from "../services/storageService.js";
+import { singleImageUpload } from "../middleware/imageUpload.js";
 
 /**
  * admin 管理者向けワーカー画像アップロードルーター（#204 / ADR-0022）。
@@ -22,38 +21,11 @@ export function createAdminWorkerImageRouter(
 ): Router {
   const router = Router();
 
-  const upload = multer({
-    storage: multer.memoryStorage(),
-    // eslint-disable-next-line max-params
-    fileFilter(_req, file, callback) {
-      const allowedMimes: readonly string[] = ALLOWED_IMAGE_MIME_TYPES;
-      if (allowedMimes.includes(file.mimetype)) {
-        callback(null, true);
-      } else {
-        callback(null, false);
-      }
-    },
-    limits: { fileSize: MAX_IMAGE_SIZE_BYTES },
-  });
-
   router.post(
     "/workers/:id/image",
     requireAuth,
     requireAdmin,
-    // eslint-disable-next-line max-params
-    (req, res, next) => {
-      upload.single("image")(req, res, (err) => {
-        if (err instanceof multer.MulterError && err.code === "LIMIT_FILE_SIZE") {
-          res.status(400).json({ error: "FileTooLarge: image must be 5MB or less" });
-          return;
-        }
-        if (err) {
-          next(err);
-          return;
-        }
-        next();
-      });
-    },
+    singleImageUpload,
     // eslint-disable-next-line max-params
     async (req, res, next) => {
       try {

@@ -14,7 +14,7 @@ import {
   TableRow,
   Typography,
 } from "./uiParts";
-import { DEFAULT_WORKERS, resolveWorkerImageUrl, type Worker } from "@hatchery/common";
+import { DEFAULT_WORKERS, formatWorkerDisplayName, resolveWorkerImageUrl, type Worker } from "@hatchery/common";
 
 import { type ReactElement, useState } from "react";
 
@@ -34,6 +34,8 @@ export interface WorkerTableProps {
   onDelete?: (id: string) => void;
   /** 削除操作中は削除ボタンを無効化する（#218）。 */
   isDeleting?: boolean;
+  /** 編集ボタンクリック時に呼ばれるコールバック（#181）。isEditable=true のときのみ意味を持つ。 */
+  onEdit?: (worker: Worker) => void;
 }
 
 const SKELETON_ROW_COUNT = 3;
@@ -44,6 +46,7 @@ export const WorkerTable = ({
   isLoading = false,
   isEditable = false,
   onDelete,
+  onEdit,
   isDeleting = false,
 }: WorkerTableProps): ReactElement => {
   const [editingWorker, setEditingWorker] = useState<Worker | null>(null);
@@ -111,14 +114,14 @@ export const WorkerTable = ({
                         {worker.displayName[0]}
                       </Avatar>
                     </TableCell>
-                    <TableCell>{worker.displayName}</TableCell>
+                    <TableCell>{formatWorkerDisplayName(worker)}</TableCell>
                     <TableCell>{worker.role ?? "—"}</TableCell>
                     {isEditable && (
                       <TableCell>
                         <Button
                           size="small"
                           variant="outlined"
-                          onClick={() => setEditingWorker(worker)}
+                          onClick={() => { setEditingWorker(worker); onEdit?.(worker); }}
                           aria-label={`編集 ${worker.displayName}`}
                         >
                           編集

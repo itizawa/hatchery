@@ -212,11 +212,6 @@ describe("CommunityScene", () => {
   });
 });
 
-/**
- * #924: vote 楽観的更新テスト
- * コミュニティフィードで vote ボタンを押したとき、
- * API レスポンス前に aria-pressed / score が即座に更新されることを検証する。
- */
 describe("CommunityScene — vote 楽観的更新（#924）", () => {
   const votePost = {
     id: "post-924",
@@ -278,15 +273,15 @@ describe("CommunityScene — vote 楽観的更新（#924）", () => {
         return HttpResponse.json({});
       }),
     );
-    renderVoteScene({ score: 5, my_vote: null });
+    renderVoteScene();
     await screen.findByText("楽観的更新テスト投稿");
 
     await userEvent.click(screen.getByRole("button", { name: /up vote/i }));
 
     await waitFor(() => {
       expect(screen.getByRole("button", { name: /up vote/i })).toHaveAttribute("aria-pressed", "true");
+      expect(screen.getByText("6")).toBeInTheDocument();
     });
-    expect(screen.getByText("6")).toBeInTheDocument();
   });
 
   it("up 済み → 同方向クリックで toggle off される（aria-pressed が false になる）", async () => {
@@ -306,8 +301,8 @@ describe("CommunityScene — vote 楽観的更新（#924）", () => {
 
     await waitFor(() => {
       expect(screen.getByRole("button", { name: /up vote/i })).toHaveAttribute("aria-pressed", "false");
+      expect(screen.getByText("9")).toBeInTheDocument();
     });
-    expect(screen.getByText("9")).toBeInTheDocument();
   });
 
   it("API エラー時に aria-pressed がロールバックされる", async () => {
@@ -327,12 +322,10 @@ describe("CommunityScene — vote 楽観的更新（#924）", () => {
 
     await userEvent.click(screen.getByRole("button", { name: /up vote/i }));
 
-    // 楽観的更新で true になる
     await waitFor(() => {
       expect(screen.getByRole("button", { name: /up vote/i })).toHaveAttribute("aria-pressed", "true");
     });
 
-    // API エラー後にロールバックされ false に戻る
     await waitFor(() => {
       expect(screen.getByRole("button", { name: /up vote/i })).toHaveAttribute("aria-pressed", "false");
     });

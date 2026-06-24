@@ -36,6 +36,7 @@ import { createCommunitiesRouter } from "./routes/communities.js";
 import { createWorkersRouter } from "./routes/workers.js";
 import { createFeedRouter } from "./routes/feed.js";
 import { healthRouter } from "./routes/health.js";
+import { createCommunityEngagementRouter } from "./routes/community-engagement.js";
 import { createOgpRouter } from "./routes/ogp.js";
 import { createPostsRouter } from "./routes/posts.js";
 import { createSitemapRouter } from "./routes/sitemap.js";
@@ -191,6 +192,14 @@ export function createApp(deps: AppDeps): Express {
     createWorkersRouter(deps.workerRepository, viewRepo, voteRepo),
   );
   app.use("/api/admin/batch-logs", noStoreCache, createBatchLogsRouter(deps.batchRunLogRepository));
+  app.use(
+    "/api/admin/community-engagement",
+    noStoreCache,
+    createCommunityEngagementRouter({
+      voteRepository: voteRepo,
+      subscriptionRepository: subscriptionRepo,
+    }),
+  );
   app.use(
     "/api/admin/token-usage",
     noStoreCache,

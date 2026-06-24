@@ -414,6 +414,81 @@
         ],
         "description": "トークン使用量レスポンス（直近 50 件 + 全期間集計）"
       },
+      "CommunityEngagement": {
+        "type": "object",
+        "properties": {
+          "windowDays": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "communityVotes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "communityId": {
+                  "type": "string"
+                },
+                "count": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "sharePercent": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "communityId",
+                "count",
+                "sharePercent"
+              ]
+            }
+          },
+          "workerVotes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "workerId": {
+                  "type": "string"
+                },
+                "count": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "sharePercent": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "workerId",
+                "count",
+                "sharePercent"
+              ]
+            }
+          },
+          "loyaltyScore": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "subscriberCountByCommunity": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "required": [
+          "windowDays",
+          "communityVotes",
+          "workerVotes",
+          "loyaltyScore",
+          "subscriberCountByCommunity"
+        ],
+        "description": "コミュニティ帰属シグナル（#761）。vote 集中度・ロイヤリティ・購読数を集計。"
+      },
       "Community": {
         "type": "object",
         "properties": {
@@ -1645,6 +1720,43 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/TokenUsageResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未認証",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "admin 権限なし",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/community-engagement": {
+      "get": {
+        "summary": "コミュニティ帰属シグナルを取得（認証必須・admin ロール）（#761）",
+        "responses": {
+          "200": {
+            "description": "コミュニティ帰属シグナル（vote 集中度・ロイヤリティ・購読数）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommunityEngagement"
                 }
               }
             }

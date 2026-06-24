@@ -221,5 +221,55 @@ export function createPrismaVoteRepository(prisma: PrismaClient): VoteRepository
       }
       return scores;
     },
+
+    async voteCountsPerUserPerCommunitySince(since: Date): Promise<Map<string, Map<string, number>>> {
+      const rows = await prisma.$queryRaw<{ userId: string; communityId: string; cnt: bigint }[]>(Prisma.sql`
+        SELECT "userId", "communityId", COUNT(*) AS "cnt"
+        FROM (
+          SELECT v."userId" AS "userId", p."communityId" AS "communityId"
+          FROM "Vote" v
+          JOIN "Post" p ON p."id" = v."postId"
+          WHERE v."postId" IS NOT NULL AND v."userId" IS NOT NULL AND v."createdAt" >= ${since}
+          UNION ALL
+          SELECT v."userId" AS "userId", c."communityId" AS "communityId"
+          FROM "Vote" v
+          JOIN "Comment" c ON c."id" = v."commentId"
+          WHERE v."commentId" IS NOT NULL AND v."userId" IS NOT NULL AND v."createdAt" >= ${since}
+        ) AS resolved
+        GROUP BY "userId", "communityId"
+      `);
+
+      const result = new Map<string, Map<string, number>>();
+      for (const row of rows) {
+        const userMap = result.get(row.userId) ?? new Map<string, number>();
+        userMap.set(row.communityId, (userMap.get(row.communityId) ?? 0) + Number(row.cnt));
+        result.set(row.userId, userMap);
+      }
+      return result;
+    },
+
+    async rawVoteCountsByWorkerSince(since: Date): Promise<Map<string, number>> {
+      const rows = await prisma.$queryRaw<{ workerId: string; cnt: bigint }[]>(Prisma.sql`
+        SELECT "workerId", COUNT(*) AS "cnt"
+        FROM (
+          SELECT p."author" AS "workerId"
+          FROM "Vote" v
+          JOIN "Post" p ON p."id" = v."postId"
+          WHERE v."postId" IS NOT NULL AND v."createdAt" >= ${since}
+          UNION ALL
+          SELECT c."author" AS "workerId"
+          FROM "Vote" v
+          JOIN "Comment" c ON c."id" = v."commentId"
+          WHERE v."commentId" IS NOT NULL AND v."createdAt" >= ${since}
+        ) AS resolved
+        GROUP BY "workerId"
+      `);
+
+      const result = new Map<string, number>();
+      for (const row of rows) {
+        result.set(row.workerId, Number(row.cnt));
+      }
+      return result;
+    },
   };
 }

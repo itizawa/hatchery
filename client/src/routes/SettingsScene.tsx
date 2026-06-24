@@ -6,6 +6,7 @@ import { calculateCostUsd } from "@hatchery/common";
 import type { TokenUsageLog } from "@hatchery/common";
 
 import { useBatchLogs, useRefreshBatchLogs } from "../api/batchLogs.js";
+import { useCommunityEngagement } from "../api/communityEngagement.js";
 import { useTokenUsage, useRefreshTokenUsage } from "../api/tokenUsage.js";
 import { AdminWorkerTable } from "../components/AdminWorkerTable.js";
 import { CommunitiesTab } from "../components/CommunitiesTab.js";
@@ -225,6 +226,122 @@ const TokenUsageTabInner = (): ReactElement => {
 /** トークン使用量タブ（#153 / #463 / #596）。withSettingsTabPanel でローディング・エラーを扱う。 */
 const TokenUsageTab = withSettingsTabPanel(TokenUsageTabInner, <TabSkeleton testId="token-usage-skeleton" />);
 
+/** コミュニティ帰属シグナルタブの本体（#761）。 */
+const CommunityEngagementTabInner = (): ReactElement => {
+  const { data } = useCommunityEngagement();
+
+  return (
+    <Box data-testid="community-engagement-tab">
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        直近 {data.windowDays} 日間のコミュニティ帰属シグナルを表示します。
+      </Typography>
+
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="subtitle2" gutterBottom>
+          ロイヤリティスコア
+        </Typography>
+        <Typography variant="body1">
+          {(data.loyaltyScore * 100).toFixed(1)}%
+        </Typography>
+        <Typography variant="caption" color="text.secondary">
+          ユーザーが最もよく vote するコミュニティへの集中度の平均（0〜100%）
+        </Typography>
+      </Box>
+
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="subtitle2" gutterBottom>
+          コミュニティ別 Vote 分布
+        </Typography>
+        {data.communityVotes.length === 0 ? (
+          <Typography variant="body2" color="text.secondary">
+            データがありません。
+          </Typography>
+        ) : (
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>コミュニティ ID</TableCell>
+                <TableCell align="right">Vote 数</TableCell>
+                <TableCell align="right">シェア</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {data.communityVotes.map((entry) => (
+                <TableRow key={entry.communityId}>
+                  <TableCell>{entry.communityId}</TableCell>
+                  <TableCell align="right">{entry.count.toLocaleString()}</TableCell>
+                  <TableCell align="right">{entry.sharePercent.toFixed(1)}%</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </Box>
+
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="subtitle2" gutterBottom>
+          ワーカー別 Vote 分布
+        </Typography>
+        {data.workerVotes.length === 0 ? (
+          <Typography variant="body2" color="text.secondary">
+            データがありません。
+          </Typography>
+        ) : (
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>ワーカー ID</TableCell>
+                <TableCell align="right">Vote 数</TableCell>
+                <TableCell align="right">シェア</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {data.workerVotes.map((entry) => (
+                <TableRow key={entry.workerId}>
+                  <TableCell>{entry.workerId}</TableCell>
+                  <TableCell align="right">{entry.count.toLocaleString()}</TableCell>
+                  <TableCell align="right">{entry.sharePercent.toFixed(1)}%</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </Box>
+
+      <Box>
+        <Typography variant="subtitle2" gutterBottom>
+          コミュニティ別購読者数
+        </Typography>
+        {Object.keys(data.subscriberCountByCommunity).length === 0 ? (
+          <Typography variant="body2" color="text.secondary">
+            データがありません。
+          </Typography>
+        ) : (
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>コミュニティ ID</TableCell>
+                <TableCell align="right">購読者数</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {Object.entries(data.subscriberCountByCommunity).map(([communityId, count]) => (
+                <TableRow key={communityId}>
+                  <TableCell>{communityId}</TableCell>
+                  <TableCell align="right">{count.toLocaleString()}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </Box>
+    </Box>
+  );
+};
+
+/** コミュニティ帰属シグナルタブ（#761 / #596）。withSettingsTabPanel でローディング・エラーを扱う。 */
+const CommunityEngagementTab = withSettingsTabPanel(CommunityEngagementTabInner, <TabSkeleton testId="community-engagement-skeleton" />);
+
 /** 管理画面のタブ定義。配列駆動にして将来のタブ追加（会社設定・定時設定など）を妨げない。 */
 interface SettingsTab {
   label: string;
@@ -237,6 +354,7 @@ const SETTINGS_TABS: readonly [SettingsTab, ...SettingsTab[]] = [
   { label: "バッチログ", value: "batch-logs", content: <BatchLogs /> },
   { label: "トークン使用量", value: "token-usage", content: <TokenUsageTab /> },
   { label: "コミュニティ", value: "communities", content: <CommunitiesTab /> },
+  { label: "帰属シグナル", value: "community-engagement", content: <CommunityEngagementTab /> },
 ];
 
 /** 管理画面（/admin）。タブ UI を持ち、ユーザー一覧タブに AI 社員をテーブル表示する（#25）。 */

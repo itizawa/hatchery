@@ -1,6 +1,7 @@
 import type { OpenAPIRegistry } from "@asteasolutions/zod-to-openapi";
 import {
   BatchRunLogSchema,
+  CommunityEngagementSchema,
   TokenUsageLogSchema,
 } from "@hatchery/common";
 import { z } from "zod";
@@ -65,6 +66,28 @@ export function registerAdmin(registry: OpenAPIRegistry, ctx: RegistryContext): 
       200: {
         description: "トークン使用量一覧と集計",
         content: { "application/json": { schema: TokenUsageResponseComponent } },
+      },
+      401: { description: "未認証", ...errorJson },
+      403: { description: "admin 権限なし", ...errorJson },
+    },
+  });
+
+  // コミュニティ帰属シグナル（#761）。admin ロール必須。
+  const CommunityEngagementComponent = registry.register(
+    "CommunityEngagement",
+    CommunityEngagementSchema.openapi({
+      description: "コミュニティ帰属シグナル（#761）。vote 集中度・ロイヤリティ・購読数を集計。",
+    }),
+  );
+
+  registry.registerPath({
+    method: "get",
+    path: "/api/admin/community-engagement",
+    summary: "コミュニティ帰属シグナルを取得（認証必須・admin ロール）（#761）",
+    responses: {
+      200: {
+        description: "コミュニティ帰属シグナル（vote 集中度・ロイヤリティ・購読数）",
+        content: { "application/json": { schema: CommunityEngagementComponent } },
       },
       401: { description: "未認証", ...errorJson },
       403: { description: "admin 権限なし", ...errorJson },

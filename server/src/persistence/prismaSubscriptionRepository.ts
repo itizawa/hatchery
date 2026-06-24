@@ -43,5 +43,17 @@ export function createPrismaSubscriptionRepository(prisma: PrismaClient): Subscr
       });
       return row !== null;
     },
+
+    async subscriberCountPerCommunity(): Promise<Map<string, number>> {
+      const rows = await prisma.subscription.groupBy({
+        by: ["communityId"],
+        _count: { userId: true },
+      });
+      const counts = new Map<string, number>();
+      for (const row of rows) {
+        counts.set(row.communityId, row._count.userId);
+      }
+      return counts;
+    },
   };
 }

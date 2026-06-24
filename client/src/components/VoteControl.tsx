@@ -59,11 +59,12 @@ export const VoteControl = ({
           <IconButton
             aria-label="up vote"
             aria-pressed={currentVote === "up"}
+            data-color-state={isVoted ? (currentVote === "up" ? "selected" : "unselected") : "unvoted"}
             onClick={() => onVote("up")}
             disabled={upDisabled}
             size="small"
             sx={{
-              color: isVoted ? "inherit" : "action.active",
+              color: isVoted ? (currentVote === "up" ? "inherit" : SLACK_COLORS.voteDimmed) : "action.active",
               height: 32,
               width: 32,
               borderRadius: "50%",
@@ -92,11 +93,12 @@ export const VoteControl = ({
           <IconButton
             aria-label="down vote"
             aria-pressed={currentVote === "down"}
+            data-color-state={isVoted ? (currentVote === "down" ? "selected" : "unselected") : "unvoted"}
             onClick={() => onVote("down")}
             disabled={downDisabled}
             size="small"
             sx={{
-              color: isVoted ? "inherit" : "action.active",
+              color: isVoted ? (currentVote === "down" ? "inherit" : SLACK_COLORS.voteDimmed) : "action.active",
               height: 32,
               width: 32,
               borderRadius: "50%",

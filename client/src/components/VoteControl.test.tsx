@@ -166,6 +166,38 @@ describe("VoteControl", () => {
     });
   });
 
+  describe("選択状態の色区別（#891）", () => {
+    it("currentVote='up' のとき up ボタンが selected 状態になる", () => {
+      render(<VoteControl score={1} onVote={vi.fn()} currentVote="up" />);
+      expect(screen.getByRole("button", { name: /up vote/i })).toHaveAttribute("data-color-state", "selected");
+    });
+
+    it("currentVote='up' のとき down ボタンが unselected 状態になる", () => {
+      render(<VoteControl score={1} onVote={vi.fn()} currentVote="up" />);
+      expect(screen.getByRole("button", { name: /down vote/i })).toHaveAttribute("data-color-state", "unselected");
+    });
+
+    it("currentVote='down' のとき down ボタンが selected 状態になる", () => {
+      render(<VoteControl score={-1} onVote={vi.fn()} currentVote="down" />);
+      expect(screen.getByRole("button", { name: /down vote/i })).toHaveAttribute("data-color-state", "selected");
+    });
+
+    it("currentVote='down' のとき up ボタンが unselected 状態になる", () => {
+      render(<VoteControl score={-1} onVote={vi.fn()} currentVote="down" />);
+      expect(screen.getByRole("button", { name: /up vote/i })).toHaveAttribute("data-color-state", "unselected");
+    });
+
+    it("currentVote=null（未投票）のとき up ボタンが unvoted 状態になる", () => {
+      render(<VoteControl score={0} onVote={vi.fn()} currentVote={null} />);
+      expect(screen.getByRole("button", { name: /up vote/i })).toHaveAttribute("data-color-state", "unvoted");
+    });
+
+    it("currentVote=null（未投票）のとき down ボタンが unvoted 状態になる", () => {
+      render(<VoteControl score={0} onVote={vi.fn()} currentVote={null} />);
+      expect(screen.getByRole("button", { name: /down vote/i })).toHaveAttribute("data-color-state", "unvoted");
+    });
+  });
+
   describe("アイコン solid/outline バリアント（#854）", () => {
     it("未投票時に up アイコンが outline バリアントでレンダリングされる", () => {
       const { container } = render(<VoteControl score={0} onVote={vi.fn()} currentVote={null} />);

@@ -39,7 +39,7 @@ export async function fetchTokenUsage(): Promise<TokenUsageResult> {
   const result = await openApiClient.GET("/api/admin/token-usage", {
     credentials: "include",
   });
-  const data = unwrap(result, "GET /api/admin/token-usage");
+  const data = unwrap({ result, label: "GET /api/admin/token-usage" });
   const raw = data as { logs: unknown[]; summary: unknown };
   const logs = TokenUsageLogSchema.array().parse(raw.logs);
   const summary = TokenUsageSummarySchema.parse(raw.summary);

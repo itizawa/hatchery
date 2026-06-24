@@ -44,8 +44,7 @@ type FetchResult<T, E> = {
  * @param label フォールバック文言（例: `"GET /api/admin/settings"`）。サーバボディが無いとき
  *   `"<label> (<status>)"` 形式で Error message に使う。
  */
-// eslint-disable-next-line max-params
-export function unwrap<T, E>(result: FetchResult<T, E>, label: string): NonNullable<T> {
+export function unwrap<T, E>({ result, label }: { result: FetchResult<T, E>; label: string }): NonNullable<T> {
   const { data, error, response } = result;
   if (error || !response.ok || data == null) {
     throw new Error(buildApiErrorMessage(error, response.status, label));
@@ -61,8 +60,7 @@ export function unwrap<T, E>(result: FetchResult<T, E>, label: string): NonNulla
  * @param result openapi-fetch の `{ data, error, response }`
  * @param label フォールバック文言（`unwrap` と同様）
  */
-// eslint-disable-next-line max-params
-export function ensureOk<T, E>(result: FetchResult<T, E>, label: string): T | undefined {
+export function ensureOk<T, E>({ result, label }: { result: FetchResult<T, E>; label: string }): T | undefined {
   const { data, error, response } = result;
   if (error || !response.ok) {
     throw new Error(buildApiErrorMessage(error, response.status, label));

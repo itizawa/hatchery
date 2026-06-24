@@ -34,12 +34,12 @@ export async function fetchCommunityFeed({
     params: { path: { slug }, query: query as Record<string, string> | undefined },
     credentials: "include",
   });
-  return unwrap(result, `GET /api/communities/${slug}/feed`);
+  return unwrap({ result, label: `GET /api/communities/${slug}/feed` });
 }
 
 /**
  * GET /api/feed — ホームフィードを 1 ページ分取得する（カーソルページネーション #367 / 並び順 #435）。
- * sort=latest（既定）は後方互换のため query に sort を含めない。
+ * sort=latest（既定）は後方互換のため query に sort を含めない。
  * sessionId を付与すると各 post に my_vote が付く（#831）。
  */
 export async function fetchHomeFeedPage({
@@ -61,7 +61,7 @@ export async function fetchHomeFeedPage({
     params: { query: query as Record<string, string | number | undefined> },
     credentials: "include",
   });
-  return unwrap(result, "GET /api/feed") as { posts: Post[]; nextCursor: string | null };
+  return unwrap({ result, label: "GET /api/feed" }) as { posts: Post[]; nextCursor: string | null };
 }
 
 /**

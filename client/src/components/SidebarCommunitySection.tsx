@@ -20,6 +20,7 @@ import { usePublicCommunities } from "../api/communities.js";
 import { QueryBoundary } from "./QueryBoundary.js";
 import { SLACK_COLORS } from "../theme.js";
 
+export const SIDEBAR_ICON_SIZE = 20;
 const SIDEBAR_ICON_SX = { color: SLACK_COLORS.sidebarText, minWidth: 36 } as const;
 
 /**
@@ -39,11 +40,11 @@ const SidebarCommunityItems = (): ReactElement => {
             to={`/communities/${community.slug}` as "/communities/$slug"}
             sx={{ color: SLACK_COLORS.sidebarText, py: 0.25 }}
           >
-            <ListItemIcon sx={{ minWidth: 36 }}>
+            <ListItemIcon sx={SIDEBAR_ICON_SX}>
               <Avatar
                 src={community.iconUrl ?? undefined}
                 alt={community.name}
-                sx={{ width: 24, height: 24, fontSize: "0.75rem", bgcolor: "primary.main" }}
+                sx={{ width: SIDEBAR_ICON_SIZE, height: SIDEBAR_ICON_SIZE, fontSize: "0.75rem", bgcolor: "primary.main" }}
               >
                 {community.name[0]}
               </Avatar>
@@ -108,7 +109,7 @@ export const SidebarCommunitySection = (): ReactElement => {
               sx={{ color: SLACK_COLORS.sidebarText, py: 0.25 }}
             >
               <ListItemIcon sx={SIDEBAR_ICON_SX}>
-                <ExploreIcon fontSize="small" />
+                <ExploreIcon sx={{ fontSize: SIDEBAR_ICON_SIZE }} />
               </ListItemIcon>
               <ListItemText
                 primary="探す"

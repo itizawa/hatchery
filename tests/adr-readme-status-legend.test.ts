@@ -13,8 +13,9 @@ function readmeContent(): string {
 
 function statusSection(content: string): string {
   const start = content.indexOf("## ステータス");
+  if (start === -1) throw new Error("'## ステータス' section not found in docs/adr/README.md");
   const end = content.indexOf("## ", start + 1);
-  return content.slice(start, end);
+  return content.slice(start, end === -1 ? undefined : end);
 }
 
 describe("docs/adr/README.md ステータス凡例 (Issue #791)", () => {

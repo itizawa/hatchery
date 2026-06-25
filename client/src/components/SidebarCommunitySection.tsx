@@ -15,6 +15,7 @@ import {
 import type { ReactElement } from "react";
 import { useState } from "react";
 import { Link as RouterLink } from "@tanstack/react-router";
+import { resolveCommunityIconUrl } from "@hatchery/common";
 
 import { usePublicCommunities } from "../api/communities.js";
 import { QueryBoundary } from "./QueryBoundary.js";
@@ -42,7 +43,7 @@ const SidebarCommunityItems = (): ReactElement => {
           >
             <ListItemIcon sx={SIDEBAR_ICON_SX}>
               <Avatar
-                src={community.iconUrl ?? undefined}
+                src={resolveCommunityIconUrl({ id: community.id, iconUrl: community.iconUrl })}
                 alt={community.name}
                 sx={{ width: SIDEBAR_ICON_SIZE, height: SIDEBAR_ICON_SIZE, fontSize: "0.75rem", bgcolor: "primary.main" }}
               >

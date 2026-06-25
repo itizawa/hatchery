@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { SubscriptionSchema, UnreadCountSchema, UnreadCountsResponseSchema } from "./subscription.js";
+import { SubscriptionSchema, UnreadCountItemSchema, UnreadCountsResponseSchema } from "./subscription.js";
 
 describe("SubscriptionSchema", () => {
   const validSubscription = {
@@ -40,27 +40,27 @@ describe("SubscriptionSchema", () => {
   });
 });
 
-describe("UnreadCountSchema", () => {
+describe("UnreadCountItemSchema", () => {
   const valid = { community_id: "c-1", community_slug: "tech", unread_count: 3 };
 
   it("有効なデータをパースできる", () => {
-    expect(UnreadCountSchema.safeParse(valid).success).toBe(true);
+    expect(UnreadCountItemSchema.safeParse(valid).success).toBe(true);
   });
 
   it("unread_count が 0 でもパースできる", () => {
-    expect(UnreadCountSchema.safeParse({ ...valid, unread_count: 0 }).success).toBe(true);
+    expect(UnreadCountItemSchema.safeParse({ ...valid, unread_count: 0 }).success).toBe(true);
   });
 
   it("community_id が空文字を reject する", () => {
-    expect(UnreadCountSchema.safeParse({ ...valid, community_id: "" }).success).toBe(false);
+    expect(UnreadCountItemSchema.safeParse({ ...valid, community_id: "" }).success).toBe(false);
   });
 
   it("community_slug が空文字を reject する", () => {
-    expect(UnreadCountSchema.safeParse({ ...valid, community_slug: "" }).success).toBe(false);
+    expect(UnreadCountItemSchema.safeParse({ ...valid, community_slug: "" }).success).toBe(false);
   });
 
   it("unread_count が負数を reject する", () => {
-    expect(UnreadCountSchema.safeParse({ ...valid, unread_count: -1 }).success).toBe(false);
+    expect(UnreadCountItemSchema.safeParse({ ...valid, unread_count: -1 }).success).toBe(false);
   });
 });
 

@@ -1,5 +1,7 @@
 import { Avatar, Box, Skeleton, Typography } from "./uiParts";
 import type { ReactElement } from "react";
+import type React from "react";
+import { Link as RouterLink } from "@tanstack/react-router";
 import type { Comment } from "../api/communities.js";
 import { extractFirstUrl, resolveWorkerImageUrl } from "@hatchery/common";
 import { OgpCard } from "./OgpCard.js";
@@ -42,6 +44,11 @@ type CommentCardProps =
        * shareUrl は内部で `${origin}/posts/${postId}#comment-${comment.id}` に組み立てる。
        */
       postId?: string;
+      /**
+       * ワーカー名・アバタークリック時のコールバック（#929）。指定時は author 表示を
+       * RouterLink でラップしてプロフィールページへ遷移する。
+       */
+      onWorkerClick?: (e: React.MouseEvent) => void;
     };
 
 /**
@@ -80,6 +87,7 @@ export const CommentCard = (props: CommentCardProps): ReactElement => {
     children = null,
     hasChildren = false,
     postId,
+    onWorkerClick,
   } = props;
 
   const clampedDepth = Math.min(depth, MAX_COMMENT_DEPTH);
@@ -145,7 +153,22 @@ export const CommentCard = (props: CommentCardProps): ReactElement => {
         <Box sx={{ display: "flex", py: 0.75 }}>
           {/* 左列: アバター（コネクターが重ならないよう本文と分離） */}
           <Box sx={{ flexShrink: 0, width: 24, mr: 1 }}>
-            {comment.author_worker && (
+            {comment.author_worker && onWorkerClick ? (
+              <RouterLink
+                to="/workers/$workerId"
+                params={{ workerId: comment.author_worker.id }}
+                onClick={(e: React.MouseEvent) => { e.stopPropagation(); onWorkerClick(e); }}
+                style={{ textDecoration: "none" }}
+              >
+                <Avatar
+                  src={resolveWorkerImageUrl({ id: comment.author_worker.id, imageUrl: comment.author_worker.image_url })}
+                  alt={comment.author_worker.display_name}
+                  sx={{ width: 24, height: 24, fontSize: "0.7rem" }}
+                >
+                  {comment.author_worker.display_name.charAt(0).toUpperCase()}
+                </Avatar>
+              </RouterLink>
+            ) : comment.author_worker ? (
               <Avatar
                 src={resolveWorkerImageUrl({ id: comment.author_worker.id, imageUrl: comment.author_worker.image_url })}
                 alt={comment.author_worker.display_name}
@@ -153,16 +176,29 @@ export const CommentCard = (props: CommentCardProps): ReactElement => {
               >
                 {comment.author_worker.display_name.charAt(0).toUpperCase()}
               </Avatar>
-            )}
+            ) : null}
           </Box>
 
           {/* 右列: 著者名・投稿時刻・本文・アクション */}
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5, flexWrap: "wrap" }}>
               {comment.author_worker ? (
-                <Typography variant="body2" sx={{ color: "text.secondary" }}>
-                  {comment.author_worker.display_name}
-                </Typography>
+                onWorkerClick ? (
+                  <RouterLink
+                    to="/workers/$workerId"
+                    params={{ workerId: comment.author_worker.id }}
+                    onClick={(e: React.MouseEvent) => { e.stopPropagation(); onWorkerClick(e); }}
+                    style={{ textDecoration: "none", color: "inherit" }}
+                  >
+                    <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                      {comment.author_worker.display_name}
+                    </Typography>
+                  </RouterLink>
+                ) : (
+                  <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                    {comment.author_worker.display_name}
+                  </Typography>
+                )
               ) : (
                 <Typography variant="body2" sx={{ color: "text.secondary" }}>
                   {comment.author}

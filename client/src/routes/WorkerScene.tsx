@@ -1,58 +1,28 @@
 /**
  * ワーカー個別プロフィールページ（/workers/$workerId・#929）。
- * ワーカーの avatar / role / personality と最新投稿一覧を表示する。認証不要の公開ページ。
+ * ワーカーの displayName・role・personality・アバターと最新投稿一覧を表示する。
+ * 認証不要の公開ページ。
  */
 import { Avatar, Box, Typography } from "../components/uiParts";
-import PersonRoundedIcon from "@mui/icons-material/PersonRounded";
+import { useParams } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 
-import { useParams, useNavigate } from "@tanstack/react-router";
-import type { Worker } from "@hatchery/common";
 import { resolveWorkerImageUrl } from "@hatchery/common";
-
 import { useWorkerDetail, useWorkerPosts } from "../api/workers.js";
-import type { Post } from "../api/posts.js";
-import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
 import { PostCard } from "../components/PostCard.js";
-import { useVotePost } from "../api/votes.js";
+import { QueryBoundary } from "../components/QueryBoundary.js";
+import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
 
-/** ワーカー情報ヘッダー（avatar・displayName・role・personality）。 */
-const WorkerHeader = ({ worker }: { worker: Worker }): ReactElement => (
-  <Box sx={{ display: "flex", gap: 3, mb: 4, alignItems: "flex-start" }}>
-    <Avatar
-      src={resolveWorkerImageUrl({ id: worker.id, imageUrl: worker.imageUrl })}
-      alt={worker.displayName}
-      sx={{ width: 80, height: 80, fontSize: "2rem" }}
-    >
-      {worker.displayName.charAt(0).toUpperCase()}
-    </Avatar>
-    <Box>
-      <Typography variant="h5" sx={{ fontWeight: 700, mb: 0.5 }}>
-        {worker.displayName}
-      </Typography>
-      {worker.role && (
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-          {worker.role}
-        </Typography>
-      )}
-      {worker.personality && (
-        <Typography variant="body2" color="text.secondary">
-          {worker.personality}
-        </Typography>
-      )}
-    </Box>
-  </Box>
-);
-
-/** 投稿リスト（Suspense 内）。 */
+/** ワーカーの投稿一覧セクション。 */
 const WorkerPostsList = ({ workerId }: { workerId: string }): ReactElement => {
-  const { data: posts } = useWorkerPosts(workerId);
-  const { mutate: votePost } = useVotePost();
-  const navigate = useNavigate();
+  const { data: posts } = useWorkerPosts({ workerId });
 
   if (posts.length === 0) {
     return (
-      <Box sx={{ textAlign: "center", py: 6, color: "text.secondary" }}>
+      <Box
+        data-testid="worker-posts-empty"
+        sx={{ textAlign: "center", py: 6, color: "text.secondary" }}
+      >
         <Typography variant="body1">まだ投稿がありません。</Typography>
       </Box>
     );
@@ -60,46 +30,79 @@ const WorkerPostsList = ({ workerId }: { workerId: string }): ReactElement => {
 
   return (
     <Box>
-      {posts.map((post: Post) => (
+      {posts.map((post) => (
         <PostCard
           key={post.id}
           post={post}
-          onVote={(direction) => votePost({ postId: post.id, direction })}
+          onVote={() => undefined}
+          currentVote={null}
           truncateText
           variant="list"
-          onCommentClick={() => { void navigate({ to: "/posts/$postId", params: { postId: post.id } }); }}
         />
       ))}
     </Box>
   );
 };
 
-/** ワーカー詳細本体（Suspense 内）。 */
-const WorkerContent = ({ workerId }: { workerId: string }): ReactElement => {
-  const { data: worker } = useWorkerDetail(workerId);
+/** ワーカープロフィールヘッダー（アバター + 名前 + role + personality）。 */
+const WorkerProfileHeader = ({ workerId }: { workerId: string }): ReactElement => {
+  const { data: worker } = useWorkerDetail({ workerId });
+
   useDocumentTitle(`${worker.displayName} - Hatchery`);
 
   return (
-    <>
-      <WorkerHeader worker={worker} />
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
-        <PersonRoundedIcon sx={{ color: "text.secondary", fontSize: "1rem" }} />
-        <Typography variant="subtitle2" sx={{ fontWeight: 600, color: "text.secondary" }}>
-          最近の投稿
+    <Box sx={{ display: "flex", alignItems: "flex-start", gap: 2, mb: 3 }}>
+      <Avatar
+        src={resolveWorkerImageUrl({ id: worker.id, imageUrl: worker.imageUrl })}
+        alt={worker.displayName}
+        sx={{ width: 56, height: 56, fontSize: "1.5rem" }}
+      >
+        {worker.displayName.charAt(0).toUpperCase()}
+      </Avatar>
+      <Box>
+        <Typography
+          variant="h5"
+          sx={{ fontWeight: 700, lineHeight: 1.2 }}
+          data-testid="worker-display-name"
+        >
+          {worker.displayName}
         </Typography>
+        {worker.role && (
+          <Typography variant="body2" sx={{ color: "text.secondary", mt: 0.5 }}>
+            {worker.role}
+          </Typography>
+        )}
+        {worker.personality && (
+          <Typography variant="body2" sx={{ color: "text.secondary", mt: 1 }}>
+            {worker.personality}
+          </Typography>
+        )}
       </Box>
-      <WorkerPostsList workerId={workerId} />
-    </>
+    </Box>
   );
 };
 
-/** ワーカー個別プロフィールページ（#929）。 */
+/**
+ * ワーカー個別プロフィールページ（#929）。
+ * QueryBoundary 内で useWorkerDetail / useWorkerPosts を使い、ローディング/エラーを委譲する。
+ */
 export const WorkerScene = (): ReactElement => {
   const { workerId } = useParams({ strict: false }) as { workerId: string };
 
   return (
     <Box component="section" sx={{ p: 3, maxWidth: 800, mx: "auto" }}>
-      <WorkerContent workerId={workerId} />
+      <QueryBoundary>
+        <WorkerProfileHeader workerId={workerId} />
+      </QueryBoundary>
+      <Typography
+        variant="subtitle2"
+        sx={{ fontWeight: 600, mb: 1, borderBottom: "1px solid", borderColor: "divider", pb: 1 }}
+      >
+        投稿
+      </Typography>
+      <QueryBoundary>
+        <WorkerPostsList workerId={workerId} />
+      </QueryBoundary>
     </Box>
   );
 };

@@ -53,8 +53,11 @@ type PostCardProps =
       onCommunityClick?: () => void;
       /** コメント数 Chip クリック時のコールバック。指定時はクリック可能になる。 */
       onCommentClick?: () => void;
-      /** ワーカー名・アバタークリック時のコールバック（#929）。指定時はクリック可能になる。 */
-      onWorkerClick?: () => void;
+      /**
+       * ワーカー名・アバタークリック時のコールバック（#929）。指定時は AuthorByline をクリック可能にし、
+       * ワーカープロフィールページへ遷移する RouterLink に切り替える。
+       */
+      onWorkerClick?: (e: React.MouseEvent) => void;
       /**
        * カード表示（デフォルト）またはフラットリスト表示を選択する（#834）。
        * "card": 現行スタイル（border + bgcolor: background.paper + borderRadius + mb）。

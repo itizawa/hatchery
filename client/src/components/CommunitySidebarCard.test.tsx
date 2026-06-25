@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { CommunitySidebarCard } from "./CommunitySidebarCard";
 import type { Community } from "../api/communities";
+import { generateCommunityIconUrl } from "@hatchery/common";
 import type React from "react";
 
 const mockCommunity: Community = {
@@ -132,6 +133,24 @@ describe("CommunitySidebarCard", () => {
   it("iconUrl 未設定でもイニシャルのフォールバックで崩れずに表示する（#457）", () => {
     render(<CommunitySidebarCard {...baseProps} />);
     expect(screen.getByRole("heading", { name: "AI 開発者の集い" })).toBeInTheDocument();
+  });
+
+  it("iconUrl 未設定のとき Avatar src が bauhaus 自動生成 URL になる（#960）", () => {
+    render(<CommunitySidebarCard {...baseProps} />);
+    const img = screen.getByRole("img", { name: "AI 開発者の集い" });
+    expect(img).toHaveAttribute("src", generateCommunityIconUrl({ id: mockCommunity.id }));
+  });
+
+  it("iconUrl 設定済みのとき Avatar src がその URL を優先する（#960）", () => {
+    const iconUrl = "https://example.com/custom-icon.png";
+    render(
+      <CommunitySidebarCard
+        {...baseProps}
+        community={{ ...mockCommunity, iconUrl }}
+      />,
+    );
+    const img = screen.getByRole("img", { name: "AI 開発者の集い" });
+    expect(img).toHaveAttribute("src", iconUrl);
   });
 
   it("children を追加セクションとして描画する", () => {

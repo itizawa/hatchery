@@ -41,7 +41,7 @@ function EditCommunityForm({ communityId }: { communityId: string }): ReactEleme
     void form.setFieldValue("name", community.name);
     void form.setFieldValue("description", community.description);
     void form.setFieldValue("generationInstruction", community.generationInstruction ?? "");
-  }, [community.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [community.id]);
 
   return (
     <>

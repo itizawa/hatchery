@@ -472,3 +472,57 @@ describe("公開 API に generationInstruction が露出しない（#488）", ()
     expect(JSON.stringify(res.body)).not.toContain("generationInstruction");
   });
 });
+
+describe("PATCH /api/communities/:slug/mark-viewed", () => {
+  it("購読済みユーザーは 204 が返る", async () => {
+    const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
+    const subscriptionRepo = createInMemorySubscriptionRepository();
+    const deps = await createTestDeps({ communityRepository: communityRepo, subscriptionRepository: subscriptionRepo });
+    const app = createApp(deps);
+
+    const loginRes = await request(app).post("/api/auth/dev-login");
+    const cookie = loginRes.headers["set-cookie"] as string[];
+    await request(app).post("/api/communities/technology/subscribe").set("Cookie", cookie);
+
+    const res = await request(app)
+      .patch("/api/communities/technology/mark-viewed")
+      .set("Cookie", cookie);
+    expect(res.status).toBe(204);
+  });
+
+  it("未購読ユーザーは 403 が返る", async () => {
+    const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
+    const deps = await createTestDeps({ communityRepository: communityRepo });
+    const app = createApp(deps);
+
+    const loginRes = await request(app).post("/api/auth/dev-login");
+    const cookie = loginRes.headers["set-cookie"] as string[];
+
+    const res = await request(app)
+      .patch("/api/communities/technology/mark-viewed")
+      .set("Cookie", cookie);
+    expect(res.status).toBe(403);
+  });
+
+  it("存在しないコミュニティは 404 が返る", async () => {
+    const deps = await createTestDeps();
+    const app = createApp(deps);
+
+    const loginRes = await request(app).post("/api/auth/dev-login");
+    const cookie = loginRes.headers["set-cookie"] as string[];
+
+    const res = await request(app)
+      .patch("/api/communities/not-exists/mark-viewed")
+      .set("Cookie", cookie);
+    expect(res.status).toBe(404);
+  });
+
+  it("未認証は 401 が返る", async () => {
+    const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
+    const deps = await createTestDeps({ communityRepository: communityRepo });
+    const app = createApp(deps);
+
+    const res = await request(app).patch("/api/communities/technology/mark-viewed");
+    expect(res.status).toBe(401);
+  });
+});

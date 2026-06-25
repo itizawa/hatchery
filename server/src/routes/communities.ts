@@ -173,5 +173,29 @@ export function createCommunitiesRouter(
       .catch(next);
   });
 
+  // コミュニティ既読マーク（認証必須・#933）
+  // eslint-disable-next-line max-params
+  router.patch("/:slug/mark-viewed", requireAuth, (req, res, next) => {
+    const { slug } = req.params as { slug: string };
+    const userId = getAuthUser(req).id;
+
+    communityRepo
+      .findBySlug(slug)
+      .then((community) => {
+        if (!community) {
+          throw new NotFoundError("CommunityNotFound");
+        }
+        return subscriptionRepo.hasSubscription(userId, community.id).then((subscribed) => {
+          if (!subscribed) {
+            return res.status(403).json({ error: "NotSubscribed" });
+          }
+          return subscriptionRepo
+            .updateLastViewedAt({ userId, communityId: community.id, viewedAt: new Date() })
+            .then(() => res.status(204).end());
+        });
+      })
+      .catch(next);
+  });
+
   return router;
 }

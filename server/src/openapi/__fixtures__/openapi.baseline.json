@@ -1079,6 +1079,63 @@
         ],
         "description": "vote リクエストボディ（direction: up | down）"
       },
+      "UnreadCountItem": {
+        "type": "object",
+        "properties": {
+          "community_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "community_slug": {
+            "type": "string",
+            "minLength": 1
+          },
+          "unread_count": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "community_id",
+          "community_slug",
+          "unread_count"
+        ],
+        "description": "購読コミュニティの未読数アイテム（#933）"
+      },
+      "UnreadCountsResponse": {
+        "type": "object",
+        "properties": {
+          "unread_counts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "community_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "community_slug": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "unread_count": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "community_id",
+                "community_slug",
+                "unread_count"
+              ]
+            }
+          }
+        },
+        "required": [
+          "unread_counts"
+        ],
+        "description": "購読コミュニティ別未読数レスポンス（#933）"
+      },
       "OgpMeta": {
         "type": "object",
         "properties": {
@@ -2989,6 +3046,95 @@
           },
           "404": {
             "description": "コメントが存在しない",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/subscriptions/unread-counts": {
+      "get": {
+        "summary": "購読コミュニティ別の未読数を取得する（#933）",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "subscriptions"
+        ],
+        "responses": {
+          "200": {
+            "description": "未読数一覧",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnreadCountsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/communities/{slug}/mark-viewed": {
+      "patch": {
+        "summary": "コミュニティを既読にする（lastViewedAt を現在時刻に更新）（#933）",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "communities"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "slug",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "既読に更新した"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
             "content": {
               "application/json": {
                 "schema": {

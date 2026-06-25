@@ -1,6 +1,6 @@
 import { Prisma, type PrismaClient } from "@prisma/client";
 
-import type { SubscriptionRepository } from "./subscriptionRepository.js";
+import type { SubscriptionRepository, SubscriptionWithUnreadCount } from "./subscriptionRepository.js";
 
 /** SubscriptionRepository の Prisma / PostgreSQL 実装（ADR-0019 / #305）。 */
 export function createPrismaSubscriptionRepository(prisma: PrismaClient): SubscriptionRepository {
@@ -54,6 +54,60 @@ export function createPrismaSubscriptionRepository(prisma: PrismaClient): Subscr
         counts.set(row.communityId, row._count.userId);
       }
       return counts;
+    },
+
+    async updateLastViewedAt({
+      userId,
+      communityId,
+      viewedAt,
+    }: {
+      userId: string;
+      communityId: string;
+      viewedAt: Date;
+    }): Promise<void> {
+      try {
+        await prisma.subscription.update({
+          where: { userId_communityId: { userId, communityId } },
+          data: { lastViewedAt: viewedAt },
+        });
+      } catch (err) {
+        if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025") {
+          return;
+        }
+        throw err;
+      }
+    },
+
+    async listWithUnreadCounts(userId: string): Promise<SubscriptionWithUnreadCount[]> {
+      const now = new Date();
+      const subscriptions = await prisma.subscription.findMany({
+        where: { userId },
+        include: { community: { select: { slug: true } } },
+      });
+
+      const result = await Promise.all(
+        subscriptions.map(async (sub) => {
+          let unreadCount = 0;
+          if (sub.lastViewedAt !== null) {
+            unreadCount = await prisma.post.count({
+              where: {
+                communityId: sub.communityId,
+                createdAt: {
+                  gt: sub.lastViewedAt,
+                  lte: now,
+                },
+              },
+            });
+          }
+          return {
+            communityId: sub.communityId,
+            communitySlug: sub.community.slug,
+            unreadCount,
+          };
+        }),
+      );
+
+      return result;
     },
   };
 }

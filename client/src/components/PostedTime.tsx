@@ -1,10 +1,12 @@
 import { formatAbsoluteTime, formatRelativeTime } from "@hatchery/common";
 import { Tooltip, Typography } from "./uiParts";
-import type { ReactElement } from "react";
+import type { ComponentProps, ReactElement } from "react";
 
 interface PostedTimeProps {
   /** 投稿時刻の ISO 文字列（post / comment の created_at）。未指定なら何も描画しない（後方互換）。 */
   createdAt?: string | null;
+  /** Typography の variant。既定は body2。サイドバー等で caption に変えたい場合に指定する。 */
+  variant?: ComponentProps<typeof Typography>["variant"];
 }
 
 /**
@@ -13,7 +15,7 @@ interface PostedTimeProps {
  * - 機械可読な絶対時刻を `<time dateTime>` に持たせる（アクセシビリティ）。
  * - createdAt が未指定 / 不正な日付なら何も描画しない（破綻させない）。
  */
-export const PostedTime = ({ createdAt }: PostedTimeProps): ReactElement | null => {
+export const PostedTime = ({ createdAt, variant = "body2" }: PostedTimeProps): ReactElement | null => {
   if (!createdAt) return null;
 
   const target = new Date(createdAt);
@@ -27,7 +29,7 @@ export const PostedTime = ({ createdAt }: PostedTimeProps): ReactElement | null 
   return (
     <Tooltip title={absoluteLabel}>
       <Typography
-        variant="body2"
+        variant={variant}
         component="time"
         dateTime={target.toISOString()}
         sx={{ color: "text.secondary" }}

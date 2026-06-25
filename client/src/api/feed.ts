@@ -46,13 +46,15 @@ export async function fetchHomeFeedPage({
   cursor,
   sort = "latest",
   sessionId,
+  limit = 20,
 }: {
   cursor?: string;
   sort?: HomeFeedSort;
   sessionId?: string;
+  limit?: number;
 } = {}): Promise<{ posts: Post[]; nextCursor: string | null }> {
   const query: { cursor?: string; limit: number; sort?: HomeFeedSort; sessionId?: string } = {
-    limit: 20,
+    limit,
   };
   if (cursor) query.cursor = cursor;
   if (sort === "popular") query.sort = sort;
@@ -75,6 +77,26 @@ export function useCommunityFeed(slug: string) {
     queryKey: communityFeedQueryKey(slug),
     queryFn: () => fetchCommunityFeed({ slug, sessionId }),
     staleTime: 30_000,
+  });
+}
+
+/**
+ * サイドバー用新着ポストのキャッシュキー。
+ * "feed" プレフィックスを避けてvote ミューテーションの cancelQueries / getQueriesData 対象外にする（#928）。
+ * homeFeedQueryKeyPrefix() = ["feed"] に合致すると onMutate が pages 構造を期待して TypeError を起こす。
+ */
+export const recentPostsSidebarQueryKey = () => ["recent-posts-sidebar"] as const;
+
+/**
+ * 右サイドバー用に最新 10 件のホームフィードを取得するフック（#928）。
+ * 無限スクロール不要のため useSuspenseQuery で単一ページ取得する。
+ */
+export function useRecentPostsSidebar() {
+  return useSuspenseQuery({
+    queryKey: recentPostsSidebarQueryKey(),
+    queryFn: () => fetchHomeFeedPage({ sort: "latest", limit: 10 }),
+    staleTime: 30_000,
+    select: (data) => data.posts,
   });
 }
 

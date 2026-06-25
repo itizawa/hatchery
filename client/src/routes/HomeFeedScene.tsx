@@ -4,11 +4,13 @@ import { Link as RouterLink, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, type ReactElement } from "react";
 
 import { useInfiniteHomeFeed, usePublicCommunities, useVotePost } from "../api/communities.js";
+import { useRecentPostsSidebar } from "../api/feed.js";
 import { useAuth } from "../api/auth.js";
 import { PostCard } from "../components/PostCard.js";
+import { QueryBoundary } from "../components/QueryBoundary.js";
+import { RecentPostsSidebarCard } from "../components/RecentPostsSidebarCard.js";
 import { WelcomeSection } from "../components/WelcomeSection.js";
 import type { VoteDirection } from "../components/VoteControl.js";
-
 
 /** フラットリスト行の hover スタイル（#834）。borderRadius は付けず bgcolor 変化のみ。 */
 const listItemSx = {
@@ -28,10 +30,24 @@ export interface HomeFeedSceneProps {
 }
 
 /**
+ * 右サイドバー内に新着ポスト一覧を表示するパネル（#928）。
+ * useRecentPostsSidebar は Suspense 化済みのため、QueryBoundary で局所フォールバックを与える。
+ */
+const RecentPostsSidebarPanel = ({
+  communityById,
+}: {
+  communityById: Map<string, { slug: string; name: string }>;
+}): ReactElement => {
+  const { data: posts } = useRecentPostsSidebar();
+  return <RecentPostsSidebarCard posts={posts} communityById={communityById} />;
+};
+
+/**
  * ホームフィード（/ = 新着順 / /popular = 人気順）。
  * 購読状態・認証状態に関わらず全 community の post を表示する（ADR-0020 更新）。
  * #367: 無限スクロール（カーソルページネーション）対応。#435: 並び順パラメータ化。
  * #748: vote 連打防止。#890: 押した方向のみ disabled にし、反対方向は操作可能にする。
+ * #928: 2 カラムレイアウト化・右サイドバーに横断新着ポスト表示。
  */
 export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactElement => {
   // #462: useInfiniteHomeFeed は Suspense 化。data は non-undefined。
@@ -72,66 +88,104 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
   const showWelcome = !user || !hasPosts;
 
   return (
-    <Box component="section" sx={{ p: 3, maxWidth: 800, mx: "auto" }}>
+    <Box component="section" sx={{ p: 3, maxWidth: 1200, mx: "auto" }}>
       <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1 }}>
         <Typography variant="h5" component="h1">
           {FEED_HEADING[sort]}
         </Typography>
       </Box>
-      {showWelcome && (
-        <WelcomeSection communities={Array.isArray(communities) ? communities : []} />
-      )}
-      {hasPosts && (
-        <Box sx={{ borderTop: "1px solid", borderColor: "divider" }}>
-          {posts.map((post) => {
-            const community = communityById.get(post.community_id);
-            return (
-              <Box
-                key={post.id}
-                sx={listItemSx}
-              >
-                <RouterLink
-                  to="/posts/$postId"
-                  params={{ postId: post.id }}
-                  style={{ display: "block", textDecoration: "none", color: "inherit" }}
-                >
-                  <PostCard
-                    post={post}
-                    onVote={(direction: VoteDirection) =>
-                      votePost({ postId: post.id, direction })
-                    }
-                    upVoteDisabled={isVotingPost && votingPostVars?.direction === "up"}
-                    downVoteDisabled={isVotingPost && votingPostVars?.direction === "down"}
-                    voteStopPropagation
-                    truncateText
-                    variant="list"
-                    community={community}
-                    currentVote={post.my_vote ?? null}
-                    postUrl={`${window.location.origin}/posts/${post.id}`}
-                    onCommunityClick={
-                      community
-                        ? () => void navigate({ to: "/communities/$slug", params: { slug: community.slug } })
-                        : undefined
-                    }
-                    onCommentClick={
-                      post.comment_count
-                        ? () => void navigate({ to: "/posts/$postId", params: { postId: post.id }, hash: "comments" })
-                        : undefined
-                    }
-                  />
-                </RouterLink>
+
+      <Box sx={{ display: "flex", gap: 3, alignItems: "flex-start" }}>
+        {/* 左カラム: Post 一覧 */}
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          {showWelcome && (
+            <WelcomeSection communities={Array.isArray(communities) ? communities : []} />
+          )}
+          {hasPosts && (
+            <Box sx={{ borderTop: "1px solid", borderColor: "divider" }}>
+              {posts.map((post) => {
+                const community = communityById.get(post.community_id);
+                return (
+                  <Box key={post.id} sx={listItemSx}>
+                    <RouterLink
+                      to="/posts/$postId"
+                      params={{ postId: post.id }}
+                      style={{ display: "block", textDecoration: "none", color: "inherit" }}
+                    >
+                      <PostCard
+                        post={post}
+                        onVote={(direction: VoteDirection) =>
+                          votePost({ postId: post.id, direction })
+                        }
+                        upVoteDisabled={isVotingPost && votingPostVars?.direction === "up"}
+                        downVoteDisabled={isVotingPost && votingPostVars?.direction === "down"}
+                        voteStopPropagation
+                        truncateText
+                        variant="list"
+                        community={community}
+                        currentVote={post.my_vote ?? null}
+                        postUrl={`${window.location.origin}/posts/${post.id}`}
+                        onCommunityClick={
+                          community
+                            ? () =>
+                                void navigate({
+                                  to: "/communities/$slug",
+                                  params: { slug: community.slug },
+                                })
+                            : undefined
+                        }
+                        onCommentClick={
+                          post.comment_count
+                            ? () =>
+                                void navigate({
+                                  to: "/posts/$postId",
+                                  params: { postId: post.id },
+                                  hash: "comments",
+                                })
+                            : undefined
+                        }
+                      />
+                    </RouterLink>
+                  </Box>
+                );
+              })}
+              <Box ref={sentinelRef} sx={{ py: 1 }}>
+                {isFetchingNextPage && (
+                  <Typography variant="body2" color="text.secondary" sx={{ textAlign: "center" }}>
+                    読み込み中...
+                  </Typography>
+                )}
               </Box>
-            );
-          })}
-          <Box ref={sentinelRef} sx={{ py: 1 }}>
-            {isFetchingNextPage && (
-              <Typography variant="body2" color="text.secondary" sx={{ textAlign: "center" }}>
+            </Box>
+          )}
+        </Box>
+
+        {/* 右カラム: 横断新着ポスト sticky サイドバー（md 未満で非表示）（#928） */}
+        <Box
+          sx={{
+            width: 312,
+            flexShrink: 0,
+            display: { xs: "none", md: "block" },
+            position: "sticky",
+            top: 80,
+          }}
+        >
+          <QueryBoundary
+            fallback={
+              <Typography variant="body2" color="text.secondary">
                 読み込み中...
               </Typography>
+            }
+            errorFallback={() => (
+              <Typography variant="body2" color="text.secondary">
+                読み込みに失敗しました
+              </Typography>
             )}
-          </Box>
+          >
+            <RecentPostsSidebarPanel communityById={communityById} />
+          </QueryBoundary>
         </Box>
-      )}
+      </Box>
     </Box>
   );
 };

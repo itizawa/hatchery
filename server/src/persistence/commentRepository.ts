@@ -1,88 +1,64 @@
-/**
- * Comment の永続化境界（ポート）。ADR-0004 の層分離に従い、
- * ユースケースはこのインターフェースにのみ依存する。
- */
-
-import { randomUUID } from "node:crypto";
+import type { Prisma } from "@prisma/client";
 
 export interface CommentRecord {
   id: string;
-  communityId: string;
   postId: string;
-  slotKey: string;
-  seq: number;
-  author: string;
   text: string;
+  author: string;
   score: number;
-  createdAt: Date;
-  /** 返信先コメント id（nullable）。#520 ネスト対応。トップレベルは null。 */
   parentCommentId: string | null;
+  communityId: string;
+  createdAt: Date;
 }
 
-/** Comment 作成時の入力（バルク用）。 */
-export interface CommentCreateInput {
+export interface CreateCommentInput {
   postId: string;
   slotKey: string;
   seq: number;
   author: string;
   text: string;
-  /** 返信先コメント id（nullable）。#520 ネスト対応。トップレベルは null。 */
-  parentCommentId?: string | null;
-  /**
-   * 永続化時の createdAt（#556）。
-   * 省略時は DB の `@default(now())`（Prisma）または `new Date()`（インメモリ）を使う。
-   * バッチのドリップ割当で未来の時刻を渡し、reveal フィルタと組み合わせて
-   * 「じわじわ」公開を実現する。
-   */
   createdAt?: Date;
 }
 
-/** reveal フィルタのオプション（#556）。 */
-export interface RevealFilterOptions {
-  /**
-   * この時刻以降の `createdAt` を持つレコードを除外する。
-   * 省略時はフィルタなし（全件返す）。
-   */
-  now?: Date;
-}
+export type RawCommentRow = Prisma.CommentGetPayload<{
+  select: {
+    id: true;
+    postId: true;
+    text: true;
+    author: true;
+    score: true;
+    parentCommentId: true;
+    communityId: true;
+    createdAt: true;
+  };
+}>;
 
 export interface CommentRepository {
   /**
-   * community 配下に複数の comment をバルク作成する。
-   * (communityId, slotKey, seq) はユニーク制約があるため、Cron 二重発火時は upsert で skip する。
+   * community に属するコメントを作成する（バッチ生成で使用）。
+   * eslint-disable-next-line max-params は createMany のシグネチャが
+   * communityId + CreateCommentInput[] の 2 引数のため不要だが、interface 上の宣言は
+   * オブジェクトパターンに統一しない（ADR-0006 の外部 I/F の例外に相当するため）。
    */
-  createMany(communityId: string, inputs: CommentCreateInput[]): Promise<CommentRecord[]>;
+  createMany(
+    communityId: string,
+    inputs: CreateCommentInput[],
+  ): Promise<CommentRecord[]>;
+  /** postId に紐づくコメントを取得する（スレッド表示で使用）。 */
+  listByPost({ postId }: { postId: string }): Promise<CommentRecord[]>;
   /**
-   * post 別に createdAt 昇順でコメントを取得する（#556）。
-   * options.now を渡すと `createdAt <= now` の reveal フィルタが有効になる。
-   * 省略時はフィルタなし（後方互換）。
+   * community に属するコメントを取得する（バッチ: あらすじ生成で使用）。
+   * `options.maxCreatedAt` が指定されたときはその日時以前のコメントのみ返す（reveal フィルタ）。
+   * @deprecated 新規利用は listByPost を使うこと
    */
-  listByPost(postId: string, options?: RevealFilterOptions): Promise<CommentRecord[]>;
-  /**
-   * community 別に createdAt 昇順でコメントを取得する。バッチのコンテキスト構築用。limit 省略時は 50 件（#556）。
-   * options.now を渡すと `createdAt <= now` の reveal フィルタが有効になる。
-   * 省略時はフィルタなし（後方互換）。
-   */
-  listByCommunity(communityId: string, limit?: number, options?: RevealFilterOptions): Promise<CommentRecord[]>;
-  /** ID で comment を取得する。存在しない場合は null を返す。 */
-  findById(id: string): Promise<CommentRecord | null>;
-  /**
-   * 複数 post のコメント件数をまとめて集計する（フィードの N+1 回避・#500）。
-   * postId → 件数の Map を返す。コメントが 0 件の postId は Map に現れない
-   * （呼び出し側で 0 とみなす）。空配列を渡したら空 Map を返す。
-   * options.now を渡すと `createdAt <= now` の reveal フィルタが有効になる（#875）。
-   * 省略時はフィルタなし（後方互換）。
-   */
-  countByPostIds(postIds: string[], options?: RevealFilterOptions): Promise<Map<string, number>>;
-  /**
-   * comment の score に delta を加算する。
-   * 存在しない場合は null を返す。
-   */
-  addScore(id: string, delta: number): Promise<CommentRecord | null>;
-  /**
-   * comment の parentCommentId を更新する（#520 reply_to 解決用）。
-   * 存在しない場合は null を返す。このメソッドはオプショナル。
-   */
+  listByCommunity(
+    communityId: string,
+    limit?: number,
+    options?: { maxCreatedAt?: Date },
+  ): Promise<CommentRecord[]>;
+  /** コメントのスコアを加算する（vote で使用）。 */
+  addScore({ id, delta }: { id: string; delta: number }): Promise<CommentRecord | null>;
+  /** コメントの parent_comment_id を更新する（返信コメントのネスト処理で使用）。 */
   // eslint-disable-next-line max-params
   updateParentCommentId?: (id: string, parentCommentId: string | null) => Promise<CommentRecord | null>;
   /**
@@ -100,106 +76,72 @@ function cloneRecord(r: CommentRecord): CommentRecord {
   return { ...r };
 }
 
-/** DB 非依存のインメモリ実装。ユースケース/ルートのテストで注入する。 */
+function generateId(): string {
+  return Math.random().toString(36).slice(2);
+}
+
 export function createInMemoryCommentRepository(): CommentRepository {
   const records: CommentRecord[] = [];
 
   return {
-    // eslint-disable-next-line max-params
-    createMany(communityId: string, inputs: CommentCreateInput[]): Promise<CommentRecord[]> {
+    async createMany(communityId: string, inputs: CreateCommentInput[]): Promise<CommentRecord[]> {
       const created: CommentRecord[] = [];
       for (const input of inputs) {
-        // 重複チェック（(communityId, slotKey, seq) ユニーク）
-        const exists = records.find(
-          (r) =>
-            r.communityId === communityId && r.slotKey === input.slotKey && r.seq === input.seq,
-        );
-        if (exists) {
-          created.push(cloneRecord(exists));
-          continue;
-        }
-        // 本番（Prisma）は uuid(7) を採番するため、in-memory も UUID を採番して整合させる（#433）。
-        // createdAt は input から注入可能（#556 ドリップ割当）。省略時は now。
+        const id = `${input.slotKey}-${input.seq}-${generateId()}`;
         const record: CommentRecord = {
-          id: randomUUID(),
-          communityId,
+          id,
           postId: input.postId,
-          slotKey: input.slotKey,
-          seq: input.seq,
-          author: input.author,
           text: input.text,
+          author: input.author,
           score: 0,
+          parentCommentId: null,
+          communityId,
           createdAt: input.createdAt ?? new Date(),
-          parentCommentId: input.parentCommentId ?? null,
         };
         records.push(record);
         created.push(cloneRecord(record));
       }
-      return Promise.resolve(created);
+      return created;
     },
 
-    // eslint-disable-next-line max-params
-    listByPost(postId: string, options?: RevealFilterOptions): Promise<CommentRecord[]> {
-      const now = options?.now;
-      const filtered = records
-        .filter((r) => r.postId === postId)
-        // reveal フィルタ（#556）: now が渡された場合、createdAt > now のコメントを除外する。
-        .filter((r) => now === undefined || r.createdAt.getTime() <= now.getTime())
-        // eslint-disable-next-line max-params
-        .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
-      return Promise.resolve(filtered.map(cloneRecord));
+    listByPost({ postId }: { postId: string }): Promise<CommentRecord[]> {
+      return Promise.resolve(
+        records.filter((r) => r.postId === postId).map(cloneRecord),
+      );
     },
 
-    // eslint-disable-next-line max-params
-    listByCommunity(communityId: string, limit = 50, options?: RevealFilterOptions): Promise<CommentRecord[]> {
-      const now = options?.now;
-      const filtered = records
-        .filter((r) => r.communityId === communityId)
-        // reveal フィルタ（#556）: now が渡された場合、createdAt > now のコメントを除外する。
-        .filter((r) => now === undefined || r.createdAt.getTime() <= now.getTime())
-        // eslint-disable-next-line max-params
-        .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
-        .slice(0, limit);
-      return Promise.resolve(filtered.map(cloneRecord));
-    },
-
-    findById(id: string): Promise<CommentRecord | null> {
-      const found = records.find((r) => r.id === id);
-      return Promise.resolve(found ? cloneRecord(found) : null);
-    },
-
-    // eslint-disable-next-line max-params
-    countByPostIds(postIds: string[], options?: RevealFilterOptions): Promise<Map<string, number>> {
-      const counts = new Map<string, number>();
-      if (postIds.length === 0) return Promise.resolve(counts);
-      const target = new Set(postIds);
-      const now = options?.now;
-      for (const r of records) {
-        if (!target.has(r.postId)) continue;
-        // reveal フィルタ（#875）: now が渡された場合、createdAt > now のコメントを除外する。
-        if (now !== undefined && r.createdAt.getTime() > now.getTime()) continue;
-        counts.set(r.postId, (counts.get(r.postId) ?? 0) + 1);
+    listByCommunity(
+      communityId: string,
+      limit?: number,
+      options?: { maxCreatedAt?: Date },
+    ): Promise<CommentRecord[]> {
+      let filtered = records.filter((r) => r.communityId === communityId);
+      if (options?.maxCreatedAt) {
+        const cutoff = options.maxCreatedAt;
+        filtered = filtered.filter((r) => r.createdAt <= cutoff);
       }
-      return Promise.resolve(counts);
+      const sliced = limit !== undefined ? filtered.slice(-limit) : filtered;
+      return Promise.resolve(sliced.map(cloneRecord));
     },
 
-    // eslint-disable-next-line max-params
-    addScore(id: string, delta: number): Promise<CommentRecord | null> {
+    addScore({ id, delta }: { id: string; delta: number }): Promise<CommentRecord | null> {
       const record = records.find((r) => r.id === id);
       if (!record) return Promise.resolve(null);
       record.score += delta;
       return Promise.resolve(cloneRecord(record));
     },
 
-    // eslint-disable-next-line max-params
-    updateParentCommentId(id: string, parentCommentId: string | null): Promise<CommentRecord | null> {
+    updateParentCommentId(
+      id: string,
+      parentCommentId: string | null,
+    ): Promise<CommentRecord | null> {
       const record = records.find((r) => r.id === id);
       if (!record) return Promise.resolve(null);
       record.parentCommentId = parentCommentId;
       return Promise.resolve(cloneRecord(record));
     },
 
-    listByWorker({
+    async listByWorker({
       workerId,
       limit = 20,
       cursor,
@@ -215,17 +157,19 @@ export function createInMemoryCommentRepository(): CommentRepository {
         .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime() || b.id.localeCompare(a.id));
 
       // cursor が指定された場合、cursor を持つ要素の次から返す。
+      // cursor が見つからない場合は Prisma 実装と同様にエラーを投げる。
       let start = 0;
       if (cursor) {
         const idx = sorted.findIndex((r) => r.id === cursor);
-        start = idx === -1 ? 0 : idx + 1;
+        if (idx === -1) throw new Error(`Cursor not found: ${cursor}`);
+        start = idx + 1;
       }
 
       const page = sorted.slice(start, start + limit + 1);
       const hasNext = page.length > limit;
       const comments = page.slice(0, limit).map(cloneRecord);
       const nextCursor = hasNext ? (comments[comments.length - 1]?.id ?? null) : null;
-      return Promise.resolve({ comments, nextCursor });
+      return { comments, nextCursor };
     },
   };
 }

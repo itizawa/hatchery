@@ -27,9 +27,28 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
   return {
     ...actual,
     useParams: () => ({ workerId: "worker-abc" }),
-    Link: ({ children, to }: { children: React.ReactNode; to: string; params?: unknown }) => (
-      <a href={to}>{children}</a>
-    ),
+    Link: ({
+      children,
+      to,
+      params,
+      hash,
+      ...rest
+    }: {
+      children: React.ReactNode;
+      to: string;
+      params?: Record<string, string>;
+      hash?: string;
+      [key: string]: unknown;
+    }) => {
+      let href = to;
+      if (params) {
+        for (const [key, value] of Object.entries(params)) {
+          href = href.replace(`$${key}`, value);
+        }
+      }
+      if (hash) href += `#${hash}`;
+      return <a href={href} {...rest}>{children}</a>;
+    },
   };
 });
 

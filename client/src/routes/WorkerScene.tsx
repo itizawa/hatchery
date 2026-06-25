@@ -118,7 +118,7 @@ const WorkerCommunitiesList = ({ workerId }: { workerId: string }): ReactElement
 
 /** ワーカーのコメント一覧セクション（#690）。 */
 const WorkerCommentsList = ({ workerId }: { workerId: string }): ReactElement => {
-  const { data } = useWorkerComments({ workerId });
+  const { data, hasNextPage, fetchNextPage, isFetchingNextPage } = useWorkerComments({ workerId });
   const comments = data.pages.flatMap((p) => p.comments);
 
   if (comments.length === 0) {
@@ -139,17 +139,38 @@ const WorkerCommentsList = ({ workerId }: { workerId: string }): ReactElement =>
           key={comment.id}
           sx={{ py: 1, borderBottom: "1px solid", borderColor: "divider" }}
         >
-          <a
-            href={`/posts/${comment.post_id}#comment-${comment.id}`}
+          <Link
+            to="/posts/$postId"
+            params={{ postId: comment.post_id }}
+            hash={`comment-${comment.id}`}
             data-testid={`worker-comment-link-${comment.id}`}
             style={{ textDecoration: "none", color: "inherit", display: "block" }}
           >
             <Typography variant="body2" sx={{ color: "text.secondary", mb: 0.5 }}>
               {comment.text}
             </Typography>
-          </a>
+          </Link>
         </Box>
       ))}
+      {hasNextPage && (
+        <Box sx={{ textAlign: "center", pt: 2 }}>
+          <Typography
+            component="button"
+            variant="body2"
+            onClick={() => void fetchNextPage()}
+            disabled={isFetchingNextPage}
+            sx={{
+              cursor: isFetchingNextPage ? "default" : "pointer",
+              color: "primary.main",
+              background: "none",
+              border: "none",
+              p: 0,
+            }}
+          >
+            {isFetchingNextPage ? "読み込み中…" : "もっと見る"}
+          </Typography>
+        </Box>
+      )}
     </Box>
   );
 };

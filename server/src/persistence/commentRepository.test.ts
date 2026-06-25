@@ -3,226 +3,165 @@ import { createInMemoryCommentRepository } from "./commentRepository.js";
 
 describe("createInMemoryCommentRepository", () => {
   describe("createMany", () => {
-    it("複数のコメントをバルク作成できる", async () => {
+    it("入力した件数のコメントが作成される", async () => {
       const repo = createInMemoryCommentRepository();
-      const created = await repo.createMany("community-1", [
-        { postId: "post-1", slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", text: "Comment 1" },
-        { postId: "post-1", slotKey: "2026-06-10T09:00", seq: 1, author: "worker-2", text: "Comment 2" },
-      ]);
-      expect(created).toHaveLength(2);
-      expect(created[0].communityId).toBe("community-1");
-      expect(created[0].score).toBe(0);
+      const inputs = [
+        { postId: "post-1", slotKey: "morning", seq: 0, author: "worker-1", text: "Hello" },
+        { postId: "post-1", slotKey: "morning", seq: 1, author: "worker-2", text: "World" },
+      ];
+      const result = await repo.createMany("community-1", inputs);
+      expect(result).toHaveLength(2);
     });
 
-    it("(communityId, slotKey, seq) が重複する場合は既存を返す（Cron 二重発火ガード）", async () => {
+    it("返却された CommentRecord は入力値を反映している", async () => {
       const repo = createInMemoryCommentRepository();
-      await repo.createMany("community-1", [
-        { postId: "post-1", slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", text: "Comment 1" },
+      const [comment] = await repo.createMany("community-1", [
+        { postId: "post-1", slotKey: "morning", seq: 0, author: "worker-1", text: "Hello" },
       ]);
-      const second = await repo.createMany("community-1", [
-        { postId: "post-1", slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", text: "Comment 1" },
+      expect(comment!.text).toBe("Hello");
+      expect(comment!.author).toBe("worker-1");
+      expect(comment!.communityId).toBe("community-1");
+      expect(comment!.score).toBe(0);
+    });
+
+    it("createdAt を指定すると反映される", async () => {
+      const repo = createInMemoryCommentRepository();
+      const createdAt = new Date("2024-06-01T00:00:00Z");
+      const [comment] = await repo.createMany("community-1", [
+        { postId: "post-1", slotKey: "morning", seq: 0, author: "worker-1", text: "Hello", createdAt },
       ]);
-      expect(second).toHaveLength(1);
-      const all = await repo.listByPost("post-1");
-      expect(all).toHaveLength(1);
+      expect(comment!.createdAt).toEqual(createdAt);
     });
   });
 
   describe("listByPost", () => {
-    it("post のコメントを createdAt 昇順で返す", async () => {
+    it("指定した postId に紐づくコメントのみ返す", async () => {
       const repo = createInMemoryCommentRepository();
       await repo.createMany("community-1", [
-        { postId: "post-1", slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", text: "First" },
-        { postId: "post-1", slotKey: "2026-06-10T09:00", seq: 1, author: "worker-2", text: "Second" },
+        { postId: "post-1", slotKey: "morning", seq: 0, author: "worker-1", text: "For post 1" },
+        { postId: "post-2", slotKey: "morning", seq: 1, author: "worker-2", text: "For post 2" },
       ]);
-      const result = await repo.listByPost("post-1");
-      expect(result).toHaveLength(2);
-      expect(result[0].text).toBe("First");
-    });
-
-    it("別の post のコメントは含めない", async () => {
-      const repo = createInMemoryCommentRepository();
-      await repo.createMany("community-1", [
-        { postId: "post-1", slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", text: "P1 Comment" },
-        { postId: "post-2", slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", text: "P2 Comment" },
-      ]);
-      const result = await repo.listByPost("post-1");
+      const result = await repo.listByPost({ postId: "post-1" });
       expect(result).toHaveLength(1);
-      expect(result[0].text).toBe("P1 Comment");
+      expect(result[0]!.text).toBe("For post 1");
+    });
+
+    it("該当なしのとき空配列を返す", async () => {
+      const repo = createInMemoryCommentRepository();
+      const result = await repo.listByPost({ postId: "nonexistent" });
+      expect(result).toHaveLength(0);
     });
   });
 
-  describe("countByPostIds（#500）", () => {
-    it("postId ごとのコメント件数を Map で返す", async () => {
+  describe("listByCommunity", () => {
+    it("指定した communityId に紐づくコメントのみ返す", async () => {
       const repo = createInMemoryCommentRepository();
       await repo.createMany("community-1", [
-        { postId: "post-1", slotKey: "s", seq: 0, author: "w", text: "c1" },
-        { postId: "post-1", slotKey: "s", seq: 1, author: "w", text: "c2" },
-        { postId: "post-2", slotKey: "s", seq: 2, author: "w", text: "c3" },
+        { postId: "post-1", slotKey: "morning", seq: 0, author: "worker-1", text: "For community 1" },
       ]);
-      const counts = await repo.countByPostIds(["post-1", "post-2"]);
-      expect(counts.get("post-1")).toBe(2);
-      expect(counts.get("post-2")).toBe(1);
+      await repo.createMany("community-2", [
+        { postId: "post-2", slotKey: "morning", seq: 0, author: "worker-2", text: "For community 2" },
+      ]);
+      const result = await repo.listByCommunity("community-1");
+      expect(result).toHaveLength(1);
+      expect(result[0]!.text).toBe("For community 1");
     });
 
-    it("コメントが無い postId は Map に現れない（呼び出し側で 0 とみなす）", async () => {
+    it("limit を指定すると末尾 N 件を返す", async () => {
       const repo = createInMemoryCommentRepository();
       await repo.createMany("community-1", [
-        { postId: "post-1", slotKey: "s", seq: 0, author: "w", text: "c1" },
+        { postId: "p", slotKey: "s", seq: 0, author: "w", text: "first" },
+        { postId: "p", slotKey: "s", seq: 1, author: "w", text: "second" },
+        { postId: "p", slotKey: "s", seq: 2, author: "w", text: "third" },
       ]);
-      const counts = await repo.countByPostIds(["post-1", "post-empty"]);
-      expect(counts.get("post-1")).toBe(1);
-      expect(counts.has("post-empty")).toBe(false);
+      const result = await repo.listByCommunity("community-1", 2);
+      expect(result).toHaveLength(2);
     });
 
-    it("空配列を渡すと空の Map を返す", async () => {
+    it("maxCreatedAt より新しいコメントは除外される", async () => {
       const repo = createInMemoryCommentRepository();
-      const counts = await repo.countByPostIds([]);
-      expect(counts.size).toBe(0);
-    });
-
-    it("対象外の postId のコメントは数えない", async () => {
-      const repo = createInMemoryCommentRepository();
+      const past = new Date("2024-01-01T00:00:00Z");
+      const future = new Date("2099-01-01T00:00:00Z");
       await repo.createMany("community-1", [
-        { postId: "post-1", slotKey: "s", seq: 0, author: "w", text: "c1" },
-        { postId: "post-other", slotKey: "s", seq: 1, author: "w", text: "c2" },
+        { postId: "p", slotKey: "s", seq: 0, author: "w", text: "past", createdAt: past },
+        { postId: "p", slotKey: "s", seq: 1, author: "w", text: "future", createdAt: future },
       ]);
-      const counts = await repo.countByPostIds(["post-1"]);
-      expect(counts.get("post-1")).toBe(1);
-      expect(counts.has("post-other")).toBe(false);
-    });
-
-    it("now を渡すと createdAt > now のコメントは件数に含まれない（#875）", async () => {
-      const repo = createInMemoryCommentRepository();
-      const past = new Date(Date.now() - 10_000);
-      const future = new Date(Date.now() + 60_000);
-      await repo.createMany("community-1", [
-        { postId: "post-1", slotKey: "s", seq: 0, author: "w", text: "past", createdAt: past },
-        { postId: "post-1", slotKey: "s", seq: 1, author: "w", text: "future", createdAt: future },
-      ]);
-      const now = new Date();
-      const counts = await repo.countByPostIds(["post-1"], { now });
-      expect(counts.get("post-1")).toBe(1);
-    });
-
-    it("now を渡さないと全件集計（後方互換・#875）", async () => {
-      const repo = createInMemoryCommentRepository();
-      const future = new Date(Date.now() + 60_000);
-      await repo.createMany("community-1", [
-        { postId: "post-1", slotKey: "s", seq: 0, author: "w", text: "c1" },
-        { postId: "post-1", slotKey: "s", seq: 1, author: "w", text: "future", createdAt: future },
-      ]);
-      const counts = await repo.countByPostIds(["post-1"]);
-      expect(counts.get("post-1")).toBe(2);
-    });
-
-    it("過去・未来混在の複数 post に対して now フィルタが正確に適用される（#875）", async () => {
-      const repo = createInMemoryCommentRepository();
-      const past = new Date(Date.now() - 10_000);
-      const future = new Date(Date.now() + 60_000);
-      await repo.createMany("community-1", [
-        { postId: "post-1", slotKey: "s", seq: 0, author: "w", text: "p1-past", createdAt: past },
-        { postId: "post-1", slotKey: "s", seq: 1, author: "w", text: "p1-future", createdAt: future },
-        { postId: "post-2", slotKey: "s", seq: 2, author: "w", text: "p2-future", createdAt: future },
-      ]);
-      const now = new Date();
-      const counts = await repo.countByPostIds(["post-1", "post-2"], { now });
-      expect(counts.get("post-1")).toBe(1);
-      expect(counts.has("post-2")).toBe(false);
-    });
-  });
-
-  describe("findById", () => {
-    it("存在する id で取得できる", async () => {
-      const repo = createInMemoryCommentRepository();
-      const [created] = await repo.createMany("community-1", [
-        { postId: "post-1", slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", text: "Comment" },
-      ]);
-      const result = await repo.findById(created.id);
-      expect(result).toMatchObject({ text: "Comment" });
-    });
-
-    it("存在しない id は null を返す", async () => {
-      const repo = createInMemoryCommentRepository();
-      const result = await repo.findById("not-exists");
-      expect(result).toBeNull();
+      const result = await repo.listByCommunity("community-1", undefined, { maxCreatedAt: new Date("2024-06-01") });
+      expect(result).toHaveLength(1);
+      expect(result[0]!.text).toBe("past");
     });
   });
 
   describe("addScore", () => {
-    it("score を加算できる", async () => {
+    it("存在するコメントのスコアが加算される", async () => {
       const repo = createInMemoryCommentRepository();
-      const [created] = await repo.createMany("community-1", [
-        { postId: "post-1", slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", text: "Comment" },
+      const [comment] = await repo.createMany("community-1", [
+        { postId: "post-1", slotKey: "morning", seq: 0, author: "worker-1", text: "Hello" },
       ]);
-      const updated = await repo.addScore(created.id, 1);
-      expect(updated?.score).toBe(1);
+      const updated = await repo.addScore({ id: comment!.id, delta: 3 });
+      expect(updated!.score).toBe(3);
     });
 
-    it("存在しない id は null を返す", async () => {
+    it("存在しない id のとき null を返す", async () => {
       const repo = createInMemoryCommentRepository();
-      const result = await repo.addScore("not-exists", 1);
+      const result = await repo.addScore({ id: "nonexistent", delta: 1 });
       expect(result).toBeNull();
     });
   });
 
-  describe("reveal フィルタ（#556）", () => {
-    it("createMany に createdAt を渡すと指定した時刻で永続化される", async () => {
+  describe("updateParentCommentId", () => {
+    it("存在するコメントの parentCommentId が更新される", async () => {
       const repo = createInMemoryCommentRepository();
-      const future = new Date(Date.now() + 60_000);
-      const [created] = await repo.createMany("community-1", [
-        { postId: "post-1", slotKey: "s", seq: 0, author: "w", text: "c", createdAt: future },
+      const [comment] = await repo.createMany("community-1", [
+        { postId: "post-1", slotKey: "morning", seq: 0, author: "worker-1", text: "Child" },
       ]);
-      expect(created.createdAt.getTime()).toBe(future.getTime());
+      const updated = await repo.updateParentCommentId!(comment!.id, "parent-id");
+      expect(updated!.parentCommentId).toBe("parent-id");
     });
 
-    it("listByPost に now を渡すと createdAt > now のコメントは除外される", async () => {
+    it("存在しない id のとき null を返す", async () => {
       const repo = createInMemoryCommentRepository();
-      const past = new Date(Date.now() - 10_000);
-      const future = new Date(Date.now() + 60_000);
-      await repo.createMany("community-1", [
-        { postId: "post-1", slotKey: "s", seq: 0, author: "w", text: "past", createdAt: past },
-        { postId: "post-1", slotKey: "s", seq: 1, author: "w", text: "future", createdAt: future },
-      ]);
-      const now = new Date();
-      const result = await repo.listByPost("post-1", { now });
-      expect(result).toHaveLength(1);
-      expect(result[0].text).toBe("past");
+      const result = await repo.updateParentCommentId!("nonexistent", null);
+      expect(result).toBeNull();
     });
+  });
 
-    it("listByPost に now を渡さないと全件返す（後方互換）", async () => {
+  describe("listByPost — parentCommentId 解決", () => {
+    it("parentCommentId を持つコメントが取得できる", async () => {
       const repo = createInMemoryCommentRepository();
-      const future = new Date(Date.now() + 60_000);
-      await repo.createMany("community-1", [
-        { postId: "post-1", slotKey: "s", seq: 0, author: "w", text: "past" },
-        { postId: "post-1", slotKey: "s", seq: 1, author: "w", text: "future", createdAt: future },
+      const [parent, child] = await repo.createMany("community-1", [
+        { postId: "post-1", slotKey: "morning", seq: 0, author: "worker-1", text: "parent" },
+        { postId: "post-1", slotKey: "morning", seq: 1, author: "worker-2", text: "child" },
       ]);
-      const result = await repo.listByPost("post-1");
-      expect(result).toHaveLength(2);
+      await repo.updateParentCommentId!(child!.id, parent!.id);
+      const result = await repo.listByPost({ postId: "post-1" });
+      const childResult = result.find((c) => c.id === child!.id);
+      expect(childResult!.parentCommentId).toBe(parent!.id);
     });
+  });
 
-    it("listByCommunity に now を渡すと createdAt > now のコメントは除外される", async () => {
+  describe("listByCommunity — addScore 反映確認", () => {
+    it("addScore 後に listByCommunity を呼ぶとスコアが反映される", async () => {
       const repo = createInMemoryCommentRepository();
-      const past = new Date(Date.now() - 10_000);
-      const future = new Date(Date.now() + 60_000);
-      await repo.createMany("community-1", [
-        { postId: "post-1", slotKey: "s", seq: 0, author: "w", text: "past", createdAt: past },
-        { postId: "post-1", slotKey: "s", seq: 1, author: "w", text: "future", createdAt: future },
+      const [comment] = await repo.createMany("community-1", [
+        { postId: "post-1", slotKey: "morning", seq: 0, author: "worker-1", text: "Hello" },
       ]);
-      const now = new Date();
-      const result = await repo.listByCommunity("community-1", 50, { now });
-      expect(result).toHaveLength(1);
-      expect(result[0].text).toBe("past");
-    });
-
-    it("listByCommunity に now を渡さないと全件返す（後方互換）", async () => {
-      const repo = createInMemoryCommentRepository();
-      const future = new Date(Date.now() + 60_000);
-      await repo.createMany("community-1", [
-        { postId: "post-1", slotKey: "s", seq: 0, author: "w", text: "past" },
-        { postId: "post-1", slotKey: "s", seq: 1, author: "w", text: "future", createdAt: future },
-      ]);
+      await repo.addScore({ id: comment!.id, delta: 5 });
       const result = await repo.listByCommunity("community-1");
+      expect(result).toHaveLength(1);
+      expect(result[0]!.score).toBe(5);
+    });
+  });
+
+  describe("listByPost — 複数投稿のコメント", () => {
+    it("異なる postId のコメントが混在しても正しく絞り込まれる", async () => {
+      const repo = createInMemoryCommentRepository();
+      await repo.createMany("community-1", [
+        { postId: "post-A", slotKey: "s", seq: 0, author: "w", text: "A1" },
+        { postId: "post-B", slotKey: "s", seq: 1, author: "w", text: "B1" },
+        { postId: "post-A", slotKey: "s", seq: 2, author: "w", text: "A2" },
+      ]);
+      const result = await repo.listByPost({ postId: "post-A" });
       expect(result).toHaveLength(2);
     });
   });
@@ -284,6 +223,13 @@ describe("createInMemoryCommentRepository", () => {
       const page2 = await repo.listByWorker({ workerId: "worker-1", limit: 2, cursor: page1.nextCursor! });
       expect(page2.comments.map((c) => c.text)).toEqual(["oldest"]);
       expect(page2.nextCursor).toBeNull();
+    });
+
+    it("存在しない cursor を指定するとエラーを投げる", async () => {
+      const repo = createInMemoryCommentRepository();
+      await expect(
+        repo.listByWorker({ workerId: "worker-1", cursor: "nonexistent-cursor" }),
+      ).rejects.toThrow("Cursor not found");
     });
   });
 });

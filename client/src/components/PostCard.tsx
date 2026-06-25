@@ -53,6 +53,8 @@ type PostCardProps =
       onCommunityClick?: () => void;
       /** コメント数 Chip クリック時のコールバック。指定時はクリック可能になる。 */
       onCommentClick?: () => void;
+      /** ワーカー名・アバタークリック時のコールバック（#929）。指定時はクリック可能になる。 */
+      onWorkerClick?: () => void;
       /**
        * カード表示（デフォルト）またはフラットリスト表示を選択する（#834）。
        * "card": 現行スタイル（border + bgcolor: background.paper + borderRadius + mb）。
@@ -151,6 +153,7 @@ export const PostCard = (props: PostCardProps): ReactElement => {
     community,
     onCommunityClick,
     onCommentClick,
+    onWorkerClick,
     variant = "card",
   } = props;
 
@@ -176,7 +179,7 @@ export const PostCard = (props: PostCardProps): ReactElement => {
       </Typography>
       <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1, flexWrap: "wrap" }}>
         {community && <CommunityByline community={community} onClick={onCommunityClick} />}
-        <AuthorByline author={post.author} authorWorker={post.author_worker} />
+        <AuthorByline author={post.author} authorWorker={post.author_worker} onWorkerClick={onWorkerClick} />
         <PostedTime createdAt={post.created_at} />
       </Box>
       <MarkdownContent

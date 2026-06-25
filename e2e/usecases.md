@@ -29,4 +29,5 @@
 | legal | 利用規約・プライバシーポリシー（`/terms`・`/privacy`） | [legal/usecases.md](legal/usecases.md) | UC-LEGAL-01〇04 |
 | not-found | 未マッチ URL のグローバル 404 画面（`NotFoundScene`） | [not-found/usecases.md](not-found/usecases.md) | UC-404-01＄（02 |
 | ranking | ワーカーランキング画面（`/ranking`）・閲覧数 + 評価スコア（賛成から反対を引いた値）表示・空状態（#665・#774） | [ranking/usecases.md](ranking/usecases.md) | UC-RANK-01＄（03 |
+| worker | ワーカー個別プロフィールページ（`/workers/$workerId`）・プロフィール表示・最新投稿一覧・空状態（#929） | [worker/usecases.md](worker/usecases.md) | UC-WORKER-01〜03 |
 | pwa | PWA（manifest リンクヾtheme-color・Service Worker・ホーム画面追加）（#797） | [pwa/usecases.md](pwa/usecases.md) | UC-PWA-01＆06 |

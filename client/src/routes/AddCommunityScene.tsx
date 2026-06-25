@@ -7,7 +7,7 @@ import type { CreateCommunityInput } from "@hatchery/common";
 
 import { useCreateCommunity } from "../api/communities.js";
 import { CommunityFormFields } from "../components/CommunityFormFields.js";
-import { Alert, Box, Button, Snackbar, TextField, Typography } from "../components/uiParts/index.js";
+import { Alert, Box, Button, TextField, Typography } from "../components/uiParts/index.js";
 
 /**
  * コミュニティ作成ページ（/admin/communities/new）。#889
@@ -99,11 +99,6 @@ export function AddCommunityScene(): ReactElement {
           </Button>
         </Box>
       </Box>
-      <Snackbar
-        open={!!errorMsg && !createMutation.isPending}
-        autoHideDuration={null}
-        onClose={() => setErrorMsg(null)}
-      />
     </Box>
   );
 }

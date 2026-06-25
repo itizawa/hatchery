@@ -2,7 +2,7 @@ import { useForm } from "@tanstack/react-form";
 import { Link, useParams } from "@tanstack/react-router";
 import { type ReactElement, useEffect } from "react";
 
-import type { AdminCommunity, UpdateCommunityInput } from "@hatchery/common";
+import type { UpdateCommunityInput } from "@hatchery/common";
 
 import { useAdminCommunityById, useUpdateCommunity } from "../api/communities.js";
 import { getApiErrorMessage } from "../api/errors.js";
@@ -36,7 +36,9 @@ function EditCommunityForm({ communityId }: { communityId: string }): ReactEleme
     },
   });
 
-  // community データが更新されたらフォームを同期する（再フェッチ時）
+  // community データが更新されたらフォームを同期する（再フェッチ時）。
+  // community.id の変化時のみ再同期する意図的な設計（同一 id での再フェッチはユーザー編集中の値を保持）。
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     void form.setFieldValue("name", community.name);
     void form.setFieldValue("description", community.description);
@@ -53,14 +55,14 @@ function EditCommunityForm({ communityId }: { communityId: string }): ReactEleme
           communityId={communityId}
           kind="cover"
           name={community.name}
-          currentImageUrl={(community as AdminCommunity).coverUrl ?? null}
+          currentImageUrl={community.coverUrl ?? null}
         />
         <Box sx={{ display: "flex", alignItems: "center", gap: 2, mt: 1 }}>
           <CommunityImageUpload
             communityId={communityId}
             kind="icon"
             name={community.name}
-            currentImageUrl={(community as AdminCommunity).iconUrl ?? null}
+            currentImageUrl={community.iconUrl ?? null}
           />
           <Typography variant="caption" color="text.secondary">
             アイコン画像（クリックして変更）

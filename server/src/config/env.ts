@@ -69,6 +69,12 @@ export interface ServerEnv {
    * 1ms 〜 24h。未指定なら DEFAULT_BATCH_DRIP_WINDOW_MS（3h）。
    */
   batchDripWindowMs: number;
+  /** VAPID 公開鍵（#798）。Web Push 送信に使う。未設定なら undefined（プッシュ通知無効）。 */
+  vapidPublicKey: string | undefined;
+  /** VAPID 秘密鍵（#798）。Web Push 送信に使う。未設定なら undefined（プッシュ通知無効）。 */
+  vapidPrivateKey: string | undefined;
+  /** VAPID サブジェクト（mailto:xxx または URL）（#798）。未設定なら undefined。 */
+  vapidSubject: string | undefined;
 }
 
 /**
@@ -203,6 +209,10 @@ const EnvSchema = z.object({
     .min(BATCH_DRIP_WINDOW_MS_MIN)
     .max(BATCH_DRIP_WINDOW_MS_MAX)
     .default(DEFAULT_BATCH_DRIP_WINDOW_MS),
+  // VAPID キー（#798）。未設定なら Web Push 無効。
+  VAPID_PUBLIC_KEY: z.string().min(1).optional(),
+  VAPID_PRIVATE_KEY: z.string().min(1).optional(),
+  VAPID_SUBJECT: z.string().min(1).optional(),
 });
 
 /** 環境変数から ServerEnv を構築する。不正な値は ZodError を投げて起動時に気付けるようにする。 */
@@ -232,6 +242,9 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): ServerEnv {
     CACHE_S_MAXAGE_SECONDS: source.CACHE_S_MAXAGE_SECONDS,
     CACHE_STALE_WHILE_REVALIDATE_SECONDS: source.CACHE_STALE_WHILE_REVALIDATE_SECONDS,
     BATCH_DRIP_WINDOW_MS: source.BATCH_DRIP_WINDOW_MS,
+    VAPID_PUBLIC_KEY: source.VAPID_PUBLIC_KEY,
+    VAPID_PRIVATE_KEY: source.VAPID_PRIVATE_KEY,
+    VAPID_SUBJECT: source.VAPID_SUBJECT,
   });
   return {
     port: parsed.PORT,
@@ -258,5 +271,8 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): ServerEnv {
     cacheSMaxageSeconds: parsed.CACHE_S_MAXAGE_SECONDS,
     cacheStaleWhileRevalidateSeconds: parsed.CACHE_STALE_WHILE_REVALIDATE_SECONDS,
     batchDripWindowMs: parsed.BATCH_DRIP_WINDOW_MS,
+    vapidPublicKey: parsed.VAPID_PUBLIC_KEY,
+    vapidPrivateKey: parsed.VAPID_PRIVATE_KEY,
+    vapidSubject: parsed.VAPID_SUBJECT,
   };
 }

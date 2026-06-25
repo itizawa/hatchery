@@ -18,6 +18,7 @@ import type { WorkerRepository } from "./persistence/workerRepository.js";
 import type { WorkerCommunityRepository } from "./persistence/workerCommunityRepository.js";
 import type { StorageService } from "./services/storageService.js";
 import type { PostRepository } from "./persistence/postRepository.js";
+import type { PushSubscriptionRepository } from "./persistence/pushSubscriptionRepository.js";
 import type { SubscriptionRepository } from "./persistence/subscriptionRepository.js";
 import type { TokenUsageLogRepository } from "./persistence/tokenUsageLogRepository.js";
 import type { UserRepository } from "./persistence/userRepository.js";
@@ -41,6 +42,7 @@ import { createOgpRouter } from "./routes/ogp.js";
 import { createPostsRouter } from "./routes/posts.js";
 import { createSitemapRouter } from "./routes/sitemap.js";
 import { createSubscriptionsRouter } from "./routes/subscriptions.js";
+import { createPushSubscriptionsRouter } from "./routes/pushSubscriptions.js";
 
 /** DDoS/過負荷対策（#34）の設定。未指定の項目は安全な既定値を使う。 */
 export interface SecurityOptions {
@@ -93,6 +95,7 @@ export interface AppDeps {
   viewRepository: ViewRepository;
   voteRepository: VoteRepository;
   worldStateRepository: WorldStateRepository;
+  pushSubscriptionRepository: PushSubscriptionRepository;
   storageService: StorageService;
   security?: SecurityOptions;
   sessionStore?: Store;
@@ -262,6 +265,11 @@ export function createApp(deps: AppDeps): Express {
     createSubscriptionsRouter({ subscriptionRepository: subscriptionRepo }),
   );
   app.use("/api/ogp", publicCache, createOgpRouter());
+  app.use(
+    "/api/push-subscriptions",
+    noStoreCache,
+    createPushSubscriptionsRouter({ pushSubscriptionRepository: deps.pushSubscriptionRepository }),
+  );
   app.use(
     "/api",
     publicCache,

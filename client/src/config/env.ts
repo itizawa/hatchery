@@ -10,6 +10,8 @@ export interface ClientEnv {
   apiBaseUrl: string | undefined;
   /** クライアントのログレベル。未指定なら "info"。 */
   logLevel: "debug" | "info" | "warn" | "error";
+  /** VAPID 公開鍵（#798）。未設定なら Web Push 購読ボタンを非表示にする。 */
+  vapidPublicKey: string | undefined;
 }
 
 /**
@@ -26,6 +28,11 @@ const ClientEnvSchema = z.object({
     .optional()
     .or(z.literal("").transform(() => undefined)),
   VITE_LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
+  // VAPID 公開鍵（#798）。未設定なら空文字 → undefined に変換する。
+  VITE_VAPID_PUBLIC_KEY: z
+    .string()
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
 });
 
 /**
@@ -36,10 +43,12 @@ export function loadClientEnv(source: Record<string, unknown> = import.meta.env)
   const parsed = ClientEnvSchema.parse({
     VITE_API_BASE_URL: source.VITE_API_BASE_URL,
     VITE_LOG_LEVEL: source.VITE_LOG_LEVEL,
+    VITE_VAPID_PUBLIC_KEY: source.VITE_VAPID_PUBLIC_KEY,
   });
   return {
     apiBaseUrl: parsed.VITE_API_BASE_URL,
     logLevel: parsed.VITE_LOG_LEVEL,
+    vapidPublicKey: parsed.VITE_VAPID_PUBLIC_KEY,
   };
 }
 

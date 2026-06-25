@@ -33,8 +33,9 @@ model User {
   avatarUrl     String?
   /// 権限ロール（#136）。既定は member。
   role          UserRole       @default(member)
-  subscriptions Subscription[]
-  votes         Vote[]
+  subscriptions      Subscription[]
+  votes              Vote[]
+  pushSubscriptions  PushSubscription[]
 }
 
 /// AI ワーカー（社員）。ADR-0019: post / comment の author として使う。
@@ -263,6 +264,24 @@ model Vote {
   @@index([commentId])
   /// #554: netScoresByCommunitySince の createdAt >= since フィルタ最適化。
   @@index([createdAt])
+}
+
+/// Web Push 購読レコード（#798）。ユーザー単位で endpoint をキーに upsert する。
+/// endpoint は RFC 8030 で URL として定義される（最大 2048 文字）。
+model PushSubscription {
+  id        String   @id @default(uuid(7))
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Web Push endpoint URL（RFC 8030）。ユニーク制約でユーザー間重複を防ぐ。
+  endpoint  String   @unique
+  /// ECDH 公開鍵（p256dh）。
+  p256dh    String
+  /// HMAC 認証秘密（auth）。
+  auth      String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("push_subscriptions")
 }
 
 /// 閲覧計測レコード。ADR-0032 / #665。

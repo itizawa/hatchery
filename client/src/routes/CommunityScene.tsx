@@ -132,8 +132,8 @@ const CommunityContent = ({
                           onVote={(direction: VoteDirection) =>
                             votePost({ postId: post.id, direction })
                           }
-                          upVoteDisabled={isVotingPost && votingPostVars?.direction === "up"}
-                          downVoteDisabled={isVotingPost && votingPostVars?.direction === "down"}
+                          upVoteDisabled={isVotingPost && votingPostVars?.postId === post.id && votingPostVars?.direction === "up"}
+                          downVoteDisabled={isVotingPost && votingPostVars?.postId === post.id && votingPostVars?.direction === "down"}
                           voteStopPropagation
                           truncateText
                           variant="list"

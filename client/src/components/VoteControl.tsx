@@ -69,6 +69,9 @@ export const VoteControl = ({
               height: 32,
               width: 32,
               borderRadius: "50%",
+              "&.Mui-disabled": {
+                color: currentVote === "up" ? "inherit" : undefined,
+              },
               "&:hover": {
                 color: isVoted ? "inherit" : SLACK_COLORS.voteUp,
                 bgcolor: isVoted ? SLACK_COLORS.voteHoverOverlay : "action.hover",
@@ -100,6 +103,9 @@ export const VoteControl = ({
               height: 32,
               width: 32,
               borderRadius: "50%",
+              "&.Mui-disabled": {
+                color: currentVote === "down" ? "inherit" : undefined,
+              },
               "&:hover": {
                 color: isVoted ? "inherit" : SLACK_COLORS.voteDown,
                 bgcolor: isVoted ? SLACK_COLORS.voteHoverOverlay : "action.hover",

@@ -1,5 +1,6 @@
 import type { OpenAPIRegistry } from "@asteasolutions/zod-to-openapi";
 import { UnreadCountItemSchema, UnreadCountsResponseSchema } from "@hatchery/common";
+import { z } from "zod";
 
 import type { RegistryContext } from "./shared.js";
 import { communitySlugParam } from "./shared.js";
@@ -33,7 +34,7 @@ export function registerSubscriptions(registry: OpenAPIRegistry, ctx: RegistryCo
         description: "未読数一覧",
         content: { "application/json": { schema: UnreadCountsResponseComponent } },
       },
-      401: errorJson,
+      401: { description: "未認証", ...errorJson },
     },
     tags: ["subscriptions"],
   });
@@ -44,13 +45,13 @@ export function registerSubscriptions(registry: OpenAPIRegistry, ctx: RegistryCo
     summary: "コミュニティを既読にする（lastViewedAt を現在時刻に更新）（#933）",
     security: [{ cookieAuth: [] }],
     request: {
-      params: communitySlugParam,
+      params: z.object({ slug: communitySlugParam }),
     },
     responses: {
       204: { description: "既読に更新した" },
-      401: errorJson,
-      403: errorJson,
-      404: errorJson,
+      401: { description: "未認証", ...errorJson },
+      403: { description: "権限なし", ...errorJson },
+      404: { description: "コミュニティが存在しない", ...errorJson },
     },
     tags: ["communities"],
   });

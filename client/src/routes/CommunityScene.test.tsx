@@ -12,6 +12,7 @@ import {
   communitySubscriptionQueryKey,
 } from "../api/communities";
 import { AUTH_ME_QUERY_KEY } from "../api/auth";
+import { unreadCountsQueryKey } from "../api/subscriptions";
 import { QueryBoundary } from "../components/QueryBoundary";
 import { MainContentSkeleton } from "../components/MainContentSkeleton";
 import type { Community, RecentWorker } from "../api/communities";
@@ -330,5 +331,70 @@ describe("CommunityScene — vote 楽観的更新（#924）", () => {
       expect(screen.getByRole("button", { name: /up vote/i })).toHaveAttribute("aria-pressed", "false");
     });
     errorSpy.mockRestore();
+  });
+});
+
+describe("CommunityScene — mark-viewed（#934）", () => {
+  const mockUser = {
+    id: "user-1",
+    name: "テスト",
+    email: "test@test.com",
+    role: "user" as const,
+    imageUrl: null,
+    isPremium: false,
+  };
+
+  function renderSubscribedScene() {
+    const qc = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    });
+    qc.setQueryData(["communities"], [mockCommunity]);
+    qc.setQueryData(communityFeedQueryKey("ai-dev"), []);
+    qc.setQueryData(communitySubscriptionQueryKey("ai-dev"), { subscribed: true });
+    qc.setQueryData(AUTH_ME_QUERY_KEY, mockUser);
+    qc.setQueryData(communityRecentWorkersQueryKey("ai-dev"), mockRecentWorkers);
+    qc.setQueryData(unreadCountsQueryKey(), { unread_counts: [] });
+
+    return render(
+      <QueryClientProvider client={qc}>
+        <QueryBoundary fallback={<></>}>
+          <CommunityScene />
+        </QueryBoundary>
+      </QueryClientProvider>,
+    );
+  }
+
+  it("購読中コミュニティ訪問時に mark-viewed が自動呼び出しされる", async () => {
+    const markViewedSpy = vi.fn();
+    server.use(
+      http.patch("/api/communities/:slug/mark-viewed", () => {
+        markViewedSpy();
+        return new HttpResponse(null, { status: 200 });
+      }),
+    );
+
+    renderSubscribedScene();
+    await screen.findByRole("heading", { level: 1 });
+
+    await waitFor(() => {
+      expect(markViewedSpy).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it("未購読コミュニティ訪問時に mark-viewed は呼ばれない", async () => {
+    const markViewedSpy = vi.fn();
+    server.use(
+      http.patch("/api/communities/:slug/mark-viewed", () => {
+        markViewedSpy();
+        return new HttpResponse(null, { status: 200 });
+      }),
+    );
+
+    // renderScene はデフォルトで subscribed: false
+    renderScene();
+    await screen.findByRole("heading", { level: 1 });
+    await new Promise((r) => setTimeout(r, 50));
+
+    expect(markViewedSpy).not.toHaveBeenCalled();
   });
 });

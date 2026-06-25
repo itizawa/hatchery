@@ -41,6 +41,19 @@ const listItemSx = {
 } as const;
 
 /**
+ * 購読中コミュニティ訪問時に mark-viewed を自動呼び出しするエフェクト（#934）。
+ * SubscriptionStatus render-prop 内で subscribed === true のときのみレンダーされ、
+ * 未認証ユーザー・未購読コミュニティへの余分な API 呼び出しを防ぐ。
+ */
+const MarkViewedEffect = ({ slug }: { slug: string }): null => {
+  const { mutate: markViewed } = useMarkCommunityViewed(slug);
+  useEffect(() => {
+    markViewed();
+  }, [slug, markViewed]);
+  return null;
+};
+
+/**
  * コミュニティが実在する場合のみレンダーされる内側コンポーネント。
  * useCommunityFeed など、コミュニティ存在を前提とするフックをここに集約する（#524）。
  * 存在しない slug の場合は CommunityScene が早期リターンしてこのコンポーネントはレンダーされない。
@@ -60,11 +73,6 @@ const CommunityContent = ({
   const { mutate: subscribe, isPending: isSubscribing } = useSubscribe(communitySlug);
   const { mutate: unsubscribe, isPending: isUnsubscribing } = useUnsubscribe(communitySlug);
   const { mutate: votePost, isPending: isVotingPost, variables: votingPostVars } = useVotePost(communitySlug);
-  const { mutate: markViewed } = useMarkCommunityViewed(communitySlug);
-
-  useEffect(() => {
-    markViewed();
-  }, [communitySlug, markViewed]);
 
   const isSubscriptionPending = isSubscribing || isUnsubscribing;
 
@@ -74,7 +82,9 @@ const CommunityContent = ({
   return (
     <SubscriptionStatus communitySlug={communitySlug}>
       {(subscribed) => (
-        <Box component="section" sx={{ p: 3, maxWidth: 1200, mx: "auto" }}>
+        <>
+          {subscribed && <MarkViewedEffect slug={communitySlug} />}
+          <Box component="section" sx={{ p: 3, maxWidth: 1200, mx: "auto" }}>
           {/* Reddit 風ヘッダー: カバー画像＋左下に重ねた丸いアイコン＋name（#457） */}
           <CommunityHeader
             community={community}
@@ -187,6 +197,7 @@ const CommunityContent = ({
             </Box>
           </Box>
         </Box>
+        </>
       )}
     </SubscriptionStatus>
   );

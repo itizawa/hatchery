@@ -110,8 +110,8 @@ const SidebarContent = (): ReactElement => {
     <>
       <SidebarGlobalNav />
       <Divider sx={{ my: 1 }} />
-      <SidebarCommunitySection />
       <SubscribedCommunitiesSection />
+      <SidebarCommunitySection />
       {user && isAdmin(user) && (
         <>
           <Divider sx={{ my: 1 }} />

@@ -31,80 +31,18 @@ function badgeContent(count: number): string | number {
 }
 
 /**
- * 購読コミュニティ一覧アイテム（Suspense フックを使う部分）。
- * useUnreadCounts と usePublicCommunities を結合して community 名・アイコンを表示する。
+ * 購読コミュニティセクション本体（Suspense フックを使う部分）。
+ * SubscribedCommunitiesInner による認証ガード後にのみレンダーされるため、
+ * useSuspenseQuery は認証済みユーザーのみで呼ばれることが保証される。
+ * unread_counts が空（購読なし）のときは null を返してヘッダーも非表示にする（#934）。
  */
-const SubscribedCommunityItems = (): ReactElement => {
+const SubscribedCommunitiesBody = (): ReactElement | null => {
+  const [expanded, setExpanded] = useState(true);
   const { data: unreadData } = useUnreadCounts();
   const { data: communities } = usePublicCommunities();
   const { unread_counts } = unreadData;
 
-  if (unread_counts.length === 0) return <></>;
-
-  return (
-    <>
-      {unread_counts.map((item) => {
-        const community = communities.find((c) => c.id === item.community_id);
-        const displayName = community?.name ?? item.community_slug;
-        const iconUrl = community?.iconUrl ?? undefined;
-        const hasUnread = item.unread_count > 0;
-
-        return (
-          <ListItem key={item.community_id} disablePadding>
-            <ListItemButton
-              component={RouterLink}
-              to={`/communities/${item.community_slug}` as "/communities/$slug"}
-              sx={{ color: SLACK_COLORS.sidebarText, py: 0.25 }}
-            >
-              <ListItemIcon sx={SIDEBAR_ICON_SX}>
-                <Badge
-                  badgeContent={hasUnread ? badgeContent(item.unread_count) : null}
-                  color="primary"
-                  sx={{
-                    "& .MuiBadge-badge": {
-                      fontSize: "0.6rem",
-                      minWidth: 16,
-                      height: 16,
-                      padding: "0 4px",
-                    },
-                  }}
-                  data-testid={hasUnread ? `unread-badge-${item.community_id}` : undefined}
-                >
-                  <Avatar
-                    src={iconUrl}
-                    alt={displayName}
-                    sx={{
-                      width: SIDEBAR_ICON_SIZE,
-                      height: SIDEBAR_ICON_SIZE,
-                      fontSize: "0.75rem",
-                      bgcolor: "primary.main",
-                    }}
-                  >
-                    {displayName[0]}
-                  </Avatar>
-                </Badge>
-              </ListItemIcon>
-              <ListItemText
-                primary={displayName}
-                slotProps={{ primary: { variant: "body2" } }}
-              />
-            </ListItemButton>
-          </ListItem>
-        );
-      })}
-    </>
-  );
-};
-
-/**
- * サイドバー「購読中」セクション本体（ログイン済みのみ）。
- * useAuth で認証状態を確認し、未ログインは null を返す。
- */
-const SubscribedCommunitiesInner = (): ReactElement | null => {
-  const { data: user } = useAuth();
-  const [expanded, setExpanded] = useState(true);
-
-  if (!user) return null;
+  if (unread_counts.length === 0) return null;
 
   return (
     <Box>
@@ -134,11 +72,73 @@ const SubscribedCommunitiesInner = (): ReactElement | null => {
       </ListItemButton>
       <Collapse in={expanded} unmountOnExit>
         <List dense>
-          <SubscribedCommunityItems />
+          {unread_counts.map((item) => {
+            const community = communities.find((c) => c.id === item.community_id);
+            const displayName = community?.name ?? item.community_slug;
+            const iconUrl = community?.iconUrl ?? undefined;
+            const hasUnread = item.unread_count > 0;
+
+            return (
+              <ListItem key={item.community_id} disablePadding>
+                <ListItemButton
+                  component={RouterLink}
+                  to={`/communities/${item.community_slug}` as "/communities/$slug"}
+                  sx={{ color: SLACK_COLORS.sidebarText, py: 0.25 }}
+                >
+                  <ListItemIcon sx={SIDEBAR_ICON_SX}>
+                    <Badge
+                      badgeContent={hasUnread ? badgeContent(item.unread_count) : null}
+                      color="primary"
+                      sx={{
+                        "& .MuiBadge-badge": {
+                          fontSize: "0.6rem",
+                          minWidth: 16,
+                          height: 16,
+                          padding: "0 4px",
+                        },
+                      }}
+                      data-testid={hasUnread ? `unread-badge-${item.community_id}` : undefined}
+                    >
+                      <Avatar
+                        src={iconUrl}
+                        alt={displayName}
+                        sx={{
+                          width: SIDEBAR_ICON_SIZE,
+                          height: SIDEBAR_ICON_SIZE,
+                          fontSize: "0.75rem",
+                          bgcolor: "primary.main",
+                        }}
+                      >
+                        {displayName[0]}
+                      </Avatar>
+                    </Badge>
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={displayName}
+                    slotProps={{ primary: { variant: "body2" } }}
+                  />
+                </ListItemButton>
+              </ListItem>
+            );
+          })}
         </List>
       </Collapse>
     </Box>
   );
+};
+
+/**
+ * サイドバー「購読中」セクション本体（ログイン済みのみ）。
+ * useAuth で認証状態を確認し、未ログインは null を返す。
+ * ログイン済みの場合のみ SubscribedCommunitiesBody をレンダーし、
+ * そこで unread_counts が空かどうかを判定する。
+ */
+const SubscribedCommunitiesInner = (): ReactElement | null => {
+  const { data: user } = useAuth();
+
+  if (!user) return null;
+
+  return <SubscribedCommunitiesBody />;
 };
 
 /**

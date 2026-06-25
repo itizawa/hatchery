@@ -118,4 +118,15 @@ describe("SubscribedCommunitiesSection", () => {
     await new Promise((r) => setTimeout(r, 50));
     expect(screen.queryByText("購読中")).not.toBeInTheDocument();
   });
+
+  it("ログイン済み・購読 0 件（unread_counts が空）→ 「購読中」セクションが表示されない", async () => {
+    server.use(
+      http.get("/api/subscriptions/unread-counts", () =>
+        HttpResponse.json({ unread_counts: [] }),
+      ),
+    );
+    renderSection({ seedUnreadCounts: false });
+    await new Promise((r) => setTimeout(r, 50));
+    expect(screen.queryByText("購読中")).not.toBeInTheDocument();
+  });
 });

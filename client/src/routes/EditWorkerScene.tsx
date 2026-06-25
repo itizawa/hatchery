@@ -112,9 +112,9 @@ function EditWorkerForm({ workerId }: { workerId: string }): ReactElement {
       </Box>
       <Box
         component="form"
-        onSubmit={async (e) => {
+        onSubmit={(e) => {
           e.preventDefault();
-          await form.handleSubmit();
+          void form.handleSubmit();
         }}
         sx={{ display: "flex", flexDirection: "column", gap: 2 }}
       >

@@ -219,11 +219,10 @@ export function useVotePost(communitySlug?: string) {
       }
     },
     onSettled: () => {
-      // postThreadQueryKey は onSuccess で確定値を直接書き込む（#853 / #872）。feed/community は invalidate を維持。
+      // postThreadQueryKey・homeFeed は onSuccess で確定値を直接書き込むため invalidate しない（#853 / #872）。
       if (communitySlug) {
         void queryClient.invalidateQueries({ queryKey: communityFeedQueryKey(communitySlug) });
       }
-      void queryClient.invalidateQueries({ queryKey: homeFeedQueryKeyPrefix() });
     },
   });
 }

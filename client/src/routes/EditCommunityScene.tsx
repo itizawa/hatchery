@@ -1,18 +1,25 @@
 import { useForm } from "@tanstack/react-form";
 import { Link, useParams } from "@tanstack/react-router";
-import type { ReactElement } from "react";
+import { type ReactElement, useEffect } from "react";
 
-import type { AdminCommunity, UpdateCommunityInput } from "@hatchery/common";
-import { useCommunities, useUpdateCommunity } from "../api/communities.js";
+import type { UpdateCommunityInput } from "@hatchery/common";
+
+import { useAdminCommunityById, useUpdateCommunity } from "../api/communities.js";
 import { getApiErrorMessage } from "../api/errors.js";
 import { CommunityFormFields } from "../components/CommunityFormFields.js";
 import { CommunityImageUpload } from "../components/CommunityImageUpload.js";
-import { Alert, Box, Button, Snackbar, Typography } from "../components/uiParts/index.js";
+import { QueryBoundary } from "../components/QueryBoundary.js";
+import {
+  Alert,
+  Box,
+  Button,
+  Snackbar,
+  Typography,
+} from "../components/uiParts/index.js";
 
-function EditCommunityForm({ community }: { community: AdminCommunity }): ReactElement {
+function EditCommunityForm({ communityId }: { communityId: string }): ReactElement {
+  const { data: community } = useAdminCommunityById({ id: communityId });
   const updateMutation = useUpdateCommunity();
-  const isPending = updateMutation.isPending;
-  const handleErrorClose = (): void => { updateMutation.reset(); };
 
   const form = useForm({
     defaultValues: {
@@ -22,48 +29,55 @@ function EditCommunityForm({ community }: { community: AdminCommunity }): ReactE
     } as UpdateCommunityInput,
     onSubmit: async ({ value }) => {
       try {
-        await updateMutation.mutateAsync({ id: community.id, input: value });
+        await updateMutation.mutateAsync({ id: communityId, input: value });
       } catch {
-        // エラー表示は mutation の状態に委ねる
+        // エラー表示は updateMutation の状態に委ねる
       }
     },
   });
 
+  // community.id 変化時のみフォームを再同期（同一 id での再フェッチはユーザー編集中の値を保持）。
+  useEffect(() => {
+    void form.setFieldValue("name", community.name);
+    void form.setFieldValue("description", community.description);
+    void form.setFieldValue("generationInstruction", community.generationInstruction ?? "");
+  }, [community.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <>
-      <Box sx={{ mb: 2 }}>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 1, mb: 2 }}>
         <Typography variant="caption" color="text.secondary">
-          slug
+          カバー画像（ヘッダー）
         </Typography>
-        <Typography variant="body1" sx={{ fontFamily: "monospace" }}>
-          {community.slug}
-        </Typography>
-      </Box>
-      <Box sx={{ mb: 2, display: "flex", gap: 2 }}>
         <CommunityImageUpload
-          communityId={community.id}
+          communityId={communityId}
           kind="cover"
-          name="coverUrl"
+          name={community.name}
           currentImageUrl={community.coverUrl ?? null}
         />
-        <CommunityImageUpload
-          communityId={community.id}
-          kind="icon"
-          name="iconUrl"
-          currentImageUrl={community.iconUrl ?? null}
-        />
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2, mt: 1 }}>
+          <CommunityImageUpload
+            communityId={communityId}
+            kind="icon"
+            name={community.name}
+            currentImageUrl={community.iconUrl ?? null}
+          />
+          <Typography variant="caption" color="text.secondary">
+            アイコン画像（クリックして変更）
+          </Typography>
+        </Box>
       </Box>
       <Box
         component="form"
-        onSubmit={async (e) => {
+        onSubmit={(e) => {
           e.preventDefault();
-          await form.handleSubmit();
+          void form.handleSubmit();
         }}
         sx={{ display: "flex", flexDirection: "column", gap: 2 }}
       >
         <CommunityFormFields form={form} />
         <Box sx={{ display: "flex", gap: 1, justifyContent: "flex-end" }}>
-          <Button type="submit" variant="contained" disabled={isPending}>
+          <Button type="submit" variant="contained" disabled={updateMutation.isPending}>
             保存
           </Button>
         </Box>
@@ -71,9 +85,9 @@ function EditCommunityForm({ community }: { community: AdminCommunity }): ReactE
       <Snackbar
         open={updateMutation.isError}
         autoHideDuration={6000}
-        onClose={handleErrorClose}
+        onClose={() => updateMutation.reset()}
       >
-        <Alert severity="error" onClose={handleErrorClose}>
+        <Alert severity="error" onClose={() => updateMutation.reset()}>
           {getApiErrorMessage(updateMutation.error, "コミュニティの更新に失敗しました")}
         </Alert>
       </Snackbar>
@@ -82,27 +96,11 @@ function EditCommunityForm({ community }: { community: AdminCommunity }): ReactE
 }
 
 /**
- * コミュニティ編集ページ（/admin/communities/:communityId/edit）。#889
- * useCommunities() で全一覧を取得し ID でフィルタ。
- * CommunityFormFields + CommunityImageUpload を同一ページに統合。
+ * コミュニティ編集ページ（/admin/communities/:id/edit）。#889
+ * EditCommunityDialog を専用ページに移行。CommunityImageUpload を同一ページに統合。
  */
 export function EditCommunityScene(): ReactElement {
-  const { communityId } = useParams({ from: "/admin/communities/$communityId/edit" });
-  const { data: communities } = useCommunities();
-  const community = communities.find((c) => c.id === communityId);
-
-  if (!community) {
-    return (
-      <Box sx={{ p: 3, maxWidth: 560 }}>
-        <Typography color="text.secondary" sx={{ mb: 2 }}>
-          コミュニティが見つかりません
-        </Typography>
-        <Link to="/admin" search={{ tab: "communities" }}>
-          コミュニティ一覧へ戻る
-        </Link>
-      </Box>
-    );
-  }
+  const { id } = useParams({ from: "/admin/communities/$id/edit" });
 
   return (
     <Box sx={{ p: 3, maxWidth: 560 }}>
@@ -114,7 +112,20 @@ export function EditCommunityScene(): ReactElement {
       <Typography variant="h5" component="h1" gutterBottom>
         コミュニティを編集
       </Typography>
-      <EditCommunityForm community={community} />
+      <QueryBoundary
+        errorFallback={() => (
+          <Box>
+            <Typography color="text.secondary" sx={{ mb: 2 }}>
+              コミュニティが見つかりません
+            </Typography>
+            <Link to="/admin" search={{ tab: "communities" }}>
+              コミュニティ一覧へ戻る
+            </Link>
+          </Box>
+        )}
+      >
+        <EditCommunityForm communityId={id} />
+      </QueryBoundary>
     </Box>
   );
 }

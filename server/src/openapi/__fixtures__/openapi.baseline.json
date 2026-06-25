@@ -983,6 +983,20 @@
         ],
         "description": "ワーカーランキング項目（閲覧数・純 vote スコア・#665）"
       },
+      "WorkerCommentsQuery": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "cursor": {
+            "type": "string"
+          }
+        },
+        "description": "ワーカーコメント一覧のクエリパラメータ（#690）"
+      },
       "WorkerCommunityIds": {
         "type": "object",
         "properties": {
@@ -2313,6 +2327,127 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Worker"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Worker が存在しない",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workers/{workerId}/communities": {
+      "get": {
+        "summary": "ワーカーの所属コミュニティ一覧を取得（認証不要・#690）",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "workerId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ワーカーの所属コミュニティ一覧",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "communities": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Community"
+                      }
+                    }
+                  },
+                  "required": [
+                    "communities"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Worker が存在しない",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workers/{workerId}/comments": {
+      "get": {
+        "summary": "ワーカーのコメント一覧を取得（認証不要・カーソルページネーション・#690）",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "workerId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "cursor",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ワーカーのコメント一覧（createdAt 降順・カーソルページネーション）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "comments": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Comment"
+                      }
+                    },
+                    "nextCursor": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "comments",
+                    "nextCursor"
+                  ]
                 }
               }
             }

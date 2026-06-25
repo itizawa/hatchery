@@ -34,7 +34,7 @@ const makePost = (overrides: Partial<Post> = {}): Post =>
   ({
     id: "post-1",
     title: "テスト投稿タイトル",
-    body: "テスト投稿の本文内容です。",
+    text: "テスト投稿の本文内容です。",
     author: "worker-1",
     author_worker: null,
     community_id: "community-1",
@@ -104,7 +104,7 @@ describe("RecentPostsSidebarCard", () => {
   });
 
   it("本文冒頭を表示する", () => {
-    const posts = [makePost({ body: "本文の冒頭テキストです。" })];
+    const posts = [makePost({ text: "本文の冒頭テキストです。" })];
     render(<RecentPostsSidebarCard posts={posts} communityById={mockCommunityById} />);
     expect(screen.getByText("本文の冒頭テキストです。")).toBeInTheDocument();
   });

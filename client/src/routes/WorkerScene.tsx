@@ -1,14 +1,15 @@
 /**
- * ワーカー個別プロフィールページ（/workers/$workerId・#929）。
- * ワーカーの displayName・role・personality・アバターと最新投稿一覧を表示する。
- * 認証不要の公開ページ。
+ * ワーカー個別プロフィールページ（/workers/$workerId・#929 / #690）。
+ * ワーカーの displayName・role・personality・アバターと最新投稿一覧、
+ * 所属コミュニティ一覧、コメント一覧を表示する。認証不要の公開ページ。
  */
 import { Avatar, Box, Typography } from "../components/uiParts";
-import { useParams } from "@tanstack/react-router";
+import { Link, useParams } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 
 import { resolveWorkerImageUrl } from "@hatchery/common";
-import { useWorkerDetail, useWorkerPosts } from "../api/workers.js";
+import { useWorkerComments, useWorkerDetail, useWorkerPosts, useWorkerPublicCommunities } from "../api/workers.js";
+import type { Comment, Community } from "../api/workers.js";
 import { PostCard } from "../components/PostCard.js";
 import { QueryBoundary } from "../components/QueryBoundary.js";
 import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
@@ -82,9 +83,81 @@ const WorkerProfileHeader = ({ workerId }: { workerId: string }): ReactElement =
   );
 };
 
+/** ワーカーの所属コミュニティ一覧セクション（#690）。 */
+const WorkerCommunitiesList = ({ workerId }: { workerId: string }): ReactElement => {
+  const { data: communities } = useWorkerPublicCommunities({ workerId });
+
+  if (communities.length === 0) {
+    return (
+      <Box
+        data-testid="worker-communities-empty"
+        sx={{ textAlign: "center", py: 4, color: "text.secondary" }}
+      >
+        <Typography variant="body2">まだ所属コミュニティがありません。</Typography>
+      </Box>
+    );
+  }
+
+  return (
+    <Box>
+      {communities.map((community: Community) => (
+        <Box
+          key={community.id}
+          sx={{ py: 1, borderBottom: "1px solid", borderColor: "divider" }}
+        >
+          <Link to="/communities/$slug" params={{ slug: community.slug }}>
+            <Typography variant="body2" sx={{ fontWeight: 500 }}>
+              {community.name}
+            </Typography>
+          </Link>
+        </Box>
+      ))}
+    </Box>
+  );
+};
+
+/** ワーカーのコメント一覧セクション（#690）。 */
+const WorkerCommentsList = ({ workerId }: { workerId: string }): ReactElement => {
+  const { data } = useWorkerComments({ workerId });
+  const comments = data.pages.flatMap((p) => p.comments);
+
+  if (comments.length === 0) {
+    return (
+      <Box
+        data-testid="worker-comments-empty"
+        sx={{ textAlign: "center", py: 4, color: "text.secondary" }}
+      >
+        <Typography variant="body2">まだコメントがありません。</Typography>
+      </Box>
+    );
+  }
+
+  return (
+    <Box>
+      {comments.map((comment: Comment) => (
+        <Box
+          key={comment.id}
+          sx={{ py: 1, borderBottom: "1px solid", borderColor: "divider" }}
+        >
+          <a
+            href={`/posts/${comment.post_id}#comment-${comment.id}`}
+            data-testid={`worker-comment-link-${comment.id}`}
+            style={{ textDecoration: "none", color: "inherit", display: "block" }}
+          >
+            <Typography variant="body2" sx={{ color: "text.secondary", mb: 0.5 }}>
+              {comment.text}
+            </Typography>
+          </a>
+        </Box>
+      ))}
+    </Box>
+  );
+};
+
 /**
- * ワーカー個別プロフィールページ（#929）。
- * QueryBoundary 内で useWorkerDetail / useWorkerPosts を使い、ローディング/エラーを委譲する。
+ * ワーカー個別プロフィールページ（#929 / #690）。
+ * QueryBoundary 内で useWorkerDetail / useWorkerPosts / useWorkerPublicCommunities /
+ * useWorkerComments を使い、ローディング/エラーを委譲する。
  */
 export const WorkerScene = (): ReactElement => {
   const { workerId } = useParams({ strict: false }) as { workerId: string };
@@ -102,6 +175,24 @@ export const WorkerScene = (): ReactElement => {
       </Typography>
       <QueryBoundary>
         <WorkerPostsList workerId={workerId} />
+      </QueryBoundary>
+      <Typography
+        variant="subtitle2"
+        sx={{ fontWeight: 600, mt: 3, mb: 1, borderBottom: "1px solid", borderColor: "divider", pb: 1 }}
+      >
+        所属コミュニティ
+      </Typography>
+      <QueryBoundary>
+        <WorkerCommunitiesList workerId={workerId} />
+      </QueryBoundary>
+      <Typography
+        variant="subtitle2"
+        sx={{ fontWeight: 600, mt: 3, mb: 1, borderBottom: "1px solid", borderColor: "divider", pb: 1 }}
+      >
+        コメント
+      </Typography>
+      <QueryBoundary>
+        <WorkerCommentsList workerId={workerId} />
       </QueryBoundary>
     </Box>
   );

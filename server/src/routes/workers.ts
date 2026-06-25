@@ -9,14 +9,19 @@ import {
   type UpdateWorkerInput,
 } from "@hatchery/common";
 import { Router } from "express";
+import { z } from "zod";
 
 import { requireAdminAccess } from "../middleware/requireAdminAccess.js";
 import { validateBody } from "../middleware/validateBody.js";
+import type { CommentRepository } from "../persistence/commentRepository.js";
+import type { CommunityRepository } from "../persistence/communityRepository.js";
 import type { PostRepository } from "../persistence/postRepository.js";
 import type { ViewRepository } from "../persistence/viewRepository.js";
 import type { VoteRepository } from "../persistence/voteRepository.js";
+import type { WorkerCommunityRepository } from "../persistence/workerCommunityRepository.js";
 import type { WorkerRepository } from "../persistence/workerRepository.js";
-import { toPostResponse } from "./postResponse.js";
+import { toCommunityResponse } from "./communityResponse.js";
+import { toCommentResponse, toPostResponse } from "./postResponse.js";
 import { resultToResponse } from "../utils/resultToResponse.js";
 
 const DEFAULT_PAGE = 1;
@@ -26,17 +31,32 @@ const RANKING_LIMIT = 1000;
 const RANKING_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 /** ワーカー投稿一覧のデフォルト取得件数（#929）。 */
 const WORKER_POSTS_DEFAULT_LIMIT = 20;
+/** ワーカーコメント一覧のデフォルト取得件数（#690）。 */
+const WORKER_COMMENTS_DEFAULT_LIMIT = 20;
+/** ワーカーコメント一覧の最大取得件数（#690）。 */
+const WORKER_COMMENTS_MAX_LIMIT = 100;
+
+const WorkerCommentsQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(WORKER_COMMENTS_MAX_LIMIT).optional(),
+  cursor: z.string().optional(),
+});
 
 export function createWorkersRouter({
   workerRepository,
   viewRepository,
   voteRepository,
   postRepository,
+  communityRepository,
+  workerCommunityRepository,
+  commentRepository,
 }: {
   workerRepository: WorkerRepository;
   viewRepository: ViewRepository;
   voteRepository: VoteRepository;
   postRepository: PostRepository;
+  communityRepository: CommunityRepository;
+  workerCommunityRepository: WorkerCommunityRepository;
+  commentRepository: CommentRepository;
 }): Router {
   const router = Router();
 
@@ -104,6 +124,66 @@ export function createWorkersRouter({
               return author_worker ? { ...post, author_worker } : { ...post };
             });
             res.status(200).json({ posts: enriched.map(toPostResponse) });
+          });
+      })
+      .catch(next);
+  });
+
+  // ワーカーの所属コミュニティ一覧（認証不要・#690）。/:workerId より先に定義する。
+  // eslint-disable-next-line max-params
+  router.get("/:workerId/communities", (req, res, next) => {
+    const { workerId } = req.params as { workerId: string };
+    workerRepository
+      .findById(workerId)
+      .then((worker) => {
+        if (!worker) {
+          const result = err(notFound("WorkerNotFound"));
+          resultToResponse(res, result);
+          return;
+        }
+        return workerCommunityRepository
+          .listCommunityIdsByWorker(workerId)
+          .then((ids) => {
+            if (ids.length === 0) return Promise.resolve([]);
+            return communityRepository.list().then((all) => {
+              const idSet = new Set(ids);
+              return all.filter((c) => idSet.has(c.id));
+            });
+          })
+          .then((communities) => {
+            res.status(200).json({ communities: communities.map((c) => toCommunityResponse(c)) });
+          });
+      })
+      .catch(next);
+  });
+
+  // ワーカーのコメント一覧（認証不要・カーソルページネーション・#690）。/:workerId より先に定義する。
+  // eslint-disable-next-line max-params
+  router.get("/:workerId/comments", (req, res, next) => {
+    const { workerId } = req.params as { workerId: string };
+    const parsed = WorkerCommentsQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      res.status(400).json({ error: "ValidationError", issues: parsed.error.issues });
+      return;
+    }
+    const { limit = WORKER_COMMENTS_DEFAULT_LIMIT, cursor } = parsed.data;
+    workerRepository
+      .findById(workerId)
+      .then((worker) => {
+        if (!worker) {
+          const result = err(notFound("WorkerNotFound"));
+          resultToResponse(res, result);
+          return;
+        }
+        const resolve = buildAuthorWorkerResolver([worker]);
+        return commentRepository
+          .listByWorker({ workerId, limit, cursor })
+          .then(({ comments, nextCursor }) => {
+            const enriched = comments.map((c) => {
+              const author_worker = resolve(c.author);
+              return author_worker ? { ...c, author_worker } : c;
+            });
+            res.status(200).json({ comments: enriched.map(toCommentResponse), nextCursor });
           });
       })
       .catch(next);

@@ -158,7 +158,7 @@ export function createApp(deps: AppDeps): Express {
   const voteRepo = deps.voteRepository;
 
   // Cache-Control 方針（#559）。公開・コンテンツのみの GET（未認証時）はエッジ/ブラウザに
-  // キャッシュさせ、認証糳・管理系・ユーザー個別の応答は共有キャッシュに載せない。
+  // キャッシュさせ、認証系・管理系・ユーザー個別の応答は共有キャッシュに載せない。
   const publicCache = createPublicCache({
     sMaxageSeconds: security.cacheSMaxageSeconds,
     staleWhileRevalidateSeconds: security.cacheStaleWhileRevalidateSeconds,

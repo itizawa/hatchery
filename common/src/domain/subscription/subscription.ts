@@ -19,3 +19,19 @@ export const SubscriptionStatusSchema = z.object({
 });
 
 export type SubscriptionStatus = z.infer<typeof SubscriptionStatusSchema>;
+
+/** コミュニティ別未読数（#933）。 */
+export const UnreadCountSchema = z.object({
+  community_id: z.string().min(1),
+  community_slug: z.string().min(1),
+  unread_count: z.number().int().min(0),
+});
+
+export type UnreadCount = z.infer<typeof UnreadCountSchema>;
+
+/** GET /api/subscriptions/unread-counts のレスポンス（#933）。 */
+export const UnreadCountsResponseSchema = z.object({
+  unread_counts: z.array(UnreadCountSchema),
+});
+
+export type UnreadCountsResponse = z.infer<typeof UnreadCountsResponseSchema>;

@@ -62,4 +62,61 @@ describe("createInMemorySubscriptionRepository", () => {
       expect(result).toBe(false);
     });
   });
+
+  describe("updateLastViewedAt", () => {
+    it("購読済みの lastViewedAt を更新できる（no error）", async () => {
+      const repo = createInMemorySubscriptionRepository();
+      await repo.add("user-1", "community-1");
+      const viewedAt = new Date("2026-06-25T10:00:00.000Z");
+      await expect(
+        repo.updateLastViewedAt({ userId: "user-1", communityId: "community-1", viewedAt }),
+      ).resolves.toBeUndefined();
+    });
+
+    it("未購読に対して呼んでもエラーにならない（no-op）", async () => {
+      const repo = createInMemorySubscriptionRepository();
+      const viewedAt = new Date("2026-06-25T10:00:00.000Z");
+      await expect(
+        repo.updateLastViewedAt({ userId: "user-1", communityId: "not-subscribed", viewedAt }),
+      ).resolves.toBeUndefined();
+    });
+  });
+
+  describe("listWithUnreadCounts", () => {
+    it("購読がない場合は空配列を返す", async () => {
+      const repo = createInMemorySubscriptionRepository();
+      const result = await repo.listWithUnreadCounts("user-1");
+      expect(result).toEqual([]);
+    });
+
+    it("購読しているコミュニティの一覧を返す", async () => {
+      const repo = createInMemorySubscriptionRepository();
+      await repo.add("user-1", "community-1");
+      await repo.add("user-1", "community-2");
+      const result = await repo.listWithUnreadCounts("user-1");
+      expect(result).toHaveLength(2);
+      const ids = result.map((r) => r.communityId);
+      expect(ids).toContain("community-1");
+      expect(ids).toContain("community-2");
+    });
+
+    it("他ユーザーの購読は含めない", async () => {
+      const repo = createInMemorySubscriptionRepository();
+      await repo.add("user-1", "community-1");
+      await repo.add("user-2", "community-2");
+      const result = await repo.listWithUnreadCounts("user-1");
+      expect(result).toHaveLength(1);
+      expect(result[0].communityId).toBe("community-1");
+    });
+
+    it("各エントリに communityId・communitySlug・unreadCount が含まれる", async () => {
+      const repo = createInMemorySubscriptionRepository();
+      await repo.add("user-1", "community-1");
+      const result = await repo.listWithUnreadCounts("user-1");
+      expect(result[0]).toHaveProperty("communityId");
+      expect(result[0]).toHaveProperty("communitySlug");
+      expect(result[0]).toHaveProperty("unreadCount");
+      expect(typeof result[0].unreadCount).toBe("number");
+    });
+  });
 });

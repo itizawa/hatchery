@@ -1,4 +1,4 @@
-import { NotFoundError } from "@hatchery/common";
+import { ForbiddenError, NotFoundError } from "@hatchery/common";
 import { Router } from "express";
 
 import { buildPrivateCacheControl } from "../config/security.js";
@@ -169,6 +169,31 @@ export function createCommunitiesRouter(
           throw new NotFoundError("CommunityNotFound");
         }
         return subscriptionRepo.remove(userId, community.id).then(() => res.status(204).end());
+      })
+      .catch(next);
+  });
+
+  // コミュニティの最終閲覧日時を更新（認証必須・購読必須・#933）
+  // eslint-disable-next-line max-params
+  router.patch("/:slug/mark-viewed", requireAuth, (req, res, next) => {
+    const { slug } = req.params as { slug: string };
+    const userId = getAuthUser(req).id;
+    const viewedAt = new Date();
+
+    communityRepo
+      .findBySlug(slug)
+      .then((community) => {
+        if (!community) {
+          throw new NotFoundError("CommunityNotFound");
+        }
+        return subscriptionRepo.hasSubscription(userId, community.id).then((subscribed) => {
+          if (!subscribed) {
+            throw new ForbiddenError("NotSubscribed");
+          }
+          return subscriptionRepo
+            .updateLastViewedAt({ userId, communityId: community.id, viewedAt })
+            .then(() => res.status(204).end());
+        });
       })
       .catch(next);
   });

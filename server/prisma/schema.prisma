@@ -201,12 +201,15 @@ model Comment {
 
 /// コミュニティへの購読。ADR-0019 / ADR-0020。
 /// ホームフィードの構成に使う（認証ユーザーの購読 community の投稿を集約）。
+/// #933: lastViewedAt を追加して未読バッジ・New ラベルの API 基盤とする。
 model Subscription {
-  userId      String
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  communityId String
-  community   Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
-  createdAt   DateTime  @default(now())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  communityId  String
+  community    Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  createdAt    DateTime  @default(now())
+  /// 最後にこのコミュニティを閲覧した日時（#933）。null = 未訪問。
+  lastViewedAt DateTime?
 
   @@id([userId, communityId])
   @@index([userId])

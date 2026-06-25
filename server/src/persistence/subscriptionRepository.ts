@@ -7,6 +7,13 @@ export interface SubscriptionRecord {
   userId: string;
   communityId: string;
   createdAt: Date;
+  lastViewedAt: Date | null;
+}
+
+export interface SubscriptionWithUnreadCount {
+  communityId: string;
+  communitySlug: string;
+  unreadCount: number;
 }
 
 export interface SubscriptionRepository {
@@ -21,6 +28,20 @@ export interface SubscriptionRepository {
 
   /** コミュニティ別購読者数（communityId → count）を返す（#761）。 */
   subscriberCountPerCommunity(): Promise<Map<string, number>>;
+
+  /** 購読の lastViewedAt を更新する（#933）。購読が存在しない場合は何もしない。 */
+  updateLastViewedAt({
+    userId,
+    communityId,
+    viewedAt,
+  }: {
+    userId: string;
+    communityId: string;
+    viewedAt: Date;
+  }): Promise<void>;
+
+  /** ユーザーの購読コミュニティ一覧と未読数を返す（#933）。 */
+  listWithUnreadCounts(userId: string): Promise<SubscriptionWithUnreadCount[]>;
 }
 
 /** DB 非依存のインメモリ実装。ユースケース/ルートのテストで注入する。 */
@@ -32,7 +53,7 @@ export function createInMemorySubscriptionRepository(): SubscriptionRepository {
     add(userId: string, communityId: string): Promise<void> {
       const exists = records.find((r) => r.userId === userId && r.communityId === communityId);
       if (!exists) {
-        records.push({ userId, communityId, createdAt: new Date() });
+        records.push({ userId, communityId, createdAt: new Date(), lastViewedAt: null });
       }
       return Promise.resolve();
     },
@@ -63,6 +84,33 @@ export function createInMemorySubscriptionRepository(): SubscriptionRepository {
         counts.set(r.communityId, (counts.get(r.communityId) ?? 0) + 1);
       }
       return Promise.resolve(counts);
+    },
+
+    updateLastViewedAt({
+      userId,
+      communityId,
+      viewedAt,
+    }: {
+      userId: string;
+      communityId: string;
+      viewedAt: Date;
+    }): Promise<void> {
+      const record = records.find((r) => r.userId === userId && r.communityId === communityId);
+      if (record) {
+        record.lastViewedAt = viewedAt;
+      }
+      return Promise.resolve();
+    },
+
+    listWithUnreadCounts(userId: string): Promise<SubscriptionWithUnreadCount[]> {
+      const userSubs = records.filter((r) => r.userId === userId);
+      return Promise.resolve(
+        userSubs.map((r) => ({
+          communityId: r.communityId,
+          communitySlug: r.communityId,
+          unreadCount: 0,
+        })),
+      );
     },
   };
 }

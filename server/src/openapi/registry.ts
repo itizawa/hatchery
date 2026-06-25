@@ -14,6 +14,7 @@ import { registerFeed } from "./registrations/registerFeed.js";
 import { registerHealth } from "./registrations/registerHealth.js";
 import { registerOgp } from "./registrations/registerOgp.js";
 import { registerPosts } from "./registrations/registerPosts.js";
+import { registerSubscriptions } from "./registrations/registerSubscriptions.js";
 import { registerWorkers } from "./registrations/registerWorkers.js";
 import type { RegistryContext } from "./registrations/shared.js";
 
@@ -63,6 +64,7 @@ function buildRegistry(): OpenAPIRegistry {
   registerAdmin(registry, ctx);
   registerHealth(registry);
   registerCommunities(registry, ctx);
+  registerSubscriptions(registry, ctx);
   registerWorkers(registry, ctx);
   registerFeed(registry, ctx);
   registerPosts(registry, ctx);

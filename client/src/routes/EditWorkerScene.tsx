@@ -235,7 +235,7 @@ export function EditWorkerScene(): ReactElement {
   return (
     <Box sx={{ p: 3, maxWidth: 560 }}>
       <Box sx={{ mb: 3 }}>
-        <Link to="/admin" search={{ tab: "workers" }}>
+        <Link to="/admin" search={{ tab: "users" }}>
           ← 一覧に戻る
         </Link>
       </Box>
@@ -248,7 +248,7 @@ export function EditWorkerScene(): ReactElement {
             <Typography color="text.secondary" sx={{ mb: 2 }}>
               ワーカーが見つかりません
             </Typography>
-            <Link to="/admin" search={{ tab: "workers" }}>
+            <Link to="/admin" search={{ tab: "users" }}>
               ワーカー一覧へ戻る
             </Link>
           </Box>

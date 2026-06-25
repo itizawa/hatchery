@@ -54,7 +54,7 @@ export function AddWorkerScene(): ReactElement {
   return (
     <Box sx={{ p: 3, maxWidth: 560 }}>
       <Box sx={{ mb: 3 }}>
-        <Link to="/admin" search={{ tab: "workers" }}>
+        <Link to="/admin" search={{ tab: "users" }}>
           ← 一覧に戻る
         </Link>
       </Box>

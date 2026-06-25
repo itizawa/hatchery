@@ -68,9 +68,10 @@ export type UnreadCountsResponse = {
 
 /** GET /api/subscriptions/unread-counts — 購読コミュニティ別未読投稿数を取得する（#934）。 */
 export async function fetchUnreadCounts(): Promise<UnreadCountsResponse> {
-  const res = await fetch("/api/subscriptions/unread-counts", { credentials: "include" });
-  if (!res.ok) throw new Error(`GET /api/subscriptions/unread-counts failed: ${res.status}`);
-  return res.json() as Promise<UnreadCountsResponse>;
+  const result = await openApiClient.GET("/api/subscriptions/unread-counts", {
+    credentials: "include",
+  });
+  return unwrap({ result, label: "GET /api/subscriptions/unread-counts" });
 }
 
 /** 購読コミュニティ未読数フック。Suspense 化（#934）。 */
@@ -83,11 +84,11 @@ export function useUnreadCounts() {
 
 /** PATCH /api/communities/{slug}/mark-viewed — コミュニティを既読化する（#934）。 */
 export async function markCommunityViewed(slug: string): Promise<void> {
-  const res = await fetch(`/api/communities/${encodeURIComponent(slug)}/mark-viewed`, {
-    method: "PATCH",
+  const result = await openApiClient.PATCH("/api/communities/{slug}/mark-viewed", {
+    params: { path: { slug } },
     credentials: "include",
   });
-  if (!res.ok) throw new Error(`PATCH /api/communities/${slug}/mark-viewed failed: ${res.status}`);
+  ensureOk({ result, label: `PATCH /api/communities/${slug}/mark-viewed` });
 }
 
 /** コミュニティ既読化ミューテーションフック。成功後に未読数クエリを invalidate する（#934）。 */

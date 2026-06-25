@@ -68,8 +68,8 @@ describe("fetchUnreadCounts (GET /api/subscriptions/unread-counts)", () => {
 
     const result = await fetchUnreadCounts();
     expect(result).toEqual(mockData);
-    const url = fetchMock.mock.calls[0][0] as string;
-    expect(url).toContain("/api/subscriptions/unread-counts");
+    const request = fetchMock.mock.calls[0][0] as Request;
+    expect(request.url).toContain("/api/subscriptions/unread-counts");
   });
 
   it("401 のとき例外を投げる", async () => {
@@ -90,9 +90,8 @@ describe("markCommunityViewed (PATCH /api/communities/{slug}/mark-viewed)", () =
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(markCommunityViewed("ai-dev")).resolves.toBeUndefined();
-    const url = fetchMock.mock.calls[0][0] as string;
-    const opts = fetchMock.mock.calls[0][1] as RequestInit;
-    expect(url).toContain("/api/communities/ai-dev/mark-viewed");
-    expect(opts.method).toBe("PATCH");
+    const request = fetchMock.mock.calls[0][0] as Request;
+    expect(request.url).toContain("/api/communities/ai-dev/mark-viewed");
+    expect(request.method).toBe("PATCH");
   });
 });

@@ -177,7 +177,7 @@ describe("useVotePost (楽観更新フック)", () => {
     expect(d?.post.my_vote).toBeNull();
   });
 
-  it("onSettled: 成功時に communityFeedQueryKey・homeFeedQueryKeyPrefix を invalidate する（postThreadQueryKey は invalidate しない）", async () => {
+  it("onSettled: 成功時に communityFeedQueryKey のみ invalidate する（postThreadQueryKey・homeFeedQueryKeyPrefix は invalidate しない）", async () => {
     vi.spyOn(authApi, "useAuth").mockReturnValue({ data: null } as ReturnType<typeof authApi.useAuth>);
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(200, { ...basePost, score: 6, my_vote: "up" })));
 
@@ -192,7 +192,7 @@ describe("useVotePost (楽観更新フック)", () => {
 
     expect(invalidateSpy).not.toHaveBeenCalledWith({ queryKey: postThreadQueryKey("post-1") });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: communityFeedQueryKey("tech") });
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: homeFeedQueryKeyPrefix() });
+    expect(invalidateSpy).not.toHaveBeenCalledWith({ queryKey: homeFeedQueryKeyPrefix() });
   });
 
   it("onSuccess: サーバ応答の my_vote でスレッドキャッシュの post.my_vote が更新される (#853)", async () => {

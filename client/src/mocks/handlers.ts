@@ -47,6 +47,14 @@ export const handlers = [
     HttpResponse.json({ id: "comment-1", score: 1 }),
   ),
 
+  // GET /api/subscriptions/unread-counts — 購読コミュニティ未読数（#934）。
+  http.get("/api/subscriptions/unread-counts", () =>
+    HttpResponse.json({ unread_counts: [] }),
+  ),
+
+  // PATCH /api/communities/:slug/mark-viewed — コミュニティ既読化（#934）。
+  http.patch("/api/communities/:slug/mark-viewed", () => new HttpResponse(null, { status: 200 })),
+
   http.get("/api/admin/batch-logs", () => HttpResponse.json(mockBatchLogs)),
 
   http.post("/api/auth/logout", () => new HttpResponse(null, { status: 200 })),

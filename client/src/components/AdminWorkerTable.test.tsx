@@ -8,10 +8,9 @@ import type { ReactElement } from "react";
 
 import { AdminWorkerTable } from "./AdminWorkerTable";
 
-// AddWorkerDialog 自体は本テストの対象外（別フックを呼ぶ）ため、開閉が観測できる軽量スタブに差し替える。
-vi.mock("./AddWorkerDialog.js", () => ({
-  AddWorkerDialog: ({ open }: { open: boolean }) =>
-    open ? <div role="dialog">AddWorkerDialog</div> : null,
+const mockNavigate = vi.fn();
+vi.mock("@tanstack/react-router", () => ({
+  useNavigate: () => mockNavigate,
 }));
 
 // eslint-disable-next-line max-params
@@ -105,15 +104,14 @@ describe("AdminWorkerTable（useSuspenseQuery + QueryBoundary）", () => {
     expect(await screen.findByRole("button", { name: "ワーカーを追加" })).toBeInTheDocument();
   });
 
-  it("「ワーカーを追加」をクリックすると AddWorkerDialog が開く", async () => {
+  it("「ワーカーを追加」をクリックすると /admin/workers/new へ遷移する（#888）", async () => {
     stubWorkers(200, []);
     renderWithClient(<AdminWorkerTable />);
     // スケルトン（fallback）解決後の本体ボタンを操作する。
     await waitFor(() =>
       expect(screen.queryAllByTestId("worker-table-skeleton-item")).toHaveLength(0),
     );
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "ワーカーを追加" }));
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(mockNavigate).toHaveBeenCalledWith({ to: "/admin/workers/new" });
   });
 });

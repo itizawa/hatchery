@@ -17,8 +17,7 @@ import {
 import { DEFAULT_WORKERS, formatWorkerDisplayName, resolveWorkerImageUrl, type Worker } from "@hatchery/common";
 
 import { type ReactElement, useState } from "react";
-
-import { EditWorkerDialog } from "./EditWorkerDialog.js";
+import { useNavigate } from "@tanstack/react-router";
 
 export interface WorkerTableProps {
   /** 表示するワーカー一覧。未指定なら common の DEFAULT_WORKERS を単一情報源として描画する。 */
@@ -27,15 +26,13 @@ export interface WorkerTableProps {
   isLoading?: boolean;
   /**
    * true のとき各行に編集ボタンを表示する（#181）。
-   * admin 管理画面でのみ true にする想定。
+   * admin 管理画面でのみ true にする想定。編集ボタンクリックで /admin/workers/:id/edit へ遷移する（#888）。
    */
   isEditable?: boolean;
   /** 削除ボタンを表示する場合に指定するコールバック（#218）。未指定なら削除ボタン非表示。 */
   onDelete?: (id: string) => void;
   /** 削除操作中は削除ボタンを無効化する（#218）。 */
   isDeleting?: boolean;
-  /** 編集ボタンクリック時に呼ばれるコールバック（#181）。isEditable=true のときのみ意味を持つ。 */
-  onEdit?: (worker: Worker) => void;
 }
 
 const SKELETON_ROW_COUNT = 3;
@@ -46,11 +43,14 @@ export const WorkerTable = ({
   isLoading = false,
   isEditable = false,
   onDelete,
-  onEdit,
   isDeleting = false,
 }: WorkerTableProps): ReactElement => {
-  const [editingWorker, setEditingWorker] = useState<Worker | null>(null);
   const [confirmTarget, setConfirmTarget] = useState<Worker | null>(null);
+  const navigate = useNavigate();
+
+  const handleEditClick = (worker: Worker): void => {
+    void navigate({ to: "/admin/workers/$workerId/edit", params: { workerId: worker.id } });
+  };
 
   const handleDeleteClick = (worker: Worker) => {
     setConfirmTarget(worker);
@@ -121,7 +121,7 @@ export const WorkerTable = ({
                         <Button
                           size="small"
                           variant="outlined"
-                          onClick={() => { setEditingWorker(worker); onEdit?.(worker); }}
+                          onClick={() => handleEditClick(worker)}
                           aria-label={`編集 ${worker.displayName}`}
                         >
                           編集
@@ -146,19 +146,12 @@ export const WorkerTable = ({
           </TableBody>
         </Table>
       </TableContainer>
-      {editingWorker && (
-        <EditWorkerDialog
-          worker={editingWorker}
-          open={true}
-          onClose={() => setEditingWorker(null)}
-        />
-      )}
       {confirmTarget !== null && (
         <Dialog open onClose={handleCancel}>
           <DialogTitle>ワーカーの削除</DialogTitle>
           <DialogContent>
             <Typography>
-              「{confirmTarget.displayName}」を削除しますか？
+              「{formatWorkerDisplayName(confirmTarget)}」を削除しますか？
               これまでのメッセージは残りますが、表示名が「》削除済み《{confirmTarget.displayName}」になります。
             </Typography>
           </DialogContent>

@@ -1,13 +1,12 @@
 import { formatAbsoluteTime, formatRelativeTime } from "@hatchery/common";
 import { Tooltip, Typography } from "./uiParts";
-import type { TypographyProps } from "@mui/material/Typography";
-import type { ReactElement } from "react";
+import type { ComponentProps, ReactElement } from "react";
 
 interface PostedTimeProps {
   /** 投稿時刻の ISO 文字列（post / comment の created_at）。未指定なら何も描画しない（後方互換）。 */
   createdAt?: string | null;
   /** Typography の variant。既定は body2。サイドバー等で caption に変えたい場合に指定する。 */
-  variant?: TypographyProps["variant"];
+  variant?: ComponentProps<typeof Typography>["variant"];
 }
 
 /**

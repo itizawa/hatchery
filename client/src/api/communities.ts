@@ -4,7 +4,7 @@
  * - 公開コミュニティ一覧・最近のワーカー・画像アップロード（/api/communities 等）: #307 / #207 / #457
  *
  * post / vote / feed / subscription のクライアントは各ドメインモジュールに分割済み
- * （`posts.ts` / `votes.ts` / `feed.ts` / `subscriptions.ts`）。後方互換のため本ファイルから
+ * （`posts.ts` / `votes.ts` / `feed.ts` / `subscriptions.ts`）。後方互换のため本ファイルから
  * 引き続き re-export する（既存 import 参照を壊さない・受け入れ条件 2）。
  */
 import {
@@ -23,7 +23,7 @@ import { clientEnv } from "../config/env.js";
 import { openApiClient, unwrap } from "./client.js";
 import type { components } from "./openapi.gen.js";
 
-// ─── 分割先ドメインモジュールの後方互換 re-export（#533）──────────────────────────────
+// ─── 分割先ドメインモジュールの後方互换 re-export（#533）──────────────────────────────────
 // post / vote / feed / subscription のシンボルは各モジュールへ移設したが、外部からの
 // import 参照を壊さないよう本ファイルから引き続き公開する。
 export { fetchPostThread, usePostThread, postThreadQueryKey } from "./posts.js";
@@ -56,7 +56,7 @@ export {
 /** community 画像の種別（#457）。 */
 export type CommunityImageKind = "icon" | "cover";
 
-// ─── 公開 API 向け型定義（openapi.gen.ts より）────────────────────────────────────
+// ─── 公開 API 向け型定義（openapi.gen.ts より）────────────────────────────────────────────
 export type Community = components["schemas"]["Community"];
 
 /** 最近投稿したワーカーの表示用最小型（#207）。`GET /api/communities/{slug}/recent-workers` の戻り値。 */
@@ -67,19 +67,19 @@ export type RecentWorker = {
   imageUrl?: string | null;
 };
 
-// ─── 管理者 API 向け型 re-export（@hatchery/common より）──────────────────
+// ─── 管理者 API 向け型 re-export（@hatchery/common より）──────────────────────
 export type { AdminCommunity, CreateCommunityInput, UpdateCommunityInput };
 
-// ─── Query Keys ──────────────────────────────────────────────────────────────
+// ─── Query Keys ────────────────────────────────────────────────────────────────────────────
 /** 管理者コミュニティ一覧（/api/admin/communities）のキャッシュキー。 */
 export const ADMIN_COMMUNITIES_QUERY_KEY = ["admin", "communities"] as const;
-/** 後方互換のエイリアス（CommunitiesTab.tsx など既存コードが参照）。 */
+/** 後方互换のエイリアス（CommunitiesTab.tsx など既存コードが参照）。 */
 export const COMMUNITIES_QUERY_KEY = ADMIN_COMMUNITIES_QUERY_KEY;
 
 export const communityRecentWorkersQueryKey = (slug: string) =>
   ["communities", slug, "recent-workers"] as const;
 
-// ─── 管理者向け API 関数（/api/admin/communities）───────────────────────────────────
+// ─── 管理者向け API 関数（/api/admin/communities）────────────────────────────────────────────
 
 /** GET /api/admin/communities — コミュニティ一覧を取得する（admin のみ）。 */
 export async function fetchAdminCommunities(): Promise<AdminCommunity[]> {
@@ -95,7 +95,7 @@ export async function fetchAdminCommunities(): Promise<AdminCommunity[]> {
   );
 }
 
-/** 後方互換: CommunitiesTab.tsx などが参照する fetchCommunities は管理者向けを指す。 */
+/** 後方互换: CommunitiesTab.tsx などが参照する fetchCommunities は管理者向けを指す。 */
 export const fetchCommunities = fetchAdminCommunities;
 
 /** POST /api/admin/communities — コミュニティを作成する（admin のみ）。 */
@@ -137,6 +137,22 @@ export function useCommunities() {
   return useSuspenseQuery({
     queryKey: ADMIN_COMMUNITIES_QUERY_KEY,
     queryFn: fetchAdminCommunities,
+  });
+}
+
+/**
+ * 管理者コミュニティを ID で取得するフック（EditCommunityScene 向け）。#889
+ * 一覧 API から select で絞り込む。見つからない場合は Error を throw し QueryBoundary が捕捉する。
+ */
+export function useAdminCommunityById({ id }: { id: string }) {
+  return useSuspenseQuery({
+    queryKey: ADMIN_COMMUNITIES_QUERY_KEY,
+    queryFn: fetchAdminCommunities,
+    select: (list) => {
+      const found = list.find((c) => c.id === id);
+      if (!found) throw new Error("CommunityNotFound");
+      return found;
+    },
   });
 }
 
@@ -212,7 +228,7 @@ export function useUploadCommunityImage() {
   });
 }
 
-// ─── 公開ブラウズ向け API 関数（/api/communities 等）────────────────────────────────
+// ─── 公開ブラウズ向け API 関数（/api/communities 等）────────────────────────────────────────────
 
 /** GET /api/communities — 公開コミュニティ一覧を取得する（認証不要）。 */
 export async function fetchPublicCommunities(): Promise<Community[]> {

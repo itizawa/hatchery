@@ -84,6 +84,14 @@ const LazyEditWorkerScene = lazyRouteComponent(
   () => import("./routes/EditWorkerScene"),
   "EditWorkerScene",
 );
+const LazyAddCommunityScene = lazyRouteComponent(
+  () => import("./routes/AddCommunityScene"),
+  "AddCommunityScene",
+);
+const LazyEditCommunityScene = lazyRouteComponent(
+  () => import("./routes/EditCommunityScene"),
+  "EditCommunityScene",
+);
 
 /**
  * 認証ガード（#454）: 未ログイン（fetchMe が null）またはネットワークエラーの場合、
@@ -215,7 +223,7 @@ const postRoute = createRoute({
 /**
  * 旧ログインルート（/login）。#454 でログインはモーダル化したため、
  * このルートは廃止せず公開ホーム（/?login=1）へリダイレクトし、ホーム上でログインモーダルを開く。
- * 既存のブックマーク・外部リンク・OAuth 失敗時フォールバックの dead link を防ぐ後方互換。
+ * 既存のブックマーク・外部リンク・OAuth 失敗時フォールバックの dead link を防ぐ後方互换。
  */
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -346,6 +354,30 @@ const adminWorkerEditRoute = createRoute({
   beforeLoad: requireAdminRoute,
 });
 
+/** コミュニティ作成ページ（/admin/communities/new）。未ログイン・非 admin は / へリダイレクト（#889）。 */
+const adminCommunityNewRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/admin/communities/new",
+  component: () => (
+    <Suspense fallback={null}>
+      <LazyAddCommunityScene />
+    </Suspense>
+  ),
+  beforeLoad: requireAdminRoute,
+});
+
+/** コミュニティ編集ページ（/admin/communities/:id/edit）。未ログイン・非 admin は / へリダイレクト（#889）。 */
+const adminCommunityEditRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/admin/communities/$id/edit",
+  component: () => (
+    <Suspense fallback={null}>
+      <LazyEditCommunityScene />
+    </Suspense>
+  ),
+  beforeLoad: requireAdminRoute,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   popularRoute,
@@ -357,6 +389,8 @@ const routeTree = rootRoute.addChildren([
   adminRoute,
   adminWorkerNewRoute,
   adminWorkerEditRoute,
+  adminCommunityNewRoute,
+  adminCommunityEditRoute,
   accountRoute,
   termsRoute,
   privacyRoute,

@@ -1,6 +1,7 @@
 import { Avatar, Box, Divider, Skeleton, Stack, Typography } from "./uiParts";
 import { Link as RouterLink } from "@tanstack/react-router";
 import type { ReactElement, ReactNode } from "react";
+import { resolveCommunityIconUrl } from "@hatchery/common";
 
 import { ShareButton } from "./ShareButton.js";
 import { SubscribeButton } from "./SubscribeButton.js";
@@ -95,7 +96,7 @@ export const CommunitySidebarCard = (props: CommunitySidebarCardProps): ReactEle
     <Box sx={outerBoxSx}>
       <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", mb: 0.5 }}>
         <Avatar
-          src={community.iconUrl ?? undefined}
+          src={resolveCommunityIconUrl({ id: community.id, iconUrl: community.iconUrl })}
           alt={community.name}
           sx={{ width: 40, height: 40, bgcolor: "primary.main" }}
         >

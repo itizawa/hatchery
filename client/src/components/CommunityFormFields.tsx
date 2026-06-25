@@ -106,7 +106,7 @@ export function CommunityFormFields<
       <form.Field
         name="name"
         validators={{
-          onSubmit: ({ value }) => (!value ? "コミュニティ名は必須です" : undefined),
+          onChange: ({ value }) => (!value ? "コミュニティ名は必須です" : undefined),
         }}
       >
         {(field) => (
@@ -131,7 +131,7 @@ export function CommunityFormFields<
       <form.Field
         name="description"
         validators={{
-          onSubmit: ({ value }) => (!value ? "作風の説明は必須です" : undefined),
+          onChange: ({ value }) => (!value ? "作風の説明は必須です" : undefined),
         }}
       >
         {(field) => (

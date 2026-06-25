@@ -76,6 +76,14 @@ const LazyWorkerScene = lazyRouteComponent(
   () => import("./routes/WorkerScene"),
   "WorkerScene",
 );
+const LazyAddWorkerScene = lazyRouteComponent(
+  () => import("./routes/AddWorkerScene"),
+  "AddWorkerScene",
+);
+const LazyEditWorkerScene = lazyRouteComponent(
+  () => import("./routes/EditWorkerScene"),
+  "EditWorkerScene",
+);
 
 /**
  * 認証ガード（#454）: 未ログイン（fetchMe が null）またはネットワークエラーの場合、
@@ -292,7 +300,7 @@ const privacyRoute = createRoute({
   ),
 });
 
-/** ワーカーランキング（/ranking）。認証不要の公開ページ。直近 7 日の閉覧数・純 vote スコアを表示（#665）。 */
+/** ワーカーランキング（/ranking）。認証不要の公開ページ。直近 7 日の閲覧数・純 vote スコアを表示（#665）。 */
 const rankingRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/ranking",
@@ -314,6 +322,30 @@ const workerRoute = createRoute({
   ),
 });
 
+/** ワーカー作成ページ（/admin/workers/new）。未ログイン・非 admin は / へリダイレクト（#888）。 */
+const adminWorkerNewRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/admin/workers/new",
+  component: () => (
+    <Suspense fallback={null}>
+      <LazyAddWorkerScene />
+    </Suspense>
+  ),
+  beforeLoad: requireAdminRoute,
+});
+
+/** ワーカー編集ページ（/admin/workers/:workerId/edit）。未ログイン・非 admin は / へリダイレクト（#888）。 */
+const adminWorkerEditRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/admin/workers/$workerId/edit",
+  component: () => (
+    <Suspense fallback={null}>
+      <LazyEditWorkerScene />
+    </Suspense>
+  ),
+  beforeLoad: requireAdminRoute,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   popularRoute,
@@ -323,6 +355,8 @@ const routeTree = rootRoute.addChildren([
   loginRoute,
   lpRoute,
   adminRoute,
+  adminWorkerNewRoute,
+  adminWorkerEditRoute,
   accountRoute,
   termsRoute,
   privacyRoute,

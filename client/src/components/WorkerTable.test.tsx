@@ -7,6 +7,11 @@ import { DEFAULT_WORKERS } from "@hatchery/common";
 
 import { WorkerTable } from "./WorkerTable";
 
+const mockNavigate = vi.fn();
+vi.mock("@tanstack/react-router", () => ({
+  useNavigate: () => mockNavigate,
+}));
+
 const renderWithClient = (ui: React.ReactElement) => {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -89,13 +94,14 @@ describe("WorkerTable", () => {
       expect(screen.getAllByRole("button", { name: /編集/ }).length).toBeGreaterThan(0);
     });
 
-    it("編集ボタンをクリックすると onEdit コールバックが呼ばれる", async () => {
-      const onEdit = vi.fn();
-      renderWithClient(<WorkerTable isEditable onEdit={onEdit} />);
+    it("編集ボタンをクリックすると /admin/workers/$workerId/edit へ遷移する（#888）", async () => {
+      renderWithClient(<WorkerTable isEditable />);
       const editButtons = screen.getAllByRole("button", { name: /編集/ });
       await userEvent.click(editButtons[0]);
-      expect(onEdit).toHaveBeenCalledTimes(1);
-      expect(onEdit).toHaveBeenCalledWith(DEFAULT_WORKERS[0]);
+      expect(mockNavigate).toHaveBeenCalledWith({
+        to: "/admin/workers/$workerId/edit",
+        params: { workerId: DEFAULT_WORKERS[0].id },
+      });
     });
   });
 

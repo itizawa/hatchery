@@ -1,9 +1,9 @@
 import { Box, Button, TablePagination } from "./uiParts";
 
 import { useState, type ReactElement } from "react";
+import { useNavigate } from "@tanstack/react-router";
 
 import { ADMIN_WORKERS_PAGE_SIZE, useAdminWorkers } from "../api/admin.js";
-import { AddWorkerDialog } from "./AddWorkerDialog.js";
 import { QueryBoundary } from "./QueryBoundary.js";
 import { WorkerTable } from "./WorkerTable.js";
 
@@ -28,18 +28,23 @@ const AdminWorkerTableSkeleton = (): ReactElement => (
 );
 
 /**
- * 管理画面のワーカー一覧本体（#217 / #329 / #490 / #545）。
+ * 管理画面のワーカー一覧本体（#217 / #329 / #490 / #545 / #888）。
  * サーバーサイドページネーション（10件/ページ）で Worker を取得し WorkerTable に渡す。
  * ローディング・エラーは外側の QueryBoundary に委譲する。
+ * 「ワーカーを追加」ボタンは /admin/workers/new へ遷移する（#888）。
  */
 const AdminWorkerTableInner = (): ReactElement => {
   const [page, setPage] = useState(0); // MUI TablePagination は 0-indexed
   const { data } = useAdminWorkers(page + 1); // API は 1-indexed
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const navigate = useNavigate();
+
+  const handleAddWorker = (): void => {
+    void navigate({ to: "/admin/workers/new" });
+  };
 
   return (
     <Box>
-      <AddWorkerButton onClick={() => setDialogOpen(true)} />
+      <AddWorkerButton onClick={handleAddWorker} />
       <WorkerTable workers={data.workers} isEditable />
       <TablePagination
         component="div"
@@ -50,7 +55,6 @@ const AdminWorkerTableInner = (): ReactElement => {
         // eslint-disable-next-line max-params
         onPageChange={(_, newPage) => setPage(newPage)}
       />
-      <AddWorkerDialog open={dialogOpen} onClose={() => setDialogOpen(false)} />
     </Box>
   );
 };

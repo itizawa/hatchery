@@ -223,7 +223,7 @@ const postRoute = createRoute({
 /**
  * 旧ログインルート（/login）。#454 でログインはモーダル化したため、
  * このルートは廃止せず公開ホーム（/?login=1）へリダイレクトし、ホーム上でログインモーダルを開く。
- * 既存のブックマーク・外部リンク・OAuth 失敗時フォールバックの dead link を防ぐ後方互换。
+ * 既存のブックマーク・外部リンク・OAuth 失敗時フォールバックの dead link を防ぐ後方互換。
  */
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -366,10 +366,10 @@ const adminCommunityNewRoute = createRoute({
   beforeLoad: requireAdminRoute,
 });
 
-/** コミュニティ編集ページ（/admin/communities/:id/edit）。未ログイン・非 admin は / へリダイレクト（#889）。 */
+/** コミュニティ編集ページ（/admin/communities/:communityId/edit）。未ログイン・非 admin は / へリダイレクト（#889）。 */
 const adminCommunityEditRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/admin/communities/$id/edit",
+  path: "/admin/communities/$communityId/edit",
   component: () => (
     <Suspense fallback={null}>
       <LazyEditCommunityScene />

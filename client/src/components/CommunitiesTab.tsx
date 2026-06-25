@@ -1,10 +1,11 @@
 /**
  * 管理画面コミュニティタブ（#310 / #833 / #889）。
- * admin が community の一覧表示を行う。
- * #889: 作成・編集を専用ページ（/admin/communities/new・/admin/communities/:id/edit）へ移行。
- * 「コミュニティを追加」ボタン→ /admin/communities/new ナビゲーション、
- * 「編集」ボタン→ /admin/communities/:id/edit ナビゲーション。
+ * admin が community の作成・編集・一覧表示を行う。
+ * #889: 作成・編集をダイアログからページ遷移に移行した。
  */
+import { useNavigate } from "@tanstack/react-router";
+import { type ReactElement } from "react";
+
 import {
   Box,
   Button,
@@ -17,18 +18,18 @@ import {
   Typography,
 } from "./uiParts";
 
-import { type ReactElement } from "react";
-import { Link } from "@tanstack/react-router";
-
 import type { AdminCommunity } from "@hatchery/common";
 import { useCommunities } from "../api/communities.js";
 import { QueryBoundary } from "./QueryBoundary.js";
 
+/** コミュニティ一覧テーブル行（編集ページへ遷移するボタンを持つ）。 */
 interface CommunityRowProps {
   community: AdminCommunity;
 }
 
 function CommunityRow({ community }: CommunityRowProps): ReactElement {
+  const navigate = useNavigate();
+
   return (
     <TableRow>
       <TableCell sx={{ fontFamily: "monospace" }}>{community.slug}</TableCell>
@@ -40,9 +41,12 @@ function CommunityRow({ community }: CommunityRowProps): ReactElement {
         <Button
           size="small"
           variant="outlined"
-          component={Link}
-          to="/admin/communities/$id/edit"
-          params={{ id: community.id }}
+          onClick={() =>
+            void navigate({
+              to: "/admin/communities/$communityId/edit",
+              params: { communityId: community.id },
+            })
+          }
         >
           編集
         </Button>
@@ -51,6 +55,7 @@ function CommunityRow({ community }: CommunityRowProps): ReactElement {
   );
 }
 
+/** コミュニティ一覧テーブル本体（#310）。useCommunities は Suspense 化済み（#462）。 */
 function CommunityListPanel(): ReactElement {
   const { data: communities } = useCommunities();
 
@@ -81,6 +86,7 @@ function CommunityListPanel(): ReactElement {
   );
 }
 
+/** コミュニティ一覧のローディングスケルトン（Suspense fallback）。 */
 function CommunityListSkeleton(): ReactElement {
   return (
     <Box>
@@ -100,17 +106,19 @@ function CommunityListSkeleton(): ReactElement {
 
 /**
  * 管理画面コミュニティタブ（#310 / #833 / #889）。
- * 「コミュニティを追加」ボタンは /admin/communities/new へのリンク。
+ * 「コミュニティを追加」ボタンで作成ページへ遷移し、一覧は Suspense 化（#462）して
+ * 局所 QueryBoundary（fallback=スケルトン）で包む。
  */
 export function CommunitiesTab(): ReactElement {
+  const navigate = useNavigate();
+
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
       <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
         <Button
           variant="contained"
           size="small"
-          component={Link}
-          to="/admin/communities/new"
+          onClick={() => void navigate({ to: "/admin/communities/new" })}
         >
           コミュニティを追加
         </Button>

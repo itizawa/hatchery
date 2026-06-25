@@ -29,7 +29,7 @@ export interface SubscriptionRepository {
   /** コミュニティ別購読者数（communityId → count）を返す（#761）。 */
   subscriberCountPerCommunity(): Promise<Map<string, number>>;
 
-  /** 購読の lastViewedAt を更新する（#933）。購読が存在しない場合は何もしない。 */
+  /** lastViewedAt を更新する。未購読の場合は no-op（#933）。 */
   updateLastViewedAt({
     userId,
     communityId,
@@ -40,7 +40,7 @@ export interface SubscriptionRepository {
     viewedAt: Date;
   }): Promise<void>;
 
-  /** ユーザーの購読コミュニティ一覧と未読数を返す（#933）。 */
+  /** 購読コミュニティ別の未読数を返す（#933）。 */
   listWithUnreadCounts(userId: string): Promise<SubscriptionWithUnreadCount[]>;
 }
 
@@ -103,14 +103,13 @@ export function createInMemorySubscriptionRepository(): SubscriptionRepository {
     },
 
     listWithUnreadCounts(userId: string): Promise<SubscriptionWithUnreadCount[]> {
-      const userSubs = records.filter((r) => r.userId === userId);
-      return Promise.resolve(
-        userSubs.map((r) => ({
-          communityId: r.communityId,
-          communitySlug: r.communityId,
-          unreadCount: 0,
-        })),
-      );
+      const userRecords = records.filter((r) => r.userId === userId);
+      const result = userRecords.map((r) => ({
+        communityId: r.communityId,
+        communitySlug: "",
+        unreadCount: 0,
+      }));
+      return Promise.resolve(result);
     },
   };
 }

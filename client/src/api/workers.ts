@@ -3,9 +3,14 @@ import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-q
 
 import { clientEnv } from "../config/env.js";
 import { openApiClient, unwrap } from "./client.js";
+import type { Post } from "./posts.js";
 
 export const BOT_WORKERS_QUERY_KEY = ["workers", "bots"] as const;
 export const WORKER_RANKING_QUERY_KEY = ["workers", "ranking"] as const;
+export const WORKER_DETAIL_QUERY_KEY = (workerId: string) =>
+  ["workers", "detail", workerId] as const;
+export const WORKER_POSTS_QUERY_KEY = (workerId: string) =>
+  ["workers", "posts", workerId] as const;
 
 /**
  * GET /api/workers を openapi-fetch 経由で取得するフック（ADR-0006）。
@@ -110,5 +115,38 @@ export function useWorkerRanking() {
       return (data.workers ?? []) as WorkerRankingItem[];
     },
     staleTime: 60_000,
+  });
+}
+
+/**
+ * GET /api/workers/:workerId — ワーカー詳細を取得するフック（#929）。
+ * useSuspenseQuery で Suspense 化し、ローディング/エラーは QueryBoundary に委譲する。
+ */
+export function useWorkerDetail({ workerId }: { workerId: string }) {
+  return useSuspenseQuery({
+    queryKey: WORKER_DETAIL_QUERY_KEY(workerId),
+    queryFn: async (): Promise<Worker> => {
+      const result = await openApiClient.GET("/api/workers/{workerId}", {
+        params: { path: { workerId } },
+      });
+      return unwrap({ result, label: `GET /api/workers/${workerId}` }) as Worker;
+    },
+  });
+}
+
+/**
+ * GET /api/workers/:workerId/posts — ワーカーの投稿一覧を取得するフック（#929）。
+ * useSuspenseQuery で Suspense 化し、ローディング/エラーは QueryBoundary に委譲する。
+ */
+export function useWorkerPosts({ workerId }: { workerId: string }) {
+  return useSuspenseQuery({
+    queryKey: WORKER_POSTS_QUERY_KEY(workerId),
+    queryFn: async (): Promise<Post[]> => {
+      const result = await openApiClient.GET("/api/workers/{workerId}/posts", {
+        params: { path: { workerId } },
+      });
+      const data = unwrap({ result, label: `GET /api/workers/${workerId}/posts` });
+      return (data.posts ?? []) as Post[];
+    },
   });
 }

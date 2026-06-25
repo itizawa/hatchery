@@ -114,152 +114,6 @@
         ],
         "description": "AI ワーカー（id / displayName / role / personality）"
       },
-      "UpdateWorker": {
-        "type": "object",
-        "properties": {
-          "displayName": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 50
-          },
-          "role": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 50
-          },
-          "personality": {
-            "type": "string",
-            "maxLength": 500
-          },
-          "verbosity": {
-            "type": "string",
-            "enum": [
-              "concise",
-              "standard",
-              "detailed"
-            ]
-          }
-        },
-        "description": "Worker 更新リクエストボディ（#38）"
-      },
-      "CreateWorker": {
-        "type": "object",
-        "properties": {
-          "displayName": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 50
-          },
-          "role": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 50
-          },
-          "personality": {
-            "type": "string",
-            "maxLength": 500
-          },
-          "verbosity": {
-            "type": "string",
-            "enum": [
-              "concise",
-              "standard",
-              "detailed"
-            ]
-          }
-        },
-        "required": [
-          "displayName"
-        ],
-        "description": "Worker 作成リクエストボディ（#217 / #337）"
-      },
-      "WorkerListQuery": {
-        "type": "object",
-        "properties": {
-          "page": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 9999
-          },
-          "limit": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 100
-          },
-          "includeDeleted": {
-            "type": [
-              "boolean",
-              "null"
-            ]
-          }
-        },
-        "description": "Worker 一覧取得のクエリパラメータ（ページネーション・#545）"
-      },
-      "WorkerRankingItem": {
-        "type": "object",
-        "properties": {
-          "worker_id": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 36
-          },
-          "display_name": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 50
-          },
-          "view_count": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "vote_net_score": {
-            "type": "integer"
-          }
-        },
-        "required": [
-          "worker_id",
-          "display_name",
-          "view_count",
-          "vote_net_score"
-        ],
-        "description": "ワーカーランキング項目（閲覧数・純 vote スコア・#665）"
-      },
-      "WorkerCommunityIds": {
-        "type": "object",
-        "properties": {
-          "communityIds": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 64
-            },
-            "maxItems": 100
-          }
-        },
-        "required": [
-          "communityIds"
-        ],
-        "description": "ワーカーの参加コミュニティ id 集合（#490）"
-      },
-      "SetWorkerCommunities": {
-        "type": "object",
-        "properties": {
-          "communityIds": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 64
-            },
-            "maxItems": 100
-          }
-        },
-        "required": [
-          "communityIds"
-        ],
-        "description": "ワーカーの参加コミュニティを置き換えるリクエストボディ（#490）"
-      },
       "UpdateProfile": {
         "type": "object",
         "properties": {
@@ -1019,6 +873,152 @@
         ],
         "description": "コミュニティへの購読状態（#421）"
       },
+      "UpdateWorker": {
+        "type": "object",
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "role": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "personality": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "verbosity": {
+            "type": "string",
+            "enum": [
+              "concise",
+              "standard",
+              "detailed"
+            ]
+          }
+        },
+        "description": "Worker 更新リクエストボディ（#38）"
+      },
+      "CreateWorker": {
+        "type": "object",
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "role": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "personality": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "verbosity": {
+            "type": "string",
+            "enum": [
+              "concise",
+              "standard",
+              "detailed"
+            ]
+          }
+        },
+        "required": [
+          "displayName"
+        ],
+        "description": "Worker 作成リクエストボディ（#217 / #337）"
+      },
+      "WorkerListQuery": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9999
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "includeDeleted": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        },
+        "description": "Worker 一覧取得のクエリパラメータ（ページネーション・#545）"
+      },
+      "WorkerRankingItem": {
+        "type": "object",
+        "properties": {
+          "worker_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 36
+          },
+          "display_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "view_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "vote_net_score": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "worker_id",
+          "display_name",
+          "view_count",
+          "vote_net_score"
+        ],
+        "description": "ワーカーランキング項目（閲覧数・純 vote スコア・#665）"
+      },
+      "WorkerCommunityIds": {
+        "type": "object",
+        "properties": {
+          "communityIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "maxItems": 100
+          }
+        },
+        "required": [
+          "communityIds"
+        ],
+        "description": "ワーカーの参加コミュニティ id 集合（#490）"
+      },
+      "SetWorkerCommunities": {
+        "type": "object",
+        "properties": {
+          "communityIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "maxItems": 100
+          }
+        },
+        "required": [
+          "communityIds"
+        ],
+        "description": "ワーカーの参加コミュニティを置き換えるリクエストボディ（#490）"
+      },
       "PostViewRequest": {
         "type": "object",
         "properties": {
@@ -1117,453 +1117,6 @@
     "parameters": {}
   },
   "paths": {
-    "/api/workers/ranking": {
-      "get": {
-        "summary": "ワーカーランキングを取得（認証不要・直近 7 日・#665 / ADR-0032）",
-        "responses": {
-          "200": {
-            "description": "ワーカーランキング一覧",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "workers": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/WorkerRankingItem"
-                      }
-                    }
-                  },
-                  "required": [
-                    "workers"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/workers": {
-      "get": {
-        "summary": "Worker 一覧を取得（認証不要・ページネーション対応・#240 / #545）",
-        "parameters": [
-          {
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 9999
-            },
-            "required": false,
-            "name": "page",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            },
-            "required": false,
-            "name": "limit",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": [
-                "boolean",
-                "null"
-              ]
-            },
-            "required": false,
-            "name": "includeDeleted",
-            "in": "query"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Worker 一覧（ページネーション形式・#545）",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "workers": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Worker"
-                      }
-                    },
-                    "total": {
-                      "type": "integer",
-                      "minimum": 0
-                    },
-                    "page": {
-                      "type": "integer",
-                      "minimum": 1
-                    },
-                    "limit": {
-                      "type": "integer",
-                      "minimum": 1,
-                      "maximum": 100
-                    }
-                  },
-                  "required": [
-                    "workers",
-                    "total",
-                    "page",
-                    "limit"
-                  ]
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "バリデーションエラー（page/limit が範囲外）",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/workers/{id}": {
-      "patch": {
-        "summary": "Worker を更新（認証必須・admin のみ）",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "name": "id",
-            "in": "path"
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateWorker"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "更新後の Worker",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Worker"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "バリデーションエラー（personality 501 文字超など）",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "未認証",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "admin 権限なし",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Worker が存在しない",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/admin/workers": {
-      "post": {
-        "summary": "AI ワーカーを新規作成（認証必須・admin のみ・#217 / #337）",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateWorker"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "作成された Worker",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Worker"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "バリデーションエラー（displayName 空など）",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "未認証",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "admin 権限なし",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/admin/workers/{id}": {
-      "delete": {
-        "summary": "Worker を論理削除（認証必須・admin のみ・#218 / #337）",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "name": "id",
-            "in": "path"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "論理削除された Worker の id と削除日時（ISO 文字列）",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string"
-                    },
-                    "deletedAt": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "deletedAt"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "未認証",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "admin 権限なし",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Worker が存在しない",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/admin/workers/{id}/communities": {
-      "get": {
-        "summary": "ワーカーの参加コミュニティ id 一覧を取得（認証必須・admin のみ・#490）",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "name": "id",
-            "in": "path"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "参加コミュニティ id 一覧",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WorkerCommunityIds"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "未認証",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "admin 権限なし",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Worker が存在しない",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "summary": "ワーカーの参加コミュニティを置き換える（認証必須・admin のみ・#490）",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "name": "id",
-            "in": "path"
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SetWorkerCommunities"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "置換後の参加コミュニティ id 一覧",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WorkerCommunityIds"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "バリデーションエラー / 存在しない communityId",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "未認証",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "admin 権限なし",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Worker が存在しない",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/auth/logout": {
       "post": {
         "summary": "ログアウト（セッション破棄）",
@@ -2557,6 +2110,538 @@
           },
           "404": {
             "description": "コミュニティが存在しない",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workers/ranking": {
+      "get": {
+        "summary": "ワーカーランキングを取得（認証不要・直近 7 日・#665 / ADR-0032）",
+        "responses": {
+          "200": {
+            "description": "ワーカーランキング一覧",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "workers": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/WorkerRankingItem"
+                      }
+                    }
+                  },
+                  "required": [
+                    "workers"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workers": {
+      "get": {
+        "summary": "Worker 一覧を取得（認証不要・ページネーション対応・#240 / #545）",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9999
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "required": false,
+            "name": "includeDeleted",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Worker 一覧（ページネーション形式・#545）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "workers": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Worker"
+                      }
+                    },
+                    "total": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "page": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "limit": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 100
+                    }
+                  },
+                  "required": [
+                    "workers",
+                    "total",
+                    "page",
+                    "limit"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "バリデーションエラー（page/limit が範囲外）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workers/{workerId}": {
+      "get": {
+        "summary": "ワーカー詳細を取得（認証不要・#929）",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "workerId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ワーカー詳細",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Worker"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Worker が存在しない",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workers/{workerId}/posts": {
+      "get": {
+        "summary": "ワーカーの最新投稿一覧を取得（認証不要・reveal フィルタ・#929）",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "workerId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ワーカーの投稿一覧（新着順・reveal フィルタ済み）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "posts": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Post"
+                      }
+                    }
+                  },
+                  "required": [
+                    "posts"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Worker が存在しない",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workers/{id}": {
+      "patch": {
+        "summary": "Worker を更新（認証必須・admin のみ）",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateWorker"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新後の Worker",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Worker"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "バリデーションエラー（personality 501 文字超など）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未認証",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "admin 権限なし",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Worker が存在しない",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/workers": {
+      "post": {
+        "summary": "AI ワーカーを新規作成（認証必須・admin のみ・#217 / #337）",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWorker"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "作成された Worker",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Worker"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "バリデーションエラー（displayName 空など）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未認証",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "admin 権限なし",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/workers/{id}": {
+      "delete": {
+        "summary": "Worker を論理削除（認証必須・admin のみ・#218 / #337）",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "論理削除された Worker の id と削除日時（ISO 文字列）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "deletedAt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "deletedAt"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未認証",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "admin 権限なし",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Worker が存在しない",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/workers/{id}/communities": {
+      "get": {
+        "summary": "ワーカーの参加コミュニティ id 一覧を取得（認証必須・admin のみ・#490）",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "参加コミュニティ id 一覧",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerCommunityIds"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未認証",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "admin 権限なし",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Worker が存在しない",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "ワーカーの参加コミュニティを置き換える（認証必須・admin のみ・#490）",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetWorkerCommunities"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "置換後の参加コミュニティ id 一覧",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerCommunityIds"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "バリデーションエラー / 存在しない communityId",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未認証",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "admin 権限なし",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Worker が存在しない",
             "content": {
               "application/json": {
                 "schema": {

@@ -189,7 +189,12 @@ export function createApp(deps: AppDeps): Express {
   app.use(
     "/api/workers",
     publicCache,
-    createWorkersRouter(deps.workerRepository, viewRepo, voteRepo),
+    createWorkersRouter({
+      workerRepository: deps.workerRepository,
+      viewRepository: viewRepo,
+      voteRepository: voteRepo,
+      postRepository: postRepo,
+    }),
   );
   app.use("/api/admin/batch-logs", noStoreCache, createBatchLogsRouter(deps.batchRunLogRepository));
   app.use(

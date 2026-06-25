@@ -72,6 +72,10 @@ const LazyWorkerRankingScene = lazyRouteComponent(
   () => import("./routes/WorkerRankingScene"),
   "WorkerRankingScene",
 );
+const LazyWorkerScene = lazyRouteComponent(
+  () => import("./routes/WorkerScene"),
+  "WorkerScene",
+);
 
 /**
  * 認証ガード（#454）: 未ログイン（fetchMe が null）またはネットワークエラーの場合、
@@ -299,6 +303,17 @@ const rankingRoute = createRoute({
   ),
 });
 
+/** ワーカー個別プロフィールページ（/workers/$workerId）。認証不要の公開ページ（#929）。 */
+const workerRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/workers/$workerId",
+  component: () => (
+    <QueryBoundary fallback={<MainContentSkeleton />}>
+      <LazyWorkerScene />
+    </QueryBoundary>
+  ),
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   popularRoute,
@@ -312,6 +327,7 @@ const routeTree = rootRoute.addChildren([
   termsRoute,
   privacyRoute,
   rankingRoute,
+  workerRoute,
 ]);
 
 export interface CreateAppRouterOptions {

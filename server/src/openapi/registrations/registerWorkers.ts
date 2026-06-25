@@ -20,7 +20,7 @@ const workerIdParam = z.string().openapi({ param: { name: "workerId", in: "path"
  */
 // eslint-disable-next-line max-params
 export function registerWorkers(registry: OpenAPIRegistry, ctx: RegistryContext): void {
-  const { errorJson, WorkerComponent } = ctx;
+  const { errorJson, WorkerComponent, CommunityComponent, CommentComponent } = ctx;
 
   const UpdateWorkerComponent = registry.register(
     "UpdateWorker",
@@ -98,6 +98,58 @@ export function registerWorkers(registry: OpenAPIRegistry, ctx: RegistryContext)
       200: {
         description: "ワーカー詳細",
         content: { "application/json": { schema: WorkerComponent } },
+      },
+      404: { description: "Worker が存在しない", ...errorJson },
+    },
+  });
+
+  // ワーカーの所属コミュニティ一覧（認証不要・#690）
+  registry.registerPath({
+    method: "get",
+    path: "/api/workers/{workerId}/communities",
+    summary: "ワーカーの所属コミュニティ一覧を取得（認証不要・#690）",
+    request: { params: z.object({ workerId: workerIdParam }) },
+    responses: {
+      200: {
+        description: "ワーカーの所属コミュニティ一覧",
+        content: {
+          "application/json": {
+            schema: z.object({ communities: z.array(CommunityComponent!) }),
+          },
+        },
+      },
+      404: { description: "Worker が存在しない", ...errorJson },
+    },
+  });
+
+  // ワーカーのコメント一覧（認証不要・カーソルページネーション・#690）
+  const WorkerCommentsQueryRegistration = registry.register(
+    "WorkerCommentsQuery",
+    z.object({
+      limit: z.coerce.number().int().min(1).max(100).optional().openapi({ param: { name: "limit", in: "query" } }),
+      cursor: z.string().optional().openapi({ param: { name: "cursor", in: "query" } }),
+    }).openapi({ description: "ワーカーコメント一覧のクエリパラメータ（#690）" }),
+  );
+
+  registry.registerPath({
+    method: "get",
+    path: "/api/workers/{workerId}/comments",
+    summary: "ワーカーのコメント一覧を取得（認証不要・カーソルページネーション・#690）",
+    request: {
+      params: z.object({ workerId: workerIdParam }),
+      query: WorkerCommentsQueryRegistration,
+    },
+    responses: {
+      200: {
+        description: "ワーカーのコメント一覧（createdAt 降順・カーソルページネーション）",
+        content: {
+          "application/json": {
+            schema: z.object({
+              comments: z.array(CommentComponent!),
+              nextCursor: z.string().nullable(),
+            }),
+          },
+        },
       },
       404: { description: "Worker が存在しない", ...errorJson },
     },

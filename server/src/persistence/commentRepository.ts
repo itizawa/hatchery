@@ -85,6 +85,15 @@ export interface CommentRepository {
    */
   // eslint-disable-next-line max-params
   updateParentCommentId?: (id: string, parentCommentId: string | null) => Promise<CommentRecord | null>;
+  /**
+   * ワーカー別にコメントを createdAt 降順で取得する（#690）。
+   * カーソルページネーション対応。cursor は直前のページ最終コメントの id。
+   * limit 省略時は 20 件。
+   */
+  listByWorker(opts: { workerId: string; limit?: number; cursor?: string }): Promise<{
+    comments: CommentRecord[];
+    nextCursor: string | null;
+  }>;
 }
 
 function cloneRecord(r: CommentRecord): CommentRecord {
@@ -188,6 +197,35 @@ export function createInMemoryCommentRepository(): CommentRepository {
       if (!record) return Promise.resolve(null);
       record.parentCommentId = parentCommentId;
       return Promise.resolve(cloneRecord(record));
+    },
+
+    listByWorker({
+      workerId,
+      limit = 20,
+      cursor,
+    }: {
+      workerId: string;
+      limit?: number;
+      cursor?: string;
+    }): Promise<{ comments: CommentRecord[]; nextCursor: string | null }> {
+      // createdAt 降順でソート（同一時刻は id の辞書順逆で安定化）。
+      const sorted = records
+        .filter((r) => r.author === workerId)
+        // eslint-disable-next-line max-params
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime() || b.id.localeCompare(a.id));
+
+      // cursor が指定された場合、cursor を持つ要素の次から返す。
+      let start = 0;
+      if (cursor) {
+        const idx = sorted.findIndex((r) => r.id === cursor);
+        start = idx === -1 ? 0 : idx + 1;
+      }
+
+      const page = sorted.slice(start, start + limit + 1);
+      const hasNext = page.length > limit;
+      const comments = page.slice(0, limit).map(cloneRecord);
+      const nextCursor = hasNext ? (comments[comments.length - 1]?.id ?? null) : null;
+      return Promise.resolve({ comments, nextCursor });
     },
   };
 }

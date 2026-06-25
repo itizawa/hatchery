@@ -195,6 +195,9 @@ export function createApp(deps: AppDeps): Express {
       viewRepository: viewRepo,
       voteRepository: voteRepo,
       postRepository: postRepo,
+      communityRepository: deps.communityRepository,
+      workerCommunityRepository: deps.workerCommunityRepository,
+      commentRepository: deps.commentRepository,
     }),
   );
   app.use("/api/admin/batch-logs", noStoreCache, createBatchLogsRouter(deps.batchRunLogRepository));

@@ -6,6 +6,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest
 import type React from "react";
 
 import { SubscribedCommunitiesSection } from "./SubscribedCommunitiesSection.js";
+import { generateCommunityIconUrl } from "@hatchery/common";
 
 // RouterLink（ListItemButton の component prop）を <a> に差し替えてルーターコンテキスト依存を排除する。
 vi.mock("@tanstack/react-router", async (importOriginal) => {
@@ -117,6 +118,36 @@ describe("SubscribedCommunitiesSection", () => {
     renderSectionNotLoggedIn();
     await new Promise((r) => setTimeout(r, 50));
     expect(screen.queryByText("購読中")).not.toBeInTheDocument();
+  });
+
+  it("iconUrl が null のとき Avatar src が bauhaus 自動生成 URL になる（#960）", async () => {
+    renderSection();
+    await screen.findByText("購読中");
+    // community-1（AI 開発, iconUrl: null）の Avatar を確認
+    const img = screen.getByRole("img", { name: "AI 開発" });
+    expect(img).toHaveAttribute("src", generateCommunityIconUrl({ id: "community-1" }));
+  });
+
+  it("iconUrl 設定済みのとき Avatar src がその URL を優先する（#960）", async () => {
+    const qc = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    });
+    qc.setQueryData(AUTH_ME_QUERY_KEY, mockUser);
+    qc.setQueryData(unreadCountsQueryKey(), mockUnreadCounts);
+    qc.setQueryData(["communities"], [
+      { id: "community-1", slug: "ai-dev", name: "AI 開発", iconUrl: "https://example.com/icon.png" },
+      ...mockCommunities.slice(1),
+    ]);
+    render(
+      <QueryClientProvider client={qc}>
+        <QueryBoundary fallback={null}>
+          <SubscribedCommunitiesSection />
+        </QueryBoundary>
+      </QueryClientProvider>,
+    );
+    await screen.findByText("購読中");
+    const img = screen.getByRole("img", { name: "AI 開発" });
+    expect(img).toHaveAttribute("src", "https://example.com/icon.png");
   });
 
   it("ログイン済み・購読 0 件（unread_counts が空）→ 「購読中」セクションが表示されない", async () => {

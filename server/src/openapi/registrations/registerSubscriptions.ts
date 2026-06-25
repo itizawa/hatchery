@@ -7,7 +7,7 @@ import { communitySlugParam } from "./shared.js";
 /** 購読 API（#933）の OpenAPI 登録。 */
 // eslint-disable-next-line max-params
 export function registerSubscriptions(registry: OpenAPIRegistry, ctx: RegistryContext): void {
-  const { errorJson, AuthUserComponent } = ctx;
+  const { errorJson } = ctx;
 
   registry.register(
     "UnreadCountItem",
@@ -54,6 +54,4 @@ export function registerSubscriptions(registry: OpenAPIRegistry, ctx: RegistryCo
     },
     tags: ["communities"],
   });
-
-  void AuthUserComponent;
 }

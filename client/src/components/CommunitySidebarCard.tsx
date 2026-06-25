@@ -6,6 +6,7 @@ import { resolveCommunityIconUrl } from "@hatchery/common";
 import { ShareButton } from "./ShareButton.js";
 import { SubscribeButton } from "./SubscribeButton.js";
 import type { Community } from "../api/communities.js";
+import { sidebarCardOuterBoxSx } from "./sidebarCardSx.js";
 
 /**
  * CommunitySidebarCard の props。loading=true のとき community 等は不要（#807）。
@@ -45,14 +46,6 @@ const formatCreatedAt = (dateStr: string | undefined): string | null => {
   return `${d.getUTCFullYear()}年${d.getUTCMonth() + 1}月${d.getUTCDate()}日 作成`;
 };
 
-/** 外枠 Box のスタイル（loading / 通常で共通）。 */
-const outerBoxSx = {
-  border: 1,
-  borderColor: "divider",
-  borderRadius: 1,
-  p: 2,
-} as const;
-
 /**
  * コミュニティ詳細サイドバーカード（#370 / #390）。
  * 名前・説明・作成日・シェア/購読ボタンを表示する presentational コンポーネント。
@@ -62,7 +55,7 @@ const outerBoxSx = {
 export const CommunitySidebarCard = (props: CommunitySidebarCardProps): ReactElement => {
   if (props.loading) {
     return (
-      <Box sx={outerBoxSx}>
+      <Box sx={sidebarCardOuterBoxSx}>
         {/* Avatar + コミュニティ名 */}
         <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", mb: 0.5 }}>
           <Skeleton variant="circular" width={40} height={40} />
@@ -93,7 +86,7 @@ export const CommunitySidebarCard = (props: CommunitySidebarCardProps): ReactEle
 
   const createdAtLabel = formatCreatedAt(community.created_at);
   return (
-    <Box sx={outerBoxSx}>
+    <Box sx={sidebarCardOuterBoxSx}>
       <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", mb: 0.5 }}>
         <Avatar
           src={resolveCommunityIconUrl({ id: community.id, iconUrl: community.iconUrl })}

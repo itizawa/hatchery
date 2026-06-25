@@ -1,4 +1,4 @@
-import { Box, Typography } from "../components/uiParts";
+import { Box, Button, Typography } from "../components/uiParts";
 import type { HomeFeedSort } from "@hatchery/common";
 import { Link as RouterLink, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, type ReactElement } from "react";
@@ -176,10 +176,15 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
                 読み込み中...
               </Typography>
             }
-            errorFallback={() => (
-              <Typography variant="body2" color="text.secondary">
-                読み込みに失敗しました
-              </Typography>
+            errorFallback={({ reset }) => (
+              <Box>
+                <Typography variant="body2" color="text.secondary">
+                  読み込みに失敗しました
+                </Typography>
+                <Button size="small" onClick={reset} sx={{ mt: 0.5 }}>
+                  再試行
+                </Button>
+              </Box>
             )}
           >
             <RecentPostsSidebarPanel communityById={communityById} />

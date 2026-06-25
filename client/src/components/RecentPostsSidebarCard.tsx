@@ -4,6 +4,7 @@ import type { ReactElement } from "react";
 
 import type { Post } from "../api/posts.js";
 import { PostedTime } from "./PostedTime.js";
+import { sidebarCardOuterBoxSx } from "./sidebarCardSx.js";
 
 export interface PostCardCommunityInfo {
   slug: string;
@@ -15,13 +16,6 @@ interface RecentPostsSidebarCardProps {
   communityById: Map<string, PostCardCommunityInfo>;
 }
 
-const outerBoxSx = {
-  border: 1,
-  borderColor: "divider",
-  borderRadius: 1,
-  p: 2,
-} as const;
-
 /**
  * ホームフィード右サイドバー用の横断新着ポスト一覧カード（#928）。
  * 最新 10 件の投稿をコンパクトリスト（タイトル・本文冒頭・コミュニティ名・投稿時刻）で表示する。
@@ -32,7 +26,7 @@ export const RecentPostsSidebarCard = ({
   communityById,
 }: RecentPostsSidebarCardProps): ReactElement => {
   return (
-    <Box sx={outerBoxSx}>
+    <Box sx={sidebarCardOuterBoxSx}>
       <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: "bold" }}>
         新着ポスト
       </Typography>
@@ -111,7 +105,7 @@ export const RecentPostsSidebarCard = ({
                       ·
                     </Typography>
                   )}
-                  <PostedTime createdAt={post.created_at} />
+                  <PostedTime createdAt={post.created_at} variant="caption" />
                 </Box>
               </Box>
             );

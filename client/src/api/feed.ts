@@ -46,13 +46,15 @@ export async function fetchHomeFeedPage({
   cursor,
   sort = "latest",
   sessionId,
+  limit = 20,
 }: {
   cursor?: string;
   sort?: HomeFeedSort;
   sessionId?: string;
+  limit?: number;
 } = {}): Promise<{ posts: Post[]; nextCursor: string | null }> {
   const query: { cursor?: string; limit: number; sort?: HomeFeedSort; sessionId?: string } = {
-    limit: 20,
+    limit,
   };
   if (cursor) query.cursor = cursor;
   if (sort === "popular") query.sort = sort;
@@ -92,9 +94,9 @@ export const recentPostsSidebarQueryKey = () => ["recent-posts-sidebar"] as cons
 export function useRecentPostsSidebar() {
   return useSuspenseQuery({
     queryKey: recentPostsSidebarQueryKey(),
-    queryFn: () => fetchHomeFeedPage({ sort: "latest" }),
-    staleTime: 60_000,
-    select: (data) => data.posts.slice(0, 10),
+    queryFn: () => fetchHomeFeedPage({ sort: "latest", limit: 10 }),
+    staleTime: 30_000,
+    select: (data) => data.posts,
   });
 }
 

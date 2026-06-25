@@ -31,6 +31,7 @@ export function AddCommunityScene(): ReactElement {
     } as CreateCommunityInput,
     onSubmit: async ({ value }) => {
       setSlugConflictError(null);
+      createMutation.reset();
       try {
         const created = await createMutation.mutateAsync(value);
         await navigate({
@@ -42,7 +43,6 @@ export function AddCommunityScene(): ReactElement {
         const isSlugConflict =
           msg.includes("CommunitySlugAlreadyExists") || msg.includes("409");
         if (isSlugConflict) {
-          createMutation.reset();
           setSlugConflictError("この slug はすでに使用されています");
         }
       }
@@ -63,9 +63,9 @@ export function AddCommunityScene(): ReactElement {
       </Typography>
       <Box
         component="form"
-        onSubmit={(e) => {
+        onSubmit={async (e) => {
           e.preventDefault();
-          void form.handleSubmit();
+          await form.handleSubmit();
         }}
         sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 2 }}
       >

@@ -1,6 +1,6 @@
 import { useForm } from "@tanstack/react-form";
 import { Link, useParams } from "@tanstack/react-router";
-import type { ReactElement } from "react";
+import { useState, type ReactElement } from "react";
 
 import type { AdminCommunity, UpdateCommunityInput } from "@hatchery/common";
 import { useCommunities, useUpdateCommunity } from "../api/communities.js";
@@ -12,6 +12,7 @@ import { Alert, Box, Button, Snackbar, Typography } from "../components/uiParts/
 function EditCommunityForm({ community }: { community: AdminCommunity }): ReactElement {
   const updateMutation = useUpdateCommunity();
   const isPending = updateMutation.isPending;
+  const [savedSnackbarOpen, setSavedSnackbarOpen] = useState(false);
 
   const form = useForm({
     defaultValues: {
@@ -22,6 +23,7 @@ function EditCommunityForm({ community }: { community: AdminCommunity }): ReactE
     onSubmit: async ({ value }) => {
       try {
         await updateMutation.mutateAsync({ id: community.id, input: value });
+        setSavedSnackbarOpen(true);
       } catch {
         // エラー表示は updateMutation の状態に委ねる
       }
@@ -67,6 +69,15 @@ function EditCommunityForm({ community }: { community: AdminCommunity }): ReactE
           </Button>
         </Box>
       </Box>
+      <Snackbar
+        open={savedSnackbarOpen}
+        autoHideDuration={3000}
+        onClose={() => setSavedSnackbarOpen(false)}
+      >
+        <Alert severity="success" onClose={() => setSavedSnackbarOpen(false)}>
+          コミュニティを保存しました
+        </Alert>
+      </Snackbar>
       <Snackbar
         open={updateMutation.isError}
         autoHideDuration={6000}

@@ -23,20 +23,6 @@ export const openApiClient = createClient<paths>({
   fetch: (...args) => globalThis.fetch(...args),
 });
 
-// 開発環境のみ: VITE_API_DELAY_MS を設定するとすべての API リクエストに遅延が入る（楽観更新確認用）。
-// 例: client/.env.development.local に `VITE_API_DELAY_MS=2000` を追記。
-if (import.meta.env?.DEV) {
-  const delayMs = Number(import.meta.env.VITE_API_DELAY_MS ?? 0);
-  if (delayMs > 0) {
-    openApiClient.use({
-      async onRequest({ request }) {
-        await new Promise<void>((resolve) => setTimeout(resolve, delayMs));
-        return request;
-      },
-    });
-  }
-}
-
 // ─── レスポンス検証ヘルパー（#532）──────────────────────────────────────────────
 // 各 fetcher が反復していた `if (error || !response.ok || !data) throw new Error(...)` を集約する。
 // throw する際はサーバのエラーボディ（`{ error: string }`）があれば buildApiErrorMessage で

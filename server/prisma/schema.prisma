@@ -61,7 +61,7 @@ model Worker {
 
 /// ワーカーの community 参加（#489）。worker ↔ community の多対多中間テーブル。
 /// 定時バッチはこの紐づきから community ごとの登場ワーカーを DB 取得して
-/// 会話生成・author 検証に使う（DEFAULT_WORKERS への直接依存を外すデータ基盤）。
+/// 会話生成・アーサー検証に使う（DEFAULT_WORKERS への直接依存を外すデータ基盤）。
 model WorkerCommunity {
   workerId    String
   worker      Worker    @relation(fields: [workerId], references: [id], onDelete: Cascade)
@@ -115,7 +115,7 @@ model Community {
   slug          String         @unique
   name          String
   description   String
-  /// このコミュニティのあらすじ（記憶③）。定時バッチで更新される。省略可。
+  /// このコミュニティのあらすじ（記憶④）。定時バッチで更新される。省略可。
   synopsis      String?
   /// 最後に生成バッチが走った定時キー。省略可（未生成の場合 null）。
   lastSlotKey   String?
@@ -201,15 +201,15 @@ model Comment {
 
 /// コミュニティへの購読。ADR-0019 / ADR-0020。
 /// ホームフィードの構成に使う（認証ユーザーの購読 community の投稿を集約）。
-/// #933: lastViewedAt を追加して未読バッジ・New ラベルの API 基盤とする。
+/// #933: lastViewedAt を追加し未読数 API の基盤とする。
 model Subscription {
-  userId       String
-  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  communityId  String
-  community    Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
-  createdAt    DateTime  @default(now())
-  /// 最後にこのコミュニティを閲覧した日時（#933）。null = 未訪問。
-  lastViewedAt DateTime?
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  communityId   String
+  community     Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  createdAt     DateTime  @default(now())
+  /// 最後にコミュニティを訪問した時刻（#933）。null=未訪問。
+  lastViewedAt  DateTime?
 
   @@id([userId, communityId])
   @@index([userId])
@@ -239,10 +239,10 @@ enum VoteDirection {
 ///（Prisma スキーマでは宣言不可）。二重投票防止は (sessionId, postId) / (sessionId, commentId)
 /// のユニーク制約で担保する（PostgreSQL は NULL を一意制約上区別するため両立する）。
 /// #777: userId を nullable に変更（ゲスト対応）、sessionId を dedup キーとして追加。
-/// ゲストは guestId（localStorage 永続化 UUID）、ログイン済みは userId を sessionId として送る。
+/// ゲストは guestId（localStorage 永続化 UUID）、ログイン済は userId を sessionId として送る。
 model Vote {
   id        String        @id @default(uuid(7))
-  /// dedup キー（#777: ゲストは localStorage guestId、ログイン済みは userId）。
+  /// dedup キー（#777: ゲストは localStorage guestId、ログイン済は userId）。
   sessionId String
   /// 認証済みユーザーの id（ゲストは null）。
   userId    String?

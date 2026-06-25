@@ -1,4 +1,5 @@
 export { default as Alert } from "@mui/material/Alert";
+export { default as Badge } from "@mui/material/Badge";
 export { default as SvgIcon } from "@mui/material/SvgIcon";
 export { default as Fab } from "@mui/material/Fab";
 export { default as Fade } from "@mui/material/Fade";

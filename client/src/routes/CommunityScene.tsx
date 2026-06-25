@@ -1,6 +1,6 @@
 import { Box, Stack, Typography } from "../components/uiParts";
 import { Link as RouterLink, useNavigate, useParams } from "@tanstack/react-router";
-import type { ReactElement } from "react";
+import { useEffect, type ReactElement } from "react";
 
 import {
   useCommunityFeed,
@@ -11,6 +11,7 @@ import {
   useRecentWorkers,
 } from "../api/communities.js";
 import { useAuth } from "../api/auth.js";
+import { useMarkCommunityViewed } from "../api/subscriptions.js";
 import { CommunityHeader } from "../components/CommunityHeader.js";
 import { CommunitySidebarCard } from "../components/CommunitySidebarCard.js";
 import { PostCard } from "../components/PostCard.js";
@@ -59,6 +60,11 @@ const CommunityContent = ({
   const { mutate: subscribe, isPending: isSubscribing } = useSubscribe(communitySlug);
   const { mutate: unsubscribe, isPending: isUnsubscribing } = useUnsubscribe(communitySlug);
   const { mutate: votePost, isPending: isVotingPost, variables: votingPostVars } = useVotePost(communitySlug);
+  const { mutate: markViewed } = useMarkCommunityViewed(communitySlug);
+
+  useEffect(() => {
+    markViewed();
+  }, [communitySlug, markViewed]);
 
   const isSubscriptionPending = isSubscribing || isUnsubscribing;
 

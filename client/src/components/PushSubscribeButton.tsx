@@ -81,8 +81,10 @@ export function PushSubscribeButton(): ReactElement | null {
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.getSubscription();
       if (sub) {
-        await unsubscribePush({ endpoint: sub.endpoint });
+        // ブラウザ側を先に解除してから サーバ記録を削除する。
+        // 逆順にすると sub.unsubscribe() 失敗時にサーバ記録だけ消えて永続的な不整合が起きる。
         await sub.unsubscribe();
+        await unsubscribePush({ endpoint: sub.endpoint });
       }
       setState("unsubscribed");
     } catch (err) {

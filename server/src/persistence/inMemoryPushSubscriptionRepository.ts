@@ -27,6 +27,10 @@ export function createInMemoryPushSubscriptionRepository(): PushSubscriptionRepo
       const found = [...store.values()].find((r) => r.endpoint === endpoint);
       if (found) store.delete(found.id);
     },
+    async deleteByEndpointAndUserId({ endpoint, userId }: { endpoint: string; userId: string }) {
+      const found = [...store.values()].find((r) => r.endpoint === endpoint && r.userId === userId);
+      if (found) store.delete(found.id);
+    },
     async deleteByUserId(userId) {
       for (const [id, r] of store.entries()) {
         if (r.userId === userId) store.delete(id);

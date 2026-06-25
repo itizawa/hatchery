@@ -26,13 +26,14 @@ export function createPushSubscriptionsRouter({
       .catch(next);
   });
 
-  // 購読削除（認証必須）
+  // 購読削除（認証必須・オーナー確認付き）
   // eslint-disable-next-line max-params
   router.delete("/", requireAuth, validateBody(UnsubscribePushBodySchema), (req, res, next) => {
+    const userId = getAuthUser(req).id;
     const { endpoint } = req.body as { endpoint: string };
 
     pushSubscriptionRepository
-      .delete(endpoint)
+      .deleteByEndpointAndUserId({ endpoint, userId })
       .then(() => res.status(204).send())
       .catch(next);
   });

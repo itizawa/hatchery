@@ -34,6 +34,10 @@ export function createPrismaPushSubscriptionRepository(prisma: PrismaClient): Pu
       }
     },
 
+    async deleteByEndpointAndUserId({ endpoint, userId }: { endpoint: string; userId: string }): Promise<void> {
+      await prisma.pushSubscription.deleteMany({ where: { endpoint, userId } });
+    },
+
     async deleteByUserId(userId: string): Promise<void> {
       await prisma.pushSubscription.deleteMany({ where: { userId } });
     },

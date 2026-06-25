@@ -26,6 +26,8 @@ export interface PostBatchCliDeps {
  * runPostBatch を実行して完了ログを出し、成否によらず finally で disconnect する。
  */
 export async function runPostBatchCli(cliDeps: PostBatchCliDeps): Promise<RunPostBatchResult> {
+  // プッシュ通知の Promise を finally で await し DB 接続クローズ前に完了させる（#798）。
+  let pushPromise: Promise<void> | undefined;
   try {
     const result = await runPostBatch(cliDeps.batchDeps);
 
@@ -34,14 +36,14 @@ export async function runPostBatchCli(cliDeps: PostBatchCliDeps): Promise<RunPos
     });
 
     if (cliDeps.pushNotificationService && result.posts.length > 0) {
-      // fire-and-forget: プッシュ通知の失敗はバッチ結果に影響させない（#798）。
-      cliDeps.pushNotificationService
+      pushPromise = cliDeps.pushNotificationService
         .sendToAllSubscribers({ title: "新着投稿", body: "コミュニティに新しい投稿があります", url: "/" })
         .catch((err: unknown) => logBatchError("push_notification.batch_send_failed", err));
     }
 
     return result;
   } finally {
+    await pushPromise;
     await cliDeps.disconnect();
   }
 }

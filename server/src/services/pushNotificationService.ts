@@ -43,6 +43,9 @@ export function createPushNotificationService({
             if (status === 410 || status === 404) {
               // 失効した購読を削除する。
               await pushSubscriptionRepo.delete(sub.endpoint);
+            } else if (status === 401 || status === 403) {
+              // VAPID 認証エラー: キー設定ミスの可能性が高いため専用キーで記録する。
+              logBatchError("push_notification.vapid_auth_failed", err, { endpoint: sub.endpoint });
             } else {
               logBatchError("push_notification.send_failed", err, { endpoint: sub.endpoint });
             }

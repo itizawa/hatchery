@@ -3,9 +3,12 @@
  * - POST   /api/push-subscriptions … 購読登録（upsert）
  * - DELETE /api/push-subscriptions … 購読削除
  *
- * 注: openapi.gen.ts はビルド前に再生成されるため、
- * ここでは fetch を直接使い型安全な openApiClient の利用は生成後のビルドに委ねる。
+ * openapi-fetch の型は openapi.gen.ts に依存するが同ファイルはビルド前生成のため
+ * 直接 fetch で呼ぶ。クロスオリジン配信（VITE_API_BASE_URL）のために apiBaseUrl で
+ * プレフィックスを付ける（#798）。
  */
+
+import { apiBaseUrl } from "./client.js";
 
 /** POST /api/push-subscriptions — Web Push 購読を登録する（upsert）。 */
 export async function subscribePush({
@@ -17,7 +20,7 @@ export async function subscribePush({
   p256dh: string;
   auth: string;
 }): Promise<void> {
-  const res = await fetch("/api/push-subscriptions", {
+  const res = await fetch(`${apiBaseUrl}/api/push-subscriptions`, {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
@@ -31,7 +34,7 @@ export async function subscribePush({
 
 /** DELETE /api/push-subscriptions — Web Push 購読を削除する。 */
 export async function unsubscribePush({ endpoint }: { endpoint: string }): Promise<void> {
-  const res = await fetch("/api/push-subscriptions", {
+  const res = await fetch(`${apiBaseUrl}/api/push-subscriptions`, {
     method: "DELETE",
     credentials: "include",
     headers: { "Content-Type": "application/json" },

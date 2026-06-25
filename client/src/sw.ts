@@ -1,5 +1,5 @@
 /// <reference lib="webworker" />
-import { cleanupOutdatedCaches, precacheAndRoute } from "workbox-precaching";
+import { cleanupOutdatedCaches, matchPrecache, precacheAndRoute } from "workbox-precaching";
 import { NavigationRoute, registerRoute } from "workbox-routing";
 import { NetworkFirst } from "workbox-strategies";
 
@@ -20,10 +20,11 @@ registerRoute(
 );
 
 // SPA: それ以外のナビゲーションは index.html にフォールバック。
+// matchPrecache は Workbox 内部のバージョン付きキャッシュ名を解決するため
+// ハードコードした文字列は使わない。
 registerRoute(
   new NavigationRoute(async () => {
-    const cache = await caches.open("precache");
-    const cached = await cache.match("/index.html");
+    const cached = await matchPrecache("/index.html");
     return cached ?? Response.error();
   }),
 );

@@ -122,4 +122,32 @@ describe("DELETE /api/push-subscriptions", () => {
 
     expect(res.status).toBe(401);
   });
+
+  it("別ユーザーの endpoint を指定しても 204 を返すが購読は削除されない（オーナー確認）", async () => {
+    const pushSubscriptionRepository = createInMemoryPushSubscriptionRepository();
+    const deps = createTestDeps({ pushSubscriptionRepository });
+    const app = createApp(deps);
+
+    // 別ユーザーとして直接リポジトリに購読を挿入する。
+    await pushSubscriptionRepository.upsert({
+      userId: "other-user-id",
+      endpoint: "https://fcm.example.com/other",
+      p256dh: "key-other",
+      auth: "auth-other",
+    });
+
+    const loginRes = await request(app).post("/api/auth/dev-login");
+    const cookie = loginRes.headers["set-cookie"] as string[];
+
+    // 認証済み（自分とは別のユーザー ID の） endpoint を削除しようとする。
+    const res = await request(app)
+      .delete("/api/push-subscriptions")
+      .set("Cookie", cookie)
+      .send({ endpoint: "https://fcm.example.com/other" });
+
+    // レスポンスは 204（冪等）だが購読は残っている。
+    expect(res.status).toBe(204);
+    const all = await pushSubscriptionRepository.listAll();
+    expect(all).toHaveLength(1);
+  });
 });

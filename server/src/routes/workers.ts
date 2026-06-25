@@ -1,6 +1,7 @@
 import {
   UpdateWorkerSchema,
   WorkerListQuerySchema,
+  buildAuthorWorkerResolver,
   err,
   isErr,
   notFound,
@@ -15,7 +16,6 @@ import type { PostRepository } from "../persistence/postRepository.js";
 import type { ViewRepository } from "../persistence/viewRepository.js";
 import type { VoteRepository } from "../persistence/voteRepository.js";
 import type { WorkerRepository } from "../persistence/workerRepository.js";
-import { attachAuthorWorker } from "./authorWorker.js";
 import { toPostResponse } from "./postResponse.js";
 import { resultToResponse } from "../utils/resultToResponse.js";
 
@@ -78,7 +78,8 @@ export function createWorkersRouter({
       .catch(next);
   });
 
-  // ワーカー詳細（認証不要・#929）。/:workerId/posts の前に定義する（ルート優先順序）。
+  // ワーカー投稿一覧（認証不要・#929）。/:workerId より先に定義する（ルート優先順序:
+  // 先に登録しないと Express が "posts" を :workerId パラメータとして解釈して詳細エンドポイントに吸われる）。
   // eslint-disable-next-line max-params
   router.get("/:workerId/posts", (req, res, next) => {
     const { workerId } = req.params as { workerId: string };
@@ -93,8 +94,15 @@ export function createWorkersRouter({
         }
         return postRepository
           .listByAuthor({ authorId: workerId, limit: WORKER_POSTS_DEFAULT_LIMIT, now })
-          .then((posts) => attachAuthorWorker(posts, workerRepository))
-          .then((enriched) => {
+          .then((posts) => {
+            // 既に findById で取得済みのワーカーを使って author_worker を付与する。
+            // attachAuthorWorker(posts, workerRepository) は内部で listBotWorkers() を呼び
+            // 全ワーカーをフルスキャンするため、そのコストを避ける。
+            const resolve = buildAuthorWorkerResolver([worker]);
+            const enriched = posts.map((post) => {
+              const author_worker = resolve(post.author);
+              return author_worker ? { ...post, author_worker } : { ...post };
+            });
             res.status(200).json({ posts: enriched.map(toPostResponse) });
           });
       })

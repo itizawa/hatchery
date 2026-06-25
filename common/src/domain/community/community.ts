@@ -9,7 +9,7 @@ export const COMMUNITY_NAME_MAX_LENGTH = 50;
 /** Community の description の最大文字数（#91）。 */
 export const COMMUNITY_DESCRIPTION_MAX_LENGTH = 500;
 
-/** Community の synopsis の最大文字数（記憑④ / あらすじ）。 */
+/** Community の synopsis の最大文字数（記冶⑤ / あらすじ）。 */
 export const COMMUNITY_SYNOPSIS_MAX_LENGTH = 2000;
 
 /** Community の generationInstruction（非公開・生成プロンプト指示）の最大文字数（#488・#91）。 */
@@ -45,10 +45,10 @@ const communitySlugSchema = z
  * admin が CRUD できる第一級エンティティ。
  * - slug / name / description に .max() 必須（#91）
  * - slug は小文字英数字・ハイフンのみ（#310）
- * - synopsis は世界観記憶④（このコミュニティのあらすじ）。省略可能。
+ * - synopsis は世界観記憶⑤（このコミュニティのあらすじ）。省略可能。
  * - last_slot_key は最後に生成バッチが走った定時キー。省略可能（未生成の場合 null）。
  * - iconUrl / coverUrl は admin がアップロードした GCS 画像 URL（#457）。
- *   ともに任意セnullable（未設定時はプレースホルダ表示）。最大 500 文字（#91）。
+ *   ともに任意セ nullable（未設定時はプレースホルダ表示）。最大 500 文字（#91）。
  */
 /** 公開コミュニティスキーマ。`generationInstruction` は含まない（#488）。 */
 export const CommunitySchema = z.object({
@@ -120,3 +120,24 @@ export const UpdateCommunitySchema = z.object({
 });
 
 export type UpdateCommunityInput = z.infer<typeof UpdateCommunitySchema>;
+
+const BORING_AVATARS_COMMUNITY_BASE_URL = "https://source.boringavatars.com/bauhaus/40";
+
+/** コミュニティ id をシードにした Boring Avatars bauhaus スタイル自動生成アイコン URL を返す（#960）。 */
+export function generateCommunityIconUrl({ id }: { id: string }): string {
+  return `${BORING_AVATARS_COMMUNITY_BASE_URL}/${encodeURIComponent(id)}`;
+}
+
+/**
+ * iconUrl が設定されていればそれを返し、未設定なら bauhaus 自動生成 URL を返す（#960）。
+ * Avatar src の単一情報源として使う。
+ */
+export function resolveCommunityIconUrl({
+  id,
+  iconUrl,
+}: {
+  id: string;
+  iconUrl?: string | null;
+}): string {
+  return iconUrl ?? generateCommunityIconUrl({ id });
+}

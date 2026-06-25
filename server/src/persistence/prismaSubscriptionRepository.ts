@@ -79,18 +79,26 @@ export function createPrismaSubscriptionRepository(prisma: PrismaClient): Subscr
     },
 
     async listWithUnreadCounts(userId: string): Promise<SubscriptionWithUnreadCount[]> {
-      const subs = await prisma.subscription.findMany({
+      const now = new Date();
+      const subscriptions = await prisma.subscription.findMany({
         where: { userId },
         include: { community: { select: { slug: true } } },
       });
-      const results = await Promise.all(
-        subs.map(async (sub) => {
-          const unreadCount = await prisma.post.count({
-            where: {
-              communityId: sub.communityId,
-              ...(sub.lastViewedAt ? { createdAt: { gt: sub.lastViewedAt } } : {}),
-            },
-          });
+
+      const result = await Promise.all(
+        subscriptions.map(async (sub) => {
+          let unreadCount = 0;
+          if (sub.lastViewedAt !== null) {
+            unreadCount = await prisma.post.count({
+              where: {
+                communityId: sub.communityId,
+                createdAt: {
+                  gt: sub.lastViewedAt,
+                  lte: now,
+                },
+              },
+            });
+          }
           return {
             communityId: sub.communityId,
             communitySlug: sub.community.slug,
@@ -98,7 +106,8 @@ export function createPrismaSubscriptionRepository(prisma: PrismaClient): Subscr
           };
         }),
       );
-      return results;
+
+      return result;
     },
   };
 }

@@ -64,10 +64,10 @@ function buildRegistry(): OpenAPIRegistry {
   registerAdmin(registry, ctx);
   registerHealth(registry);
   registerCommunities(registry, ctx);
-  registerSubscriptions(registry, ctx);
   registerWorkers(registry, ctx);
   registerFeed(registry, ctx);
   registerPosts(registry, ctx);
+  registerSubscriptions(registry, ctx);
   registerOgp(registry);
 
   return registry;

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { CommunityHeader } from "./CommunityHeader";
 import type { Community } from "../api/communities";
+import { generateCommunityIconUrl } from "@hatchery/common";
 
 const baseCommunity: Community = {
   id: "comm-1",
@@ -60,5 +61,18 @@ describe("CommunityHeader（#457 Reddit 風ヘッダー）", () => {
     expect(screen.getByRole("heading", { name: "テクノロジー" })).toBeInTheDocument();
     // カバー画像 img は存在しない
     expect(screen.queryByTestId("community-cover-image")).not.toBeInTheDocument();
+  });
+
+  it("iconUrl 未設定のとき Avatar src が bauhaus 自動生成 URL になる（#960）", () => {
+    render(<CommunityHeader community={baseCommunity} />);
+    const img = screen.getByRole("img", { name: "テクノロジー" });
+    expect(img).toHaveAttribute("src", generateCommunityIconUrl({ id: baseCommunity.id }));
+  });
+
+  it("iconUrl 設定済みのとき Avatar src がその URL を優先する（#960）", () => {
+    const iconUrl = "https://example.com/icon.png";
+    render(<CommunityHeader community={{ ...baseCommunity, iconUrl }} />);
+    const img = screen.getByRole("img", { name: "テクノロジー" });
+    expect(img).toHaveAttribute("src", iconUrl);
   });
 });

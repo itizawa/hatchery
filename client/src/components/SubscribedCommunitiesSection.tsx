@@ -16,6 +16,8 @@ import type { ReactElement } from "react";
 import { useState } from "react";
 import { Link as RouterLink } from "@tanstack/react-router";
 
+import { resolveCommunityIconUrl } from "@hatchery/common";
+
 import { useAuth } from "../api/auth.js";
 import { usePublicCommunities } from "../api/communities.js";
 import { useUnreadCounts } from "../api/subscriptions.js";
@@ -75,7 +77,7 @@ const SubscribedCommunitiesBody = (): ReactElement | null => {
           {unread_counts.map((item) => {
             const community = communities.find((c) => c.id === item.community_id);
             const displayName = community?.name ?? item.community_slug;
-            const iconUrl = community?.iconUrl ?? undefined;
+            const resolvedIconUrl = resolveCommunityIconUrl({ id: item.community_id, iconUrl: community?.iconUrl });
             const hasUnread = item.unread_count > 0;
 
             return (
@@ -100,7 +102,7 @@ const SubscribedCommunitiesBody = (): ReactElement | null => {
                       data-testid={hasUnread ? `unread-badge-${item.community_id}` : undefined}
                     >
                       <Avatar
-                        src={iconUrl}
+                        src={resolvedIconUrl}
                         alt={displayName}
                         sx={{
                           width: SIDEBAR_ICON_SIZE,

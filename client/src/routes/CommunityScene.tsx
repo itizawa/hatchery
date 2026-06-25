@@ -128,6 +128,7 @@ const CommunityContent = ({
                               ? () => void navigate({ to: "/posts/$postId", params: { postId: post.id }, hash: "comments" })
                               : undefined
                           }
+                          onWorkerClick={() => {}}
                         />
                       </RouterLink>
                     </Box>

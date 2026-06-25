@@ -118,6 +118,7 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
                         ? () => void navigate({ to: "/posts/$postId", params: { postId: post.id }, hash: "comments" })
                         : undefined
                     }
+                    onWorkerClick={() => {}}
                   />
                 </RouterLink>
               </Box>

@@ -274,7 +274,6 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
       const rows = await prisma.post.findMany({
         where: {
           author: authorId,
-          // reveal フィルタ（#556 / #929）: now が渡された場合、createdAt > now の post を除外する。
           ...(now !== undefined ? { createdAt: { lte: now } } : {}),
         },
         orderBy: { createdAt: "desc" },

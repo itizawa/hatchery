@@ -6,7 +6,7 @@ import {
 } from "@hatchery/common";
 import { useForm } from "@tanstack/react-form";
 import { Link, useParams } from "@tanstack/react-router";
-import type { ReactElement } from "react";
+import { type ReactElement, useEffect } from "react";
 
 import { useUpdateWorker, useWorkerDetail } from "../api/workers.js";
 import { getApiErrorMessage } from "../api/errors.js";
@@ -48,7 +48,6 @@ function EditWorkerForm({ workerId }: { workerId: string }): ReactElement {
   const setCommunitiesMutation = useSetWorkerCommunities();
   const workerCommunitiesQuery = useWorkerCommunities(workerId);
 
-  const initialCommunityIds = workerCommunitiesQuery.data ?? [];
   const isInitializing = workerCommunitiesQuery.isLoading;
   const canEditCommunities = workerCommunitiesQuery.isSuccess;
   const isPending = updateMutation.isPending || setCommunitiesMutation.isPending;
@@ -66,14 +65,14 @@ function EditWorkerForm({ workerId }: { workerId: string }): ReactElement {
       role: worker.role ?? "",
       personality: worker.personality ?? "",
       verbosity: (worker.verbosity as WorkerVerbosity | undefined) ?? "standard",
-      communityIds: initialCommunityIds,
+      communityIds: [] as string[],
     },
     onSubmit: async ({ value }: { value: FormValues }) => {
       try {
         await updateMutation.mutateAsync({
           id: workerId,
           body: {
-            displayName: value.displayName || undefined,
+            displayName: value.displayName.trim() || undefined,
             role: value.role || undefined,
             personality: value.personality || undefined,
             verbosity: value.verbosity,
@@ -90,6 +89,14 @@ function EditWorkerForm({ workerId }: { workerId: string }): ReactElement {
       }
     },
   });
+
+  // useWorkerCommunities は通常の useQuery（Suspense 外）のため初回は undefined。
+  // コミュニティデータが解決したらフォームフィールドを同期する。
+  useEffect(() => {
+    if (workerCommunitiesQuery.data !== undefined) {
+      void form.setFieldValue("communityIds", workerCommunitiesQuery.data);
+    }
+  }, [workerCommunitiesQuery.data]);
 
   return (
     <>
@@ -111,7 +118,12 @@ function EditWorkerForm({ workerId }: { workerId: string }): ReactElement {
         }}
         sx={{ display: "flex", flexDirection: "column", gap: 2 }}
       >
-        <form.Field name="displayName">
+        <form.Field
+          name="displayName"
+          validators={{
+            onSubmit: ({ value }) => (!value.trim() ? "表示名は必須です" : undefined),
+          }}
+        >
           {(field) => (
             <TextField
               label="表示名"
@@ -119,6 +131,8 @@ function EditWorkerForm({ workerId }: { workerId: string }): ReactElement {
               onChange={(e) => field.handleChange(e.target.value)}
               onBlur={field.handleBlur}
               slotProps={{ htmlInput: { "aria-label": "表示名", maxLength: WORKER_DISPLAY_NAME_MAX_LENGTH } }}
+              error={field.state.meta.errors.length > 0}
+              helperText={field.state.meta.errors[0] ?? ""}
               required
               fullWidth
             />
@@ -193,9 +207,13 @@ function EditWorkerForm({ workerId }: { workerId: string }): ReactElement {
           </Alert>
         )}
         <Box sx={{ display: "flex", gap: 1, justifyContent: "flex-end" }}>
-          <Button type="submit" variant="contained" disabled={isPending}>
-            保存
-          </Button>
+          <form.Subscribe selector={(state) => state.values.displayName}>
+            {(displayName) => (
+              <Button type="submit" variant="contained" disabled={!displayName.trim() || isPending}>
+                保存
+              </Button>
+            )}
+          </form.Subscribe>
         </Box>
       </Box>
       <Snackbar open={isSaveError} autoHideDuration={6000} onClose={handleErrorClose}>

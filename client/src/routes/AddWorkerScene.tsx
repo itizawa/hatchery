@@ -1,14 +1,13 @@
-import { Box, Button, Typography } from "../components/uiParts";
-
 import { useForm } from "@tanstack/react-form";
 import { Link, useNavigate } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 
 import { WORKER_DISPLAY_NAME_MAX_LENGTH, WORKER_ROLE_MAX_LENGTH } from "@hatchery/common";
 import { useCreateAdminWorker } from "../api/admin.js";
+import { getApiErrorMessage } from "../api/errors.js";
 import { useSetWorkerCommunities } from "../api/workerCommunities.js";
 import { WorkerCommunitiesField } from "../components/WorkerCommunitiesField.js";
-import { TextField } from "../components/uiParts";
+import { Alert, Box, Button, Snackbar, TextField, Typography } from "../components/uiParts/index.js";
 
 /**
  * ワーカー作成ページ（/admin/workers/new）。#888
@@ -20,6 +19,13 @@ export function AddWorkerScene(): ReactElement {
   const createWorker = useCreateAdminWorker();
   const setCommunities = useSetWorkerCommunities();
 
+  const saveError = createWorker.error ?? setCommunities.error;
+  const isSaveError = createWorker.isError || setCommunities.isError;
+  const handleErrorClose = (): void => {
+    createWorker.reset();
+    setCommunities.reset();
+  };
+
   const form = useForm({
     defaultValues: {
       displayName: "",
@@ -27,15 +33,19 @@ export function AddWorkerScene(): ReactElement {
       communityIds: [] as string[],
     },
     onSubmit: async ({ value }) => {
-      const created = await createWorker.mutateAsync({
-        displayName: value.displayName.trim(),
-        role: value.role.trim() || undefined,
-      });
-      await setCommunities.mutateAsync({
-        workerId: created.id,
-        communityIds: value.communityIds,
-      });
-      await navigate({ to: "/admin/workers/$workerId/edit", params: { workerId: created.id } });
+      try {
+        const created = await createWorker.mutateAsync({
+          displayName: value.displayName.trim(),
+          role: value.role.trim() || undefined,
+        });
+        await setCommunities.mutateAsync({
+          workerId: created.id,
+          communityIds: value.communityIds,
+        });
+        await navigate({ to: "/admin/workers/$workerId/edit", params: { workerId: created.id } });
+      } catch {
+        // エラー表示は mutation の状態に委ねる
+      }
     },
   });
 
@@ -115,6 +125,11 @@ export function AddWorkerScene(): ReactElement {
           </form.Subscribe>
         </Box>
       </Box>
+      <Snackbar open={isSaveError} autoHideDuration={6000} onClose={handleErrorClose}>
+        <Alert severity="error" onClose={handleErrorClose}>
+          {getApiErrorMessage(saveError, "ワーカーの作成に失敗しました")}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

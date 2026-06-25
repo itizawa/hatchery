@@ -79,6 +79,26 @@ export function useCommunityFeed(slug: string) {
 }
 
 /**
+ * サイドバー用新着ポストのキャッシュキー。
+ * "feed" プレフィックスを避けてvote ミューテーションの cancelQueries / getQueriesData 対象外にする（#928）。
+ * homeFeedQueryKeyPrefix() = ["feed"] に合致すると onMutate が pages 構造を期待して TypeError を起こす。
+ */
+export const recentPostsSidebarQueryKey = () => ["recent-posts-sidebar"] as const;
+
+/**
+ * 右サイドバー用に最新 10 件のホームフィードを取得するフック（#928）。
+ * 無限スクロール不要のため useSuspenseQuery で単一ページ取得する。
+ */
+export function useRecentPostsSidebar() {
+  return useSuspenseQuery({
+    queryKey: recentPostsSidebarQueryKey(),
+    queryFn: () => fetchHomeFeedPage({ sort: "latest" }),
+    staleTime: 60_000,
+    select: (data) => data.posts.slice(0, 10),
+  });
+}
+
+/**
  * ホームフィードを TanStack Query（Suspense）の無限スクロールで取得するフック（#367 / 並び順 #435 / #462 / #831）。
  * sessionId を付与してサーバに my_vote を問い合わせる。
  */

@@ -5,8 +5,14 @@ import { createApp } from "../app.js";
 import { createInMemoryViewRepository } from "../persistence/viewRepository.js";
 import { createInMemoryVoteRepository } from "../persistence/voteRepository.js";
 import { createInMemoryWorkerRepository } from "../persistence/workerRepository.js";
+import { createInMemoryPostRepository } from "../persistence/postRepository.js";
 import { createTestUserRepository } from "../persistence/userRepository.js";
 import { createTestDeps } from "../testing/createTestDeps.js";
+import { createInMemoryCommentRepository } from "../persistence/commentRepository.js";
+import { createInMemoryCommunityRepository } from "../persistence/communityRepository.js";
+import { createInMemoryWorkerCommunityRepository } from "../persistence/workerCommunityRepository.js";
+import type { CommunityRecord } from "../persistence/communityRepository.js";
+import type { WorkerRecord } from "../persistence/workerRepository.js";
 
 const WORKER_ID = "wrk-testworker";
 
@@ -188,6 +194,129 @@ describe("GET /api/workers（Bot Worker 一覧 / #240）", () => {
   });
 });
 
+describe("GET /api/workers/:workerId（ワーカー詳細・#929）", () => {
+  it("存在するワーカー ID で 200 + ワーカー詳細を返す", async () => {
+    const workerRepo = createInMemoryWorkerRepository([
+      { id: "worker-abc", displayName: "あおい", role: "データサイエンティスト", personality: "論理的" },
+    ]);
+    const deps = createTestDeps({ workerRepository: workerRepo });
+    const app = createApp(deps);
+
+    const res = await request(app).get("/api/workers/worker-abc");
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      id: "worker-abc",
+      displayName: "あおい",
+      role: "データサイエンティスト",
+      personality: "論理的",
+    });
+  });
+
+  it("存在しないワーカー ID で 404 を返す", async () => {
+    const deps = createTestDeps({ workerRepository: createInMemoryWorkerRepository([]) });
+    const app = createApp(deps);
+
+    const res = await request(app).get("/api/workers/nonexistent");
+    expect(res.status).toBe(404);
+  });
+
+  it("論理削除済みワーカーは 404 を返す", async () => {
+    const workerRepo = createInMemoryWorkerRepository([
+      { id: "deleted-w", displayName: "削除済み", role: null, personality: null, deletedAt: new Date("2026-01-01") },
+    ]);
+    const deps = createTestDeps({ workerRepository: workerRepo });
+    const app = createApp(deps);
+
+    const res = await request(app).get("/api/workers/deleted-w");
+    expect(res.status).toBe(404);
+  });
+});
+
+describe("GET /api/workers/:workerId/posts（ワーカー投稿一覧・#929）", () => {
+  it("存在するワーカーの投稿を新着順で返す", async () => {
+    const workerRepo = createInMemoryWorkerRepository([
+      { id: "worker-1", displayName: "あおい", role: null, personality: null },
+    ]);
+    const postRepo = createInMemoryPostRepository();
+    await postRepo.createMany("community-1", [
+      {
+        slotKey: "2026-06-10T09:00",
+        seq: 0,
+        author: "worker-1",
+        title: "新しい投稿",
+        text: "テキスト",
+        createdAt: new Date("2026-06-10T09:00:00Z"),
+      },
+      {
+        slotKey: "2026-06-09T09:00",
+        seq: 0,
+        author: "worker-1",
+        title: "古い投稿",
+        text: "テキスト",
+        createdAt: new Date("2026-06-09T09:00:00Z"),
+      },
+      {
+        slotKey: "2026-06-10T09:00",
+        seq: 1,
+        author: "other-worker",
+        title: "別ワーカーの投稿",
+        text: "テキスト",
+        createdAt: new Date("2026-06-10T09:01:00Z"),
+      },
+    ]);
+    const deps = createTestDeps({ workerRepository: workerRepo, postRepository: postRepo });
+    const app = createApp(deps);
+
+    const res = await request(app).get("/api/workers/worker-1/posts");
+    expect(res.status).toBe(200);
+    expect(res.body.posts).toHaveLength(2);
+    expect(res.body.posts[0].title).toBe("新しい投稿");
+    expect(res.body.posts[1].title).toBe("古い投稿");
+  });
+
+  it("reveal フィルタ: 未来の createdAt を持つ post は除外される", async () => {
+    const now = new Date();
+    const futureDate = new Date(now.getTime() + 60 * 60 * 1000);
+    const pastDate = new Date(now.getTime() - 60 * 60 * 1000);
+
+    const workerRepo = createInMemoryWorkerRepository([
+      { id: "worker-1", displayName: "あおい", role: null, personality: null },
+    ]);
+    const postRepo = createInMemoryPostRepository();
+    await postRepo.createMany("community-1", [
+      { slotKey: "slot-past", seq: 0, author: "worker-1", title: "過去の投稿", text: "テキスト", createdAt: pastDate },
+      { slotKey: "slot-future", seq: 0, author: "worker-1", title: "未来の投稿", text: "テキスト", createdAt: futureDate },
+    ]);
+    const deps = createTestDeps({ workerRepository: workerRepo, postRepository: postRepo });
+    const app = createApp(deps);
+
+    const res = await request(app).get("/api/workers/worker-1/posts");
+    expect(res.status).toBe(200);
+    expect(res.body.posts).toHaveLength(1);
+    expect(res.body.posts[0].title).toBe("過去の投稿");
+  });
+
+  it("存在しないワーカーで 404 を返す", async () => {
+    const deps = createTestDeps({ workerRepository: createInMemoryWorkerRepository([]) });
+    const app = createApp(deps);
+
+    const res = await request(app).get("/api/workers/nonexistent/posts");
+    expect(res.status).toBe(404);
+  });
+
+  it("ワーカーに投稿がない場合は空配列を返す", async () => {
+    const workerRepo = createInMemoryWorkerRepository([
+      { id: "worker-1", displayName: "あおい", role: null, personality: null },
+    ]);
+    const deps = createTestDeps({ workerRepository: workerRepo });
+    const app = createApp(deps);
+
+    const res = await request(app).get("/api/workers/worker-1/posts");
+    expect(res.status).toBe(200);
+    expect(res.body.posts).toHaveLength(0);
+  });
+});
+
 describe("GET /api/workers/ranking（ワーカーランキング・#665）", () => {
   it("ランキング一覧を返す（認証不要）", async () => {
     const workerRepo = createInMemoryWorkerRepository([
@@ -231,5 +360,105 @@ describe("GET /api/workers/ranking（ワーカーランキング・#665）", () 
     const res = await request(app).get("/api/workers/ranking");
     expect(res.status).toBe(200);
     expect(res.body.workers).toEqual([]);
+  });
+});
+
+const COMMUNITY_RECORD: CommunityRecord = {
+  id: "comm-1",
+  slug: "ai-lab",
+  name: "AI Lab",
+  description: "AI コミュニティ",
+  synopsis: null,
+  lastSlotKey: null,
+  iconUrl: null,
+  coverUrl: null,
+  generationInstruction: null,
+  feedUrl: null,
+  createdAt: new Date("2024-01-01"),
+};
+
+const WORKER_RECORD: WorkerRecord = {
+  id: WORKER_ID,
+  displayName: "テストワーカー",
+  role: "エンジニア",
+  personality: null,
+  verbosity: "standard",
+  imageUrl: null,
+  deletedAt: null,
+};
+
+describe("GET /api/workers/:id/communities (#690)", () => {
+  it("ワーカーの所属コミュニティ一覧を返す（認証不要）", async () => {
+    const workerRepo = createInMemoryWorkerRepository([WORKER_RECORD]);
+    const communityRepo = createInMemoryCommunityRepository([COMMUNITY_RECORD]);
+    const workerCommunityRepo = createInMemoryWorkerCommunityRepository({
+      workers: [WORKER_RECORD],
+      links: [{ workerId: WORKER_ID, communityId: "comm-1" }],
+    });
+    const app = createApp(createTestDeps({ workerRepository: workerRepo, communityRepository: communityRepo, workerCommunityRepository: workerCommunityRepo }));
+    const res = await request(app).get(`/api/workers/${WORKER_ID}/communities`);
+    expect(res.status).toBe(200);
+    expect(res.body.communities).toHaveLength(1);
+    expect(res.body.communities[0].slug).toBe("ai-lab");
+  });
+
+  it("所属コミュニティが 0 件のとき空配列を返す", async () => {
+    const workerRepo = createInMemoryWorkerRepository([WORKER_RECORD]);
+    const app = createApp(createTestDeps({ workerRepository: workerRepo }));
+    const res = await request(app).get(`/api/workers/${WORKER_ID}/communities`);
+    expect(res.status).toBe(200);
+    expect(res.body.communities).toEqual([]);
+  });
+
+  it("ワーカーが存在しない場合は 404 を返す", async () => {
+    const app = createApp(createTestDeps());
+    const res = await request(app).get("/api/workers/nonexistent/communities");
+    expect(res.status).toBe(404);
+  });
+});
+
+describe("GET /api/workers/:id/comments (#690)", () => {
+  it("ワーカーのコメント一覧を返す（認証不要）", async () => {
+    const workerRepo = createInMemoryWorkerRepository([WORKER_RECORD]);
+    const commentRepo = createInMemoryCommentRepository();
+    await commentRepo.createMany("comm-1", [
+      { postId: "post-1", slotKey: "s", seq: 0, author: WORKER_ID, text: "Hello world" },
+    ]);
+    const app = createApp(createTestDeps({ workerRepository: workerRepo, commentRepository: commentRepo }));
+    const res = await request(app).get(`/api/workers/${WORKER_ID}/comments`);
+    expect(res.status).toBe(200);
+    expect(res.body.comments).toHaveLength(1);
+    expect(res.body.comments[0].text).toBe("Hello world");
+    expect(res.body).toHaveProperty("nextCursor");
+  });
+
+  it("コメントが 0 件のとき空配列と nextCursor null を返す", async () => {
+    const workerRepo = createInMemoryWorkerRepository([WORKER_RECORD]);
+    const app = createApp(createTestDeps({ workerRepository: workerRepo }));
+    const res = await request(app).get(`/api/workers/${WORKER_ID}/comments`);
+    expect(res.status).toBe(200);
+    expect(res.body.comments).toEqual([]);
+    expect(res.body.nextCursor).toBeNull();
+  });
+
+  it("ワーカーが存在しない場合は 404 を返す", async () => {
+    const app = createApp(createTestDeps());
+    const res = await request(app).get("/api/workers/nonexistent/comments");
+    expect(res.status).toBe(404);
+  });
+
+  it("limit クエリパラメータでページネーション件数を制御できる", async () => {
+    const workerRepo = createInMemoryWorkerRepository([WORKER_RECORD]);
+    const commentRepo = createInMemoryCommentRepository();
+    await commentRepo.createMany("comm-1", [
+      { postId: "p", slotKey: "s", seq: 0, author: WORKER_ID, text: "c1", createdAt: new Date("2024-01-01") },
+      { postId: "p", slotKey: "s", seq: 1, author: WORKER_ID, text: "c2", createdAt: new Date("2024-02-01") },
+      { postId: "p", slotKey: "s", seq: 2, author: WORKER_ID, text: "c3", createdAt: new Date("2024-03-01") },
+    ]);
+    const app = createApp(createTestDeps({ workerRepository: workerRepo, commentRepository: commentRepo }));
+    const res = await request(app).get(`/api/workers/${WORKER_ID}/comments?limit=2`);
+    expect(res.status).toBe(200);
+    expect(res.body.comments).toHaveLength(2);
+    expect(res.body.nextCursor).not.toBeNull();
   });
 });

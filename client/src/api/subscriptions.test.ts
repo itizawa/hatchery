@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { subscribeCommunity, unsubscribeCommunity } from "./subscriptions.js";
+import { subscribeCommunity, unsubscribeCommunity, fetchUnreadCounts, markCommunityViewed } from "./subscriptions.js";
 
 /** JSON ボディを持つ Response を組み立てる小ヘルパ。 */
 // eslint-disable-next-line max-params
@@ -43,5 +43,55 @@ describe("unsubscribeCommunity (DELETE /api/communities/{slug}/subscribe)", () =
     const request = fetchMock.mock.calls[0][0] as Request;
     expect(request.url).toContain("/api/communities/ai-dev/subscribe");
     expect(request.method).toBe("DELETE");
+  });
+});
+
+describe("fetchUnreadCounts (GET /api/subscriptions/unread-counts)", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("200 のとき unread_counts 配列を返す", async () => {
+    const mockData = {
+      unread_counts: [
+        { community_id: "community-1", community_slug: "ai-dev", unread_count: 5 },
+        { community_id: "community-2", community_slug: "tech-talk", unread_count: 0 },
+      ],
+    };
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(mockData), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await fetchUnreadCounts();
+    expect(result).toEqual(mockData);
+    const request = fetchMock.mock.calls[0][0] as Request;
+    expect(request.url).toContain("/api/subscriptions/unread-counts");
+  });
+
+  it("401 のとき例外を投げる", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 401 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(fetchUnreadCounts()).rejects.toThrow();
+  });
+});
+
+describe("markCommunityViewed (PATCH /api/communities/{slug}/mark-viewed)", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("200 のとき正常終了する", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(markCommunityViewed("ai-dev")).resolves.toBeUndefined();
+    const request = fetchMock.mock.calls[0][0] as Request;
+    expect(request.url).toContain("/api/communities/ai-dev/mark-viewed");
+    expect(request.method).toBe("PATCH");
   });
 });

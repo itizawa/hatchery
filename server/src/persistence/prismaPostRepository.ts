@@ -269,5 +269,18 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
       });
       return rows.map(toRecord);
     },
+
+    async listByAuthor({ authorId, limit = 20, now }: { authorId: string; limit?: number; now?: Date }): Promise<PostRecord[]> {
+      const rows = await prisma.post.findMany({
+        where: {
+          author: authorId,
+          // reveal フィルタ（#556 / #929）: now が渡された場合、createdAt > now の post を除外する。
+          ...(now !== undefined ? { createdAt: { lte: now } } : {}),
+        },
+        orderBy: { createdAt: "desc" },
+        take: limit,
+      });
+      return rows.map(toRecord);
+    },
   };
 }

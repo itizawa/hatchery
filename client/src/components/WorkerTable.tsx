@@ -14,11 +14,10 @@ import {
   TableRow,
   Typography,
 } from "./uiParts";
-import { DEFAULT_WORKERS, type Worker } from "@hatchery/common";
+import { DEFAULT_WORKERS, formatWorkerDisplayName, resolveWorkerImageUrl, type Worker } from "@hatchery/common";
 
 import { type ReactElement, useState } from "react";
-
-import { EditWorkerDialog } from "./EditWorkerDialog.js";
+import { useNavigate } from "@tanstack/react-router";
 
 export interface WorkerTableProps {
   /** 表示するワーカー一覧。未指定なら common の DEFAULT_WORKERS を単一情報源として描画する。 */
@@ -27,7 +26,7 @@ export interface WorkerTableProps {
   isLoading?: boolean;
   /**
    * true のとき各行に編集ボタンを表示する（#181）。
-   * admin 管理画面でのみ true にする想定。
+   * admin 管理画面でのみ true にする想定。編集ボタンクリックで /admin/workers/:id/edit へ遷移する（#888）。
    */
   isEditable?: boolean;
   /** 削除ボタンを表示する場合に指定するコールバック（#218）。未指定なら削除ボタン非表示。 */
@@ -46,8 +45,12 @@ export const WorkerTable = ({
   onDelete,
   isDeleting = false,
 }: WorkerTableProps): ReactElement => {
-  const [editingWorker, setEditingWorker] = useState<Worker | null>(null);
   const [confirmTarget, setConfirmTarget] = useState<Worker | null>(null);
+  const navigate = useNavigate();
+
+  const handleEditClick = (worker: Worker): void => {
+    void navigate({ to: "/admin/workers/$workerId/edit", params: { workerId: worker.id } });
+  };
 
   const handleDeleteClick = (worker: Worker) => {
     setConfirmTarget(worker);
@@ -104,21 +107,21 @@ export const WorkerTable = ({
                   <TableRow key={worker.id}>
                     <TableCell>
                       <Avatar
-                        src={worker.imageUrl}
+                        src={resolveWorkerImageUrl({ id: worker.id, imageUrl: worker.imageUrl })}
                         alt={worker.displayName}
                         sx={{ width: AVATAR_SIZE, height: AVATAR_SIZE }}
                       >
                         {worker.displayName[0]}
                       </Avatar>
                     </TableCell>
-                    <TableCell>{worker.displayName}</TableCell>
+                    <TableCell>{formatWorkerDisplayName(worker)}</TableCell>
                     <TableCell>{worker.role ?? "—"}</TableCell>
                     {isEditable && (
                       <TableCell>
                         <Button
                           size="small"
                           variant="outlined"
-                          onClick={() => setEditingWorker(worker)}
+                          onClick={() => handleEditClick(worker)}
                           aria-label={`編集 ${worker.displayName}`}
                         >
                           編集
@@ -143,30 +146,25 @@ export const WorkerTable = ({
           </TableBody>
         </Table>
       </TableContainer>
-      {editingWorker && (
-        <EditWorkerDialog
-          worker={editingWorker}
-          open={true}
-          onClose={() => setEditingWorker(null)}
-        />
+      {confirmTarget !== null && (
+        <Dialog open onClose={handleCancel}>
+          <DialogTitle>ワーカーの削除</DialogTitle>
+          <DialogContent>
+            <Typography>
+              「{formatWorkerDisplayName(confirmTarget)}」を削除しますか？
+              これまでのメッセージは残りますが、表示名が「》削除済み《{confirmTarget.displayName}」になります。
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCancel} disabled={isDeleting}>
+              キャンセル
+            </Button>
+            <Button onClick={handleConfirm} color="error" variant="contained" disabled={isDeleting}>
+              削除する
+            </Button>
+          </DialogActions>
+        </Dialog>
       )}
-      <Dialog open={confirmTarget !== null} onClose={handleCancel}>
-        <DialogTitle>ワーカーの削除</DialogTitle>
-        <DialogContent>
-          <Typography>
-            「{confirmTarget?.displayName}」を削除しますか？
-            これまでのメッセージは残りますが、表示名が「【削除済み】{confirmTarget?.displayName}」になります。
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCancel} disabled={isDeleting}>
-            キャンセル
-          </Button>
-          <Button onClick={handleConfirm} color="error" variant="contained" disabled={isDeleting}>
-            削除する
-          </Button>
-        </DialogActions>
-      </Dialog>
     </>
   );
 };

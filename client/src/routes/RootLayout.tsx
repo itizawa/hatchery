@@ -27,6 +27,7 @@ import { useAuth } from "../api/auth.js";
 import { AppHeader } from "../components/AppHeader";
 import { QueryBoundary } from "../components/QueryBoundary";
 import { SidebarCommunitySection } from "../components/SidebarCommunitySection";
+import { SubscribedCommunitiesSection } from "../components/SubscribedCommunitiesSection";
 import { ExternalLinkProvider } from "../hooks/useExternalLink.js";
 import { SLACK_COLORS } from "../theme.js";
 
@@ -109,6 +110,7 @@ const SidebarContent = (): ReactElement => {
     <>
       <SidebarGlobalNav />
       <Divider sx={{ my: 1 }} />
+      <SubscribedCommunitiesSection />
       <SidebarCommunitySection />
       {user && isAdmin(user) && (
         <>

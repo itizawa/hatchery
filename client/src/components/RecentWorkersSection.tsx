@@ -1,6 +1,8 @@
 import { Avatar, Box, Typography } from "./uiParts/index.js";
 import type { ReactElement } from "react";
 
+import { resolveWorkerImageUrl } from "@hatchery/common";
+
 import type { RecentWorker } from "../api/communities.js";
 
 interface RecentWorkersSectionProps {
@@ -26,7 +28,7 @@ export const RecentWorkersSection = ({ workers }: RecentWorkersSectionProps): Re
       {workers.map((worker) => (
         <Box component="li" key={worker.id} sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <Avatar
-            src={worker.imageUrl ?? undefined}
+            src={resolveWorkerImageUrl({ id: worker.id, imageUrl: worker.imageUrl })}
             alt={worker.displayName}
             sx={{ width: 28, height: 28, fontSize: "0.75rem" }}
           >

@@ -36,9 +36,11 @@ import { createCommunitiesRouter } from "./routes/communities.js";
 import { createWorkersRouter } from "./routes/workers.js";
 import { createFeedRouter } from "./routes/feed.js";
 import { healthRouter } from "./routes/health.js";
+import { createCommunityEngagementRouter } from "./routes/community-engagement.js";
 import { createOgpRouter } from "./routes/ogp.js";
 import { createPostsRouter } from "./routes/posts.js";
 import { createSitemapRouter } from "./routes/sitemap.js";
+import { createSubscriptionsRouter } from "./routes/subscriptions.js";
 
 /** DDoS/過負荷対策（#34）の設定。未指定の項目は安全な既定値を使う。 */
 export interface SecurityOptions {
@@ -188,9 +190,25 @@ export function createApp(deps: AppDeps): Express {
   app.use(
     "/api/workers",
     publicCache,
-    createWorkersRouter(deps.workerRepository, viewRepo, voteRepo),
+    createWorkersRouter({
+      workerRepository: deps.workerRepository,
+      viewRepository: viewRepo,
+      voteRepository: voteRepo,
+      postRepository: postRepo,
+      communityRepository: deps.communityRepository,
+      workerCommunityRepository: deps.workerCommunityRepository,
+      commentRepository: deps.commentRepository,
+    }),
   );
   app.use("/api/admin/batch-logs", noStoreCache, createBatchLogsRouter(deps.batchRunLogRepository));
+  app.use(
+    "/api/admin/community-engagement",
+    noStoreCache,
+    createCommunityEngagementRouter({
+      voteRepository: voteRepo,
+      subscriptionRepository: subscriptionRepo,
+    }),
+  );
   app.use(
     "/api/admin/token-usage",
     noStoreCache,
@@ -238,6 +256,11 @@ export function createApp(deps: AppDeps): Express {
     ),
   );
   app.use("/api/feed", publicCache, createFeedRouter({ postRepo, workerRepo: deps.workerRepository, commentRepo, voteRepo }));
+  app.use(
+    "/api/subscriptions",
+    noStoreCache,
+    createSubscriptionsRouter({ subscriptionRepository: subscriptionRepo }),
+  );
   app.use("/api/ogp", publicCache, createOgpRouter());
   app.use(
     "/api",

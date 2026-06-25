@@ -1,17 +1,24 @@
 /**
- * CommunitiesTab（管理画面のコミュニティ管理タブ）の RTL テスト（#381 / #833）。
- * #833 でコミュニティの作成・編集をモーダルダイアログ方式に統一したため、
- * 本タブのテストは「ボタンでダイアログを開く」フローと一覧表示の検証に絞る。
- * 作成・編集フォームの詳細（バリデーション・送信 body・maxLength）は
- * AddCommunityDialog.test.tsx / EditCommunityDialog.test.tsx で検証する。
+ * CommunitiesTab（管理画面のコミュニティ管理タブ）の RTL テスト（#381 / #833 / #889）。
+ * #889 でコミュニティの作成・編集をダイアログからページ遷移に移行したため、
+ * 本タブのテストは「ボタンでページ遷移する」フローと一覧表示の検証に絞る。
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import type { ReactElement } from "react";
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+
+const mockNavigate = vi.fn();
+vi.mock("@tanstack/react-router", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@tanstack/react-router")>();
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+  };
+});
 
 import { CommunitiesTab } from "./CommunitiesTab";
 
@@ -31,7 +38,10 @@ const server = setupServer(
 );
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
-afterEach(() => server.resetHandlers());
+afterEach(() => {
+  server.resetHandlers();
+  mockNavigate.mockReset();
+});
 afterAll(() => server.close());
 
 function renderWithClient(ui: ReactElement) {
@@ -39,7 +49,7 @@ function renderWithClient(ui: ReactElement) {
   return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
 }
 
-describe("CommunitiesTab（#833）", () => {
+describe("CommunitiesTab（#833 / #889）", () => {
   it("既存コミュニティ一覧（名前・slug）が表示される", async () => {
     renderWithClient(<CommunitiesTab />);
     expect(await screen.findByText("AI 開発者の集い")).toBeInTheDocument();
@@ -52,59 +62,38 @@ describe("CommunitiesTab（#833）", () => {
     expect(screen.queryByText("新しいコミュニティを作成")).not.toBeInTheDocument();
   });
 
-  it("「コミュニティを追加」ボタンをクリックすると作成ダイアログが開く", async () => {
+  it("「コミュニティを追加」ボタンをクリックすると /admin/communities/new へ遷移する", async () => {
     renderWithClient(<CommunitiesTab />);
     await screen.findByText("AI 開発者の集い");
+    await userEvent.click(screen.getByRole("button", { name: "コミュニティを追加" }));
+    expect(mockNavigate).toHaveBeenCalledWith(
+      expect.objectContaining({ to: "/admin/communities/new" }),
+    );
+  });
+
+  it("「コミュニティを追加」ボタンクリックでダイアログは開かない", async () => {
+    renderWithClient(<CommunitiesTab />);
+    await screen.findByText("AI 開発者の集い");
+    await userEvent.click(screen.getByRole("button", { name: "コミュニティを追加" }));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-
-    await userEvent.click(screen.getByRole("button", { name: "コミュニティを追加" }));
-    const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByText("コミュニティを追加")).toBeInTheDocument();
   });
 
-  it("一覧の「編集」ボタンをクリックすると編集ダイアログが開く（インライン展開ではない）", async () => {
+  it("一覧の「編集」ボタンをクリックすると /admin/communities/:id/edit へ遷移する", async () => {
     renderWithClient(<CommunitiesTab />);
     await screen.findByText("AI 開発者の集い");
-
     await userEvent.click(screen.getByRole("button", { name: "編集" }));
-    const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByText("コミュニティ編集")).toBeInTheDocument();
-    // 既存値がダイアログに初期表示される
-    expect(within(dialog).getByRole("textbox", { name: /コミュニティ名/ })).toHaveValue(
-      "AI 開発者の集い",
+    expect(mockNavigate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: "/admin/communities/$communityId/edit",
+        params: { communityId: "community-1" },
+      }),
     );
   });
 
-  it("編集途中でキャンセルして再度開くと、途中の入力ではなく永続値が再表示される（再マウント）", async () => {
+  it("「編集」ボタンクリックでダイアログは開かない", async () => {
     renderWithClient(<CommunitiesTab />);
     await screen.findByText("AI 開発者の集い");
-
-    // 編集ダイアログを開いて名前を書き換える
     await userEvent.click(screen.getByRole("button", { name: "編集" }));
-    let dialog = await screen.findByRole("dialog");
-    const nameInput = within(dialog).getByRole("textbox", { name: /コミュニティ名/ });
-    await userEvent.clear(nameInput);
-    await userEvent.type(nameInput, "保存しない途中編集");
-
-    // 保存せずキャンセルで閉じる
-    await userEvent.click(within(dialog).getByRole("button", { name: "キャンセル" }));
-    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
-
-    // 再度開くと、途中編集ではなく元の永続値が表示される
-    await userEvent.click(screen.getByRole("button", { name: "編集" }));
-    dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByRole("textbox", { name: /コミュニティ名/ })).toHaveValue(
-      "AI 開発者の集い",
-    );
-  });
-
-  it("追加ダイアログのキャンセルでダイアログが閉じる", async () => {
-    renderWithClient(<CommunitiesTab />);
-    await screen.findByText("AI 開発者の集い");
-
-    await userEvent.click(screen.getByRole("button", { name: "コミュニティを追加" }));
-    await screen.findByRole("dialog");
-    await userEvent.click(screen.getByRole("button", { name: "キャンセル" }));
-    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });

@@ -1,11 +1,24 @@
 import type { Worker, WorkerRankingItem } from "@hatchery/common";
-import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useSuspenseInfiniteQuery, useSuspenseQuery } from "@tanstack/react-query";
 
 import { clientEnv } from "../config/env.js";
 import { openApiClient, unwrap } from "./client.js";
+import type { components } from "./openapi.gen.js";
+import type { Post } from "./posts.js";
+
+export type Community = components["schemas"]["Community"];
+export type Comment = components["schemas"]["Comment"];
 
 export const BOT_WORKERS_QUERY_KEY = ["workers", "bots"] as const;
 export const WORKER_RANKING_QUERY_KEY = ["workers", "ranking"] as const;
+export const WORKER_DETAIL_QUERY_KEY = (workerId: string) =>
+  ["workers", "detail", workerId] as const;
+export const WORKER_POSTS_QUERY_KEY = (workerId: string) =>
+  ["workers", "posts", workerId] as const;
+export const WORKER_COMMUNITIES_QUERY_KEY = (workerId: string) =>
+  ["workers", "communities", workerId] as const;
+export const WORKER_COMMENTS_QUERY_KEY = (workerId: string) =>
+  ["workers", "comments", workerId] as const;
 
 /**
  * GET /api/workers を openapi-fetch 経由で取得するフック（ADR-0006）。
@@ -110,5 +123,77 @@ export function useWorkerRanking() {
       return (data.workers ?? []) as WorkerRankingItem[];
     },
     staleTime: 60_000,
+  });
+}
+
+/**
+ * GET /api/workers/:workerId — ワーカー詳細を取得するフック（#929）。
+ * useSuspenseQuery で Suspense 化し、ローディング/エラーは QueryBoundary に委譲する。
+ */
+export function useWorkerDetail({ workerId }: { workerId: string }) {
+  return useSuspenseQuery({
+    queryKey: WORKER_DETAIL_QUERY_KEY(workerId),
+    queryFn: async (): Promise<Worker> => {
+      const result = await openApiClient.GET("/api/workers/{workerId}", {
+        params: { path: { workerId } },
+      });
+      return unwrap({ result, label: `GET /api/workers/${workerId}` }) as Worker;
+    },
+  });
+}
+
+/**
+ * GET /api/workers/:workerId/posts — ワーカーの投稿一覧を取得するフック（#929）。
+ * useSuspenseQuery で Suspense 化し、ローディング/エラーは QueryBoundary に委譲する。
+ */
+export function useWorkerPosts({ workerId }: { workerId: string }) {
+  return useSuspenseQuery({
+    queryKey: WORKER_POSTS_QUERY_KEY(workerId),
+    queryFn: async (): Promise<Post[]> => {
+      const result = await openApiClient.GET("/api/workers/{workerId}/posts", {
+        params: { path: { workerId } },
+      });
+      const data = unwrap({ result, label: `GET /api/workers/${workerId}/posts` });
+      return (data.posts ?? []) as Post[];
+    },
+  });
+}
+
+/**
+ * GET /api/workers/:workerId/communities — ワーカーの所属コミュニティ一覧を取得するフック（#690）。
+ * useSuspenseQuery で Suspense 化し、ローディング/エラーは QueryBoundary に委譲する。
+ */
+export function useWorkerPublicCommunities({ workerId }: { workerId: string }) {
+  return useSuspenseQuery({
+    queryKey: WORKER_COMMUNITIES_QUERY_KEY(workerId),
+    queryFn: async (): Promise<Community[]> => {
+      const result = await openApiClient.GET("/api/workers/{workerId}/communities", {
+        params: { path: { workerId } },
+      });
+      const data = unwrap({ result, label: `GET /api/workers/${workerId}/communities` });
+      return (data.communities ?? []) as Community[];
+    },
+  });
+}
+
+/**
+ * GET /api/workers/:workerId/comments — ワーカーのコメント一覧（カーソルページネーション）を取得するフック（#690）。
+ * useSuspenseInfiniteQuery で Suspense 化し、ローディング/エラーは QueryBoundary に委譲する。
+ */
+export function useWorkerComments({ workerId }: { workerId: string }) {
+  return useSuspenseInfiniteQuery({
+    queryKey: WORKER_COMMENTS_QUERY_KEY(workerId),
+    queryFn: async ({ pageParam }: { pageParam: string | undefined }): Promise<{ comments: Comment[]; nextCursor: string | null }> => {
+      const result = await openApiClient.GET("/api/workers/{workerId}/comments", {
+        params: {
+          path: { workerId },
+          query: pageParam ? { cursor: pageParam } : {},
+        },
+      });
+      const data = unwrap({ result, label: `GET /api/workers/${workerId}/comments` });
+      return { comments: (data.comments ?? []) as Comment[], nextCursor: data.nextCursor ?? null };
+    },
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage: { comments: Comment[]; nextCursor: string | null }) => lastPage.nextCursor ?? undefined,
   });
 }

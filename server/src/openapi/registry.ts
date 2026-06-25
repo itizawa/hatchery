@@ -14,6 +14,7 @@ import { registerFeed } from "./registrations/registerFeed.js";
 import { registerHealth } from "./registrations/registerHealth.js";
 import { registerOgp } from "./registrations/registerOgp.js";
 import { registerPosts } from "./registrations/registerPosts.js";
+import { registerSubscriptions } from "./registrations/registerSubscriptions.js";
 import { registerWorkers } from "./registrations/registerWorkers.js";
 import type { RegistryContext } from "./registrations/shared.js";
 
@@ -57,14 +58,16 @@ function buildRegistry(): OpenAPIRegistry {
 
   // 分割前の registry.ts のセクション順を維持してモジュールを呼ぶ。
   // registerCommunities が Post / Comment component を ctx に代入するため、
-  // registerFeed / registerPosts はその後で呼ぶ必要がある。
-  registerWorkers(registry, ctx);
+  // registerFeed / registerPosts / registerWorkers（#929: /:workerId/posts で PostComponent 参照）は
+  // その後で呼ぶ必要がある。
   registerAuth(registry, ctx);
   registerAdmin(registry, ctx);
   registerHealth(registry);
   registerCommunities(registry, ctx);
+  registerWorkers(registry, ctx);
   registerFeed(registry, ctx);
   registerPosts(registry, ctx);
+  registerSubscriptions(registry, ctx);
   registerOgp(registry);
 
   return registry;

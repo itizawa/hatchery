@@ -72,6 +72,16 @@ export interface VoteRepository {
 
   /** 指定日時以降の vote を community 单位で集計し、communityId → netScore の Map を返す（#486 / ADR-0030）。 */
   netScoresByCommunitySince(since: Date): Promise<Map<string, number>>;
+
+  /**
+   * 指定日時以降の vote をユーザー×コミュニティ単位で集計する（#761 独占的ロイヤリティ計算用）。
+   * 返り値: userId → (communityId → vote 件数) の Map。
+   * 未認証（userId=null）の vote は除外する。
+   */
+  voteCountsPerUserPerCommunitySince(since: Date): Promise<Map<string, Map<string, number>>>;
+
+  /** 指定日時以降の vote をワーカー単位で生カウントする（#761 vote 分布用）。author → 総 vote 件数 の Map。 */
+  rawVoteCountsByWorkerSince(since: Date): Promise<Map<string, number>>;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -179,6 +189,14 @@ export function createInMemoryVoteRepository(): VoteRepository {
     },
 
     async netScoresByCommunitySince() {
+      return new Map();
+    },
+
+    async voteCountsPerUserPerCommunitySince() {
+      return new Map();
+    },
+
+    async rawVoteCountsByWorkerSince() {
       return new Map();
     },
   };

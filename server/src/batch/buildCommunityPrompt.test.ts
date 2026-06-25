@@ -44,14 +44,12 @@ describe("buildCommunityPrompt (#306)", () => {
 
   it("お題（open_prompts）はプロンプトに含まれない", () => {
     const { prompt } = buildCommunityPrompt(baseParams);
-    // お題に関するキーワードが含まれないことを確認
     expect(prompt).not.toContain("open_prompts");
     expect(prompt).not.toContain("お題");
   });
 
   it("出力の JSON 形式指示が含まれる", () => {
     const { prompt } = buildCommunityPrompt(baseParams);
-    // topic と posts を含む JSON 形式を要求
     expect(prompt).toContain("topic");
     expect(prompt).toContain("posts");
     expect(prompt).toContain("author");
@@ -75,7 +73,6 @@ describe("buildCommunityPrompt (#306)", () => {
     expect(prompt).toContain("このコミュニティではテクノロジーの話題が中心。");
   });
 
-  // #487: トーン規約（共通エンジン部 = 脚本ルール層）
   describe("トーン規約（#487 / concept 共通エンジン部）", () => {
     it("呼称: 互いを「さん付け」で呼ばない指示が TONE_GUIDELINES に含まれる", () => {
       expect(TONE_GUIDELINES).toContain("さん付け");
@@ -106,19 +103,16 @@ describe("buildCommunityPrompt (#306)", () => {
         description: "全く別の作風: ホラー専門コミュニティ。",
       };
       const { prompt } = buildCommunityPrompt({ ...baseParams, community });
-      // 固有部（作風）も、共通エンジン部（トーン規約）も両方含まれる
       expect(prompt).toContain("全く別の作風: ホラー専門コミュニティ。");
       expect(prompt).toContain(TONE_GUIDELINES);
     });
 
     it("自己監査に「さん付け」していないかの確認が含まれる（concept 自己監査）", () => {
       const { prompt } = buildCommunityPrompt(baseParams);
-      // 自己監査セクションで さん付け をチェックさせる
       expect(prompt).toContain("さん付け");
     });
   });
 
-  // #389 AC4: 安定 prefix（テンプレート + ワーカー + 作風）→ 可変 suffix（直近ログ）の順に構造化
   describe("プロンプトキャッシュ向けの構造化（#389 AC4）", () => {
     it("安定部（トーン規約・作風・ワーカー）が可変部（直近ログ）より前に置かれる", () => {
       const { prompt } = buildCommunityPrompt(baseParams);
@@ -127,7 +121,6 @@ describe("buildCommunityPrompt (#306)", () => {
       const workerIdx = prompt.indexOf("haru");
       const recentLogIdx = prompt.indexOf("[technology] haru: 最近の AI トレンド面白いですね");
 
-      // 安定部はすべて存在し、直近ログより前にある
       expect(toneIdx).toBeGreaterThanOrEqual(0);
       expect(descIdx).toBeGreaterThanOrEqual(0);
       expect(workerIdx).toBeGreaterThanOrEqual(0);
@@ -179,7 +172,6 @@ describe("verbosity（文章量設定）のプロンプト反映 (#625)", () => 
       workers: [{ id: "w1", displayName: "Alice", verbosity: "standard" }],
       recentLog: [],
     });
-    // standard は特別な指示なし
     expect(prompt).not.toContain("1〜2 文程度");
     expect(prompt).not.toContain("具体例や背景を交えて");
   });
@@ -311,7 +303,6 @@ describe("countHints によるpost/comment件数指示（#557）", () => {
     });
     expect(prompt).toContain("2");
     expect(prompt).toContain("3");
-    // post件数とコメント数の指示が含まれること（例: "post を 2 件" or "2件" など）
     expect(prompt).toMatch(/post.*2|2.*post/i);
   });
 
@@ -322,7 +313,6 @@ describe("countHints によるpost/comment件数指示（#557）", () => {
       recentLog: [],
       countHints: { postCount: 1, commentCount: 2 },
     });
-    // コメント数の指示が含まれること
     expect(prompt).toMatch(/comment.*2|2.*comment|コメント.*2|2.*コメント/i);
   });
 
@@ -347,7 +337,6 @@ describe("countHints によるpost/comment件数指示（#557）", () => {
       workers,
       recentLog: [],
     });
-    // 両方ともワーカー情報とトーン規約を含む
     expect(withHints).toContain("Alice");
     expect(withoutHints).toContain("Alice");
     expect(withHints).toContain("さん付け");
@@ -564,7 +553,6 @@ describe("UUID誘導ラベル（#715）", () => {
 
   it("注意事項セクションに UUID の文言が含まれる（author は UUID を使うべきという誘導）", () => {
     const { prompt } = buildCommunityPrompt({ community, workers, recentLog: [] });
-    // 注意事項の author 指示に UUID が言及されていること
     const authorNoteIdx = prompt.indexOf("author には必ず");
     expect(authorNoteIdx).toBeGreaterThanOrEqual(0);
     const afterAuthorNote = prompt.slice(authorNoteIdx, authorNoteIdx + 100);
@@ -611,9 +599,49 @@ describe("buildCommunityPrompt: feedArticles の注入（#491 / ADR-0035）", ()
       ],
     });
     expect(prompt).toContain("TypeScript 5.0 の新機能");
-    expect(prompt).toContain("https://zenn.dev/articles/ts50");
+    expect(prompt).not.toContain("https://zenn.dev/articles/ts50"); // URL は含めない（#927）
     expect(prompt).toContain("TS5.0 の概要。");
     expect(prompt).toContain("yamada");
+  });
+
+  it("feedArticles の URL はプロンプトに含まれない（#927）", () => {
+    const { prompt } = buildCommunityPrompt({
+      community,
+      workers,
+      recentLog: [],
+      feedArticles: [
+        { title: "ある記事", url: "https://b.hatena.ne.jp/hotentry/general", summary: "概要テキスト", author: null },
+        { title: "別の記事", url: "https://b.hatena.ne.jp/hotentry/it", summary: null, author: "author-a" },
+      ],
+    });
+    expect(prompt).not.toContain("https://b.hatena.ne.jp/hotentry/general");
+    expect(prompt).not.toContain("https://b.hatena.ne.jp/hotentry/it");
+    expect(prompt).toContain("ある記事");
+    expect(prompt).toContain("別の記事");
+    expect(prompt).toContain("概要テキスト");
+  });
+
+  it("feedArticles の summary 内に URL が含まれる場合もプロンプトに露出しない（#927）", () => {
+    const { prompt } = buildCommunityPrompt({
+      community,
+      workers,
+      recentLog: [],
+      feedArticles: [
+        {
+          title: "ある記事",
+          url: "https://b.hatena.ne.jp/hotentry/general",
+          summary: "詳細は https://example.com/article を参照してください。面白い内容です。",
+          author: null,
+        },
+      ],
+    });
+    expect(prompt).not.toContain("https://example.com/article");
+    expect(prompt).toContain("面白い内容です");
+  });
+
+  it("注意事項に URL を本文に含めない禁止指示が含まれる（#927）", () => {
+    const { prompt } = buildCommunityPrompt({ community, workers, recentLog: [] });
+    expect(prompt).toMatch(/URL.*含めない|含めない.*URL/);
   });
 
   it("feedArticles が省略された場合はプロンプトに変化なし（フィード関連テキストなし）", () => {

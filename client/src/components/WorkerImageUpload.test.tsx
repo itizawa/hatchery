@@ -12,7 +12,7 @@ vi.mock("../api/workers.js", () => ({
 }));
 
 describe("WorkerImageUpload（#204）", () => {
-  it("Avatar が表示される", () => {
+  it("currentImageUrl が null のとき DiceBear アバター画像を表示する (#884)", () => {
     render(
       <WorkerImageUpload
         workerId="haru"
@@ -20,8 +20,8 @@ describe("WorkerImageUpload（#204）", () => {
         currentImageUrl={null}
       />,
     );
-    // Avatar のフォールバック（イニシャル）が表示される
-    expect(screen.getByText("h")).toBeInTheDocument();
+    const img = screen.getByRole("img", { name: /haru/ });
+    expect(img).toHaveAttribute("src", expect.stringContaining("api.dicebear.com"));
   });
 
   it("imageUrl が設定されている場合は画像 Avatar が表示される", () => {

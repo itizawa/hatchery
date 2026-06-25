@@ -1,6 +1,6 @@
 import { Box, Stack, Typography } from "../components/uiParts";
 import { Link as RouterLink, useNavigate, useParams } from "@tanstack/react-router";
-import type { ReactElement } from "react";
+import { useEffect, type ReactElement } from "react";
 
 import {
   useCommunityFeed,
@@ -11,6 +11,7 @@ import {
   useRecentWorkers,
 } from "../api/communities.js";
 import { useAuth } from "../api/auth.js";
+import { useMarkCommunityViewed } from "../api/subscriptions.js";
 import { CommunityHeader } from "../components/CommunityHeader.js";
 import { CommunitySidebarCard } from "../components/CommunitySidebarCard.js";
 import { PostCard } from "../components/PostCard.js";
@@ -38,6 +39,19 @@ const listItemSx = {
   "&:hover": { bgcolor: "action.hover", cursor: "pointer" },
   transition: "background-color 150ms ease-out",
 } as const;
+
+/**
+ * 購読中コミュニティ訪問時に mark-viewed を自動呼び出しするエフェクト（#934）。
+ * SubscriptionStatus render-prop 内で subscribed === true のときのみレンダーされ、
+ * 未認証ユーザー・未購読コミュニティへの余分な API 呼び出しを防ぐ。
+ */
+const MarkViewedEffect = ({ slug }: { slug: string }): null => {
+  const { mutate: markViewed } = useMarkCommunityViewed(slug);
+  useEffect(() => {
+    markViewed();
+  }, [slug, markViewed]);
+  return null;
+};
 
 /**
  * コミュニティが実在する場合のみレンダーされる内側コンポーネント。
@@ -68,7 +82,9 @@ const CommunityContent = ({
   return (
     <SubscriptionStatus communitySlug={communitySlug}>
       {(subscribed) => (
-        <Box component="section" sx={{ p: 3, maxWidth: 1200, mx: "auto" }}>
+        <>
+          {subscribed && <MarkViewedEffect slug={communitySlug} />}
+          <Box component="section" sx={{ p: 3, maxWidth: 1200, mx: "auto" }}>
           {/* Reddit 風ヘッダー: カバー画像＋左下に重ねた丸いアイコン＋name（#457） */}
           <CommunityHeader
             community={community}
@@ -116,8 +132,8 @@ const CommunityContent = ({
                           onVote={(direction: VoteDirection) =>
                             votePost({ postId: post.id, direction })
                           }
-                          upVoteDisabled={isVotingPost && votingPostVars?.direction === "up"}
-                          downVoteDisabled={isVotingPost && votingPostVars?.direction === "down"}
+                          upVoteDisabled={isVotingPost && votingPostVars?.postId === post.id && votingPostVars?.direction === "up"}
+                          downVoteDisabled={isVotingPost && votingPostVars?.postId === post.id && votingPostVars?.direction === "down"}
                           voteStopPropagation
                           truncateText
                           variant="list"
@@ -181,6 +197,7 @@ const CommunityContent = ({
             </Box>
           </Box>
         </Box>
+        </>
       )}
     </SubscriptionStatus>
   );

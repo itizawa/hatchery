@@ -118,6 +118,11 @@ export interface PostRepository {
    * limit 省略時は 20 件。
    */
   listOldByCommunity(communityId: string, before: Date, limit?: number): Promise<PostRecord[]>;
+  /**
+   * 特定ワーカー（author）が投稿した post を新着順（createdAt 降順）で返す（#929）。
+   * limit 省略時は 20 件。now を渡すと `createdAt <= now` の reveal フィルタが有効になる。
+   */
+  listByAuthor(params: { authorId: string; limit?: number; now?: Date }): Promise<PostRecord[]>;
 }
 
 function cloneRecord(r: PostRecord): PostRecord {
@@ -435,6 +440,17 @@ export function createInMemoryPostRepository(): PostRepository {
           if (a.score !== b.score) return b.score - a.score;
           return b.createdAt.getTime() - a.createdAt.getTime();
         })
+        .slice(0, limit)
+        .map(cloneRecord);
+      return Promise.resolve(result);
+    },
+
+    listByAuthor({ authorId, limit = 20, now }: { authorId: string; limit?: number; now?: Date }): Promise<PostRecord[]> {
+      const result = records
+        .filter((r) => r.author === authorId)
+        .filter((r) => now === undefined || r.createdAt.getTime() <= now.getTime())
+        // eslint-disable-next-line max-params
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
         .slice(0, limit)
         .map(cloneRecord);
       return Promise.resolve(result);

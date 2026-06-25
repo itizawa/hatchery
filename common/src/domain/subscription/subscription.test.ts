@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { SubscriptionSchema } from "./subscription.js";
+import { SubscriptionSchema, UnreadCountItemSchema, UnreadCountsResponseSchema } from "./subscription.js";
 
 describe("SubscriptionSchema", () => {
   const validSubscription = {
@@ -37,5 +37,45 @@ describe("SubscriptionSchema", () => {
   it("community_id が空文字を reject する", () => {
     const data = { ...validSubscription, community_id: "" };
     expect(SubscriptionSchema.safeParse(data).success).toBe(false);
+  });
+});
+
+describe("UnreadCountItemSchema", () => {
+  const valid = { community_id: "c-1", community_slug: "tech", unread_count: 3 };
+
+  it("有効なデータをパースできる", () => {
+    expect(UnreadCountItemSchema.safeParse(valid).success).toBe(true);
+  });
+
+  it("unread_count が 0 でもパースできる", () => {
+    expect(UnreadCountItemSchema.safeParse({ ...valid, unread_count: 0 }).success).toBe(true);
+  });
+
+  it("community_id が空文字を reject する", () => {
+    expect(UnreadCountItemSchema.safeParse({ ...valid, community_id: "" }).success).toBe(false);
+  });
+
+  it("community_slug が空文字を reject する", () => {
+    expect(UnreadCountItemSchema.safeParse({ ...valid, community_slug: "" }).success).toBe(false);
+  });
+
+  it("unread_count が負数を reject する", () => {
+    expect(UnreadCountItemSchema.safeParse({ ...valid, unread_count: -1 }).success).toBe(false);
+  });
+});
+
+describe("UnreadCountsResponseSchema", () => {
+  it("空配列をパースできる", () => {
+    expect(UnreadCountsResponseSchema.safeParse({ unread_counts: [] }).success).toBe(true);
+  });
+
+  it("複数の unread_counts をパースできる", () => {
+    const result = UnreadCountsResponseSchema.safeParse({
+      unread_counts: [
+        { community_id: "c-1", community_slug: "tech", unread_count: 5 },
+        { community_id: "c-2", community_slug: "daily", unread_count: 0 },
+      ],
+    });
+    expect(result.success).toBe(true);
   });
 });

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { WORKER_DISPLAY_NAME_MAX_LENGTH, WORKER_IMAGE_URL_MAX_LENGTH } from "./worker.js";
+import { WORKER_DISPLAY_NAME_MAX_LENGTH, WORKER_IMAGE_URL_MAX_LENGTH, resolveWorkerImageUrl } from "./worker.js";
 
 /**
  * post / comment の発言者を画面に表示するための最小ワーカー情報（#479）。
@@ -51,7 +51,7 @@ export function buildAuthorWorkerResolver(
     return {
       id: matched.id,
       display_name: matched.displayName,
-      image_url: matched.imageUrl ?? null,
+      image_url: resolveWorkerImageUrl({ id: matched.id, imageUrl: matched.imageUrl }),
     };
   };
 }

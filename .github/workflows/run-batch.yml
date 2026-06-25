@@ -2,7 +2,9 @@ name: Run Batch (Scene Generation)
 
 # 定時起動は Cloud Scheduler + Cloud Run Jobs に移行済み（ADR-0028）。
 # このワークフローは緊急時の手動実行のみを目的として残す。
-# 通常のバッチ実行: gcloud run jobs execute hatchery-batch --region=<REGION>
+# 通常のバッチ実行:
+#   gcloud run jobs execute hatchery-batch-post --region=<REGION>
+#   gcloud run jobs execute hatchery-batch-comment --region=<REGION>
 # セットアップ手順: docs/cloud-run-batch-setup.md
 on:
   workflow_dispatch:
@@ -34,8 +36,14 @@ jobs:
       - name: Build dependencies
         run: pnpm turbo run build --filter=@hatchery/server
 
-      - name: Run community batch
-        run: pnpm --filter @hatchery/server batch
+      - name: Run post batch
+        run: pnpm --filter @hatchery/server batch:post
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+      - name: Run comment batch
+        run: pnpm --filter @hatchery/server batch:comment
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}

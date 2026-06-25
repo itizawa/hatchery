@@ -71,7 +71,7 @@ export const RecentPostsSidebarCard = ({
                     {post.title}
                   </Typography>
                 </RouterLink>
-                {post.body && (
+                {post.text && (
                   <Typography
                     variant="caption"
                     color="text.secondary"
@@ -84,7 +84,7 @@ export const RecentPostsSidebarCard = ({
                       mt: 0.25,
                     }}
                   >
-                    {post.body}
+                    {post.text}
                   </Typography>
                 )}
                 <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mt: 0.5 }}>

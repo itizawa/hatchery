@@ -149,6 +149,7 @@ async function processCommunitePosts({
       findById: async () => null,
       countByPostIds: async () => new Map(),
       addScore: async () => null,
+      listByWorker: async () => ({ comments: [], nextCursor: null }),
     },
     community,
     recentLimit,

@@ -226,4 +226,64 @@ describe("createInMemoryCommentRepository", () => {
       expect(result).toHaveLength(2);
     });
   });
+
+  describe("listByWorker (#690)", () => {
+    it("コメントが 0 件のとき空配列と nextCursor null を返す", async () => {
+      const repo = createInMemoryCommentRepository();
+      const result = await repo.listByWorker({ workerId: "worker-1" });
+      expect(result.comments).toHaveLength(0);
+      expect(result.nextCursor).toBeNull();
+    });
+
+    it("worker のコメントを createdAt 降順で返す", async () => {
+      const repo = createInMemoryCommentRepository();
+      await repo.createMany("community-1", [
+        { postId: "post-1", slotKey: "s", seq: 0, author: "worker-1", text: "older", createdAt: new Date("2024-01-01T00:00:00Z") },
+        { postId: "post-1", slotKey: "s", seq: 1, author: "worker-1", text: "newer", createdAt: new Date("2024-06-01T00:00:00Z") },
+      ]);
+      const result = await repo.listByWorker({ workerId: "worker-1" });
+      expect(result.comments[0]!.text).toBe("newer");
+      expect(result.comments[1]!.text).toBe("older");
+      expect(result.nextCursor).toBeNull();
+    });
+
+    it("別の worker のコメントは含まない", async () => {
+      const repo = createInMemoryCommentRepository();
+      await repo.createMany("community-1", [
+        { postId: "post-1", slotKey: "s", seq: 0, author: "worker-1", text: "w1 comment" },
+        { postId: "post-1", slotKey: "s", seq: 1, author: "worker-2", text: "w2 comment" },
+      ]);
+      const result = await repo.listByWorker({ workerId: "worker-1" });
+      expect(result.comments).toHaveLength(1);
+      expect(result.comments[0]!.text).toBe("w1 comment");
+    });
+
+    it("limit を超えるコメントがある場合は nextCursor を返す", async () => {
+      const repo = createInMemoryCommentRepository();
+      await repo.createMany("community-1", [
+        { postId: "p", slotKey: "s", seq: 0, author: "worker-1", text: "c0", createdAt: new Date("2024-01-01") },
+        { postId: "p", slotKey: "s", seq: 1, author: "worker-1", text: "c1", createdAt: new Date("2024-02-01") },
+        { postId: "p", slotKey: "s", seq: 2, author: "worker-1", text: "c2", createdAt: new Date("2024-03-01") },
+      ]);
+      const result = await repo.listByWorker({ workerId: "worker-1", limit: 2 });
+      expect(result.comments).toHaveLength(2);
+      expect(result.nextCursor).not.toBeNull();
+    });
+
+    it("cursor を指定すると続きのコメントを返す（カーソルページネーション）", async () => {
+      const repo = createInMemoryCommentRepository();
+      await repo.createMany("community-1", [
+        { postId: "p", slotKey: "s", seq: 0, author: "worker-1", text: "oldest", createdAt: new Date("2024-01-01") },
+        { postId: "p", slotKey: "s", seq: 1, author: "worker-1", text: "middle", createdAt: new Date("2024-04-01") },
+        { postId: "p", slotKey: "s", seq: 2, author: "worker-1", text: "newest", createdAt: new Date("2024-07-01") },
+      ]);
+      const page1 = await repo.listByWorker({ workerId: "worker-1", limit: 2 });
+      expect(page1.comments.map((c) => c.text)).toEqual(["newest", "middle"]);
+      expect(page1.nextCursor).not.toBeNull();
+
+      const page2 = await repo.listByWorker({ workerId: "worker-1", limit: 2, cursor: page1.nextCursor! });
+      expect(page2.comments.map((c) => c.text)).toEqual(["oldest"]);
+      expect(page2.nextCursor).toBeNull();
+    });
+  });
 });

@@ -15,6 +15,7 @@ export * from "./domain/generation/index.js";
 export * from "./domain/view/index.js";
 
 // ── 共通ドメイン ───────────────────────────────────
+export * from "./domain/pushSubscription/index.js";
 export * from "./domain/batchRunLog/index.js";
 export * from "./domain/tokenUsageLog/index.js";
 export * from "./domain/communityEngagement/index.js";

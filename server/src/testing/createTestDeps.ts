@@ -1,5 +1,6 @@
 import type { AppDeps } from "../app.js";
 import { createInMemoryBatchRunLogRepository } from "../persistence/batchRunLogRepository.js";
+import { createInMemoryPushSubscriptionRepository } from "../persistence/inMemoryPushSubscriptionRepository.js";
 import { createInMemoryCommentRepository } from "../persistence/commentRepository.js";
 import { createInMemoryCommunityRepository } from "../persistence/communityRepository.js";
 import { createInMemoryWorkerRepository } from "../persistence/workerRepository.js";
@@ -32,6 +33,7 @@ export function createTestDeps(overrides?: TestDepsOverrides): AppDeps {
     voteRepository: createInMemoryVoteRepository(),
     worldStateRepository: createInMemoryWorldStateRepository(),
     storageService: new InMemoryStorageService(),
+    pushSubscriptionRepository: createInMemoryPushSubscriptionRepository(),
     ...overrides,
   };
 }

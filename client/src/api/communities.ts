@@ -140,22 +140,6 @@ export function useCommunities() {
   });
 }
 
-/**
- * 管理者コミュニティを ID で取得するフック（EditCommunityScene 向け）。#889
- * 一覧 API から select で絞り込む。見つからない場合は Error を throw し QueryBoundary が捕捉する。
- */
-export function useAdminCommunityById({ id }: { id: string }) {
-  return useSuspenseQuery({
-    queryKey: ADMIN_COMMUNITIES_QUERY_KEY,
-    queryFn: fetchAdminCommunities,
-    select: (list) => {
-      const found = list.find((c) => c.id === id);
-      if (!found) throw new Error("CommunityNotFound");
-      return found;
-    },
-  });
-}
-
 export function useCreateCommunity() {
   const queryClient = useQueryClient();
   return useMutation({

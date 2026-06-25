@@ -42,6 +42,7 @@ export function AddCommunityScene(): ReactElement {
         const isSlugConflict =
           msg.includes("CommunitySlugAlreadyExists") || msg.includes("409");
         if (isSlugConflict) {
+          createMutation.reset();
           setSlugConflictError("この slug はすでに使用されています");
         }
       }
@@ -62,9 +63,9 @@ export function AddCommunityScene(): ReactElement {
       </Typography>
       <Box
         component="form"
-        onSubmit={async (e) => {
+        onSubmit={(e) => {
           e.preventDefault();
-          await form.handleSubmit();
+          void form.handleSubmit();
         }}
         sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 2 }}
       >

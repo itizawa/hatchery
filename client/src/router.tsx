@@ -366,7 +366,7 @@ const adminCommunityNewRoute = createRoute({
   beforeLoad: requireAdminRoute,
 });
 
-/** コミュニティ編集ページ（/admin/communities/:communityId/edit）。未ログイン・非 admin は / へリダイレクト（#889）。 */
+/** コミュニティ編集ページ（/admin/communities/$communityId/edit）。未ログイン・非 admin は / へリダイレクト（#889）。 */
 const adminCommunityEditRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/admin/communities/$communityId/edit",

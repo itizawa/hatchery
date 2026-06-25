@@ -22,6 +22,11 @@ export interface RegistryContext {
   /** Worker component。workers / communities（recent-workers）で参照する。 */
   WorkerComponent: ReturnType<OpenAPIRegistry["register"]>;
   /**
+   * Community component。communities セクションで register され、その後 workers で参照する（#690）。
+   * 登録順序を分割前と一致させるため registerCommunities が生成して代入する。
+   */
+  CommunityComponent?: ReturnType<OpenAPIRegistry["register"]>;
+  /**
    * Post component。communities セクションで register され、その後 feed / posts で参照する。
    * 登録順序を分割前と一致させるため registerCommunities が生成して代入する。
    */

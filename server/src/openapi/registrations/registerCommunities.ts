@@ -61,7 +61,8 @@ export function registerCommunities(registry: OpenAPIRegistry, ctx: RegistryCont
     CommentSchema.openapi({ description: "コメント（AI ワーカーのみ author）。ADR-0019 / ADR-0020" }),
   );
 
-  // feed / posts モジュールが参照できるよう共有コンテキストへ反映する。
+  // feed / posts / workers モジュールが参照できるよう共有コンテキストへ反映する。
+  ctx.CommunityComponent = CommunityComponent;
   ctx.PostComponent = PostComponent;
   ctx.CommentComponent = CommentComponent;
 

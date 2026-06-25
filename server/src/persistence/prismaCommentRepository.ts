@@ -146,5 +146,26 @@ export function createPrismaCommentRepository(prisma: PrismaClient): CommentRepo
         return null;
       }
     },
+
+    async listByWorker({
+      workerId,
+      limit = 20,
+      cursor,
+    }: {
+      workerId: string;
+      limit?: number;
+      cursor?: string;
+    }): Promise<{ comments: CommentRecord[]; nextCursor: string | null }> {
+      const rows = await prisma.comment.findMany({
+        where: { author: workerId },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        take: limit + 1,
+        ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+      });
+      const hasNext = rows.length > limit;
+      const comments = rows.slice(0, limit).map(toRecord);
+      const nextCursor = hasNext ? (comments[comments.length - 1]?.id ?? null) : null;
+      return { comments, nextCursor };
+    },
   };
 }

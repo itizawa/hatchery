@@ -50,7 +50,7 @@ function stubFetch(isLoggedIn: boolean, role: "member" | "admin" = "member") {
         return Promise.resolve(jsonResponse(200, COMMUNITIES_DATA));
       }
       if (url.includes("/api/feed")) {
-        return Promise.resolve(jsonResponse(200, []));
+        return Promise.resolve(jsonResponse(200, { posts: [], nextCursor: null }));
       }
       return Promise.resolve(jsonResponse(200, []));
     }),

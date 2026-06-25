@@ -1,21 +1,48 @@
 /**
- * CommunitiesTab（管理画面のコミュニティ管理タブ）の RTL テスト（#381 / #833）。
- * #833 でコミュニティの作成・編集をモーダルダイアログ方式に統一したため、
- * 本タブのテストは「ボタンでダイアログを開く」フローと一覧表示の検証に絞る。
- * 作成・編集フォームの詳細（バリデーション・送信 body・maxLength）は
- * AddCommunityDialog.test.tsx / EditCommunityDialog.test.tsx で検証する。
+ * CommunitiesTab（管理画面のコミュニティ管理タブ）の RTL テスト（#381 / #833 / #889）。
+ * #889: 作成・編集をモーダルから専用ページへ移行したため、
+ * ボタンがリンクになり、ダイアログは表示されなくなった。
+ * 作成・編集フォームの詳細は AddCommunityScene.test.tsx / EditCommunityScene.test.tsx で検証する。
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import type { ReactElement } from "react";
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+
+// TanStack Router の Link をモックして href 付き <a> タグに変換する
+vi.mock("@tanstack/react-router", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@tanstack/react-router")>();
+  return {
+    ...actual,
+    Link: ({
+      children,
+      to,
+      params,
+      search,
+    }: {
+      children: ReactElement;
+      to: string;
+      params?: Record<string, string>;
+      search?: Record<string, string>;
+    }) => {
+      let href = to;
+      if (params) {
+        for (const [k, v] of Object.entries(params)) {
+          href = href.replace(`$${k}`, v);
+        }
+      }
+      if (search) {
+        href = `${href}?${new URLSearchParams(search).toString()}`;
+      }
+      return <a href={href}>{children}</a>;
+    },
+  };
+});
 
 import { CommunitiesTab } from "./CommunitiesTab";
 
-/** 一覧 GET が返す既存コミュニティ（編集テストの前提データ）。 */
 const existingCommunity = {
   id: "community-1",
   slug: "ai-dev",
@@ -39,72 +66,30 @@ function renderWithClient(ui: ReactElement) {
   return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
 }
 
-describe("CommunitiesTab（#833）", () => {
+describe("CommunitiesTab（#889）", () => {
   it("既存コミュニティ一覧（名前・slug）が表示される", async () => {
     renderWithClient(<CommunitiesTab />);
     expect(await screen.findByText("AI 開発者の集い")).toBeInTheDocument();
     expect(screen.getByText("ai-dev")).toBeInTheDocument();
   });
 
-  it("インライン作成フォーム（「新しいコミュニティを作成」）は表示されない", async () => {
+  it("「コミュニティを追加」ボタンが /admin/communities/new へのリンクになる", async () => {
     renderWithClient(<CommunitiesTab />);
     await screen.findByText("AI 開発者の集い");
-    expect(screen.queryByText("新しいコミュニティを作成")).not.toBeInTheDocument();
+    const link = screen.getByRole("link", { name: "コミュニティを追加" });
+    expect(link).toHaveAttribute("href", "/admin/communities/new");
   });
 
-  it("「コミュニティを追加」ボタンをクリックすると作成ダイアログが開く", async () => {
+  it("「編集」ボタンが /admin/communities/:id/edit へのリンクになる", async () => {
+    renderWithClient(<CommunitiesTab />);
+    await screen.findByText("AI 開発者の集い");
+    const link = screen.getByRole("link", { name: "編集" });
+    expect(link).toHaveAttribute("href", "/admin/communities/community-1/edit");
+  });
+
+  it("ダイアログは表示されない（廃止）", async () => {
     renderWithClient(<CommunitiesTab />);
     await screen.findByText("AI 開発者の集い");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-
-    await userEvent.click(screen.getByRole("button", { name: "コミュニティを追加" }));
-    const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByText("コミュニティを追加")).toBeInTheDocument();
-  });
-
-  it("一覧の「編集」ボタンをクリックすると編集ダイアログが開く（インライン展開ではない）", async () => {
-    renderWithClient(<CommunitiesTab />);
-    await screen.findByText("AI 開発者の集い");
-
-    await userEvent.click(screen.getByRole("button", { name: "編集" }));
-    const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByText("コミュニティ編集")).toBeInTheDocument();
-    // 既存値がダイアログに初期表示される
-    expect(within(dialog).getByRole("textbox", { name: /コミュニティ名/ })).toHaveValue(
-      "AI 開発者の集い",
-    );
-  });
-
-  it("編集途中でキャンセルして再度開くと、途中の入力ではなく永続値が再表示される（再マウント）", async () => {
-    renderWithClient(<CommunitiesTab />);
-    await screen.findByText("AI 開発者の集い");
-
-    // 編集ダイアログを開いて名前を書き換える
-    await userEvent.click(screen.getByRole("button", { name: "編集" }));
-    let dialog = await screen.findByRole("dialog");
-    const nameInput = within(dialog).getByRole("textbox", { name: /コミュニティ名/ });
-    await userEvent.clear(nameInput);
-    await userEvent.type(nameInput, "保存しない途中編集");
-
-    // 保存せずキャンセルで閉じる
-    await userEvent.click(within(dialog).getByRole("button", { name: "キャンセル" }));
-    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
-
-    // 再度開くと、途中編集ではなく元の永続値が表示される
-    await userEvent.click(screen.getByRole("button", { name: "編集" }));
-    dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByRole("textbox", { name: /コミュニティ名/ })).toHaveValue(
-      "AI 開発者の集い",
-    );
-  });
-
-  it("追加ダイアログのキャンセルでダイアログが閉じる", async () => {
-    renderWithClient(<CommunitiesTab />);
-    await screen.findByText("AI 開発者の集い");
-
-    await userEvent.click(screen.getByRole("button", { name: "コミュニティを追加" }));
-    await screen.findByRole("dialog");
-    await userEvent.click(screen.getByRole("button", { name: "キャンセル" }));
-    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 });

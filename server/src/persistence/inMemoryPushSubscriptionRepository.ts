@@ -8,7 +8,7 @@ export function createInMemoryPushSubscriptionRepository(): PushSubscriptionRepo
     async upsert({ userId, endpoint, p256dh, auth }) {
       const existing = [...store.values()].find((r) => r.endpoint === endpoint);
       if (existing) {
-        const updated = { ...existing, p256dh, auth };
+        const updated = { ...existing, userId, p256dh, auth };
         store.set(existing.id, updated);
         return updated;
       }

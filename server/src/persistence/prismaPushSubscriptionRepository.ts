@@ -18,7 +18,7 @@ export function createPrismaPushSubscriptionRepository(prisma: PrismaClient): Pu
     }): Promise<PushSubscriptionRecord> {
       return prisma.pushSubscription.upsert({
         where: { endpoint },
-        update: { p256dh, auth },
+        update: { userId, p256dh, auth },
         create: { userId, endpoint, p256dh, auth },
       });
     },

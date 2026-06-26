@@ -1,45 +1,44 @@
 /// <reference lib="webworker" />
 import { cleanupOutdatedCaches, matchPrecache, precacheAndRoute } from "workbox-precaching";
 import { NavigationRoute, registerRoute } from "workbox-routing";
-import { NetworkFirst } from "workbox-strategies";
 
 declare let self: ServiceWorkerGlobalScope;
+
+// registerType: "autoUpdate" 相当: 即座にアクティベートしてクライアントを制御する。
+self.skipWaiting();
+self.addEventListener("activate", (event) => {
+  event.waitUntil(self.clients.claim());
+});
 
 // プレキャッシュ設定 & 古いキャッシュ削除。
 // vite-plugin-pwa の injectManifest が `self.__WB_MANIFEST` をマニフェスト配列に置換する。
 precacheAndRoute(self.__WB_MANIFEST);
 cleanupOutdatedCaches();
 
-// /api/* と /health はキャッシュしない（ネットワーク直接）。
+// SPA: ナビゲーションは index.html にフォールバック。
+// /api/* と /health は SW を素通りさせる（キャッシュしない）。
 registerRoute(
-  ({ url }) => url.pathname.startsWith("/api/") || url.pathname.startsWith("/health"),
-  new NetworkFirst(),
-);
-
-// SPA: それ以外のナビゲーションは index.html にフォールバック。
-// matchPrecache は Workbox 内部のバージョン付きキャッシュ名を解決するため
-// ハードコードした文字列は使わない。
-registerRoute(
-  new NavigationRoute(async () => {
-    const cached = await matchPrecache("/index.html");
-    return cached ?? Response.error();
-  }),
+  new NavigationRoute(
+    async () => {
+      const cached = await matchPrecache("/index.html");
+      return cached ?? Response.error();
+    },
+    { denylist: [/^\/api\//, /^\/health/] },
+  ),
 );
 
 // Web Push イベント（#798）。
 self.addEventListener("push", (event: PushEvent) => {
-  if (!event.data) return;
-
   let payload: { title?: string; body?: string; url?: string } = {};
   try {
-    payload = event.data.json() as typeof payload;
+    payload = (event.data?.json() ?? {}) as typeof payload;
   } catch {
-    payload = { title: "Hatchery", body: event.data.text() };
+    payload = { title: "Hatchery", body: event.data?.text() ?? "" };
   }
 
   const title = payload.title ?? "Hatchery";
   const options: NotificationOptions = {
-    body: payload.body,
+    body: payload.body || "新しいコンテンツがあります",
     icon: "/pwa-192x192.png",
     badge: "/pwa-192x192.png",
     data: { url: payload.url ?? "/" },
@@ -51,15 +50,16 @@ self.addEventListener("push", (event: PushEvent) => {
 // 通知タップで指定 URL を開く（#798）。
 self.addEventListener("notificationclick", (event: NotificationEvent) => {
   event.notification.close();
-  const url: string = (event.notification.data as { url?: string }).url ?? "/";
+  const path: string = (event.notification.data as { url?: string }).url ?? "/";
+  const targetUrl = new URL(path, self.location.origin).href;
 
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
-      const existing = clients.find((c) => c.url === url && "focus" in c);
+      const existing = clients.find((c) => new URL(c.url).pathname === path && "focus" in c);
       if (existing) {
         return (existing as WindowClient).focus();
       }
-      return self.clients.openWindow(url);
+      return self.clients.openWindow(targetUrl);
     }),
   );
 });

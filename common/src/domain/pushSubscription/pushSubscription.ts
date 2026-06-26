@@ -18,12 +18,8 @@ export const PushPayloadSchema = z.object({
 
 export type PushPayload = z.infer<typeof PushPayloadSchema>;
 
-/** POST /api/push/subscribe のリクエストボディ。 */
-export const SubscribePushBodySchema = z.object({
-  endpoint: z.string().url().max(2048),
-  p256dh: z.string().min(1).max(512),
-  auth: z.string().min(1).max(128),
-});
+/** POST /api/push-subscriptions のリクエストボディ（PushSubscriptionSchema と同一）。 */
+export const SubscribePushBodySchema = PushSubscriptionSchema;
 
 export type SubscribePushBody = z.infer<typeof SubscribePushBodySchema>;
 

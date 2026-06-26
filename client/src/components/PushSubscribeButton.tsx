@@ -64,10 +64,15 @@ export function PushSubscribeButton(): ReactElement | null {
         applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
       });
       const json = sub.toJSON();
+      const p256dh = json.keys?.p256dh;
+      const auth = json.keys?.auth;
+      if (!p256dh || !auth) {
+        throw new Error("ブラウザから暗号鍵を取得できませんでした");
+      }
       await subscribePush({
         endpoint: json.endpoint ?? sub.endpoint,
-        p256dh: json.keys?.p256dh ?? "",
-        auth: json.keys?.auth ?? "",
+        p256dh,
+        auth,
       });
       setState("subscribed");
     } catch (err) {

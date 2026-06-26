@@ -1,6 +1,7 @@
 import { Alert, Box, Button, Snackbar, TextField, Typography } from "../components/uiParts";
 
 import { useForm } from "@tanstack/react-form";
+import { PushSubscribeButton } from "../components/PushSubscribeButton.js";
 import { useSearch } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ReactElement, useEffect, useRef, useState } from "react";
@@ -170,6 +171,8 @@ export const AccountScene = (): ReactElement => {
           }}
         </form.Subscribe>
       </Box>
+
+      <PushSubscribeButton />
 
       <Snackbar
         open={snackbarOpen}

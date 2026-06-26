@@ -9,6 +9,7 @@ import {
   type RunPostBatchDeps,
   type RunPostBatchResult,
 } from "./runPostBatch.js";
+import type { PushNotificationService } from "../services/pushNotificationService.js";
 
 /** CLI エントリ関数の依存（テスト用注入対応）。 */
 export interface PostBatchCliDeps {
@@ -16,6 +17,8 @@ export interface PostBatchCliDeps {
   batchDeps: RunPostBatchDeps;
   /** 終了時に必ず呼ぶ後始末（本番では prisma.$disconnect）。 */
   disconnect: () => Promise<void>;
+  /** プッシュ通知サービス（#798）。未設定ならプッシュ通知はスキップ。 */
+  pushNotificationService?: PushNotificationService;
 }
 
 /**
@@ -23,6 +26,8 @@ export interface PostBatchCliDeps {
  * runPostBatch を実行して完了ログを出し、成否によらず finally で disconnect する。
  */
 export async function runPostBatchCli(cliDeps: PostBatchCliDeps): Promise<RunPostBatchResult> {
+  // プッシュ通知の Promise を finally で await し DB 接続クローズ前に完了させる（#798）。
+  let pushPromise: Promise<void> | undefined;
   try {
     const result = await runPostBatch(cliDeps.batchDeps);
 
@@ -30,8 +35,15 @@ export async function runPostBatchCli(cliDeps: PostBatchCliDeps): Promise<RunPos
       posts: result.posts.length,
     });
 
+    if (cliDeps.pushNotificationService && result.posts.length > 0) {
+      pushPromise = cliDeps.pushNotificationService
+        .sendToAllSubscribers({ title: "新着投稿", body: "コミュニティに新しい投稿があります", url: "/" })
+        .catch((err: unknown) => logBatchError("push_notification.batch_send_failed", err));
+    }
+
     return result;
   } finally {
+    await pushPromise;
     await cliDeps.disconnect();
   }
 }
@@ -53,6 +65,8 @@ async function main(): Promise<void> {
     { createPrismaWorkerRepository },
     { createPrismaWorldStateRepository },
     { createPrismaTokenUsageLogRepository },
+    { createPrismaPushSubscriptionRepository },
+    { createPushNotificationService },
   ] = await Promise.all([
     import("../persistence/prismaClient.js"),
     import("../persistence/prismaBatchRunLogRepository.js"),
@@ -63,9 +77,23 @@ async function main(): Promise<void> {
     import("../persistence/prismaWorkerRepository.js"),
     import("../persistence/prismaWorldStateRepository.js"),
     import("../persistence/prismaTokenUsageLogRepository.js"),
+    import("../persistence/prismaPushSubscriptionRepository.js"),
+    import("../services/pushNotificationService.js"),
   ]);
 
   const workerRepo = createPrismaWorkerRepository(prisma);
+
+  const pushNotificationService =
+    env.vapidPublicKey && env.vapidPrivateKey && env.vapidSubject
+      ? createPushNotificationService({
+          config: {
+            publicKey: env.vapidPublicKey,
+            privateKey: env.vapidPrivateKey,
+            subject: env.vapidSubject,
+          },
+          pushSubscriptionRepo: createPrismaPushSubscriptionRepository(prisma),
+        })
+      : undefined;
 
   await runPostBatchCli({
     batchDeps: {
@@ -83,6 +111,7 @@ async function main(): Promise<void> {
       tokenUsageLogRepository: createPrismaTokenUsageLogRepository(prisma),
     },
     disconnect: () => prisma.$disconnect(),
+    pushNotificationService,
   });
 }
 

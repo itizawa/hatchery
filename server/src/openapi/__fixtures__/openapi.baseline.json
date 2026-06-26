@@ -1150,6 +1150,46 @@
         ],
         "description": "購読コミュニティ別未読数レスポンス（#933）"
       },
+      "SubscribePushBody": {
+        "type": "object",
+        "properties": {
+          "endpoint": {
+            "type": "string",
+            "maxLength": 2048,
+            "format": "uri"
+          },
+          "p256dh": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          },
+          "auth": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "endpoint",
+          "p256dh",
+          "auth"
+        ],
+        "description": "Web Push 購読登録リクエスト（#798）"
+      },
+      "UnsubscribePushBody": {
+        "type": "object",
+        "properties": {
+          "endpoint": {
+            "type": "string",
+            "maxLength": 2048,
+            "format": "uri"
+          }
+        },
+        "required": [
+          "endpoint"
+        ],
+        "description": "Web Push 購読削除リクエスト（#798）"
+      },
       "OgpMeta": {
         "type": "object",
         "properties": {
@@ -3274,6 +3314,98 @@
           },
           "404": {
             "description": "コミュニティが存在しない",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/push-subscriptions": {
+      "post": {
+        "summary": "Web Push 購読を登録する（upsert）（#798）",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "push-subscriptions"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubscribePushBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "購読登録完了"
+          },
+          "400": {
+            "description": "リクエスト不正",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未認証",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Web Push 購読を削除する（#798）",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "push-subscriptions"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnsubscribePushBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "購読削除完了"
+          },
+          "400": {
+            "description": "リクエスト不正",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未認証",
             "content": {
               "application/json": {
                 "schema": {

@@ -5,12 +5,9 @@ import { NetworkFirst } from "workbox-strategies";
 
 declare let self: ServiceWorkerGlobalScope;
 
-// vite-plugin-pwa が injectManifest 時に注入するプレキャッシュマニフェスト（型宣言が必要）。
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-declare const __WB_MANIFEST: any[];
-
 // プレキャッシュ設定 & 古いキャッシュ削除。
-precacheAndRoute(__WB_MANIFEST);
+// vite-plugin-pwa の injectManifest が `self.__WB_MANIFEST` をマニフェスト配列に置換する。
+precacheAndRoute(self.__WB_MANIFEST);
 cleanupOutdatedCaches();
 
 // /api/* と /health はキャッシュしない（ネットワーク直接）。

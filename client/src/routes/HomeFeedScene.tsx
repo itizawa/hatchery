@@ -167,7 +167,7 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
             flexShrink: 0,
             display: { xs: "none", md: "block" },
             position: "sticky",
-            top: 80,
+            top: 24,
           }}
         >
           <QueryBoundary

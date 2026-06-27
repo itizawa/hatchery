@@ -159,7 +159,7 @@ const CommunityContent = ({
                 flexShrink: 0,
                 display: { xs: "none", md: "block" },
                 position: "sticky",
-                top: 80,
+                top: 24,
               }}
             >
               <CommunitySidebarCard

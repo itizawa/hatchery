@@ -106,7 +106,7 @@ flowchart TD
 
 - 任意のタイミングで `develop → main` の昇格 PR を作成しマージ（**人間のみ**）。
 - main マージ＝本番デプロイ（デプロイ手段は別途）。
-- **main マージ時に `.github/workflows/release-tag.yml` が自動起動**し、PR タイトルの `vX.Y.Z` からタグと GitHub Release を自動作成する。タイトルからバージョンを抽出できない場合・同名タグが既に存在する場合は何も作成せずスキップする（冪等）。
+- **main マージ後、Claude Code routine（`.claude/commands/release.md`）が cron ポーリングで未タグのマージを検知**し、PR タイトルの `vX.Y.Z` からタグと GitHub Release・リリースノートを自動生成する。タイトルからバージョンを抽出できない場合・同名タグ/Release が既に存在する場合は何も作成せずスキップする（冪等）。routine の登録手順は `docs/routine-release.md` を参照。
 
 ## 5. 自動化の実装方式
 
@@ -145,8 +145,7 @@ flowchart TD
     ├── pull_request_template.md
     └── workflows/
         ├── sync-milestone-labels.yml  # マイルストーン設定を milestone/* ラベルへ自動同期
-        ├── auto-release-pr.yml        # develop 更新時に develop→main のリリースPRを自動作成・更新
-        └── release-tag.yml            # develop→main マージ時にタグ + GitHub Release を自動作成
+        └── auto-release-pr.yml        # develop 更新時に develop→main のリリースPRを自動作成・更新
 ```
 
 ### 設計書テンプレート（`docs/design/issue-<N>.md`）
@@ -175,7 +174,7 @@ flowchart TD
 | レビュー | `/code-review` 指摘を収束まで解消 | AI 実行 |
 | 実装マージ | CI 緑 + 指摘ゼロで AI が `develop` へマージし Issue クローズ | AI 実行（CI を required check に） |
 | 本番昇格 | `develop → main` を人間がマージ | main 保護・push禁止 |
-| タグ・ Release | main マージ後、`.github/workflows/release-tag.yml` がタグ + GitHub Release を自動作成 | GitHub Actions |
+| タグ・ Release | main マージ後、Claude Code routine（`/release`）が cron で検知しタグ + GitHub Release + リリースノートを自動生成 | Claude Code routine（`docs/routine-release.md`） |
 
 **コミットメッセージ規約**（Conventional Commits 準拠）:
 `feat:` / `fix:` / `refactor:` / `docs:` / `config:` / `test:` / `style:`

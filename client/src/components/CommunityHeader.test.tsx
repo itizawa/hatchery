@@ -83,7 +83,8 @@ describe("CommunityHeader（#457 Reddit 風ヘッダー）", () => {
     });
 
     it("description が null の場合に description テキストが DOM に存在しない", () => {
-      render(<CommunityHeader community={{ ...baseCommunity, description: null }} />);
+      // Community.description は string（非 nullable）だが防御的ガード（{description && ...}）の動作確認
+      render(<CommunityHeader community={{ ...baseCommunity, description: null } as unknown as Community} />);
       expect(screen.queryByText("テクノロジーコミュニティ")).not.toBeInTheDocument();
     });
 

@@ -360,7 +360,7 @@ describe("GET /api/communities/:slug/feed comment_count（#500）", () => {
 
     const res = await request(app).get("/api/communities/technology/feed");
     expect(res.status).toBe(200);
-    expect(res.body[0].comment_count).toBe(1);
+    expect(res.body.posts[0].comment_count).toBe(1);
   });
 });
 

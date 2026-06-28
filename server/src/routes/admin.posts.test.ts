@@ -140,7 +140,7 @@ describe("POST /api/admin/posts (#433)", () => {
     const feedRes = await request(app).get("/api/communities/tech-news/feed");
     expect(feedRes.status).toBe(200);
     expect(
-      (feedRes.body as Array<{ title: string }>).some((p) => p.title === validBody.title),
+      (feedRes.body as { posts: Array<{ title: string }> }).posts.some((p) => p.title === validBody.title),
     ).toBe(true);
   });
 

@@ -1,4 +1,4 @@
-import { NotFoundError } from "@hatchery/common";
+import { CommunityFeedQuerySchema, NotFoundError } from "@hatchery/common";
 import { Router } from "express";
 
 import { buildPrivateCacheControl } from "../config/security.js";
@@ -47,13 +47,17 @@ export function createCommunitiesRouter(
       .catch(next);
   });
 
-  // community フィード（新着順・認証不要・#479 で author_worker を付与）
+  // community フィード（新着順・認証不要・#479 で author_worker を付与・#881 ページネーション対応）
   // eslint-disable-next-line max-params
   router.get("/:slug/feed", (req, res, next) => {
+    const parsed = CommunityFeedQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      res.status(400).json({ error: "ValidationError", issues: parsed.error.issues });
+      return;
+    }
+    const { cursor, limit } = parsed.data;
     const { slug } = req.params as { slug: string };
-    // sessionId は任意クエリパラメータ。UUID 検証付きで取得し、不正・未指定は null（#831）。
     const sessionId = extractSessionId(req);
-    // reveal フィルタ（#556）: createdAt <= now のもののみ公開する。
     const now = new Date();
     communityRepo
       .findBySlug(slug)
@@ -61,25 +65,31 @@ export function createCommunitiesRouter(
         if (!community) {
           throw new NotFoundError("CommunityNotFound");
         }
-        return postRepo.listByCommunity(community.id, undefined, { now });
+        return postRepo.listByCommunityPaged(community.id, cursor, limit, { now });
       })
-      .then((posts) => attachAuthorWorker(posts, workerRepo))
-      // 各 post にコメント件数を付与する（N+1 回避・#500 / reveal フィルタ #875）。
-      .then((posts) => attachCommentCount(posts, commentRepo, { now }))
-      .then(async (posts) => {
+      .then(async (result) => {
+        const enriched = await attachAuthorWorker(result.posts, workerRepo);
+        const withCounts = await attachCommentCount(enriched, commentRepo, { now });
         if (sessionId) {
           const voteMap = await voteRepo.findVotesBySessionAndTargets({
             sessionId,
             targetType: "post",
-            targetIds: posts.map((p) => p.id),
+            targetIds: withCounts.map((p) => p.id),
           });
-          res.status(200).json(posts.map((p) => toPostResponse({ ...p, myVote: voteMap.get(p.id) ?? null })));
+          const posts = withCounts.map((p) => toPostResponse({ ...p, myVote: voteMap.get(p.id) ?? null }));
+          res.status(200).json({ ...result, posts });
         } else {
-          // OpenAPI 契約（snake_case）へ整形して返す（#499）。
-          res.status(200).json(posts.map(toPostResponse));
+          const posts = withCounts.map(toPostResponse);
+          res.status(200).json({ ...result, posts });
         }
       })
-      .catch(next);
+      .catch((err: unknown) => {
+        if (err instanceof Error && err.message === "INVALID_CURSOR") {
+          res.status(400).json({ error: "ValidationError", issues: [{ message: "カーソルが不正です" }] });
+          return;
+        }
+        next(err);
+      });
   });
 
   // community に最近投稿したワーカー一覧（認証不要・#207）

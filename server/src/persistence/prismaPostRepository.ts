@@ -85,6 +85,49 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
       return rows.map(toRecord);
     },
 
+    // eslint-disable-next-line max-params
+    async listByCommunityPaged(
+      communityId: string,
+      cursor?: string,
+      limit = 20,
+      options?: RevealFilterOptions,
+    ): Promise<{ posts: PostRecord[]; nextCursor: string | null }> {
+      const now = options?.now;
+      let where: Prisma.PostWhereInput = {
+        communityId,
+        ...(now !== undefined ? { createdAt: { lte: now } } : {}),
+      };
+
+      if (cursor !== undefined) {
+        const payload = decodeCursor(cursor);
+        if (!payload) throw new Error("INVALID_CURSOR");
+        const cursorDate = new Date(payload.createdAt);
+        where = {
+          ...where,
+          AND: [
+            {
+              OR: [
+                { createdAt: { lt: cursorDate } },
+                { createdAt: { equals: cursorDate }, id: { lt: payload.id } },
+              ],
+            },
+          ],
+        };
+      }
+
+      const rows = await prisma.post.findMany({
+        where,
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        take: limit + 1,
+      });
+
+      const hasMore = rows.length > limit;
+      const posts = hasMore ? rows.slice(0, limit) : rows;
+      const nextCursor = hasMore ? encodeCursor(toRecord(posts[posts.length - 1]!)) : null;
+
+      return { posts: posts.map(toRecord), nextCursor };
+    },
+
     async findById(id: string): Promise<PostRecord | null> {
       const row = await prisma.post.findUnique({ where: { id } });
       return row ? toRecord(row) : null;

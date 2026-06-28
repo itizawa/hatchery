@@ -52,16 +52,16 @@ describe("isCrawler", () => {
 describe("resolveApiBase", () => {
   it("env.API_BASE_URL があればそれを返す（末尾スラッシュは除去）", () => {
     expect(
-      resolveApiBase({ API_BASE_URL: "https://api.example.com/" }, "https://hatchery.example/posts/x"),
+      resolveApiBase({ env: { API_BASE_URL: "https://api.example.com/" }, requestUrl: "https://hatchery.example/posts/x" }),
     ).toBe("https://api.example.com");
   });
 
   it("env.API_BASE_URL が無ければリクエストの origin を返す", () => {
-    expect(resolveApiBase({}, "https://hatchery.example/posts/x")).toBe("https://hatchery.example");
+    expect(resolveApiBase({ env: {}, requestUrl: "https://hatchery.example/posts/x" })).toBe("https://hatchery.example");
   });
 
   it("env.API_BASE_URL が空文字ならリクエストの origin を返す", () => {
-    expect(resolveApiBase({ API_BASE_URL: "" }, "https://hatchery.example/posts/x")).toBe(
+    expect(resolveApiBase({ env: { API_BASE_URL: "" }, requestUrl: "https://hatchery.example/posts/x" })).toBe(
       "https://hatchery.example",
     );
   });

@@ -9,15 +9,22 @@ async function fetchCommunities(apiBase: string): Promise<CommunityLike[] | null
     if (!res.ok) return null;
     const data = (await res.json()) as unknown;
     if (!Array.isArray(data)) return null;
-    return data.filter(
-      (c): c is CommunityLike =>
-        typeof c === "object" &&
-        c !== null &&
-        typeof (c as { id?: unknown }).id === "string" &&
-        typeof (c as { slug?: unknown }).slug === "string" &&
-        typeof (c as { name?: unknown }).name === "string" &&
-        typeof (c as { description?: unknown }).description === "string",
-    );
+    return data
+      .filter(
+        (c: unknown): c is Record<string, unknown> =>
+          typeof c === "object" &&
+          c !== null &&
+          typeof (c as Record<string, unknown>).id === "string" &&
+          typeof (c as Record<string, unknown>).slug === "string" &&
+          typeof (c as Record<string, unknown>).name === "string" &&
+          typeof (c as Record<string, unknown>).description === "string",
+      )
+      .map((c): CommunityLike => ({
+        id: c.id as string,
+        slug: c.slug as string,
+        name: c.name as string,
+        description: c.description as string,
+      }));
   } catch {
     return null;
   }
@@ -36,7 +43,7 @@ export const onRequest = async (context: PagesContext): Promise<Response> => {
     return next();
   }
 
-  const apiBase = resolveApiBase(env, request.url);
+  const apiBase = resolveApiBase({ env, requestUrl: request.url });
   const communities = await fetchCommunities(apiBase);
   if (!communities) {
     return next();

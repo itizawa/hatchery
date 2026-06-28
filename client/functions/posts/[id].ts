@@ -46,7 +46,7 @@ export const onRequest = async (context: PagesContext): Promise<Response> => {
     return next();
   }
 
-  const apiBase = resolveApiBase(env, request.url);
+  const apiBase = resolveApiBase({ env, requestUrl: request.url });
   const post = await fetchPost({ apiBase, postId });
   if (!post) {
     return next();

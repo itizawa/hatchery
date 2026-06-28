@@ -49,8 +49,8 @@ export function isCrawler(userAgent: string | null | undefined): boolean {
   return CRAWLER_UA_PATTERNS.some((pattern) => ua.includes(pattern));
 }
 
-// eslint-disable-next-line max-params
-export function resolveApiBase(env: OgpEnv, requestUrl: string): string {
+export function resolveApiBase(args: { env: OgpEnv; requestUrl: string }): string {
+  const { env, requestUrl } = args;
   const configured = env.API_BASE_URL?.trim();
   if (configured) {
     return configured.replace(/\/+$/, "");

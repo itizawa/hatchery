@@ -282,12 +282,12 @@ describe("createInMemoryPostRepository", () => {
         ]);
         await new Promise((r) => setTimeout(r, 2));
       }
-      const page1 = await repo.listByCommunityPaged("community-1", undefined, 2);
+      const page1 = await repo.listByCommunityPaged({ communityId: "community-1", limit: 2 });
       expect(page1.posts).toHaveLength(2);
       expect(page1.nextCursor).not.toBeNull();
-      const page2 = await repo.listByCommunityPaged("community-1", page1.nextCursor!, 2);
+      const page2 = await repo.listByCommunityPaged({ communityId: "community-1", cursor: page1.nextCursor!, limit: 2 });
       expect(page2.posts).toHaveLength(2);
-      const page3 = await repo.listByCommunityPaged("community-1", page2.nextCursor!, 2);
+      const page3 = await repo.listByCommunityPaged({ communityId: "community-1", cursor: page2.nextCursor!, limit: 2 });
       expect(page3.posts).toHaveLength(1);
       expect(page3.nextCursor).toBeNull();
 
@@ -306,21 +306,21 @@ describe("createInMemoryPostRepository", () => {
       await repo.createMany("community-2", [
         { slotKey: "s", seq: 0, author: "w", title: "C2", text: "t" },
       ]);
-      const { posts } = await repo.listByCommunityPaged("community-1", undefined, 20);
+      const { posts } = await repo.listByCommunityPaged({ communityId: "community-1", limit: 20 });
       expect(posts).toHaveLength(1);
       expect(posts[0].title).toBe("C1");
     });
 
     it("post が 0 件のときは空配列・nextCursor=null", async () => {
       const repo = createInMemoryPostRepository();
-      const result = await repo.listByCommunityPaged("community-1", undefined, 20);
+      const result = await repo.listByCommunityPaged({ communityId: "community-1", limit: 20 });
       expect(result).toEqual({ posts: [], nextCursor: null });
     });
 
     it("不正な cursor は INVALID_CURSOR で reject", async () => {
       const repo = createInMemoryPostRepository();
       const invalid = Buffer.from("not-json").toString("base64");
-      await expect(repo.listByCommunityPaged("community-1", invalid, 20)).rejects.toThrow("INVALID_CURSOR");
+      await expect(repo.listByCommunityPaged({ communityId: "community-1", cursor: invalid, limit: 20 })).rejects.toThrow("INVALID_CURSOR");
     });
 
     it("now を渡すと createdAt > now の post は除外される", async () => {
@@ -332,7 +332,7 @@ describe("createInMemoryPostRepository", () => {
         { slotKey: "s", seq: 1, author: "w", title: "future", text: "t", createdAt: future },
       ]);
       const now = new Date();
-      const { posts, nextCursor } = await repo.listByCommunityPaged("community-1", undefined, 20, { now });
+      const { posts, nextCursor } = await repo.listByCommunityPaged({ communityId: "community-1", limit: 20, options: { now } });
       expect(posts).toHaveLength(1);
       expect(posts[0].title).toBe("past");
       expect(nextCursor).toBeNull();

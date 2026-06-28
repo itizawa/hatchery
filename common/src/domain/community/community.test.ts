@@ -9,6 +9,8 @@ import {
   CommunitySchema,
   CreateCommunitySchema,
   UpdateCommunitySchema,
+  generateCommunityIconUrl,
+  resolveCommunityIconUrl,
 } from "./community.js";
 
 describe("CommunitySchema", () => {
@@ -258,6 +260,46 @@ describe("UpdateCommunitySchema（#310）", () => {
     expect(
       UpdateCommunitySchema.safeParse({ generationInstruction: longInstr }).success,
     ).toBe(false);
+  });
+});
+
+describe("generateCommunityIconUrl（#960）", () => {
+  it("コミュニティ id をシードにした Boring Avatars bauhaus URL を返す", () => {
+    const url = generateCommunityIconUrl({ id: "comm-1" });
+    expect(url).toBe("https://source.boringavatars.com/bauhaus/40/comm-1");
+  });
+
+  it("URL パスに /bauhaus/ が含まれる", () => {
+    const url = generateCommunityIconUrl({ id: "test" });
+    expect(url).toContain("/bauhaus/");
+  });
+
+  it("特殊文字を含む id を encodeURIComponent でエンコードする", () => {
+    const url = generateCommunityIconUrl({ id: "comm/special&chars" });
+    expect(url).toContain(encodeURIComponent("comm/special&chars"));
+    expect(url).not.toContain("comm/special&chars");
+  });
+});
+
+describe("resolveCommunityIconUrl（#960）", () => {
+  it("iconUrl が設定されているときはそれを返す", () => {
+    const url = resolveCommunityIconUrl({ id: "comm-1", iconUrl: "https://example.com/icon.png" });
+    expect(url).toBe("https://example.com/icon.png");
+  });
+
+  it("iconUrl が null のときは自動生成 URL を返す", () => {
+    const url = resolveCommunityIconUrl({ id: "comm-1", iconUrl: null });
+    expect(url).toBe(generateCommunityIconUrl({ id: "comm-1" }));
+  });
+
+  it("iconUrl が undefined のときは自動生成 URL を返す", () => {
+    const url = resolveCommunityIconUrl({ id: "comm-1", iconUrl: undefined });
+    expect(url).toBe(generateCommunityIconUrl({ id: "comm-1" }));
+  });
+
+  it("自動生成 URL に /bauhaus/ が含まれる", () => {
+    const url = resolveCommunityIconUrl({ id: "comm-2", iconUrl: null });
+    expect(url).toContain("/bauhaus/");
   });
 });
 

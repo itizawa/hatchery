@@ -7,6 +7,7 @@ import {
   CreateCommentRequestSchema,
   CreateCommunitySchema,
   CreatePostRequestSchema,
+  FEED_CURSOR_MAX_LENGTH,
   PostSchema,
   SubscriptionSchema,
   SubscriptionStatusSchema,
@@ -266,14 +267,26 @@ export function registerCommunities(registry: OpenAPIRegistry, ctx: RegistryCont
     },
   });
 
-  // コミュニティフィード（認証不要）
+  // コミュニティフィード（認証不要・#881 ページネーション対応）
   registry.registerPath({
     method: "get",
     path: "/api/communities/{slug}/feed",
-    summary: "コミュニティの投稿フィードを取得（認証不要・新着順）",
+    summary: "コミュニティの投稿フィードを取得（認証不要・新着順・カーソルページネーション）",
     request: {
       params: z.object({ slug: communitySlugParam }),
       query: z.object({
+        cursor: z
+          .string()
+          .max(FEED_CURSOR_MAX_LENGTH)
+          .optional()
+          .openapi({ description: "カーソル（直前ページ末尾位置の base64 エンコード）" }),
+        limit: z
+          .number()
+          .int()
+          .min(1)
+          .max(100)
+          .default(20)
+          .openapi({ description: "1 ページあたりの取得件数（デフォルト 20・最大 100）" }),
         sessionId: z
           .string()
           .uuid()
@@ -283,8 +296,19 @@ export function registerCommunities(registry: OpenAPIRegistry, ctx: RegistryCont
     },
     responses: {
       200: {
-        description: "コミュニティの投稿一覧（createdAt 降順）",
-        content: { "application/json": { schema: z.array(PostComponent) } },
+        description: "コミュニティの投稿一覧（createdAt 降順・カーソルページネーション）",
+        content: {
+          "application/json": {
+            schema: z.object({
+              posts: z.array(PostComponent),
+              nextCursor: z
+                .string()
+                .max(FEED_CURSOR_MAX_LENGTH)
+                .nullable()
+                .openapi({ description: "次ページ取得用カーソル。null の場合は末尾" }),
+            }),
+          },
+        },
       },
       404: { description: "コミュニティが存在しない", ...errorJson },
     },

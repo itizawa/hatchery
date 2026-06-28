@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { SIDEBAR_ICON_SIZE, SidebarCommunitySection } from "./SidebarCommunitySection";
 import type { Community } from "../api/communities";
+import { generateCommunityIconUrl } from "@hatchery/common";
 import type React from "react";
 
 const mockCommunities: Community[] = [
@@ -137,19 +138,20 @@ describe("SidebarCommunitySection", () => {
     expect(img).toHaveAttribute("src", "https://example.com/icon1.png");
   });
 
-  it("iconUrl が null の場合、Avatar にイニシャル（先頭1文字）が表示される", async () => {
+  it("iconUrl が null の場合、Avatar src が bauhaus 自動生成 URL になる（イニシャル表示ではなく img が表示される）", async () => {
     render(<SidebarCommunitySection />, { wrapper: Wrapper });
     await screen.findByText("AI 開発者の集い");
-    // "コーディング日常" の先頭文字 "コ" がフォールバック表示される
-    expect(screen.getByText("コ")).toBeInTheDocument();
+    // iconUrl: null のコミュニティは自動生成 URL の img として表示される（#960）
+    const img = screen.getByRole("img", { name: "コーディング日常" });
+    expect(img).toHaveAttribute("src", generateCommunityIconUrl({ id: "community-2" }));
   });
 
   it("コミュニティ Avatar が SIDEBAR_ICON_SIZE と同じ width/height の style で表示される（iconUrl なし）", async () => {
     render(<SidebarCommunitySection />, { wrapper: Wrapper });
     await screen.findByText("AI 開発者の集い");
-    // イニシャル表示の Avatar（iconUrl なし: コーディング日常）のコンテナを取得
-    const initial = screen.getByText("コ");
-    const avatarRoot = initial.closest(".MuiAvatar-root") as HTMLElement | null;
+    // iconUrl なし（コーディング日常）の Avatar: img role で取得しコンテナのサイズを確認
+    const img = screen.getByRole("img", { name: "コーディング日常" });
+    const avatarRoot = img.closest(".MuiAvatar-root") as HTMLElement | null;
     expect(avatarRoot).not.toBeNull();
     expect(avatarRoot).toHaveStyle({ width: `${SIDEBAR_ICON_SIZE}px`, height: `${SIDEBAR_ICON_SIZE}px` });
   });
@@ -178,5 +180,21 @@ describe("SidebarCommunitySection", () => {
       (el) => el.closest("a[href='/communities']") === el.closest("a"),
     );
     expect(exploreIconWrapper).toBeDefined();
+  });
+
+  it("iconUrl 未設定のコミュニティの Avatar src が bauhaus 自動生成 URL になる（#960）", async () => {
+    render(<SidebarCommunitySection />, { wrapper: Wrapper });
+    await screen.findByText("AI 開発者の集い");
+    // community-2（iconUrl: null）の Avatar src を確認
+    const img = screen.getByRole("img", { name: "コーディング日常" });
+    expect(img).toHaveAttribute("src", generateCommunityIconUrl({ id: "community-2" }));
+  });
+
+  it("iconUrl 設定済みのコミュニティの Avatar src はその URL を優先する（#960）", async () => {
+    render(<SidebarCommunitySection />, { wrapper: Wrapper });
+    await screen.findByText("AI 開発者の集い");
+    // community-1（iconUrl: "https://example.com/icon1.png"）の Avatar src を確認
+    const img = screen.getByRole("img", { name: "AI 開発者の集い" });
+    expect(img).toHaveAttribute("src", "https://example.com/icon1.png");
   });
 });

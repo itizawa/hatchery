@@ -1,9 +1,9 @@
-import { Box, Stack, Typography } from "../components/uiParts";
+import { Box, Button, Stack, Typography } from "../components/uiParts";
 import { Link as RouterLink, useNavigate, useParams } from "@tanstack/react-router";
-import { useEffect, type ReactElement } from "react";
+import { useEffect, useRef, type ReactElement } from "react";
 
 import {
-  useCommunityFeed,
+  useInfiniteCommunityFeed,
   useSubscribe,
   useUnsubscribe,
   useVotePost,
@@ -22,6 +22,7 @@ import type { VoteDirection } from "../components/VoteControl.js";
 import { SubscribeButton } from "../components/SubscribeButton.js";
 import { SubscriptionStatus } from "../components/SubscriptionStatus.js";
 import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
+import { useLoginModal } from "../hooks/useLoginModal.js";
 import type { Community } from "../api/communities.js";
 
 /**
@@ -55,7 +56,7 @@ const MarkViewedEffect = ({ slug }: { slug: string }): null => {
 
 /**
  * コミュニティが実在する場合のみレンダーされる内側コンポーネント。
- * useCommunityFeed など、コミュニティ存在を前提とするフックをここに集約する（#524）。
+ * useInfiniteCommunityFeed でカーソルページネーション + IntersectionObserver（#881）。
  * 存在しない slug の場合は CommunityScene が早期リターンしてこのコンポーネントはレンダーされない。
  * #748: vote 連打防止。#890: 押した方向のみ disabled にし、反対方向は操作可能にする。
  */
@@ -66,9 +67,28 @@ const CommunityContent = ({
   community: Community;
   communitySlug: string;
 }): ReactElement => {
-  const { data: posts } = useCommunityFeed(communitySlug);
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteCommunityFeed(communitySlug);
   const { data: authUser } = useAuth();
+  const { openLogin } = useLoginModal();
   const navigate = useNavigate();
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && hasNextPage && !isFetchingNextPage) {
+          void fetchNextPage();
+        }
+      },
+      { threshold: 0.1 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const posts = data.pages.flatMap((page) => page.posts);
 
   const { mutate: subscribe, isPending: isSubscribing } = useSubscribe(communitySlug);
   const { mutate: unsubscribe, isPending: isUnsubscribing } = useUnsubscribe(communitySlug);
@@ -91,20 +111,24 @@ const CommunityContent = ({
             actions={
               <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
                 <ShareButton shareUrl={shareUrl} shareTitle={shareTitle} />
-                {authUser && (
+                {authUser ? (
                   <SubscribeButton
                     subscribed={subscribed}
                     onSubscribe={() => subscribe()}
                     onUnsubscribe={() => unsubscribe()}
                     disabled={isSubscriptionPending}
                   />
+                ) : (
+                  <Button variant="contained" size="small" onClick={openLogin}>
+                    ログインして購読
+                  </Button>
                 )}
               </Stack>
             }
           />
 
           <Box sx={{ display: "flex", gap: 3, alignItems: "flex-start" }}>
-            {/* 左カラム: Post 一覧（#462: useCommunityFeed は Suspense 化済みのため isLoading 分岐は不要） */}
+            {/* 左カラム: Post 一覧（#881: useInfiniteCommunityFeed でカーソルページネーション + sentinel） */}
             <Box sx={{ flex: 1, minWidth: 0 }}>
               {posts.length === 0 ? (
                 <Box sx={{ textAlign: "center", py: 4 }}>
@@ -148,6 +172,13 @@ const CommunityContent = ({
                       </RouterLink>
                     </Box>
                   ))}
+                  <Box ref={sentinelRef} sx={{ py: 1 }}>
+                    {isFetchingNextPage && (
+                      <Typography variant="body2" color="text.secondary" sx={{ textAlign: "center" }}>
+                        読み込み中...
+                      </Typography>
+                    )}
+                  </Box>
                 </Box>
               )}
             </Box>
@@ -159,7 +190,7 @@ const CommunityContent = ({
                 flexShrink: 0,
                 display: { xs: "none", md: "block" },
                 position: "sticky",
-                top: 80,
+                top: 24,
               }}
             >
               <CommunitySidebarCard
@@ -207,7 +238,7 @@ const CommunityContent = ({
  * コミュニティページ（/communities/$slug）。
  * Reddit 風 2 カラムレイアウト（左: Post 一覧 / 右: コミュニティ詳細 sticky サイドバー）。
  * ADR-0018 / Issue #370。
- * #462: usePublicCommunities・useCommunityFeed は Suspense 化（ローディング/エラーは router の QueryBoundary に委譲）。
+ * #462: usePublicCommunities は Suspense 化（ローディング/エラーは router の QueryBoundary に委譲）。
  * useRecentWorkers はサイドバーの局所 QueryBoundary に委譲する。
  * #481: ゲストの vote 押下は guardVote で握りつぶさずログイン誘導する。
  * #524: 存在しない slug のとき「コミュニティが見つかりません」を表示する。

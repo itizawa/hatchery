@@ -29,9 +29,9 @@ import type { components } from "./openapi.gen.js";
 export { fetchPostThread, usePostThread, postThreadQueryKey } from "./posts.js";
 export type { Post, Comment } from "./posts.js";
 export {
-  fetchCommunityFeed,
+  fetchCommunityFeedPage,
   fetchHomeFeedPage,
-  useCommunityFeed,
+  useInfiniteCommunityFeed,
   useInfiniteHomeFeed,
   communityFeedQueryKey,
   homeFeedQueryKeyPrefix,

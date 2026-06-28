@@ -3,7 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse, delay } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CommunityScene } from "./CommunityScene";
 import {
@@ -17,6 +17,9 @@ import { QueryBoundary } from "../components/QueryBoundary";
 import { MainContentSkeleton } from "../components/MainContentSkeleton";
 import type { Community, RecentWorker } from "../api/communities";
 import type React from "react";
+
+const mockNavigate = vi.fn();
+let mockSearch: Record<string, unknown> = {};
 
 const mockCommunity: Community = {
   id: "community-1",
@@ -37,6 +40,8 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
   return {
     ...actual,
     useParams: () => ({ slug: "ai-dev" }),
+    useNavigate: () => mockNavigate,
+    useSearch: () => mockSearch,
     Link: ({ children, to }: { children: React.ReactNode; to: string; params?: unknown }) => (
       <a href={to}>{children}</a>
     ),
@@ -45,11 +50,15 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
 
 const server = setupServer(
   http.get("/api/communities", () => HttpResponse.json([mockCommunity])),
-  http.get("/api/communities/:slug/feed", () => HttpResponse.json([])),
+  http.get("/api/communities/:slug/feed", () => HttpResponse.json({ posts: [], nextCursor: null })),
   http.get("/api/communities/:slug/recent-workers", () => HttpResponse.json(mockRecentWorkers)),
 );
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+beforeEach(() => {
+  mockNavigate.mockReset();
+  mockSearch = {};
+});
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
@@ -63,7 +72,10 @@ function renderScene({ seedRecentWorkers = true }: { seedRecentWorkers?: boolean
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   });
   qc.setQueryData(["communities"], [mockCommunity]);
-  qc.setQueryData(communityFeedQueryKey("ai-dev"), []);
+  qc.setQueryData(communityFeedQueryKey("ai-dev"), {
+    pages: [{ posts: [], nextCursor: null }],
+    pageParams: [undefined],
+  });
   qc.setQueryData(communitySubscriptionQueryKey("ai-dev"), { subscribed: false });
   qc.setQueryData(AUTH_ME_QUERY_KEY, null);
   if (seedRecentWorkers) {
@@ -194,7 +206,10 @@ describe("CommunityScene", () => {
       defaultOptions: { queries: { retry: false, gcTime: 0 } },
     });
     qc.setQueryData(["communities"], [mockCommunity]);
-    qc.setQueryData(communityFeedQueryKey("ai-dev"), [mockPost]);
+    qc.setQueryData(communityFeedQueryKey("ai-dev"), {
+      pages: [{ posts: [mockPost], nextCursor: null }],
+      pageParams: [undefined],
+    });
     qc.setQueryData(communitySubscriptionQueryKey("ai-dev"), { subscribed: false });
     qc.setQueryData(AUTH_ME_QUERY_KEY, null);
     qc.setQueryData(communityRecentWorkersQueryKey("ai-dev"), mockRecentWorkers);
@@ -234,7 +249,10 @@ describe("CommunityScene — vote 楽観的更新（#924）", () => {
       defaultOptions: { queries: { retry: false, gcTime: 0 } },
     });
     qc.setQueryData(["communities"], [mockCommunity]);
-    qc.setQueryData(communityFeedQueryKey("ai-dev"), [post]);
+    qc.setQueryData(communityFeedQueryKey("ai-dev"), {
+      pages: [{ posts: [post], nextCursor: null }],
+      pageParams: [undefined],
+    });
     qc.setQueryData(communitySubscriptionQueryKey("ai-dev"), { subscribed: false });
     qc.setQueryData(AUTH_ME_QUERY_KEY, null);
     qc.setQueryData(communityRecentWorkersQueryKey("ai-dev"), mockRecentWorkers);
@@ -315,7 +333,7 @@ describe("CommunityScene — vote 楽観的更新（#924）", () => {
       }),
       // invalidateQueries によるリフェッチで投稿が消えないよう元データを返す
       http.get("/api/communities/:slug/feed", () =>
-        HttpResponse.json([{ ...votePost, my_vote: null }]),
+        HttpResponse.json({ posts: [{ ...votePost, my_vote: null }], nextCursor: null }),
       ),
     );
     renderVoteScene({ my_vote: null });
@@ -349,7 +367,10 @@ describe("CommunityScene — mark-viewed（#934）", () => {
       defaultOptions: { queries: { retry: false, gcTime: 0 } },
     });
     qc.setQueryData(["communities"], [mockCommunity]);
-    qc.setQueryData(communityFeedQueryKey("ai-dev"), []);
+    qc.setQueryData(communityFeedQueryKey("ai-dev"), {
+      pages: [{ posts: [], nextCursor: null }],
+      pageParams: [undefined],
+    });
     qc.setQueryData(communitySubscriptionQueryKey("ai-dev"), { subscribed: true });
     qc.setQueryData(AUTH_ME_QUERY_KEY, mockUser);
     qc.setQueryData(communityRecentWorkersQueryKey("ai-dev"), mockRecentWorkers);
@@ -396,5 +417,70 @@ describe("CommunityScene — mark-viewed（#934）", () => {
     await new Promise((r) => setTimeout(r, 50));
 
     expect(markViewedSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe("CommunityScene — ゲスト購読誘導（#882）", () => {
+  const mockUser = {
+    id: "user-1",
+    name: "テスト",
+    email: "test@test.com",
+    role: "user" as const,
+    imageUrl: null,
+    isPremium: false,
+  };
+
+  function renderAuthScene() {
+    const qc = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    });
+    qc.setQueryData(["communities"], [mockCommunity]);
+    qc.setQueryData(communityFeedQueryKey("ai-dev"), {
+      pages: [{ posts: [], nextCursor: null }],
+      pageParams: [undefined],
+    });
+    qc.setQueryData(communitySubscriptionQueryKey("ai-dev"), { subscribed: false });
+    qc.setQueryData(AUTH_ME_QUERY_KEY, mockUser);
+    qc.setQueryData(communityRecentWorkersQueryKey("ai-dev"), mockRecentWorkers);
+    qc.setQueryData(unreadCountsQueryKey(), { unread_counts: [] });
+    return render(
+      <QueryClientProvider client={qc}>
+        <QueryBoundary fallback={<MainContentSkeleton />}>
+          <CommunityScene />
+        </QueryBoundary>
+      </QueryClientProvider>,
+    );
+  }
+
+  it("ゲストのとき「ログインして購読」ボタンが表示される", async () => {
+    renderScene();
+    await screen.findByRole("heading", { level: 1 });
+    expect(screen.getByRole("button", { name: "ログインして購読" })).toBeInTheDocument();
+  });
+
+  it("ゲストが「ログインして購読」ボタンをクリックするとログインモーダルが開く（login:1 が付与される）", async () => {
+    renderScene();
+    await screen.findByRole("heading", { level: 1 });
+
+    await userEvent.click(screen.getByRole("button", { name: "ログインして購読" }));
+
+    expect(mockNavigate).toHaveBeenCalledTimes(1);
+    const searchFn = mockNavigate.mock.calls[0][0].search as (
+      prev: Record<string, unknown>
+    ) => Record<string, unknown>;
+    expect(searchFn({})).toMatchObject({ login: 1 });
+  });
+
+  it("認証済みのとき「ログインして購読」ボタンは表示されない", async () => {
+    renderAuthScene();
+    await screen.findByRole("heading", { level: 1 });
+    expect(screen.queryByRole("button", { name: "ログインして購読" })).not.toBeInTheDocument();
+  });
+
+  it("認証済みかつ未購読のとき「購読する」ボタンが表示される", async () => {
+    renderAuthScene();
+    await screen.findByRole("heading", { level: 1 });
+    const subscribeButtons = screen.getAllByRole("button", { name: "購読する" });
+    expect(subscribeButtons.length).toBeGreaterThan(0);
   });
 });

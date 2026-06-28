@@ -115,7 +115,7 @@ describe("GET /api/communities", () => {
 });
 
 describe("GET /api/communities/:slug/feed", () => {
-  it("community の投稿フィードを取得できる（認証不要）", async () => {
+  it("community の投稿フィードを取得できる（認証不要・ページネーション形式）", async () => {
     const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
     const postRepo = createInMemoryPostRepository();
     await postRepo.createMany("community-1", [
@@ -128,9 +128,11 @@ describe("GET /api/communities/:slug/feed", () => {
     const app = createApp(deps);
     const res = await request(app).get("/api/communities/technology/feed");
     expect(res.status).toBe(200);
-    expect(res.body).toHaveLength(1);
+    expect(res.body).toHaveProperty("posts");
+    expect(res.body).toHaveProperty("nextCursor");
+    expect(res.body.posts).toHaveLength(1);
     // OpenAPI スキーマ（PostSchema）は snake_case の community_id が正本（#499）
-    expect(res.body[0]).toMatchObject({ title: "Title", community_id: "community-1" });
+    expect(res.body.posts[0]).toMatchObject({ title: "Title", community_id: "community-1" });
   });
 
   it("各 post のフィールド名が OpenAPI スキーマ（snake_case）と一致し camelCase を含まない（#499）", async () => {
@@ -146,7 +148,7 @@ describe("GET /api/communities/:slug/feed", () => {
     const app = createApp(deps);
     const res = await request(app).get("/api/communities/technology/feed");
     expect(res.status).toBe(200);
-    const post = res.body[0];
+    const post = res.body.posts[0];
     expect(post).toHaveProperty("community_id", "community-1");
     expect(post).toHaveProperty("slot_key");
     expect(post).toHaveProperty("created_at");
@@ -179,7 +181,7 @@ describe("GET /api/communities/:slug/feed", () => {
     const app = createApp(deps);
     const res = await request(app).get("/api/communities/technology/feed");
     expect(res.status).toBe(200);
-    expect(res.body[0].author_worker).toEqual({
+    expect(res.body.posts[0].author_worker).toEqual({
       id: "uuid-haru",
       display_name: "haru",
       image_url: "https://example.com/haru.png",
@@ -198,7 +200,52 @@ describe("GET /api/communities/:slug/feed", () => {
     });
     const app = createApp(deps);
     const res = await request(app).get("/api/communities/technology/feed");
-    expect(res.body[0].author_worker).toBeUndefined();
+    expect(res.body.posts[0].author_worker).toBeUndefined();
+  });
+
+  it("cursor と limit でページネーションできる（#881）", async () => {
+    const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
+    const postRepo = createInMemoryPostRepository();
+    for (let i = 0; i < 5; i++) {
+      await postRepo.createMany("community-1", [
+        { slotKey: "s", seq: i, author: "w", title: `P${i}`, text: "t" },
+      ]);
+      await new Promise((r) => setTimeout(r, 2));
+    }
+    const deps = await createTestDeps({
+      communityRepository: communityRepo,
+      postRepository: postRepo,
+    });
+    const app = createApp(deps);
+    const res1 = await request(app).get("/api/communities/technology/feed?limit=2");
+    expect(res1.status).toBe(200);
+    expect(res1.body.posts).toHaveLength(2);
+    expect(res1.body.nextCursor).not.toBeNull();
+
+    const res2 = await request(app).get(`/api/communities/technology/feed?limit=2&cursor=${res1.body.nextCursor}`);
+    expect(res2.status).toBe(200);
+    expect(res2.body.posts).toHaveLength(2);
+
+    const res3 = await request(app).get(`/api/communities/technology/feed?limit=2&cursor=${res2.body.nextCursor}`);
+    expect(res3.status).toBe(200);
+    expect(res3.body.posts).toHaveLength(1);
+    expect(res3.body.nextCursor).toBeNull();
+
+    const allTitles = [
+      ...res1.body.posts,
+      ...res2.body.posts,
+      ...res3.body.posts,
+    ].map((p: { title: string }) => p.title);
+    expect(allTitles).toEqual(["P4", "P3", "P2", "P1", "P0"]);
+  });
+
+  it("不正な cursor で 400 を返す（#881）", async () => {
+    const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
+    const deps = await createTestDeps({ communityRepository: communityRepo });
+    const app = createApp(deps);
+    const invalid = Buffer.from("not-json").toString("base64");
+    const res = await request(app).get(`/api/communities/technology/feed?cursor=${invalid}`);
+    expect(res.status).toBe(400);
   });
 });
 

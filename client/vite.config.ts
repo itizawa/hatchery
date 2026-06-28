@@ -104,12 +104,13 @@ export default defineConfig({
     faviconHtmlPlugin(),
     VitePWA({
       registerType: "autoUpdate",
+      strategies: "injectManifest",
+      srcDir: "src",
+      filename: "sw.ts",
       manifest: PWA_MANIFEST_CONFIG,
-      workbox: {
-        // SPA のナビゲーションはすべて index.html にフォールバックする。
-        navigateFallback: "/index.html",
-        // API・ヘルスチェックパスはフォールバックの対象外にする（SW が /api/* を index.html で上書きしないよう）。
-        navigateFallbackDenylist: [/^\/api\//, /^\/health/],
+      injectManifest: {
+        // SPA のナビゲーションはすべて index.html にフォールバックする（generateSW と同じ設定）。
+        // navigateFallback / denylist は sw.ts 側の registerRoute で設定する。
       },
       // dev モードでは SW を有効にしない（pnpm dev の挙動を破壊しない）。
       devOptions: { enabled: false },

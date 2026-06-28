@@ -1,4 +1,5 @@
 import type { ReactElement, ReactNode } from "react";
+import { resolveCommunityIconUrl } from "@hatchery/common";
 
 import { Avatar, Box, Typography } from "./uiParts";
 import type { Community } from "../api/communities.js";
@@ -17,10 +18,11 @@ const ICON_SIZE = 88;
  * 上部にカバー画像を表示し、その左下に丸いアイコンを重ねる。
  * コミュニティ名・説明はアイコン行の下（カバー画像と重ならない位置）に配置する（#870）。
  * - coverUrl 未設定: テーマ色のプレースホルダ矩形。
- * - iconUrl 未設定: name 頭文字の MUI Avatar フォールバック。
+ * - iconUrl 未設定: bauhaus 自動生成アイコン（#960）。
  */
 export const CommunityHeader = ({ community, actions }: CommunityHeaderProps): ReactElement => {
-  const { name, iconUrl, coverUrl, description } = community;
+  const { name, coverUrl, description } = community;
+  const resolvedIconUrl = resolveCommunityIconUrl({ id: community.id, iconUrl: community.iconUrl });
 
   return (
     <Box sx={{ mb: 3 }}>
@@ -56,7 +58,7 @@ export const CommunityHeader = ({ community, actions }: CommunityHeaderProps): R
         }}
       >
         <Avatar
-          src={iconUrl ?? undefined}
+          src={resolvedIconUrl}
           alt={name}
           sx={{
             width: ICON_SIZE,
@@ -85,11 +87,7 @@ export const CommunityHeader = ({ community, actions }: CommunityHeaderProps): R
           {name}
         </Typography>
         {description && (
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            sx={{ display: { xs: "none", sm: "block" } }}
-          >
+          <Typography variant="body2" color="text.secondary">
             {description}
           </Typography>
         )}

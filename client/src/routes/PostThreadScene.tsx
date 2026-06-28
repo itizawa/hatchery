@@ -32,7 +32,7 @@ const SidebarColumn = ({ children }: { children: ReactElement }): ReactElement =
       flexShrink: 0,
       display: { xs: "none", md: "block" },
       position: "sticky",
-      top: 80,
+      top: 24,
     }}
   >
     {children}

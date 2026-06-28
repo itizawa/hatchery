@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { CommunityHeader } from "./CommunityHeader";
 import type { Community } from "../api/communities";
+import { generateCommunityIconUrl } from "@hatchery/common";
 
 const baseCommunity: Community = {
   id: "comm-1",
@@ -60,5 +61,36 @@ describe("CommunityHeader（#457 Reddit 風ヘッダー）", () => {
     expect(screen.getByRole("heading", { name: "テクノロジー" })).toBeInTheDocument();
     // カバー画像 img は存在しない
     expect(screen.queryByTestId("community-cover-image")).not.toBeInTheDocument();
+  });
+
+  it("iconUrl 未設定のとき Avatar src が bauhaus 自動生成 URL になる（#960）", () => {
+    render(<CommunityHeader community={baseCommunity} />);
+    const img = screen.getByRole("img", { name: "テクノロジー" });
+    expect(img).toHaveAttribute("src", generateCommunityIconUrl({ id: baseCommunity.id }));
+  });
+
+  it("iconUrl 設定済みのとき Avatar src がその URL を優先する（#960）", () => {
+    const iconUrl = "https://example.com/icon.png";
+    render(<CommunityHeader community={{ ...baseCommunity, iconUrl }} />);
+    const img = screen.getByRole("img", { name: "テクノロジー" });
+    expect(img).toHaveAttribute("src", iconUrl);
+  });
+
+  describe("description 表示（#883 モバイル非表示バグ修正）", () => {
+    it("description がある場合に DOM に description テキストが存在する", () => {
+      render(<CommunityHeader community={baseCommunity} />);
+      expect(screen.getByText("テクノロジーコミュニティ")).toBeInTheDocument();
+    });
+
+    it("description が null の場合に description テキストが DOM に存在しない", () => {
+      // Community.description は string（非 nullable）だが防御的ガード（{description && ...}）の動作確認
+      render(<CommunityHeader community={{ ...baseCommunity, description: null } as unknown as Community} />);
+      expect(screen.queryByText("テクノロジーコミュニティ")).not.toBeInTheDocument();
+    });
+
+    it("description が空文字の場合に description テキストが DOM に存在しない", () => {
+      render(<CommunityHeader community={{ ...baseCommunity, description: "" }} />);
+      expect(screen.queryByText("テクノロジーコミュニティ")).not.toBeInTheDocument();
+    });
   });
 });

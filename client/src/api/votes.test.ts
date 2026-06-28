@@ -226,6 +226,10 @@ function makeHomeFeedData(posts: FeedPost[]): HomeFeedData {
   return { pages: [{ posts, nextCursor: null }], pageParams: [undefined] };
 }
 
+function makeCommunityFeedData(posts: FeedPost[]): HomeFeedData {
+  return { pages: [{ posts, nextCursor: null }], pageParams: [undefined] };
+}
+
 describe("useVotePost (フィードキャッシュ楽観更新)", () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -268,19 +272,19 @@ describe("useVotePost (フィードキャッシュ楽観更新)", () => {
     const { queryClient, wrapper } = createHookWrapper();
     queryClient.setQueryData(
       communityFeedQueryKey("tech"),
-      [{ ...feedBasePost, score: 5, my_vote: null }],
+      makeCommunityFeedData([{ ...feedBasePost, score: 5, my_vote: null }]),
     );
 
     const { result } = renderHook(() => useVotePost("tech"), { wrapper });
     act(() => { result.current.mutate({ postId: "post-1", direction: "up" }); });
 
     await waitFor(() => {
-      const d = queryClient.getQueryData<FeedPost[]>(communityFeedQueryKey("tech"));
-      expect(d?.[0]?.my_vote).toBe("up");
+      const d = queryClient.getQueryData<HomeFeedData>(communityFeedQueryKey("tech"));
+      expect(d?.pages[0]?.posts[0]?.my_vote).toBe("up");
     });
 
-    const d = queryClient.getQueryData<FeedPost[]>(communityFeedQueryKey("tech"));
-    expect(d?.[0]?.score).toBe(6);
+    const d = queryClient.getQueryData<HomeFeedData>(communityFeedQueryKey("tech"));
+    expect(d?.pages[0]?.posts[0]?.score).toBe(6);
 
     resolveFetch(jsonResponse(200, { ...feedBasePost, score: 6, my_vote: "up" }));
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
@@ -340,7 +344,7 @@ describe("useVotePost (フィードキャッシュ楽観更新)", () => {
     const { queryClient, wrapper } = createHookWrapper();
     queryClient.setQueryData(
       communityFeedQueryKey("tech"),
-      [{ ...feedBasePost, score: 5, my_vote: null }],
+      makeCommunityFeedData([{ ...feedBasePost, score: 5, my_vote: null }]),
     );
 
     const { result } = renderHook(() => useVotePost("tech"), { wrapper });
@@ -348,9 +352,9 @@ describe("useVotePost (フィードキャッシュ楽観更新)", () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true));
 
-    const d = queryClient.getQueryData<FeedPost[]>(communityFeedQueryKey("tech"));
-    expect(d?.[0]?.score).toBe(5);
-    expect(d?.[0]?.my_vote).toBeNull();
+    const d = queryClient.getQueryData<HomeFeedData>(communityFeedQueryKey("tech"));
+    expect(d?.pages[0]?.posts[0]?.score).toBe(5);
+    expect(d?.pages[0]?.posts[0]?.my_vote).toBeNull();
   });
 
   it("onSuccess: homeFeedQueryKey の対象 post がサーバ確定値で更新される", async () => {
@@ -382,7 +386,7 @@ describe("useVotePost (フィードキャッシュ楽観更新)", () => {
     const { queryClient, wrapper } = createHookWrapper();
     queryClient.setQueryData(
       communityFeedQueryKey("tech"),
-      [{ ...feedBasePost, score: 5, my_vote: null }],
+      makeCommunityFeedData([{ ...feedBasePost, score: 5, my_vote: null }]),
     );
 
     const { result } = renderHook(() => useVotePost("tech"), { wrapper });
@@ -390,9 +394,9 @@ describe("useVotePost (フィードキャッシュ楽観更新)", () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    const d = queryClient.getQueryData<FeedPost[]>(communityFeedQueryKey("tech"));
-    expect(d?.[0]?.score).toBe(6);
-    expect(d?.[0]?.my_vote).toBe("up");
+    const d = queryClient.getQueryData<HomeFeedData>(communityFeedQueryKey("tech"));
+    expect(d?.pages[0]?.posts[0]?.score).toBe(6);
+    expect(d?.pages[0]?.posts[0]?.my_vote).toBe("up");
   });
 });
 

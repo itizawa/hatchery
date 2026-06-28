@@ -1,5 +1,7 @@
 import { Router } from "express";
 
+import { logError } from "../logger.js";
+
 /** DB 疎通確認など任意のヘルスチェック関数。失敗時は例外/Rejected Promise を投げる。 */
 export type HealthChecker = () => Promise<void>;
 
@@ -17,7 +19,7 @@ export function createHealthRouter(healthCheck?: HealthChecker): Router {
       try {
         await healthCheck();
       } catch (err) {
-        console.error("[health] healthCheck failed:", err);
+        logError("health.check_failed", err);
         res.status(503).json({ status: "error", message: "service unavailable" });
         return;
       }

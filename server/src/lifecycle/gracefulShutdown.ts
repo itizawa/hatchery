@@ -8,6 +8,8 @@
  * 切ってからプロセスを終了する。
  */
 
+import { logError, logInfo } from "../logger.js";
+
 /** http.Server の最小サブセットで受ける（テストでフェイクに差し替え可能にする）。 */
 interface ClosableServer {
   close(cb?: (err?: Error) => void): unknown;
@@ -19,9 +21,9 @@ interface GracefulShutdownDeps {
   server: ClosableServer;
   /** DB など外部接続の切断（例: prisma.$disconnect）。 */
   disconnect: () => Promise<void>;
-  /** 失敗時のログ出力（既定: console.error）。throw はしない。 */
+  /** 失敗時のログ出力（既定: 構造化ログ）。throw はしない。 */
   onError?: (err: unknown) => void;
-  /** 進行ログ（既定: console.log）。 */
+  /** 進行ログ（既定: 構造化ログ）。 */
   log?: (message: string) => void;
 }
 
@@ -33,8 +35,8 @@ interface GracefulShutdownDeps {
 export async function gracefulShutdown({
   server,
   disconnect,
-  onError = console.error,
-  log = console.log,
+  onError = (err: unknown) => logError("server.shutdown_error", err),
+  log = (message: string) => logInfo("server.lifecycle", { message }),
 }: GracefulShutdownDeps): Promise<void> {
   log("[server] graceful shutdown: closing server (draining in-flight requests)");
   await new Promise<void>((resolve) => {
@@ -87,8 +89,8 @@ export function registerGracefulShutdown({
   signals = ["SIGTERM", "SIGINT"],
   exit = (code) => process.exit(code),
   process: proc = process,
-  onError = console.error,
-  log = console.log,
+  onError = (err: unknown) => logError("server.shutdown_error", err),
+  log = (message: string) => logInfo("server.lifecycle", { message }),
   forceExitAfterMs = 10_000,
 }: RegisterGracefulShutdownDeps): void {
   let shuttingDown = false;

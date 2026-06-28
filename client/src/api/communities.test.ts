@@ -4,7 +4,7 @@ import {
   fetchPublicCommunities,
   // 分割先モジュールが communities.ts から後方互換 re-export されることを確認する（#533）。
   fetchPostThread,
-  fetchCommunityFeed,
+  fetchCommunityFeedPage,
   fetchHomeFeedPage,
   subscribeCommunity,
   unsubscribeCommunity,
@@ -61,7 +61,7 @@ describe("fetchPublicCommunities (GET /api/communities)", () => {
 describe("communities.ts の後方互換 re-export（#533）", () => {
   it("分割先のシンボルを communities.ts から import できる", () => {
     expect(fetchPostThread).toBeTypeOf("function");
-    expect(fetchCommunityFeed).toBeTypeOf("function");
+    expect(fetchCommunityFeedPage).toBeTypeOf("function");
     expect(fetchHomeFeedPage).toBeTypeOf("function");
     expect(subscribeCommunity).toBeTypeOf("function");
     expect(unsubscribeCommunity).toBeTypeOf("function");

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { fetchCommunityFeed, fetchHomeFeedPage } from "./feed.js";
+import { fetchCommunityFeedPage, fetchHomeFeedPage } from "./feed.js";
 
 /** JSON ボディを持つ Response を組み立てる小ヘルパ。 */
 // eslint-disable-next-line max-params
@@ -23,24 +23,25 @@ const mockPost = {
   created_at: "2026-06-01T09:00:00Z",
 };
 
-describe("fetchCommunityFeed (GET /api/communities/{slug}/feed)", () => {
+describe("fetchCommunityFeedPage (GET /api/communities/{slug}/feed)", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
 
-  it("200 のときコミュニティフィードを返す", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, [mockPost]));
+  it("200 のときコミュニティフィードページを返す", async () => {
+    const mockResponse = { posts: [mockPost], nextCursor: null };
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, mockResponse));
     vi.stubGlobal("fetch", fetchMock);
 
-    const result = await fetchCommunityFeed({ slug: "ai-dev" });
-    expect(result).toEqual([mockPost]);
+    const result = await fetchCommunityFeedPage({ slug: "ai-dev" });
+    expect(result).toEqual(mockResponse);
     const request = fetchMock.mock.calls[0][0] as Request;
     expect(request.url).toContain("/api/communities/ai-dev/feed");
   });
 
   it("404 のとき例外を投げる", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(404)));
-    await expect(fetchCommunityFeed({ slug: "not-exist" })).rejects.toThrow();
+    await expect(fetchCommunityFeedPage({ slug: "not-exist" })).rejects.toThrow();
   });
 });
 

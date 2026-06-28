@@ -78,8 +78,8 @@ export async function voteComment({
   return unwrap({ result, label: `POST /api/comments/${commentId}/vote` });
 }
 
-type HomeFeedPage = { posts: Post[]; nextCursor: string | null };
-type HomeFeedData = { pages: HomeFeedPage[]; pageParams: unknown[] };
+type FeedPage = { posts: Post[]; nextCursor: string | null };
+type InfiniteFeedData = { pages: FeedPage[]; pageParams: unknown[] };
 
 type VoteFields = { score: number; my_vote?: "up" | "down" | null };
 
@@ -131,10 +131,10 @@ export function useVotePost(communitySlug?: string) {
       }
 
       // ホームフィードキャッシュを楽観更新（#872）。全 sort キーを一括更新。
-      const previousHomeFeedEntries = queryClient.getQueriesData<HomeFeedData>({ queryKey: homeFeedPrefix });
+      const previousHomeFeedEntries = queryClient.getQueriesData<InfiniteFeedData>({ queryKey: homeFeedPrefix });
       for (const [queryKey, data] of previousHomeFeedEntries) {
         if (!data) continue;
-        queryClient.setQueryData<HomeFeedData>(queryKey, {
+        queryClient.setQueryData<InfiniteFeedData>(queryKey, {
           ...data,
           pages: data.pages.map((page) => ({
             ...page,
@@ -145,16 +145,22 @@ export function useVotePost(communitySlug?: string) {
         });
       }
 
-      // コミュニティフィードキャッシュを楽観更新（#872）。
+      // コミュニティフィードキャッシュを楽観更新（#872 / #881 infinite query 対応）。
       const previousCommunityFeed = communitySlug
-        ? queryClient.getQueryData<Post[]>(communityFeedQueryKey(communitySlug))
+        ? queryClient.getQueryData<InfiniteFeedData>(communityFeedQueryKey(communitySlug))
         : undefined;
       if (communitySlug && previousCommunityFeed) {
-        queryClient.setQueryData<Post[]>(
+        queryClient.setQueryData<InfiniteFeedData>(
           communityFeedQueryKey(communitySlug),
-          previousCommunityFeed.map((p) =>
-            p.id === postId ? { ...p, ...calcOptimisticPostVote({ post: p, direction }) } : p,
-          ),
+          {
+            ...previousCommunityFeed,
+            pages: previousCommunityFeed.pages.map((page) => ({
+              ...page,
+              posts: page.posts.map((p) =>
+                p.id === postId ? { ...p, ...calcOptimisticPostVote({ post: p, direction }) } : p,
+              ),
+            })),
+          },
         );
       }
 
@@ -187,10 +193,10 @@ export function useVotePost(communitySlug?: string) {
       }
 
       // ホームフィードキャッシュをサーバ確定値で更新する（#872）。
-      const homeFeedEntries = queryClient.getQueriesData<HomeFeedData>({ queryKey: homeFeedQueryKeyPrefix() });
+      const homeFeedEntries = queryClient.getQueriesData<InfiniteFeedData>({ queryKey: homeFeedQueryKeyPrefix() });
       for (const [queryKey, data] of homeFeedEntries) {
         if (!data) continue;
-        queryClient.setQueryData<HomeFeedData>(queryKey, {
+        queryClient.setQueryData<InfiniteFeedData>(queryKey, {
           ...data,
           pages: data.pages.map((page) => ({
             ...page,
@@ -203,17 +209,23 @@ export function useVotePost(communitySlug?: string) {
         });
       }
 
-      // コミュニティフィードキャッシュをサーバ確定値で更新する（#872）。
+      // コミュニティフィードキャッシュをサーバ確定値で更新する（#872 / #881 infinite query 対応）。
       if (communitySlug) {
-        const currentCommunityFeed = queryClient.getQueryData<Post[]>(communityFeedQueryKey(communitySlug));
+        const currentCommunityFeed = queryClient.getQueryData<InfiniteFeedData>(communityFeedQueryKey(communitySlug));
         if (currentCommunityFeed) {
-          queryClient.setQueryData<Post[]>(
+          queryClient.setQueryData<InfiniteFeedData>(
             communityFeedQueryKey(communitySlug),
-            currentCommunityFeed.map((p) =>
-              p.id === postId
-                ? { ...p, score: serverPost.score, my_vote: serverPost.my_vote ?? null }
-                : p,
-            ),
+            {
+              ...currentCommunityFeed,
+              pages: currentCommunityFeed.pages.map((page) => ({
+                ...page,
+                posts: page.posts.map((p) =>
+                  p.id === postId
+                    ? { ...p, score: serverPost.score, my_vote: serverPost.my_vote ?? null }
+                    : p,
+                ),
+              })),
+            },
           );
         }
       }

@@ -5,7 +5,7 @@
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { fetchCommunityFeed, fetchHomeFeedPage } from "./feed.js";
+import { fetchCommunityFeedPage, fetchHomeFeedPage } from "./feed.js";
 import { fetchPostThread } from "./posts.js";
 import { subscribeCommunity, unsubscribeCommunity } from "./subscriptions.js";
 import { voteComment, votePost } from "./votes.js";
@@ -76,31 +76,34 @@ describe("voteComment", () => {
   });
 });
 
-// ─── fetchCommunityFeed ───────────────────────────────────────────────────────
+// ─── fetchCommunityFeedPage ──────────────────────────────────────────────────
 
-describe("fetchCommunityFeed", () => {
-  const mockPosts = [
-    {
-      id: "p1",
-      title: "title",
-      body: "",
-      score: 0,
-      my_vote: null,
-      communityId: "c1",
-      workerId: "w1",
-      createdAt: "2024-01-01T00:00:00.000Z",
-    },
-  ];
+describe("fetchCommunityFeedPage", () => {
+  const mockResponse = {
+    posts: [
+      {
+        id: "p1",
+        title: "title",
+        body: "",
+        score: 0,
+        my_vote: null,
+        communityId: "c1",
+        workerId: "w1",
+        createdAt: "2024-01-01T00:00:00.000Z",
+      },
+    ],
+    nextCursor: null,
+  };
 
-  it("200 のとき Post[] を返す（AC9）", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ status: 200, body: mockPosts })));
-    const result = await fetchCommunityFeed({ slug: "tech" });
-    expect(result).toEqual(mockPosts);
+  it("200 のとき { posts, nextCursor } を返す（AC9）", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ status: 200, body: mockResponse })));
+    const result = await fetchCommunityFeedPage({ slug: "tech" });
+    expect(result).toEqual(mockResponse);
   });
 
   it('500 のとき "GET /api/communities/tech/feed (500)" 形式で throw する（AC3）', async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ status: 500 })));
-    await expect(fetchCommunityFeed({ slug: "tech" })).rejects.toThrow(
+    await expect(fetchCommunityFeedPage({ slug: "tech" })).rejects.toThrow(
       "GET /api/communities/tech/feed (500)",
     );
   });

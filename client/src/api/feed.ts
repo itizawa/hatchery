@@ -19,22 +19,31 @@ export const homeFeedQueryKey = (sort: HomeFeedSort = "latest") =>
   [...homeFeedQueryKeyPrefix(), sort] as const;
 
 /**
- * GET /api/communities/{slug}/feed — コミュニティフィードを取得する。
+ * GET /api/communities/{slug}/feed — コミュニティフィードを 1 ページ分取得する（#881 カーソルページネーション）。
  * sessionId を付与すると各 post に my_vote が付く（#831）。
  */
-export async function fetchCommunityFeed({
+export async function fetchCommunityFeedPage({
   slug,
+  cursor,
+  limit = 20,
   sessionId,
 }: {
   slug: string;
+  cursor?: string;
+  limit?: number;
   sessionId?: string;
-}): Promise<Post[]> {
-  const query = sessionId ? { sessionId } : undefined;
+}): Promise<{ posts: Post[]; nextCursor: string | null }> {
+  const query: { cursor?: string; limit: number; sessionId?: string } = { limit };
+  if (cursor) query.cursor = cursor;
+  if (sessionId) query.sessionId = sessionId;
   const result = await openApiClient.GET("/api/communities/{slug}/feed", {
-    params: { path: { slug }, query: query as Record<string, string> | undefined },
+    params: { path: { slug }, query: query as Record<string, string | number | undefined> },
     credentials: "include",
   });
-  return unwrap({ result, label: `GET /api/communities/${slug}/feed` });
+  return unwrap({ result, label: `GET /api/communities/${slug}/feed` }) as {
+    posts: Post[];
+    nextCursor: string | null;
+  };
 }
 
 /**
@@ -67,16 +76,20 @@ export async function fetchHomeFeedPage({
 }
 
 /**
- * コミュニティフィードを TanStack Query（Suspense）で取得するフック（#462 / #831）。
+ * コミュニティフィードを TanStack Query（Suspense）の無限スクロールで取得するフック（#881 / #831）。
  * sessionId を付与してサーバに my_vote を問い合わせる。
  */
-export function useCommunityFeed(slug: string) {
+export function useInfiniteCommunityFeed(slug: string) {
   const { data: authUser } = useAuth();
   const sessionId = authUser?.id ?? getOrCreateGuestId();
-  return useSuspenseQuery({
+  return useSuspenseInfiniteQuery({
     queryKey: communityFeedQueryKey(slug),
-    queryFn: () => fetchCommunityFeed({ slug, sessionId }),
+    queryFn: ({ pageParam }) =>
+      fetchCommunityFeedPage({ slug, cursor: pageParam as string | undefined, sessionId }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     staleTime: 30_000,
+    retry: false,
   });
 }
 

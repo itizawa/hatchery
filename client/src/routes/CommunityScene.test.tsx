@@ -430,27 +430,6 @@ describe("CommunityScene — ゲスト購読誘導（#882）", () => {
     isPremium: false,
   };
 
-  function renderGuestScene() {
-    const qc = new QueryClient({
-      defaultOptions: { queries: { retry: false, gcTime: 0 } },
-    });
-    qc.setQueryData(["communities"], [mockCommunity]);
-    qc.setQueryData(communityFeedQueryKey("ai-dev"), {
-      pages: [{ posts: [], nextCursor: null }],
-      pageParams: [undefined],
-    });
-    qc.setQueryData(communitySubscriptionQueryKey("ai-dev"), { subscribed: false });
-    qc.setQueryData(AUTH_ME_QUERY_KEY, null);
-    qc.setQueryData(communityRecentWorkersQueryKey("ai-dev"), mockRecentWorkers);
-    return render(
-      <QueryClientProvider client={qc}>
-        <QueryBoundary fallback={<MainContentSkeleton />}>
-          <CommunityScene />
-        </QueryBoundary>
-      </QueryClientProvider>,
-    );
-  }
-
   function renderAuthScene() {
     const qc = new QueryClient({
       defaultOptions: { queries: { retry: false, gcTime: 0 } },
@@ -474,13 +453,13 @@ describe("CommunityScene — ゲスト購読誘導（#882）", () => {
   }
 
   it("ゲストのとき「ログインして購読」ボタンが表示される", async () => {
-    renderGuestScene();
+    renderScene();
     await screen.findByRole("heading", { level: 1 });
     expect(screen.getByRole("button", { name: "ログインして購読" })).toBeInTheDocument();
   });
 
   it("ゲストが「ログインして購読」ボタンをクリックするとログインモーダルが開く（login:1 が付与される）", async () => {
-    renderGuestScene();
+    renderScene();
     await screen.findByRole("heading", { level: 1 });
 
     await userEvent.click(screen.getByRole("button", { name: "ログインして購読" }));

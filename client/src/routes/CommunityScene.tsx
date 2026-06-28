@@ -1,4 +1,4 @@
-import { Box, Stack, Typography } from "../components/uiParts";
+import { Box, Button, Stack, Typography } from "../components/uiParts";
 import { Link as RouterLink, useNavigate, useParams } from "@tanstack/react-router";
 import { useEffect, useRef, type ReactElement } from "react";
 
@@ -22,6 +22,7 @@ import type { VoteDirection } from "../components/VoteControl.js";
 import { SubscribeButton } from "../components/SubscribeButton.js";
 import { SubscriptionStatus } from "../components/SubscriptionStatus.js";
 import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
+import { useLoginModal } from "../hooks/useLoginModal.js";
 import type { Community } from "../api/communities.js";
 
 /**
@@ -68,6 +69,7 @@ const CommunityContent = ({
 }): ReactElement => {
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteCommunityFeed(communitySlug);
   const { data: authUser } = useAuth();
+  const { openLogin } = useLoginModal();
   const navigate = useNavigate();
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
@@ -109,13 +111,17 @@ const CommunityContent = ({
             actions={
               <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
                 <ShareButton shareUrl={shareUrl} shareTitle={shareTitle} />
-                {authUser && (
+                {authUser ? (
                   <SubscribeButton
                     subscribed={subscribed}
                     onSubscribe={() => subscribe()}
                     onUnsubscribe={() => unsubscribe()}
                     disabled={isSubscriptionPending}
                   />
+                ) : (
+                  <Button variant="contained" size="small" onClick={openLogin}>
+                    ログインして購読
+                  </Button>
                 )}
               </Stack>
             }

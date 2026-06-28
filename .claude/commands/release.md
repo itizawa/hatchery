@@ -57,7 +57,7 @@ git tag <version> <mergeCommitOid>
 git push origin <version>
 ```
 
-push に失敗した場合（並行実行による競合等）はエラーを記録して STEP 5 へ進む（Release 作成は試みる）。
+push に失敗した場合（並行実行による競合等）はエラーを報告して終了する。次回 cron 実行時に STEP 2 のタグ確認でスキップされるため、タグが存在しない場合は STEP 3 からリトライされる。
 
 ### STEP 5 — GitHub Release を作成する
 

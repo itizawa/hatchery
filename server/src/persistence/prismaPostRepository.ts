@@ -85,13 +85,17 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
       return rows.map(toRecord);
     },
 
-    // eslint-disable-next-line max-params
-    async listByCommunityPaged(
-      communityId: string,
-      cursor?: string,
+    async listByCommunityPaged({
+      communityId,
+      cursor,
       limit = 20,
-      options?: RevealFilterOptions,
-    ): Promise<{ posts: PostRecord[]; nextCursor: string | null }> {
+      options,
+    }: {
+      communityId: string;
+      cursor?: string;
+      limit?: number;
+      options?: RevealFilterOptions;
+    }): Promise<{ posts: PostRecord[]; nextCursor: string | null }> {
       const now = options?.now;
       let where: Prisma.PostWhereInput = {
         communityId,

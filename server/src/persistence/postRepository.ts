@@ -64,12 +64,17 @@ export interface PostRepository {
    * nextCursor が null の場合は末尾（追加ページなし）。
    * options.now を渡すと `createdAt <= now` の reveal フィルタが有効になる。
    */
-  listByCommunityPaged(
-    communityId: string,
-    cursor?: string,
-    limit?: number,
-    options?: RevealFilterOptions,
-  ): Promise<{ posts: PostRecord[]; nextCursor: string | null }>;
+  listByCommunityPaged({
+    communityId,
+    cursor,
+    limit,
+    options,
+  }: {
+    communityId: string;
+    cursor?: string;
+    limit?: number;
+    options?: RevealFilterOptions;
+  }): Promise<{ posts: PostRecord[]; nextCursor: string | null }>;
   /** ID で post を取得する。存在しない場合は null を返す。 */
   findById(id: string): Promise<PostRecord | null>;
   /**
@@ -268,13 +273,17 @@ export function createInMemoryPostRepository(): PostRepository {
       return Promise.resolve(filtered.map(cloneRecord));
     },
 
-    // eslint-disable-next-line max-params
-    listByCommunityPaged(
-      communityId: string,
-      cursor?: string,
+    listByCommunityPaged({
+      communityId,
+      cursor,
       limit = 20,
-      options?: RevealFilterOptions,
-    ): Promise<{ posts: PostRecord[]; nextCursor: string | null }> {
+      options,
+    }: {
+      communityId: string;
+      cursor?: string;
+      limit?: number;
+      options?: RevealFilterOptions;
+    }): Promise<{ posts: PostRecord[]; nextCursor: string | null }> {
       let cursorPayload: CursorPayload | null = null;
       if (cursor !== undefined) {
         cursorPayload = decodeCursor(cursor);

@@ -87,11 +87,7 @@ export const CommunityHeader = ({ community, actions }: CommunityHeaderProps): R
           {name}
         </Typography>
         {description && (
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            sx={{ display: { xs: "none", sm: "block" } }}
-          >
+          <Typography variant="body2" color="text.secondary">
             {description}
           </Typography>
         )}

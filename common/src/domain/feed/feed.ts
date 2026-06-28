@@ -26,3 +26,19 @@ export const HomeFeedResponseSchema = z.object({
 });
 
 export type HomeFeedResponse = z.infer<typeof HomeFeedResponseSchema>;
+
+/** コミュニティフィード取得クエリのスキーマ（#881）。cursor・limit を検証する。 */
+export const CommunityFeedQuerySchema = z.object({
+  cursor: z.string().max(FEED_CURSOR_MAX_LENGTH).optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+
+export type CommunityFeedQuery = z.infer<typeof CommunityFeedQuerySchema>;
+
+/** コミュニティフィードレスポンスのスキーマ（#881）。カーソルページネーション形式。 */
+export const CommunityFeedResponseSchema = z.object({
+  posts: z.array(PostSchema),
+  nextCursor: z.string().max(FEED_CURSOR_MAX_LENGTH).nullable(),
+});
+
+export type CommunityFeedResponse = z.infer<typeof CommunityFeedResponseSchema>;

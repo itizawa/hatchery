@@ -65,7 +65,7 @@ export function createCommunitiesRouter(
         if (!community) {
           throw new NotFoundError("CommunityNotFound");
         }
-        return postRepo.listByCommunityPaged(community.id, cursor, limit, { now });
+        return postRepo.listByCommunityPaged({ communityId: community.id, cursor, limit, options: { now } });
       })
       .then(async (result) => {
         const enriched = await attachAuthorWorker(result.posts, workerRepo);

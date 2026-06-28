@@ -18,7 +18,7 @@ export const PushPayloadSchema = z.object({
 
 export type PushPayload = z.infer<typeof PushPayloadSchema>;
 
-/** POST /api/push-subscriptions のリクエストボディ（PushSubscriptionSchema と同一）。 */
+/** POST /api/push-subscriptions のリクエストボディ。PushSubscriptionSchema と同一。 */
 export const SubscribePushBodySchema = PushSubscriptionSchema;
 
 export type SubscribePushBody = z.infer<typeof SubscribePushBodySchema>;

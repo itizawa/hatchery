@@ -1,13 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 
-import {
-  buildOgpMeta,
-  escapeHtmlAttr,
-  findChannelInList,
-  isCrawler,
-  resolveApiBase,
-} from "./ogp";
+import { buildOgpMetaHtml, escapeHtmlAttr, isCrawler, resolveApiBase } from "./ogp";
 
 describe("isCrawler", () => {
   it("Twitterbot を含む UA は true", () => {
@@ -55,66 +49,19 @@ describe("isCrawler", () => {
   });
 });
 
-describe("findChannelInList", () => {
-  const channels = [
-    { id: "zatsudan", label: "雑談" },
-    { id: "shigoto", label: "仕事" },
-  ];
-
-  it("id 一致のチャンネルを返す", () => {
-    expect(findChannelInList(channels, "shigoto")).toEqual({ id: "shigoto", label: "仕事" });
-  });
-
-  it("未一致は undefined", () => {
-    expect(findChannelInList(channels, "unknown")).toBeUndefined();
-  });
-
-  it("空配列は undefined", () => {
-    expect(findChannelInList([], "zatsudan")).toBeUndefined();
-  });
-});
-
-describe("buildOgpMeta", () => {
-  it("title は '<label> - Hatchery'", () => {
-    const meta = buildOgpMeta({
-      channel: { id: "zatsudan", label: "雑談" },
-      requestUrl: "https://hatchery.example/channels/zatsudan",
-    });
-    expect(meta.title).toBe("雑談 - Hatchery");
-  });
-
-  it("description に label を含む", () => {
-    const meta = buildOgpMeta({
-      channel: { id: "zatsudan", label: "雑談" },
-      requestUrl: "https://hatchery.example/channels/zatsudan",
-    });
-    expect(meta.description).toContain("雑談");
-  });
-
-  it("url は渡した requestUrl", () => {
-    const meta = buildOgpMeta({
-      channel: { id: "zatsudan", label: "雑談" },
-      requestUrl: "https://hatchery.example/channels/zatsudan",
-    });
-    expect(meta.url).toBe("https://hatchery.example/channels/zatsudan");
-  });
-});
-
 describe("resolveApiBase", () => {
   it("env.API_BASE_URL があればそれを返す（末尾スラッシュは除去）", () => {
     expect(
-      resolveApiBase({ API_BASE_URL: "https://api.example.com/" }, "https://hatchery.example/channels/x"),
+      resolveApiBase({ env: { API_BASE_URL: "https://api.example.com/" }, requestUrl: "https://hatchery.example/posts/x" }),
     ).toBe("https://api.example.com");
   });
 
   it("env.API_BASE_URL が無ければリクエストの origin を返す", () => {
-    expect(resolveApiBase({}, "https://hatchery.example/channels/x")).toBe(
-      "https://hatchery.example",
-    );
+    expect(resolveApiBase({ env: {}, requestUrl: "https://hatchery.example/posts/x" })).toBe("https://hatchery.example");
   });
 
   it("env.API_BASE_URL が空文字ならリクエストの origin を返す", () => {
-    expect(resolveApiBase({ API_BASE_URL: "" }, "https://hatchery.example/channels/x")).toBe(
+    expect(resolveApiBase({ env: { API_BASE_URL: "" }, requestUrl: "https://hatchery.example/posts/x" })).toBe(
       "https://hatchery.example",
     );
   });
@@ -127,5 +74,32 @@ describe("escapeHtmlAttr", () => {
 
   it("通常の文字列はそのまま", () => {
     expect(escapeHtmlAttr("雑談 - Hatchery")).toBe("雑談 - Hatchery");
+  });
+});
+
+describe("buildOgpMetaHtml", () => {
+  it("og:title / og:description / og:url / twitter:title / twitter:description の meta タグを生成する", () => {
+    const html = buildOgpMetaHtml({
+      title: "テスト投稿 - Hatchery",
+      description: "テスト説明文",
+      url: "https://hatchery.example/posts/abc",
+    });
+    expect(html).toContain('<meta property="og:title" content="テスト投稿 - Hatchery" />');
+    expect(html).toContain('<meta property="og:description" content="テスト説明文" />');
+    expect(html).toContain('<meta property="og:url" content="https://hatchery.example/posts/abc" />');
+    expect(html).toContain('<meta name="twitter:title" content="テスト投稿 - Hatchery" />');
+    expect(html).toContain('<meta name="twitter:description" content="テスト説明文" />');
+  });
+
+  it("HTML 特殊文字をエスケープする", () => {
+    const html = buildOgpMetaHtml({
+      title: 'タイトル"with"quotes',
+      description: "desc<script>alert(1)</script>",
+      url: "https://example.com",
+    });
+    expect(html).toContain("&quot;");
+    expect(html).toContain("&lt;");
+    expect(html).toContain("&gt;");
+    expect(html).not.toContain("<script>");
   });
 });

@@ -5,6 +5,8 @@
 - 関連 Issue: #247, #248, #249
 
 > **注記（ADR-0018）**: ADR-0018 で公共型 AI コミュニティ（Reddit 風）へ方針転換した。本 ADR の決定（Next.js / Cloud Run 移行はせず、OGP/SEO は Cloudflare Pages Functions + `HTMLRewriter` で実現）は**維持**される。本文の「公開チャンネル」は公共型では「公開投稿・スレッド・トピック板」と読み替える。公共コミュニティは全体が公開前提のため、ページ毎 OGP/SEO の重要性はむしろ増すが、実現手段は不変。
+>
+> **注記（#858）**: 上記の読み替えを実装として反映した。旧チャンネルモデル向けの `client/functions/channels/` を削除し、投稿詳細（`/posts/:id`）・コミュニティ（`/communities/:slug`）向けの Pages Functions を新設した。共通ユーティリティ（`isCrawler`・`resolveApiBase`・`escapeHtmlAttr`・`buildOgpMetaHtml`）は `client/functions/shared/ogp.ts` に集約した。
 
 ## コンテキスト（背景）
 

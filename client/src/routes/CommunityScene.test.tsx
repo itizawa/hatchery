@@ -45,7 +45,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
 
 const server = setupServer(
   http.get("/api/communities", () => HttpResponse.json([mockCommunity])),
-  http.get("/api/communities/:slug/feed", () => HttpResponse.json([])),
+  http.get("/api/communities/:slug/feed", () => HttpResponse.json({ posts: [], nextCursor: null })),
   http.get("/api/communities/:slug/recent-workers", () => HttpResponse.json(mockRecentWorkers)),
 );
 
@@ -63,7 +63,10 @@ function renderScene({ seedRecentWorkers = true }: { seedRecentWorkers?: boolean
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   });
   qc.setQueryData(["communities"], [mockCommunity]);
-  qc.setQueryData(communityFeedQueryKey("ai-dev"), []);
+  qc.setQueryData(communityFeedQueryKey("ai-dev"), {
+    pages: [{ posts: [], nextCursor: null }],
+    pageParams: [undefined],
+  });
   qc.setQueryData(communitySubscriptionQueryKey("ai-dev"), { subscribed: false });
   qc.setQueryData(AUTH_ME_QUERY_KEY, null);
   if (seedRecentWorkers) {
@@ -194,7 +197,10 @@ describe("CommunityScene", () => {
       defaultOptions: { queries: { retry: false, gcTime: 0 } },
     });
     qc.setQueryData(["communities"], [mockCommunity]);
-    qc.setQueryData(communityFeedQueryKey("ai-dev"), [mockPost]);
+    qc.setQueryData(communityFeedQueryKey("ai-dev"), {
+      pages: [{ posts: [mockPost], nextCursor: null }],
+      pageParams: [undefined],
+    });
     qc.setQueryData(communitySubscriptionQueryKey("ai-dev"), { subscribed: false });
     qc.setQueryData(AUTH_ME_QUERY_KEY, null);
     qc.setQueryData(communityRecentWorkersQueryKey("ai-dev"), mockRecentWorkers);
@@ -234,7 +240,10 @@ describe("CommunityScene — vote 楽観的更新（#924）", () => {
       defaultOptions: { queries: { retry: false, gcTime: 0 } },
     });
     qc.setQueryData(["communities"], [mockCommunity]);
-    qc.setQueryData(communityFeedQueryKey("ai-dev"), [post]);
+    qc.setQueryData(communityFeedQueryKey("ai-dev"), {
+      pages: [{ posts: [post], nextCursor: null }],
+      pageParams: [undefined],
+    });
     qc.setQueryData(communitySubscriptionQueryKey("ai-dev"), { subscribed: false });
     qc.setQueryData(AUTH_ME_QUERY_KEY, null);
     qc.setQueryData(communityRecentWorkersQueryKey("ai-dev"), mockRecentWorkers);
@@ -315,7 +324,7 @@ describe("CommunityScene — vote 楽観的更新（#924）", () => {
       }),
       // invalidateQueries によるリフェッチで投稿が消えないよう元データを返す
       http.get("/api/communities/:slug/feed", () =>
-        HttpResponse.json([{ ...votePost, my_vote: null }]),
+        HttpResponse.json({ posts: [{ ...votePost, my_vote: null }], nextCursor: null }),
       ),
     );
     renderVoteScene({ my_vote: null });
@@ -349,7 +358,10 @@ describe("CommunityScene — mark-viewed（#934）", () => {
       defaultOptions: { queries: { retry: false, gcTime: 0 } },
     });
     qc.setQueryData(["communities"], [mockCommunity]);
-    qc.setQueryData(communityFeedQueryKey("ai-dev"), []);
+    qc.setQueryData(communityFeedQueryKey("ai-dev"), {
+      pages: [{ posts: [], nextCursor: null }],
+      pageParams: [undefined],
+    });
     qc.setQueryData(communitySubscriptionQueryKey("ai-dev"), { subscribed: true });
     qc.setQueryData(AUTH_ME_QUERY_KEY, mockUser);
     qc.setQueryData(communityRecentWorkersQueryKey("ai-dev"), mockRecentWorkers);

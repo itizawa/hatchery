@@ -107,11 +107,11 @@ async function mockCommunityFeedApi(
   slug: string,
   posts: unknown[] = [MOCK_POST],
 ): Promise<void> {
-  await page.route(`**/api/communities/${slug}/feed`, (route) =>
+  await page.route(`**/api/communities/${slug}/feed**`, (route) =>
     route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify(posts),
+      body: JSON.stringify({ posts, nextCursor: null }),
     }),
   );
 }
@@ -144,7 +144,7 @@ async function mockSubscriptionApi(
   );
 }
 
-// ─── テスト ───────────────────────────────────────────────────────────────────
+// ─── テスト ─────────────────────────────────────────────────────────────────
 
 test("UC-COMM-01: コミュニティ一覧（/communities）が未ログインでも閲覧できる", async ({
   page,
@@ -371,7 +371,7 @@ test(
   },
 );
 
-test("UC-COMM-09: サイドバーの「コミュニティ」セクションを見出しクリックで開閉できる", async ({
+test("サイドバーの「コミュニティ」セクションを見出しクリックで開閉できる", async ({
   page,
 }) => {
   await mockUnauthenticated(page);
@@ -573,4 +573,6 @@ test.todo(
   "UC-COMM-16: vote ミューテーション進行中はコミュニティフィードの vote ボタンが disabled になる（#748）",
 );
 
-test.todo("UC-COMM-19: コミュニティ詳細の各投稿カードに共有ボタンが表示される（#838）");
+test.todo("コミュニティ詳細の各投稿カードに共有ボタンが表示される（#838）");
+
+test.todo("UC-COMM-23: コミュニティフィードを無限スクロールで閲覧できる（#881）");

@@ -96,7 +96,7 @@ describe("errorHandler", () => {
     expect(res.body.error).toBe("InternalServerError");
   });
 
-  it("500 に変換する想定外エラーは console.error で原因（メソッド/URL/例外）をログ出力する", async () => {
+  it("500 に変換する想定外エラーは構造化 JSON（event/method/path/error/stack）で console.error にログ出力する", async () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
     const boom = new Error("boom");
     await request(
@@ -107,15 +107,18 @@ describe("errorHandler", () => {
     ).get("/t");
 
     expect(spy).toHaveBeenCalledTimes(1);
-    // 例外オブジェクト本体が渡され、スタックトレースが追える形であること。
-    expect(spy.mock.calls[0]).toContain(boom);
-    // どのリクエストで起きたか（メソッド + パス）も出力されること。
-    const logged = spy.mock.calls[0].map(String).join(" ");
-    expect(logged).toContain("GET");
-    expect(logged).toContain("/t");
+    const parsed = JSON.parse(spy.mock.calls[0]?.[0] as string) as Record<string, unknown>;
+    expect(parsed.event).toBe("http.500");
+    expect(parsed.level).toBe("error");
+    expect(parsed.severity).toBe("ERROR");
+    expect(parsed.method).toBe("GET");
+    expect(parsed.path).toBe("/t");
+    expect(parsed.error).toBe("boom");
+    expect(typeof parsed.stack).toBe("string");
+    expect(parsed.stack).toContain("Error: boom");
   });
 
-  it("5xx の AppError（InternalServerError 等）も console.error でログ出力する", async () => {
+  it("5xx の AppError（InternalServerError 等）も構造化 JSON（event/statusCode）で console.error にログ出力する", async () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
     const err = new InternalServerError("SceneGenerationFailed");
     const res = await request(
@@ -127,7 +130,10 @@ describe("errorHandler", () => {
 
     expect(res.status).toBe(500);
     expect(spy).toHaveBeenCalledTimes(1);
-    expect(spy.mock.calls[0]).toContain(err);
+    const parsed = JSON.parse(spy.mock.calls[0]?.[0] as string) as Record<string, unknown>;
+    expect(parsed.event).toBe("http.error");
+    expect(parsed.statusCode).toBe(500);
+    expect(parsed.error).toBe("SceneGenerationFailed");
   });
 
   it("AppError（4xx）や 413 など想定内エラーは console.error しない", async () => {

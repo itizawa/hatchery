@@ -1,6 +1,8 @@
 import { AppError } from "@hatchery/common";
 import type { ErrorRequestHandler } from "express";
 
+import { logError } from "../logger.js";
+
 /**
  * 集約エラーハンドラ。
  * AppError（common 定義）は statusCode に応じた HTTP レスポンスを返す。
@@ -19,7 +21,7 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
     // AppError でも 5xx（InternalServerError 等）はサーバ側の障害なので必ずログに残す。
     // 4xx（NotFound/BadRequest 等）は想定内なのでログしない。
     if (err.statusCode >= 500) {
-      console.error(`[errorHandler] ${err.statusCode} ${req.method} ${req.originalUrl}`, err);
+      logError("http.error", err, { statusCode: err.statusCode, method: req.method, path: req.originalUrl });
     }
     res.status(err.statusCode).json({ error: err.message });
     return;
@@ -31,6 +33,6 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
   }
   // 想定外の例外は 500 に変換する。原因追跡のため、どのリクエストで何が起きたかを
   // 必ずログに残す（これが無いと本番の 500 がスタックトレースなしで不可視になる）。
-  console.error(`[errorHandler] 500 ${req.method} ${req.originalUrl}`, err);
+  logError("http.500", err, { method: req.method, path: req.originalUrl });
   res.status(500).json({ error: "InternalServerError" });
 };

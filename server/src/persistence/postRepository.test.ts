@@ -273,6 +273,72 @@ describe("createInMemoryPostRepository", () => {
     });
   });
 
+  describe("listByCommunityPaged (#881)", () => {
+    it("カーソルで次ページを取得でき、重複・欠落がない（新着順）", async () => {
+      const repo = createInMemoryPostRepository();
+      for (let i = 0; i < 5; i++) {
+        await repo.createMany("community-1", [
+          { slotKey: "s", seq: i, author: "w", title: `P${i}`, text: "t" },
+        ]);
+        await new Promise((r) => setTimeout(r, 2));
+      }
+      const page1 = await repo.listByCommunityPaged("community-1", undefined, 2);
+      expect(page1.posts).toHaveLength(2);
+      expect(page1.nextCursor).not.toBeNull();
+      const page2 = await repo.listByCommunityPaged("community-1", page1.nextCursor!, 2);
+      expect(page2.posts).toHaveLength(2);
+      const page3 = await repo.listByCommunityPaged("community-1", page2.nextCursor!, 2);
+      expect(page3.posts).toHaveLength(1);
+      expect(page3.nextCursor).toBeNull();
+
+      const ids = [...page1.posts, ...page2.posts, ...page3.posts].map((p) => p.id);
+      expect(ids.length).toBe(5);
+      expect(new Set(ids).size).toBe(5);
+      const titles = [...page1.posts, ...page2.posts, ...page3.posts].map((p) => p.title);
+      expect(titles).toEqual(["P4", "P3", "P2", "P1", "P0"]);
+    });
+
+    it("別 community の post は含めない", async () => {
+      const repo = createInMemoryPostRepository();
+      await repo.createMany("community-1", [
+        { slotKey: "s", seq: 0, author: "w", title: "C1", text: "t" },
+      ]);
+      await repo.createMany("community-2", [
+        { slotKey: "s", seq: 0, author: "w", title: "C2", text: "t" },
+      ]);
+      const { posts } = await repo.listByCommunityPaged("community-1", undefined, 20);
+      expect(posts).toHaveLength(1);
+      expect(posts[0].title).toBe("C1");
+    });
+
+    it("post が 0 件のときは空配列・nextCursor=null", async () => {
+      const repo = createInMemoryPostRepository();
+      const result = await repo.listByCommunityPaged("community-1", undefined, 20);
+      expect(result).toEqual({ posts: [], nextCursor: null });
+    });
+
+    it("不正な cursor は INVALID_CURSOR で reject", async () => {
+      const repo = createInMemoryPostRepository();
+      const invalid = Buffer.from("not-json").toString("base64");
+      await expect(repo.listByCommunityPaged("community-1", invalid, 20)).rejects.toThrow("INVALID_CURSOR");
+    });
+
+    it("now を渡すと createdAt > now の post は除外される", async () => {
+      const repo = createInMemoryPostRepository();
+      const past = new Date(Date.now() - 10_000);
+      const future = new Date(Date.now() + 60_000);
+      await repo.createMany("community-1", [
+        { slotKey: "s", seq: 0, author: "w", title: "past", text: "t", createdAt: past },
+        { slotKey: "s", seq: 1, author: "w", title: "future", text: "t", createdAt: future },
+      ]);
+      const now = new Date();
+      const { posts, nextCursor } = await repo.listByCommunityPaged("community-1", undefined, 20, { now });
+      expect(posts).toHaveLength(1);
+      expect(posts[0].title).toBe("past");
+      expect(nextCursor).toBeNull();
+    });
+  });
+
   describe("listPopularPaged", () => {
     it("score 降順で返す（同点は createdAt 降順）", async () => {
       const repo = createInMemoryPostRepository();

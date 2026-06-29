@@ -55,4 +55,12 @@ describe("withGenerationRetry (#626)", () => {
     await expect(withGenerationRetry({ fn, maxRetries: 0, label: "test" })).rejects.toThrow(err);
     expect(fn).toHaveBeenCalledTimes(1);
   });
+
+  it("maxRetries が負の場合、fn を呼ばずに Error を throw する", async () => {
+    const fn = vi.fn();
+    await expect(withGenerationRetry({ fn, maxRetries: -1, label: "test" })).rejects.toThrow(
+      "withGenerationRetry: test exhausted without error",
+    );
+    expect(fn).toHaveBeenCalledTimes(0);
+  });
 });

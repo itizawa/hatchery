@@ -34,11 +34,13 @@ export async function withGenerationRetry<T>({
         lastError = err;
         if (attempt < maxRetries) {
           logBatchError("generation.retry_failed", err, { label, attempt, maxRetries });
+        } else {
+          logBatchError("generation.retry_exhausted", err, { label, attempt, maxRetries });
         }
         continue;
       }
       throw err;
     }
   }
-  throw lastError!;
+  throw lastError ?? new Error(`withGenerationRetry: ${label} exhausted without error`);
 }

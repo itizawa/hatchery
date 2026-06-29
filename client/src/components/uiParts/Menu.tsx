@@ -7,15 +7,18 @@ const MENU_PAPER_SX = {
   marginTop: "8px",
 };
 
-export const Menu = ({ slotProps, ...props }: MenuProps) => (
-  <MuiMenu
-    slotProps={{
-      ...slotProps,
-      paper: {
-        ...(slotProps?.paper as object | undefined),
-        sx: { ...MENU_PAPER_SX, ...(slotProps?.paper as { sx?: object } | undefined)?.sx },
-      },
-    }}
-    {...props}
-  />
-);
+export const Menu = ({ slotProps, ...props }: MenuProps) => {
+  const paperSlotProps = typeof slotProps?.paper === "function" ? undefined : slotProps?.paper;
+  return (
+    <MuiMenu
+      slotProps={{
+        ...slotProps,
+        paper: {
+          ...paperSlotProps,
+          sx: { ...MENU_PAPER_SX, ...paperSlotProps?.sx },
+        },
+      }}
+      {...props}
+    />
+  );
+};

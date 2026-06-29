@@ -96,12 +96,16 @@ export const CommentCard = (props: CommentCardProps): ReactElement => {
     parentComment = null,
   } = props;
 
-  // 親コメントのテキストを最大 40 文字に切り詰める（#931）。[...text] でコードポイント単位に処理。
-  const parentPreviewText = (() => {
-    if (!parentComment) return null;
-    const chars = [...parentComment.text];
-    return chars.length > 40 ? chars.slice(0, 40).join("") + "…" : parentComment.text;
-  })();
+  // コードポイント単位で文字列を切り詰める。サロゲートペア（絵文字等）の途中で切れるのを防ぐ。
+  const truncateCodePoints = ({ text, limit }: { text: string; limit: number }): string => {
+    const chars = [...text];
+    return chars.length > limit ? chars.slice(0, limit).join("") + "…" : text;
+  };
+
+  // 親コメントの引用プレビュー（#931）。text と id をまとめて返し non-null assertion を避ける。
+  const parentPreview = parentComment
+    ? { text: truncateCodePoints({ text: parentComment.text, limit: 40 }), id: parentComment.id }
+    : null;
 
   const clampedDepth = Math.min(depth, MAX_COMMENT_DEPTH);
   const indentLeft = clampedDepth * INDENT_PER_DEPTH;
@@ -111,11 +115,7 @@ export const CommentCard = (props: CommentCardProps): ReactElement => {
 
   // 共有ボタン用 URL / タイトル（#775）。postId が渡された場合のみ組み立てる。
   const shareUrl = postId ? `${window.location.origin}/posts/${postId}#comment-${comment.id}` : undefined;
-  // [...text] でコードポイント単位に分割し、サロゲートペア（絵文字等）の途中で切れるのを防ぐ。
-  const commentChars = shareUrl ? [...comment.text] : [];
-  const shareTitle = shareUrl
-    ? commentChars.slice(0, 50).join("") + (commentChars.length > 50 ? "…" : "")
-    : "";
+  const shareTitle = shareUrl ? truncateCodePoints({ text: comment.text, limit: 50 }) : "";
 
   return (
     <Box
@@ -219,7 +219,7 @@ export const CommentCard = (props: CommentCardProps): ReactElement => {
               )}
               <PostedTime createdAt={comment.created_at} />
             </Box>
-            {parentPreviewText && (
+            {parentPreview && (
               <Box
                 data-testid="comment-quote-preview"
                 sx={{
@@ -234,7 +234,7 @@ export const CommentCard = (props: CommentCardProps): ReactElement => {
               >
                 <Typography
                   component="a"
-                  href={`#comment-${parentComment!.id}`}
+                  href={`#comment-${parentPreview.id}`}
                   variant="caption"
                   sx={{
                     color: "text.secondary",
@@ -246,7 +246,7 @@ export const CommentCard = (props: CommentCardProps): ReactElement => {
                     "&:hover": { textDecoration: "underline" },
                   }}
                 >
-                  {parentPreviewText}
+                  {parentPreview.text}
                 </Typography>
               </Box>
             )}

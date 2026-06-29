@@ -23,7 +23,8 @@ describe("generateOpenApiDocument スナップショット回帰（#535）", () 
   );
 
   it("分割前後で openapi.json が完全一致する（差分なし）", () => {
-    const expected = readFileSync(baselinePath, "utf-8");
+    // 末尾改行の有無に依存しないよう trimEnd() で正規化して比較する（#925: push_files は末尾改行を付与する）。
+    const expected = readFileSync(baselinePath, "utf-8").trimEnd();
     // 生成スクリプト（generate.ts）と同じ整形（2 スペースインデント）で文字列化して比較する。
     const actual = JSON.stringify(generateOpenApiDocument(), null, 2);
     expect(actual).toBe(expected);

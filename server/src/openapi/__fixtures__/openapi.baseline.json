@@ -1476,6 +1476,34 @@
         }
       }
     },
+    "/api/health": {
+      "get": {
+        "summary": "ヘルスチェック（Cloud Scheduler warmup 用）",
+        "responses": {
+          "200": {
+            "description": "稼働中",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "ok"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/communities": {
       "get": {
         "summary": "コミュニティ一覧を取得（認証必須・admin のみ・#310 / #337）",

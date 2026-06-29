@@ -59,6 +59,19 @@ client のデプロイは ADR-0008 の通り Cloudflare Pages を使用する。
 
 ---
 
+## コールドスタート対策（#925）
+
+`--min-instances=0` のままコールドスタートによる初回レスポンス遅延を防ぐため、
+**Cloud Scheduler から本番 Cloud Run の `/api/health` へ 10 分おきに GET ping を送る**。
+
+- **スケジュール**: `*/10 * * * *`（Cloud Scheduler ジョブ名: `hatchery-prod-warmup`、リージョン: `asia-northeast1`）
+- **ターゲット**: `https://hatchery-works.com/api/health`（Cloudflare Pages 経由でプロキシ）
+- **コスト**: Cloud Scheduler は月 3 ジョブまで無料。追加コスト不要
+- **根拠**: Cloud Run のアイドルタイムアウトデフォルト 15 分 > ping 間隔 10 分 のためゼロスケールを防止できる
+- 設定手順は `docs/deploy/setup.md` §7 参照
+
+---
+
 ## 影響（結果）
 
 - **新規ファイル**: `server/Dockerfile`, `server/.dockerignore`, `.github/workflows/deploy-server-dev.yml`, `client/wrangler.toml`, `.github/workflows/deploy-client-dev.yml`, `docs/deploy/setup.md`
@@ -74,3 +87,4 @@ client のデプロイは ADR-0008 の通り Cloudflare Pages を使用する。
 - ADR-0004: server スタック（Express + Prisma）
 - ADR-0002: ビルドツール（pnpm + Turborepo）
 - Issue #78: 本 ADR に基づく実装
+- Issue #925: コールドスタート対策（Cloud Scheduler 定期 ping）

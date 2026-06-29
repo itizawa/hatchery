@@ -754,6 +754,39 @@ test(
   },
 );
 
+test(
+  "UC-HOME-24: フィードの投稿カードのコメント Chip をクリックすると /posts/$postId#comments へ遷移する（#836）",
+  async ({ page }) => {
+    await setupVoteTestMocks({ page });
+    await page.goto("/");
+    await expect(page.getByText(MOCK_POST_VOTE.title)).toBeVisible();
+
+    // コメント数 Chip（aria-label="コメント N 件"）をクリック
+    const commentChip = page.getByRole("button", {
+      name: `コメント ${MOCK_POST_VOTE.comment_count} 件`,
+    });
+    await expect(commentChip).toBeVisible();
+    await commentChip.click();
+
+    // /posts/$postId#comments へ遷移することを確認
+    await expect(page).toHaveURL(new RegExp(`/posts/${MOCK_POST_VOTE.id}#comments`));
+  },
+);
+
+test(
+  "UC-HOME-25: ホームフィードの投稿一覧が border-bottom のフラットリスト表示である（#834）",
+  async ({ page }) => {
+    await setupVoteTestMocks({ page });
+    await page.goto("/");
+    await expect(page.getByText(MOCK_POST_VOTE.title)).toBeVisible();
+
+    // PostCard が list バリアントで描画される（data-variant="list"）
+    await expect(page.locator('[data-variant="list"]').first()).toBeVisible();
+    // card バリアントは使われていない
+    await expect(page.locator('[data-variant="card"]')).not.toBeVisible();
+  },
+);
+
 test.todo("UC-HOME-26: ホームフィードの各投稿カードに共有ボタンが表示される（#838）");
 
 test.todo("UC-HOME-32: 購読コミュニティの新着投稿に「New」ラベルが表示される（#935）");

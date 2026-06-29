@@ -41,7 +41,7 @@ describe("SubscriptionSchema", () => {
 });
 
 describe("UnreadCountItemSchema", () => {
-  const valid = { community_id: "c-1", community_slug: "tech", unread_count: 3 };
+  const valid = { community_id: "c-1", community_slug: "tech", unread_count: 3, last_viewed_at: null };
 
   it("有効なデータをパースできる", () => {
     expect(UnreadCountItemSchema.safeParse(valid).success).toBe(true);
@@ -72,8 +72,8 @@ describe("UnreadCountsResponseSchema", () => {
   it("複数の unread_counts をパースできる", () => {
     const result = UnreadCountsResponseSchema.safeParse({
       unread_counts: [
-        { community_id: "c-1", community_slug: "tech", unread_count: 5 },
-        { community_id: "c-2", community_slug: "daily", unread_count: 0 },
+        { community_id: "c-1", community_slug: "tech", unread_count: 5, last_viewed_at: "2026-06-01T00:00:00.000Z" },
+        { community_id: "c-2", community_slug: "daily", unread_count: 0, last_viewed_at: null },
       ],
     });
     expect(result.success).toBe(true);

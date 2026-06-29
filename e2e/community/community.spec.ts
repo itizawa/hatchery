@@ -575,6 +575,75 @@ test.todo(
   "UC-COMM-16: vote ミューテーション進行中はコミュニティフィードの vote ボタンが disabled になる（#748）",
 );
 
+test(
+  "UC-COMM-17: コミュニティフィードのコメント Chip をクリックするとコメントセクションへ直接遷移する（#836）",
+  async ({ page }) => {
+    await mockUnauthenticated(page);
+    await mockCommunitiesApi(page);
+    await mockFeedApi(page);
+    await mockCommunityFeedApi(page, MOCK_COMMUNITY.slug);
+    await mockRecentWorkersApi(page, MOCK_COMMUNITY.slug);
+    await mockSubscriptionApi(page, MOCK_COMMUNITY.slug, false);
+
+    // 遷移先の投稿スレッドページ API をモック（遷移後のエラーを防ぐ）
+    await page.route(`**/api/posts/${MOCK_POST.id}`, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ post: MOCK_POST, comments: [] }),
+      }),
+    );
+
+    await page.goto(`/communities/${MOCK_COMMUNITY.slug}`);
+
+    // 投稿タイトルが表示されることを確認
+    await expect(page.getByRole("heading", { name: MOCK_POST.title })).toBeVisible();
+
+    // コメント Chip が表示される（aria-label で特定）
+    const commentChip = page.getByLabel(`コメント ${MOCK_POST.comment_count} 件`);
+    await expect(commentChip).toBeVisible();
+
+    // コメント Chip をクリック → /posts/$postId#comments へ遷移する
+    await commentChip.click();
+    await expect(page).toHaveURL(`/posts/${MOCK_POST.id}#comments`);
+  },
+);
+
+test(
+  "UC-COMM-18: コミュニティ詳細の投稿一覧がフラットリスト（border 区切り）で表示される（#834）",
+  async ({ page }) => {
+    await mockUnauthenticated(page);
+    await mockCommunitiesApi(page);
+    await mockFeedApi(page);
+    await mockCommunityFeedApi(page, MOCK_COMMUNITY.slug);
+    await mockRecentWorkersApi(page, MOCK_COMMUNITY.slug);
+    await mockSubscriptionApi(page, MOCK_COMMUNITY.slug, false);
+
+    await page.goto(`/communities/${MOCK_COMMUNITY.slug}`);
+
+    // 投稿タイトルが表示されることを確認
+    await expect(page.getByRole("heading", { name: MOCK_POST.title })).toBeVisible();
+
+    // 投稿カードが variant="list" で描画されている（data-variant="list" 属性で確認）
+    const postCard = page.locator('[data-variant="list"]').first();
+    await expect(postCard).toBeAttached();
+
+    // フラットリストスタイル: border-bottom が適用されている（浮き上がりカードではない）
+    const borderBottomWidth = await postCard.evaluate(
+      (el) => window.getComputedStyle(el).borderBottomWidth,
+    );
+    const borderBottomStyle = await postCard.evaluate(
+      (el) => window.getComputedStyle(el).borderBottomStyle,
+    );
+    expect(borderBottomWidth).toBe("1px");
+    expect(borderBottomStyle).toBe("solid");
+
+    // カードスタイルでない（浮き上がり box-shadow がない）
+    const boxShadow = await postCard.evaluate((el) => window.getComputedStyle(el).boxShadow);
+    expect(boxShadow).toBe("none");
+  },
+);
+
 test.todo("コミュニティ詳細の各投稿カードに共有ボタンが表示される（#838）");
 
 test.todo("UC-COMM-23: コミュニティフィードを無限スクロールで閲覧できる（#881）");

@@ -411,6 +411,7 @@ export const createAppRouter = (options: CreateAppRouterOptions = {}) =>
     routeTree,
     history: options.history,
     defaultPreload: "intent",
+    defaultViewTransition: true,
   });
 
 /** アプリのルータ型（AppRoot への注入や Register augmentation で共有する）。 */

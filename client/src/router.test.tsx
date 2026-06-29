@@ -280,3 +280,17 @@ describe("認証ガード（未ログイン時のリダイレクト）", () => {
     expect(screen.queryByRole("heading", { name: /^ログイン$/ })).not.toBeInTheDocument();
   });
 });
+
+// #967: ビュー遷移アニメーション — ルータ設定の検証
+describe("ビュー遷移（#967）", () => {
+  it("createAppRouter() が返すルータに defaultViewTransition: true が設定されている", () => {
+    const router = createAppRouter();
+    expect(router.options.defaultViewTransition).toBe(true);
+  });
+
+  it("history オプションを渡しても defaultViewTransition: true が維持される", () => {
+    const history = createMemoryHistory({ initialEntries: ["/"] });
+    const router = createAppRouter({ history });
+    expect(router.options.defaultViewTransition).toBe(true);
+  });
+});

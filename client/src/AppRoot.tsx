@@ -1,4 +1,5 @@
 import CssBaseline from "@mui/material/CssBaseline";
+import GlobalStyles from "@mui/material/GlobalStyles";
 import { ThemeProvider } from "@mui/material/styles";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
@@ -8,6 +9,32 @@ import { useCfPageViewTracking } from "./analytics/useCfPageViewTracking";
 import { createQueryClient } from "./queryClient";
 import { router as defaultRouter, type AppRouter } from "./router";
 import { slackTheme } from "./theme";
+
+const viewTransitionStyles = {
+  "::view-transition-old(root), ::view-transition-new(root)": {
+    animationDuration: "180ms",
+    animationTimingFunction: "ease-out",
+  },
+  "::view-transition-old(root)": {
+    animationName: "vt-fade-out",
+  },
+  "::view-transition-new(root)": {
+    animationName: "vt-fade-in",
+  },
+  "@keyframes vt-fade-out": {
+    from: { opacity: 1 },
+    to: { opacity: 0 },
+  },
+  "@keyframes vt-fade-in": {
+    from: { opacity: 0 },
+    to: { opacity: 1 },
+  },
+  "@media (prefers-reduced-motion: reduce)": {
+    "::view-transition-old(root), ::view-transition-new(root)": {
+      animationDuration: "0.01ms",
+    },
+  },
+};
 
 export interface AppRootProps {
   /** 注入するルータ（未指定なら browser history の既定ルータ）。テストで memory history を差し込める。 */
@@ -29,6 +56,7 @@ export const AppRoot = ({ router = defaultRouter }: AppRootProps = {}): ReactEle
   return (
     <ThemeProvider theme={slackTheme}>
       <CssBaseline />
+      <GlobalStyles styles={viewTransitionStyles} />
       <QueryClientProvider client={queryClient}>
         <RouterProvider router={router} />
       </QueryClientProvider>

@@ -294,3 +294,39 @@ describe("ビュー遷移（#967）", () => {
     expect(router.options.defaultViewTransition).toBe(true);
   });
 });
+
+// #950: スクロール復元 — ルータ設定とメインコンテナの検証
+describe("スクロール復元（#950）", () => {
+  beforeEach(() => {
+    stubFetch({ authenticated: false });
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("createAppRouter() が返すルータに scrollRestoration: true が設定されている", () => {
+    const router = createAppRouter();
+    expect(router.options.scrollRestoration).toBe(true);
+  });
+
+  it("history オプションを渡しても scrollRestoration: true が維持される", () => {
+    const history = createMemoryHistory({ initialEntries: ["/"] });
+    const router = createAppRouter({ history });
+    expect(router.options.scrollRestoration).toBe(true);
+  });
+
+  it("createAppRouter() が返すルータの scrollToTopSelectors が main-content を含む", () => {
+    const router = createAppRouter();
+    expect(router.options.scrollToTopSelectors).toContain('[data-scroll-restoration-id="main-content"]');
+  });
+
+  it('<main> 要素に data-scroll-restoration-id="main-content" 属性が付与されている', async () => {
+    const router = createAppRouter({
+      history: createMemoryHistory({ initialEntries: ["/"] }),
+    });
+    const { container } = render(renderRouter(router));
+    await screen.findByRole("heading", { name: /ホームフィード/ });
+    const main = container.querySelector('main[data-scroll-restoration-id="main-content"]');
+    expect(main).toBeInTheDocument();
+  });
+});

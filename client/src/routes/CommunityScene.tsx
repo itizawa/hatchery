@@ -78,6 +78,7 @@ const CommunityContent = ({
   const lastViewedAt =
     unreadCountsData?.unread_counts.find((item) => item.community_id === community.id)
       ?.last_viewed_at ?? null;
+  const lastViewedAtDate = lastViewedAt ? new Date(lastViewedAt) : null;
 
   useEffect(() => {
     const el = sentinelRef.current;
@@ -150,9 +151,9 @@ const CommunityContent = ({
                   {posts.map((post) => {
                     const isNew =
                       subscribed &&
-                      lastViewedAt != null &&
+                      lastViewedAtDate != null &&
                       post.created_at != null &&
-                      new Date(post.created_at) > new Date(lastViewedAt);
+                      new Date(post.created_at) > lastViewedAtDate;
                     return (
                       <Box
                         key={post.id}

@@ -11,6 +11,7 @@ import { ShareButton } from "./ShareButton.js";
 import { MarkdownContent } from "./MarkdownContent.js";
 import type { VoteDirection } from "./VoteControl.js";
 import CommentRounded from "@mui/icons-material/CommentRounded";
+import { SLACK_COLORS } from "../theme.js";
 
 /** 投稿カードに表示する所属コミュニティの最小情報（#503）。 */
 export interface PostCardCommunity {
@@ -189,7 +190,7 @@ export const PostCard = (props: PostCardProps): ReactElement => {
             label="New"
             size="small"
             sx={{
-              bgcolor: "#1164A3",
+              bgcolor: SLACK_COLORS.blue,
               color: "#fff",
               fontWeight: 600,
               height: 20,

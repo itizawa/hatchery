@@ -33,12 +33,4 @@ describe("PostThreadSkeleton レイアウト構造 (#955)", () => {
     const sidebar = screen.getByTestId("post-thread-skeleton-sidebar");
     expect(left.parentElement).toBe(sidebar.parentElement);
   });
-
-  it("右カラムは DOM に存在する（xs で CSS 非表示・md+ で表示されるレスポンシブ Box）", () => {
-    // jsdom + Emotion の環境では CSSStyleSheet.insertRule 経由のスタイルを getComputedStyle で
-    // 読めないため、「DOM に存在すること」を確認する。display:{ xs:"none", md:"block" } の
-    // sx がソースコードに設定されていることが実装上の保証であり、DOM 上の存在確認が十分な代理指標。
-    render(<PostThreadSkeleton />);
-    expect(screen.getByTestId("post-thread-skeleton-sidebar")).toBeInTheDocument();
-  });
 });

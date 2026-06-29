@@ -35,8 +35,7 @@ export const PostThreadSkeleton = (): ReactElement => (
           <CommentCard loading />
         </Box>
       </Box>
-      {/* 右カラム: PostThreadScene の SidebarColumn と同一の sx（#955）。
-          position:sticky / top:24 を追加し CLS を最小化する。 */}
+      {/* CLS 最小化のため PostThreadScene.SidebarColumn と sticky sx を揃える */}
       <Box
         sx={{
           width: 312,

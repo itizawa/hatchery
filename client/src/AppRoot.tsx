@@ -31,7 +31,7 @@ const viewTransitionStyles = {
   },
   "@media (prefers-reduced-motion: reduce)": {
     "::view-transition-old(root), ::view-transition-new(root)": {
-      animationDuration: "0.01ms",
+      animation: "none",
     },
   },
 };

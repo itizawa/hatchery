@@ -501,7 +501,7 @@ test(
     await page.goto("/");
 
     // ログイン済み + 投稿ありの場合はようこそセクションが非表示になる
-    await expect(page.getByRole("heading", { name: /Hatchery へようこそ/ })).not.toBeVisible();
+    await expect(page.getByRole("heading", { name: /Hatchery へようこそ/ })).toBeVisible({ visible: false });
     // 投稿一覧は表示される
     await expect(page.getByText(MOCK_POST.title)).toBeVisible();
   },
@@ -639,7 +639,11 @@ test(
     await expect(page.getByText(MOCK_POST_VOTE.title)).toBeVisible();
 
     const upVoteButton = page.getByRole("button", { name: "up vote" }).first();
+
+    // route handler が実行され resolveVote が代入されるのを確実に待つ
+    const voteRequestPromise = page.waitForRequest("**/api/posts/*/vote");
     await upVoteButton.click();
+    await voteRequestPromise;
 
     // ミューテーション進行中: up vote ボタンが disabled になる
     await expect(upVoteButton).toBeDisabled();
@@ -732,8 +736,10 @@ test(
     await page.goto("/");
     await expect(page.getByText(MOCK_POST_VOTE.title)).toBeVisible();
 
-    // up vote する
+    // up vote する（route handler 完了を待ってから reload することで postMyVote が確実に "up" になる）
+    const voteResponsePromise = page.waitForResponse("**/api/posts/*/vote");
     await page.getByRole("button", { name: "up vote" }).first().click();
+    await voteResponsePromise;
 
     // 投票後: vote ウィジェットが up 状態
     const voteWidget = page.locator("[data-voted]").first();

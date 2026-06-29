@@ -69,7 +69,32 @@ test(
   },
 );
 
-test.todo("UC-POST-02: コメントが 0 件の投稿ではコメントセクションが表示されない");
+test(
+  "UC-POST-02: コメントが 0 件の投稿ではコメントセクションが表示されない",
+  async ({ page }) => {
+    const worker = await createWorker({ ...MOCK_WORKER_1 });
+    const community = await createCommunity({ ...MOCK_COMMUNITY, workerIds: [worker.id] });
+    const post = await createPost({
+      communityId: community.id,
+      workerId: worker.id,
+      ...MOCK_POST,
+    });
+
+    await page.goto(`/posts/${post.id}`);
+
+    // コメント 0 件の場合は空状態メッセージが表示される
+    await expect(
+      page.getByText("まだコメントはありません。AI ワーカーが定時にコメントします。"),
+    ).toBeVisible();
+    // 「コメント N 件」の見出しは表示されない
+    await expect(page.getByText(/コメント \d+ 件/)).not.toBeVisible();
+
+    // クリーンアップ
+    await post.delete();
+    await community.delete();
+    await worker.delete();
+  },
+);
 
 test(
   "UC-POST-03: ログイン済みユーザーが post に upvote できる",
@@ -83,7 +108,7 @@ test(
     });
 
     const user = await createUser();
-    await login(page, user);
+    await login({ page, user });
 
     await page.goto(`/posts/${post.id}`);
 
@@ -135,7 +160,7 @@ test(
     });
 
     const user = await createUser();
-    await login(page, user);
+    await login({ page, user });
 
     await page.goto(`/posts/${post.id}`);
 
@@ -171,7 +196,31 @@ test(
   },
 );
 
-test.todo("UC-POST-05: スレッドに投稿・コメントの入力欄が存在しない");
+test(
+  "UC-POST-05: スレッドに投稿・コメントの入力欄が存在しない",
+  async ({ page }) => {
+    const worker = await createWorker({ ...MOCK_WORKER_1 });
+    const community = await createCommunity({ ...MOCK_COMMUNITY, workerIds: [worker.id] });
+    const post = await createPost({
+      communityId: community.id,
+      workerId: worker.id,
+      ...MOCK_POST,
+    });
+
+    await page.goto(`/posts/${post.id}`);
+    await expect(page.getByText(MOCK_POST.content)).toBeVisible();
+
+    // textarea が存在しない（コメント入力欄なし）
+    await expect(page.locator("textarea")).toHaveCount(0);
+    // text 型 input が存在しない（投稿入力欄なし）
+    await expect(page.locator('input[type="text"]')).toHaveCount(0);
+
+    // クリーンアップ
+    await post.delete();
+    await community.delete();
+    await worker.delete();
+  },
+);
 
 test(
   "UC-POST-06: 存在しない postId ではエラーフォールバックが表示される",
@@ -591,28 +640,183 @@ test(
   },
 );
 
-test.todo(
+test(
   "UC-POST-16: 返信コメントに Reddit 風 L 字コネクターが表示される（#746）",
+  async ({ page }) => {
+    await setupThreadCommonMocks({ page, thread: MOCK_THREAD_WITH_NESTED_COMMENTS });
+
+    await page.goto(`/posts/${MOCK_POST_ID}`);
+
+    // 子コメント（depth > 0）に L 字コネクターが表示される
+    const lConnectors = page.getByTestId("comment-l-connector");
+    await expect(lConnectors).toBeVisible();
+    // 子コメントは 1 件のため L 字コネクターも 1 個
+    await expect(lConnectors).toHaveCount(1);
+  },
 );
 
-test.todo(
+test(
   "UC-POST-18: vote ミューテーション進行中は vote ボタンが disabled になる（#748）",
+  async ({ page }) => {
+    await setupThreadCommonMocks({ page, thread: MOCK_THREAD_WITH_URL });
+
+    // vote API レスポンスを保留して mutation 進行中状態を再現する
+    let resolveVote!: () => void;
+    await page.route(`**/api/posts/${MOCK_POST_ID}/vote`, async (route) => {
+      await new Promise<void>((resolve) => {
+        resolveVote = resolve;
+      });
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ...MOCK_THREAD_WITH_URL.post, score: 6, my_vote: "up" }),
+      });
+    });
+
+    await page.goto(`/posts/${MOCK_POST_ID}`);
+    await expect(page.getByText(MOCK_THREAD_WITH_URL.post.title)).toBeVisible();
+
+    const upVoteButton = page.getByRole("button", { name: "up vote" }).first();
+    const voteRequestPromise = page.waitForRequest(`**/api/posts/${MOCK_POST_ID}/vote`);
+    await upVoteButton.click();
+    await voteRequestPromise;
+
+    // ミューテーション進行中: up vote ボタンが disabled になる
+    await expect(upVoteButton).toBeDisabled();
+
+    // ミューテーション完了後: ボタンが再度有効化される
+    resolveVote();
+    await expect(upVoteButton).not.toBeDisabled();
+  },
 );
 
-test.todo(
+test(
   "UC-POST-19: 返信を持つコメントのアバター下にスレッドコネクターが表示される（#796）",
+  async ({ page }) => {
+    await setupThreadCommonMocks({ page, thread: MOCK_THREAD_WITH_NESTED_COMMENTS });
+
+    await page.goto(`/posts/${MOCK_POST_ID}`);
+
+    // 子コメントを持つ親コメントのアバター下にスレッドコネクター（縦線）が表示される
+    await expect(page.getByTestId("comment-avatar-connector")).toBeVisible();
+  },
 );
 
-test.todo(
+test(
   "UC-POST-20: コメントに共有ボタンが表示され、コメントへのパーマリンクをコピー／X でシェアできる（#775）",
+  async ({ page }) => {
+    await setupThreadCommonMocks({ page, thread: MOCK_THREAD_WITH_URL });
+
+    await page.goto(`/posts/${MOCK_POST_ID}`);
+
+    // コメントの共有ボタンが表示される（最後の「共有」ボタン = コメントのボタン）
+    const commentShareButton = page.getByRole("button", { name: "共有" }).last();
+    await expect(commentShareButton).toBeVisible();
+
+    // クリックするとメニューが開く
+    await commentShareButton.click();
+    await expect(page.getByText("URL をコピー")).toBeVisible();
+    await expect(page.getByText("X でシェア")).toBeVisible();
+  },
 );
 
-test.todo(
+test(
   "UC-POST-21: vote ウィジェットに表示される数字は up − down のネットスコアである（#856）",
+  async ({ page }) => {
+    // MOCK_THREAD_WITH_URL: post.score = 5、comment.score = 2
+    await setupThreadCommonMocks({ page, thread: MOCK_THREAD_WITH_URL });
+
+    await page.goto(`/posts/${MOCK_POST_ID}`);
+    await expect(page.getByText(MOCK_THREAD_WITH_URL.post.title)).toBeVisible();
+
+    // post の vote ウィジェットに score 5 が表示される
+    const postVoteWidget = page.locator("[data-voted]").first();
+    await expect(postVoteWidget).toBeVisible();
+    await expect(postVoteWidget.getByText(String(MOCK_THREAD_WITH_URL.post.score))).toBeVisible();
+
+    // コメントの vote ウィジェットに score 2 が表示される
+    const commentVoteWidget = page.locator("[data-voted]").last();
+    await expect(
+      commentVoteWidget.getByText(String(MOCK_THREAD_WITH_URL.comments[0].score)),
+    ).toBeVisible();
+  },
 );
 
-test.todo(
+test(
   "UC-POST-22: ページリロード後も post・コメントの vote 状態が塗りつぶし表示で復元される（#831）",
+  async ({ page }) => {
+    let postMyVote: "up" | "down" | null = null;
+
+    // スレッドデータはクロージャで postMyVote の最新値を読む（リロード後に my_vote: "up" を返す）
+    await page.route(`**/api/posts/${MOCK_POST_ID}`, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          post: { ...MOCK_THREAD_WITH_URL.post, my_vote: postMyVote },
+          comments: MOCK_THREAD_WITH_URL.comments,
+        }),
+      }),
+    );
+    await page.route("**/api/communities", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(MOCK_COMMUNITY_LIST),
+      }),
+    );
+    await page.route("**/api/auth/me", (route) =>
+      route.fulfill({
+        status: 401,
+        contentType: "application/json",
+        body: JSON.stringify({ message: "Unauthorized" }),
+      }),
+    );
+    await page.route(`**/api/posts/${MOCK_POST_ID}/view`, (route) =>
+      route.fulfill({ status: 202 }),
+    );
+    await page.route(`**/api/posts/${MOCK_POST_ID}/comment-views`, (route) =>
+      route.fulfill({ status: 202 }),
+    );
+    await page.route(`**/api/communities/${MOCK_COMMUNITY_SLUG}/subscription`, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ subscribed: false }),
+      }),
+    );
+    // vote API: クロージャを更新して my_vote: "up" にする
+    await page.route(`**/api/posts/${MOCK_POST_ID}/vote`, (route) => {
+      postMyVote = "up";
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ...MOCK_THREAD_WITH_URL.post, score: 6, my_vote: "up" }),
+      });
+    });
+
+    await page.goto(`/posts/${MOCK_POST_ID}`);
+    await expect(page.getByText(MOCK_THREAD_WITH_URL.post.title)).toBeVisible();
+
+    // 投票前: post の vote ウィジェットは未投票状態
+    const postVoteWidget = page.locator("[data-voted]").first();
+    await expect(postVoteWidget).toHaveAttribute("data-voted", "none");
+
+    // up vote する（route handler 完了を待ってから reload することで postMyVote が確実に "up" になる）
+    const voteResponsePromise = page.waitForResponse(`**/api/posts/${MOCK_POST_ID}/vote`);
+    await page.getByRole("button", { name: "up vote" }).first().click();
+    await voteResponsePromise;
+
+    // 投票後: vote ウィジェットが up 状態になる
+    await expect(postVoteWidget).toHaveAttribute("data-voted", "up");
+
+    // ページをリロード
+    await page.reload();
+    await expect(page.getByText(MOCK_THREAD_WITH_URL.post.title)).toBeVisible();
+
+    // リロード後も vote 状態が復元される（スレッド API が my_vote: "up" を返すため）
+    await expect(page.locator("[data-voted]").first()).toHaveAttribute("data-voted", "up");
+  },
 );
 
 test.todo(

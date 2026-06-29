@@ -985,10 +985,12 @@
             "type": "integer"
           },
           "image_url": {
-            "type": "string",
-            "format": "uri",
+            "type": [
+              "string",
+              "null"
+            ],
             "maxLength": 500,
-            "nullable": true
+            "format": "uri"
           }
         },
         "required": [

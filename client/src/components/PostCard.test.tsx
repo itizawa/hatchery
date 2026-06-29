@@ -401,6 +401,23 @@ describe("PostCard", () => {
     });
   });
 
+  describe("isNew（新着ラベル・#935）", () => {
+    it("isNew={true} のとき「New」ラベル Chip が表示される", () => {
+      render(<PostCard post={mockPost} onVote={vi.fn()} isNew />);
+      expect(screen.getByText("New")).toBeInTheDocument();
+    });
+
+    it("isNew={false} のとき「New」ラベル Chip が表示されない", () => {
+      render(<PostCard post={mockPost} onVote={vi.fn()} isNew={false} />);
+      expect(screen.queryByText("New")).not.toBeInTheDocument();
+    });
+
+    it("isNew 未指定（デフォルト）のとき「New」ラベル Chip が表示されない", () => {
+      render(<PostCard post={mockPost} onVote={vi.fn()} />);
+      expect(screen.queryByText("New")).not.toBeInTheDocument();
+    });
+  });
+
   describe("loading（Skeleton 表示・#807）", () => {
     it("loading=true のとき MUI Skeleton が描画される", () => {
       const { container } = render(<PostCard loading />);

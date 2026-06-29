@@ -1117,12 +1117,19 @@
           "unread_count": {
             "type": "integer",
             "minimum": 0
+          },
+          "last_viewed_at": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "required": [
           "community_id",
           "community_slug",
-          "unread_count"
+          "unread_count",
+          "last_viewed_at"
         ],
         "description": "購読コミュニティの未読数アイテム（#933）"
       },
@@ -1145,12 +1152,19 @@
                 "unread_count": {
                   "type": "integer",
                   "minimum": 0
+                },
+                "last_viewed_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 }
               },
               "required": [
                 "community_id",
                 "community_slug",
-                "unread_count"
+                "unread_count",
+                "last_viewed_at"
               ]
             }
           }

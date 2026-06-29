@@ -103,6 +103,7 @@ export function createPrismaSubscriptionRepository(prisma: PrismaClient): Subscr
             communityId: sub.communityId,
             communitySlug: sub.community.slug,
             unreadCount,
+            lastViewedAt: sub.lastViewedAt,
           };
         }),
       );

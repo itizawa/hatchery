@@ -33,9 +33,9 @@ const mockUser = {
 
 const mockUnreadCounts = {
   unread_counts: [
-    { community_id: "community-1", community_slug: "ai-dev", unread_count: 5 },
-    { community_id: "community-2", community_slug: "tech-talk", unread_count: 0 },
-    { community_id: "community-3", community_slug: "news", unread_count: 105 },
+    { community_id: "community-1", community_slug: "ai-dev", unread_count: 5, last_viewed_at: null },
+    { community_id: "community-2", community_slug: "tech-talk", unread_count: 0, last_viewed_at: null },
+    { community_id: "community-3", community_slug: "news", unread_count: 105, last_viewed_at: null },
   ],
 };
 

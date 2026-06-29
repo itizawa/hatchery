@@ -56,6 +56,7 @@ describe("GET /api/subscriptions/unread-counts", () => {
       community_id: "community-1",
       community_slug: expect.any(String),
       unread_count: expect.any(Number),
+      last_viewed_at: null,
     });
   });
 

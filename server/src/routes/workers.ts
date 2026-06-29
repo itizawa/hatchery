@@ -151,7 +151,7 @@ export function createWorkersRouter({
             });
           })
           .then((communities) => {
-            res.status(200).json({ communities: communities.map((c) => toCommunityResponse(c)) });
+            res.status(200).json({ communities: communities.map((c) => toCommunityResponse({ record: c })) });
           });
       })
       .catch(next);

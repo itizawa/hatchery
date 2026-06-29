@@ -49,7 +49,7 @@ export function createCommunitiesRouter(
       .then(([communities, statsMap, subscriberMap]) =>
         res.status(200).json(
           communities.map((c) =>
-            toCommunityResponse(c, statsMap.get(c.id), subscriberMap.get(c.id) ?? 0),
+            toCommunityResponse({ record: c, stats: statsMap.get(c.id), subscriberCount: subscriberMap.get(c.id) ?? 0 }),
           ),
         ),
       )

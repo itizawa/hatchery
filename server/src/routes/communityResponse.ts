@@ -10,22 +10,25 @@ import type { CommunityRecord } from "../persistence/communityRepository.js";
  * - post_count / last_post_at は stats から付与する（#527）
  * - subscriber_count は一括集計した購読者数から付与する（#930）
  */
-// eslint-disable-next-line max-params
-export function toCommunityResponse(
-  r: CommunityRecord,
-  stats?: CommunityPostStats,
+export function toCommunityResponse({
+  record,
+  stats,
   subscriberCount = 0,
-) {
+}: {
+  record: CommunityRecord;
+  stats?: CommunityPostStats;
+  subscriberCount?: number;
+}) {
   return {
-    id: r.id,
-    slug: r.slug,
-    name: r.name,
-    description: r.description,
-    synopsis: r.synopsis ?? undefined,
-    last_slot_key: r.lastSlotKey ?? undefined,
-    iconUrl: r.iconUrl ?? null,
-    coverUrl: r.coverUrl ?? null,
-    created_at: r.createdAt,
+    id: record.id,
+    slug: record.slug,
+    name: record.name,
+    description: record.description,
+    synopsis: record.synopsis ?? undefined,
+    last_slot_key: record.lastSlotKey ?? undefined,
+    iconUrl: record.iconUrl ?? null,
+    coverUrl: record.coverUrl ?? null,
+    created_at: record.createdAt,
     post_count: stats?.postCount ?? 0,
     last_post_at: stats?.lastPostAt?.toISOString() ?? null,
     subscriber_count: subscriberCount,
@@ -36,10 +39,10 @@ export function toCommunityResponse(
  * CommunityRecord（camelCase）を admin API レスポンスに変換する（#488 / #491）。
  * 公開レスポンスに加えて `generationInstruction` と `feedUrl` を含む。admin エンドポイントのみで使用する。
  */
-export function toAdminCommunityResponse(r: CommunityRecord) {
+export function toAdminCommunityResponse(record: CommunityRecord) {
   return {
-    ...toCommunityResponse(r),
-    generationInstruction: r.generationInstruction ?? null,
-    feedUrl: r.feedUrl ?? null,
+    ...toCommunityResponse({ record }),
+    generationInstruction: record.generationInstruction ?? null,
+    feedUrl: record.feedUrl ?? null,
   };
 }

@@ -1,6 +1,6 @@
 import { Box, Button, Stack, Typography } from "../components/uiParts";
 import { Link as RouterLink, useNavigate, useParams } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, type ReactElement } from "react";
+import { useEffect, useRef, type ReactElement } from "react";
 
 import {
   useInfiniteCommunityFeed,
@@ -73,6 +73,12 @@ const CommunityContent = ({
   const navigate = useNavigate();
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
+  // #935: 購読コミュニティの lastViewedAt。未認証時はリクエストしない。
+  const { data: unreadCountsData } = useUnreadCountsForNewLabel({ enabled: !!authUser });
+  const lastViewedAt =
+    unreadCountsData?.unread_counts.find((item) => item.community_id === community.id)
+      ?.last_viewed_at ?? null;
+
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el) return;
@@ -93,14 +99,6 @@ const CommunityContent = ({
   const { mutate: subscribe, isPending: isSubscribing } = useSubscribe(communitySlug);
   const { mutate: unsubscribe, isPending: isUnsubscribing } = useUnsubscribe(communitySlug);
   const { mutate: votePost, isPending: isVotingPost, variables: votingPostVars } = useVotePost(communitySlug);
-
-  // #935: 購読コミュニティの lastViewedAt で「New」ラベル判定。未認証時は呼ばない。
-  const { data: unreadCountsData } = useUnreadCountsForNewLabel({ enabled: !!authUser });
-  const communityLastViewedAt = useMemo(() => {
-    if (!unreadCountsData) return null;
-    const item = unreadCountsData.unread_counts.find((c) => c.community_slug === communitySlug);
-    return item?.last_viewed_at ?? null;
-  }, [unreadCountsData, communitySlug]);
 
   const isSubscriptionPending = isSubscribing || isUnsubscribing;
 
@@ -151,8 +149,10 @@ const CommunityContent = ({
                 <Box sx={{ borderTop: "1px solid", borderColor: "divider" }}>
                   {posts.map((post) => {
                     const isNew =
-                      communityLastViewedAt != null &&
-                      new Date(post.created_at) > new Date(communityLastViewedAt);
+                      subscribed &&
+                      lastViewedAt != null &&
+                      post.created_at != null &&
+                      new Date(post.created_at) > new Date(lastViewedAt);
                     return (
                       <Box
                         key={post.id}

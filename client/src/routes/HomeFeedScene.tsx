@@ -69,12 +69,11 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
     return map;
   }, [communities]);
 
-  // #935: 購読コミュニティの lastViewedAt を取得して「New」ラベル判定に使う。未認証時は呼ばない。
+  // #935: 購読コミュニティの lastViewedAt マップ。未認証時はリクエストしない。
   const { data: unreadCountsData } = useUnreadCountsForNewLabel({ enabled: !!user });
-  const lastViewedAtByCommunityId = useMemo(() => {
+  const lastViewedAtById = useMemo(() => {
     const map = new Map<string, string | null>();
-    if (!unreadCountsData) return map;
-    for (const item of unreadCountsData.unread_counts) {
+    for (const item of unreadCountsData?.unread_counts ?? []) {
       map.set(item.community_id, item.last_viewed_at);
     }
     return map;
@@ -117,9 +116,10 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
             <Box sx={{ borderTop: "1px solid", borderColor: "divider" }}>
               {posts.map((post) => {
                 const community = communityById.get(post.community_id);
-                const lastViewedAt = lastViewedAtByCommunityId.get(post.community_id);
+                const lastViewedAt = lastViewedAtById.get(post.community_id);
                 const isNew =
                   lastViewedAt != null &&
+                  post.created_at != null &&
                   new Date(post.created_at) > new Date(lastViewedAt);
                 return (
                   <Box key={post.id} sx={listItemSx}>

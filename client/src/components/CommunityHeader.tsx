@@ -91,6 +91,9 @@ export const CommunityHeader = ({ community, actions }: CommunityHeaderProps): R
             {description}
           </Typography>
         )}
+        <Typography variant="caption" color="text.secondary">
+          {`${community.subscriber_count} 購読者`}
+        </Typography>
       </Box>
     </Box>
   );

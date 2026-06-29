@@ -31,6 +31,7 @@ describe("toCommunityResponse", () => {
       created_at: baseRecord.createdAt,
       post_count: 0,
       last_post_at: null,
+      subscriber_count: 0,
     });
   });
 

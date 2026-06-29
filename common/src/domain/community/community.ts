@@ -9,7 +9,7 @@ export const COMMUNITY_NAME_MAX_LENGTH = 50;
 /** Community の description の最大文字数（#91）。 */
 export const COMMUNITY_DESCRIPTION_MAX_LENGTH = 500;
 
-/** Community の synopsis の最大文字数（記冶⑤ / あらすじ）。 */
+/** Community の synopsis の最大文字数（記憶⑤ / あらすじ）。 */
 export const COMMUNITY_SYNOPSIS_MAX_LENGTH = 2000;
 
 /** Community の generationInstruction（非公開・生成プロンプト指示）の最大文字数（#488・#91）。 */
@@ -48,7 +48,7 @@ const communitySlugSchema = z
  * - synopsis は世界観記憶⑤（このコミュニティのあらすじ）。省略可能。
  * - last_slot_key は最後に生成バッチが走った定時キー。省略可能（未生成の場合 null）。
  * - iconUrl / coverUrl は admin がアップロードした GCS 画像 URL（#457）。
- *   ともに任意セ nullable（未設定時はプレースホルダ表示）。最大 500 文字（#91）。
+ *   ともに任意かつ nullable（未設定時はプレースホルダ表示）。最大 500 文字（#91）。
  */
 /** 公開コミュニティスキーマ。`generationInstruction` は含まない（#488）。 */
 export const CommunitySchema = z.object({
@@ -65,6 +65,8 @@ export const CommunitySchema = z.object({
   post_count: z.number().int().min(0),
   /** 最終投稿時刻（活気指標・#527）。投稿が 0 件の場合は null。 */
   last_post_at: z.string().datetime().nullable(),
+  /** 購読者数（社会的証明・#930）。購読者がいない場合は 0。 */
+  subscriber_count: z.number().int().min(0),
 });
 
 export type Community = z.infer<typeof CommunitySchema>;

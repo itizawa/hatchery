@@ -66,6 +66,9 @@ export const CommunityBrowseScene = (): ReactElement => {
                       <>最終投稿: <PostedTime createdAt={community.last_post_at} /></>
                     )}
                   </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {`${community.subscriber_count} 購読者`}
+                  </Typography>
                 </Box>
               </Box>
             </RouterLink>

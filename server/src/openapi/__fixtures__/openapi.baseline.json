@@ -983,13 +983,20 @@
           },
           "vote_net_score": {
             "type": "integer"
+          },
+          "image_url": {
+            "type": "string",
+            "format": "uri",
+            "maxLength": 500,
+            "nullable": true
           }
         },
         "required": [
           "worker_id",
           "display_name",
           "view_count",
-          "vote_net_score"
+          "vote_net_score",
+          "image_url"
         ],
         "description": "ワーカーランキング項目（閲覧数・純 vote スコア・#665）"
       },

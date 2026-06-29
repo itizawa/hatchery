@@ -24,7 +24,7 @@ describe("GET /api/health (AC-2: Cloud Scheduler warmup 用エンドポイント
   });
 });
 
-describe("createHealthRouter（AC-2: 異常系）", () => {
+describe("createHealthRouter（AC-3: 異常系）", () => {
   function buildApp(healthCheck?: () => Promise<void>) {
     const app = express();
     app.use("/health", createHealthRouter(healthCheck));

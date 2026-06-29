@@ -172,8 +172,7 @@ export function createApp(deps: AppDeps): Express {
     app.use("/", createApiDocsRouter());
   }
 
-  app.use("/health", healthRouter);
-  app.use("/api/health", healthRouter);
+  app.use(["/health", "/api/health"], healthRouter);
   app.use(
     "/sitemap.xml",
     publicCache,

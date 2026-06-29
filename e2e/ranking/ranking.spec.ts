@@ -16,18 +16,21 @@ const MOCK_RANKING_WORKERS = [
     display_name: "アリス",
     view_count: 150,
     vote_net_score: 42,
+    image_url: null,
   },
   {
     worker_id: "worker-2",
     display_name: "ボブ",
     view_count: 80,
     vote_net_score: -5,
+    image_url: "https://example.com/bob.png",
   },
   {
     worker_id: "worker-3",
     display_name: "キャロル",
     view_count: 30,
     vote_net_score: 0,
+    image_url: null,
   },
 ];
 
@@ -102,7 +105,7 @@ test("UC-RANK-01: サイドバーの「ランキング」リンクを押して /
 });
 
 test(
-  "UC-RANK-02: ランキング画面にワーカーの表示名・閲覧数（7日）・ Vote スコア（7日）と順位番号が表示される",
+  "UC-RANK-02: ランキング画面にワーカーの表示名・閲覧数（7日）・評価（7日）・順位番号・アバターが表示される",
   async ({ page }) => {
     await mockUnauthenticated(page);
     await mockCommunitiesApi(page);
@@ -148,6 +151,11 @@ test(
     await expect(row3).toContainText("キャロル");
     await expect(row3).toContainText("30");
     await expect(row3.getByTestId("score-positive")).toHaveText("+0");
+
+    // 各行にワーカー画像（アバター）が表示される（#956）
+    await expect(row1.getByRole("img", { name: "アリス" })).toBeVisible();
+    await expect(row2.getByRole("img", { name: "ボブ" })).toBeVisible();
+    await expect(row3.getByRole("img", { name: "キャロル" })).toBeVisible();
   },
 );
 

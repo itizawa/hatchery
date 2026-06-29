@@ -76,6 +76,7 @@ export function createWorkersRouter({
             display_name: w.displayName,
             view_count: viewCounts.get(w.id) ?? 0,
             vote_net_score: voteScores.get(w.id) ?? 0,
+            image_url: w.imageUrl ?? null,
           }))
           // eslint-disable-next-line max-params
           .sort((a, b) => b.view_count - a.view_count || b.vote_net_score - a.vote_net_score);

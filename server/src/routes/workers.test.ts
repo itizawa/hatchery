@@ -333,7 +333,7 @@ describe("GET /api/workers/ranking（ワーカーランキング・#665）", () 
     expect(Array.isArray(res.body.workers)).toBe(true);
   });
 
-  it("workers 配列には worker_id / display_name / view_count / vote_net_score が含まれる", async () => {
+  it("workers 配列には worker_id / display_name / view_count / vote_net_score / image_url が含まれる", async () => {
     const workerRepo = createInMemoryWorkerRepository([
       { id: "w1", displayName: "Worker Alpha", role: null, personality: null, imageUrl: null },
     ]);
@@ -350,6 +350,7 @@ describe("GET /api/workers/ranking（ワーカーランキング・#665）", () 
       expect(w).toHaveProperty("display_name");
       expect(w).toHaveProperty("view_count");
       expect(w).toHaveProperty("vote_net_score");
+      expect(w).toHaveProperty("image_url");
     });
   });
 

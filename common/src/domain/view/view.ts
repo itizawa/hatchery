@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { WORKER_DISPLAY_NAME_MAX_LENGTH } from "../worker/worker.js";
+import { WORKER_DISPLAY_NAME_MAX_LENGTH, WORKER_IMAGE_URL_MAX_LENGTH } from "../worker/worker.js";
 
 /** sessionId の最大文字数（UUID v4/v7 は 36 文字。余裕を持たせ 256 文字上限）。 */
 export const SESSION_ID_MAX_LENGTH = 256;
@@ -35,12 +35,13 @@ export type CommentViewsRequest = z.infer<typeof CommentViewsRequestSchema>;
 
 /**
  * GET /api/workers/ranking の 1 アイテム（#665 / ADR-0032）。
- * vote net score と閲覧数を**併記**する（単一合成スコアに畳まない）。
+ * vote net score と閲覧数を**併記**する（単一合成スコアに畴まない）。
  */
 export const WorkerRankingItemSchema = z.object({
   worker_id: z.string().min(1).max(WORKER_ID_MAX_LENGTH),
   display_name: z.string().min(1).max(WORKER_DISPLAY_NAME_MAX_LENGTH),
   view_count: z.number().int().nonnegative(),
   vote_net_score: z.number().int(),
+  image_url: z.string().url().max(WORKER_IMAGE_URL_MAX_LENGTH).nullable(),
 });
 export type WorkerRankingItem = z.infer<typeof WorkerRankingItemSchema>;

@@ -1,8 +1,8 @@
-# 設計書: AccountScene.tsx の isDirty 判定を @tanstack/react-form の state.isDirty に置き換える (#900)
+# 設計書: AccountScene.tsx の isDirty 判定を @tanstack/react-form の !state.isDefaultValue に置き換える (#900)
 
 ## 1. 目的 / 背景
 
-`client/src/routes/AccountScene.tsx` の保存ボタン disabled 制御で `savedValuesRef` を使った手動 isDirty 計算をしており、CLAUDE.md フォーム規約（#262）の「自前 isDirty 実装は禁止」に抵触している。`@tanstack/react-form` が提供する `state.isDirty` を利用して統一する。
+`client/src/routes/AccountScene.tsx` の保存ボタン disabled 制御で `savedValuesRef` を使った手動 isDirty 計算をしており、CLAUDE.md フォーム規約（#262）の「自前 isDirty 実装は禁止」に抗触している。`@tanstack/react-form` が提供する `state.isDefaultValue` を利用して統一する。
 
 ## 2. スコープ（やること / やらないこと）
 
@@ -27,11 +27,16 @@
 
 ## 4. 設計方針
 
-`state.isDirty` は TanStack Form v1.33 において「フィールドがタッチされたか」を追跡するフラグであり、値が元に戻っても `true` のままになる。値とデフォルト値の比較には `state.isDefaultValue` を使う。
+`state.isDirty` と `state.isDefaultValue` は TanStack Form v1.33 で意味が異なる:
 
-`state.isDefaultValue` は各フィールドの現在値とデフォルト値を `deepEqual` で比較し、全フィールドがデフォルト値と一致する場合に `true` となる。`form.reset(values)` でデフォルト値も更新されるため、authUser ロード後に `form.reset(values)` を呼ぶ既存実装と整合する。
+- `isDirty`: `setFieldValue` の履歴を追跡するフラグ。ユーザーが一度でも入力すると `true` になり、元の値に戻しても `form.reset()` を呼ぶまで `false` に戻らない。
+- `isDefaultValue`: 全フィールドの現在値と defaultValues を `deepEqual` で比較する純粹な値比較フラグ。値が元に戻れば `true`（dirty 、0）に戻る。
+
+受け入れ条件 §3-4「変更後に初期値へ戻すと保存ボタンが再び disabled」は `state.isDirty` では実現不可能。`isDirty: !state.isDefaultValue` を使用する。
 
 `form.Subscribe` の selector で `isDirty: !state.isDefaultValue` とすることで、値が変更されたとき `isDirty = true`、元に戻ったとき `isDirty = false` という期待動作が実現できる。
+
+`savedValuesRef` は `useEffect` 内の `savedValuesRef.current = values` 行と宣言ごと削除する。`useEffect` 内の `form.reset(values)` は引き続き必要（authUser ロード後の同期）。`form.reset(values)` は現在値と defaultValues の両方を更新するため、`isDefaultValue` の判定基準が正しく更新される。
 
 ## 5. 影響範囲 / 既存への変更
 

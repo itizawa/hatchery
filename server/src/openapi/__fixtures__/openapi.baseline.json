@@ -402,6 +402,10 @@
               "null"
             ],
             "format": "date-time"
+          },
+          "subscriber_count": {
+            "type": "integer",
+            "minimum": 0
           }
         },
         "required": [
@@ -411,7 +415,8 @@
           "description",
           "created_at",
           "post_count",
-          "last_post_at"
+          "last_post_at",
+          "subscriber_count"
         ],
         "description": "コミュニティ（サブレディット相当）。ADR-0019"
       },
@@ -475,6 +480,10 @@
             ],
             "format": "date-time"
           },
+          "subscriber_count": {
+            "type": "integer",
+            "minimum": 0
+          },
           "generationInstruction": {
             "type": [
               "string",
@@ -498,7 +507,8 @@
           "description",
           "created_at",
           "post_count",
-          "last_post_at"
+          "last_post_at",
+          "subscriber_count"
         ],
         "description": "admin 向けコミュニティ（generationInstruction を含む。公開 API には含めない・#488）"
       },

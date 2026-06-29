@@ -24,6 +24,7 @@ describe("CommunitySchema", () => {
     created_at: new Date("2026-06-01T00:00:00.000Z"),
     post_count: 5,
     last_post_at: "2026-06-10T09:00:00.000Z",
+    subscriber_count: 0,
   };
 
   it("有効なコミュニティをパースできる", () => {
@@ -312,6 +313,7 @@ describe("CommunitySchema / AdminCommunitySchema のフィールド分離（#488
     created_at: new Date("2026-01-01"),
     post_count: 0,
     last_post_at: null,
+    subscriber_count: 0,
   };
 
   it("公開 CommunitySchema は generationInstruction を含まない", () => {

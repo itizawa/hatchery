@@ -31,6 +31,7 @@ export const mockCommunities: Community[] = [
     created_at: "2026-06-01T00:00:00Z",
     post_count: 5,
     last_post_at: "2026-06-01T09:00:00Z",
+    subscriber_count: 3,
   },
   {
     id: "community-2",
@@ -42,6 +43,7 @@ export const mockCommunities: Community[] = [
     created_at: "2026-06-02T00:00:00Z",
     post_count: 0,
     last_post_at: null,
+    subscriber_count: 0,
   },
 ];
 

@@ -112,6 +112,56 @@ describe("GET /api/communities", () => {
     expect(comm1).toHaveProperty("post_count", 3);
     expect(comm2).toHaveProperty("post_count", 1);
   });
+
+  it("購読者が 0 件の community は subscriber_count: 0 を返す（#930）", async () => {
+    const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
+    const deps = await createTestDeps({ communityRepository: communityRepo });
+    const app = createApp(deps);
+    const res = await request(app).get("/api/communities");
+    expect(res.status).toBe(200);
+    expect(res.body[0]).toHaveProperty("subscriber_count", 0);
+  });
+
+  it("購読者がいる community は正しい subscriber_count を返す（#930）", async () => {
+    const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
+    const subscriptionRepo = createInMemorySubscriptionRepository();
+    await subscriptionRepo.add("user-1", "community-1");
+    await subscriptionRepo.add("user-2", "community-1");
+    const deps = await createTestDeps({
+      communityRepository: communityRepo,
+      subscriptionRepository: subscriptionRepo,
+    });
+    const app = createApp(deps);
+    const res = await request(app).get("/api/communities");
+    expect(res.status).toBe(200);
+    expect(res.body[0]).toHaveProperty("subscriber_count", 2);
+  });
+
+  it("複数 community がある場合それぞれ独立した subscriber_count を返す（N+1 回避・#930）", async () => {
+    const communityRepo = createInMemoryCommunityRepository([
+      makeCommunity({ id: "community-1", slug: "technology" }),
+      makeCommunity({ id: "community-2", slug: "science", name: "Science" }),
+    ]);
+    const subscriptionRepo = createInMemorySubscriptionRepository();
+    await subscriptionRepo.add("user-1", "community-1");
+    await subscriptionRepo.add("user-2", "community-1");
+    await subscriptionRepo.add("user-1", "community-2");
+    const deps = await createTestDeps({
+      communityRepository: communityRepo,
+      subscriptionRepository: subscriptionRepo,
+    });
+    const app = createApp(deps);
+    const res = await request(app).get("/api/communities");
+    expect(res.status).toBe(200);
+    const comm1 = (res.body as { id: string; subscriber_count: number }[]).find(
+      (c) => c.id === "community-1",
+    );
+    const comm2 = (res.body as { id: string; subscriber_count: number }[]).find(
+      (c) => c.id === "community-2",
+    );
+    expect(comm1).toHaveProperty("subscriber_count", 2);
+    expect(comm2).toHaveProperty("subscriber_count", 1);
+  });
 });
 
 describe("GET /api/communities/:slug/feed", () => {

@@ -501,7 +501,7 @@ test(
     await page.goto("/");
 
     // ログイン済み + 投稿ありの場合はようこそセクションが非表示になる
-    await expect(page.getByRole("heading", { name: /Hatchery へようこそ/ })).not.toBeVisible();
+    await expect(page.getByRole("heading", { name: /Hatchery へようこそ/ })).toBeVisible({ visible: false });
     // 投稿一覧は表示される
     await expect(page.getByText(MOCK_POST.title)).toBeVisible();
   },
@@ -556,13 +556,203 @@ test(
   },
 );
 
-test.todo("UC-HOME-20: vote ミューテーション進行中はフィードの vote ボタンが disabled になる（#748）");
+/* ── UC-HOME-20〜23 用モックデータ（PostSchema / feed レスポンス形式に準拠） ──── */
 
-test.todo("UC-HOME-21: vote 済みの投稿は vote ウィジェットが塗りつぶし表示になる（#813）");
+/** UC-HOME-20〜23 で使う投稿モック（score=8 で UC-HOME-22 のネットスコア表示を検証）。 */
+const MOCK_POST_VOTE = {
+  id: "vote-test-post",
+  community_id: "comm1",
+  slot_key: "2025-01-01T10:00",
+  seq: 0,
+  author: "Alice",
+  title: "TypeScript の型推論はすごい",
+  text: "TypeScript の型推論は非常に優秀です。",
+  score: 8,
+  created_at: "2025-01-01T07:00:00.000Z",
+  comment_count: 2,
+  my_vote: null as "up" | "down" | null,
+  author_worker: null,
+};
 
-test.todo("UC-HOME-22: vote ウィジェットに表示される数字は up − down のネットスコアである（#856）");
+const MOCK_COMMUNITY_VOTE = {
+  id: "comm1",
+  slug: "ts-talk",
+  name: "TypeScript Talk",
+  description: "TypeScript について語る",
+  created_at: "2024-01-01T00:00:00.000Z",
+  post_count: 1,
+  last_post_at: "2025-01-01T07:00:00.000Z",
+  subscriber_count: 0,
+};
 
-test.todo("UC-HOME-23: ページリロード後もホームフィードの vote 状態が塗りつぶし表示で復元される（#831）");
+/** UC-HOME-20〜23 の共通 API モックを設定する。 */
+async function setupVoteTestMocks({
+  page,
+  myVote = null,
+}: {
+  page: import("@playwright/test").Page;
+  myVote?: "up" | "down" | null;
+}) {
+  const post = { ...MOCK_POST_VOTE, my_vote: myVote };
+  await page.route("**/api/auth/me", (route) =>
+    route.fulfill({
+      status: 401,
+      contentType: "application/json",
+      body: JSON.stringify({ message: "Unauthorized" }),
+    }),
+  );
+  await page.route("**/api/feed?*", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ posts: [post], nextCursor: null }),
+    }),
+  );
+  await page.route("**/api/communities", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([MOCK_COMMUNITY_VOTE]),
+    }),
+  );
+}
+
+test(
+  "UC-HOME-20: vote ミューテーション進行中はフィードの vote ボタンが disabled になる（#748）",
+  async ({ page }) => {
+    await setupVoteTestMocks({ page });
+
+    // vote API レスポンスを保留して mutation 進行中状態を再現する
+    let resolveVote!: () => void;
+    await page.route("**/api/posts/*/vote", async (route) => {
+      await new Promise<void>((resolve) => {
+        resolveVote = resolve;
+      });
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ...MOCK_POST_VOTE, score: 9, my_vote: "up" }),
+      });
+    });
+
+    await page.goto("/");
+    await expect(page.getByText(MOCK_POST_VOTE.title)).toBeVisible();
+
+    const upVoteButton = page.getByRole("button", { name: "up vote" }).first();
+
+    // route handler が実行され resolveVote が代入されるのを確実に待つ
+    const voteRequestPromise = page.waitForRequest("**/api/posts/*/vote");
+    await upVoteButton.click();
+    await voteRequestPromise;
+
+    // ミューテーション進行中: up vote ボタンが disabled になる
+    await expect(upVoteButton).toBeDisabled();
+
+    // ミューテーション完了後: ボタンが再度有効化される
+    resolveVote();
+    await expect(upVoteButton).not.toBeDisabled();
+  },
+);
+
+test(
+  "UC-HOME-21: vote 済みの投稿は vote ウィジェットが塗りつぶし表示になる（#813）",
+  async ({ page }) => {
+    await setupVoteTestMocks({ page });
+    await page.route("**/api/posts/*/vote", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ...MOCK_POST_VOTE, score: 9, my_vote: "up" }),
+      }),
+    );
+
+    await page.goto("/");
+    await expect(page.getByText(MOCK_POST_VOTE.title)).toBeVisible();
+
+    // 投票前: vote ウィジェットは未投票状態
+    const voteWidget = page.locator("[data-voted]").first();
+    await expect(voteWidget).toHaveAttribute("data-voted", "none");
+
+    // up vote する
+    await page.getByRole("button", { name: "up vote" }).first().click();
+
+    // 投票後: vote ウィジェットが up 状態（塗りつぶし表示）になる（楽観更新で即座に変わる）
+    await expect(voteWidget).toHaveAttribute("data-voted", "up");
+  },
+);
+
+test(
+  "UC-HOME-22: vote ウィジェットに表示される数字は up − down のネットスコアである（#856）",
+  async ({ page }) => {
+    // MOCK_POST_VOTE.score = 8 (up 10 - down 2 のネットスコア相当)
+    await setupVoteTestMocks({ page });
+
+    await page.goto("/");
+    await expect(page.getByText(MOCK_POST_VOTE.title)).toBeVisible();
+
+    // vote ウィジェット内に score（= 8）が表示される
+    const voteWidget = page.locator("[data-voted]").first();
+    await expect(voteWidget).toBeVisible();
+    await expect(voteWidget.getByText(String(MOCK_POST_VOTE.score))).toBeVisible();
+  },
+);
+
+test(
+  "UC-HOME-23: ページリロード後もホームフィードの vote 状態が塗りつぶし表示で復元される（#831）",
+  async ({ page }) => {
+    let postMyVote: "up" | "down" | null = null;
+
+    await page.route("**/api/auth/me", (route) =>
+      route.fulfill({
+        status: 401,
+        contentType: "application/json",
+        body: JSON.stringify({ message: "Unauthorized" }),
+      }),
+    );
+    // feed ルートはクロージャで postMyVote の最新値を読む（リロード後に my_vote: "up" を返す）
+    await page.route("**/api/feed?*", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ posts: [{ ...MOCK_POST_VOTE, my_vote: postMyVote }], nextCursor: null }),
+      }),
+    );
+    await page.route("**/api/communities", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([MOCK_COMMUNITY_VOTE]),
+      }),
+    );
+    await page.route("**/api/posts/*/vote", (route) => {
+      postMyVote = "up";
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ...MOCK_POST_VOTE, score: 9, my_vote: "up" }),
+      });
+    });
+
+    await page.goto("/");
+    await expect(page.getByText(MOCK_POST_VOTE.title)).toBeVisible();
+
+    // up vote する（route handler 完了を待ってから reload することで postMyVote が確実に "up" になる）
+    const voteResponsePromise = page.waitForResponse("**/api/posts/*/vote");
+    await page.getByRole("button", { name: "up vote" }).first().click();
+    await voteResponsePromise;
+
+    // 投票後: vote ウィジェットが up 状態
+    const voteWidget = page.locator("[data-voted]").first();
+    await expect(voteWidget).toHaveAttribute("data-voted", "up");
+
+    // ページをリロード（TanStack Query キャッシュはクリアされ、feed が再取得される）
+    await page.reload();
+    await expect(page.getByText(MOCK_POST_VOTE.title)).toBeVisible();
+
+    // リロード後も vote 状態が復元される（feed が my_vote: "up" を返すため）
+    await expect(page.locator("[data-voted]").first()).toHaveAttribute("data-voted", "up");
+  },
+);
 
 test.todo("UC-HOME-26: ホームフィードの各投稿カードに共有ボタンが表示される（#838）");
 

@@ -6,7 +6,6 @@ interface CommentParams {
   postId: string;
   workerId: string;
   text: string;
-  parentCommentId?: string;
 }
 
 interface Comment {
@@ -15,11 +14,11 @@ interface Comment {
   delete: () => Promise<void>;
 }
 
-export async function createComment({ postId, workerId, text, parentCommentId }: CommentParams): Promise<Comment> {
+export async function createComment({ postId, workerId, text }: CommentParams): Promise<Comment> {
   const res = await fetch(`${API_BASE}/api/admin/comments`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ postId, authorWorkerId: workerId, text, parentCommentId: parentCommentId ?? null }),
+    body: JSON.stringify({ postId, authorWorkerId: workerId, text }),
   });
   if (!res.ok) throw new Error(`createComment failed: ${res.status} ${await res.text()}`);
   const comment = (await res.json()) as { id: string; text: string };

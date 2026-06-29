@@ -6,7 +6,7 @@ interface LoginUser {
   password: string;
 }
 
-export async function login(page: Page, user: LoginUser): Promise<void> {
+export async function login({ page, user }: { page: Page; user: LoginUser }): Promise<void> {
   await page.goto("/auth/login");
   await page.fill('[name="email"]', user.email);
   await page.fill('[name="password"]', user.password);

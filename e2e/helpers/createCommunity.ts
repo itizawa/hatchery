@@ -25,8 +25,8 @@ export async function createCommunity({ name, slug, description = "", workerIds 
   if (!res.ok) throw new Error(`createCommunity failed: ${res.status} ${await res.text()}`);
   const community = (await res.json()) as { id: string; slug: string; name: string };
 
-  if (workerIds.length > 0) {
-    const assign = await fetch(`${API_BASE}/api/admin/workers/${workerIds[0]}/communities`, {
+  for (const workerId of workerIds) {
+    const assign = await fetch(`${API_BASE}/api/admin/workers/${workerId}/communities`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ communityIds: [community.id] }),

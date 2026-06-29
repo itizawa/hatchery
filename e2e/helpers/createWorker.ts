@@ -28,7 +28,7 @@ export async function createWorker({ display_name, bio, image_url }: WorkerParam
     id: worker.id,
     display_name: worker.displayName,
     bio: worker.bio,
-    image_url: image_url ?? null,
+    image_url: worker.imageUrl ?? null,
     delete: async () => {
       const del = await fetch(`${API_BASE}/api/admin/workers/${worker.id}`, { method: "DELETE" });
       if (!del.ok) throw new Error(`deleteWorker failed: ${del.status}`);

@@ -108,7 +108,7 @@ test(
     });
 
     const user = await createUser();
-    await login(page, user);
+    await login({ page, user });
 
     await page.goto(`/posts/${post.id}`);
 
@@ -160,7 +160,7 @@ test(
     });
 
     const user = await createUser();
-    await login(page, user);
+    await login({ page, user });
 
     await page.goto(`/posts/${post.id}`);
 

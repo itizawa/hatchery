@@ -25,6 +25,7 @@ import { fetchRecentContext } from "./fetchRecentContext.js";
 import { pickInRange } from "./generateCountHints.js";
 import { extractErrorMessage, logBatchError, logBatchInfo } from "./logger.js";
 import { assignDripTimestamps } from "./assignDripTimestamps.js";
+import { withGenerationRetry, RetryableGenerationError } from "./withGenerationRetry.js";
 
 /** 1 定時あたりの post 最小件数（#672）。 */
 export const POST_COUNT_MIN = 1;
@@ -171,56 +172,57 @@ async function processCommunitePosts({
     countHints: { postCount },
   });
 
-  // AI 生成（1 コミュニティ = 1 API コール）。
-  const generationResult = await generate(prompt, apiKey);
-  const raw = generationResult.text;
+  // AI 生成 → JSON パース → スキーマ検証 → author 検証（最大 2 回リトライ、#626）。
+  const { output, usage } = await withGenerationRetry({
+    fn: async () => {
+      const generationResult = await generate(prompt, apiKey);
+      const raw = generationResult.text;
 
-  // usage が取得できた場合に記録する（#663）。
-  let usage: { model: string; inputTokens: number; outputTokens: number } | undefined;
-  if (
-    generationResult.model !== undefined &&
-    generationResult.inputTokens !== undefined &&
-    generationResult.outputTokens !== undefined
-  ) {
-    usage = {
-      model: generationResult.model,
-      inputTokens: generationResult.inputTokens,
-      outputTokens: generationResult.outputTokens,
-    };
-  }
+      // JSON パース。
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        logBatchError("post_batch.json_parse_failed", "JSON parse failed", { communityId: community.id });
+        throw new RetryableGenerationError(`${community.id}: JSON パース失敗`);
+      }
 
-  // JSON パース。
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    logBatchError("post_batch.json_parse_failed", "JSON parse failed", {
-      communityId: community.id,
-    });
-    throw new Error(`${community.id}: JSON パース失敗`);
-  }
+      // Zod スキーマ検証。
+      const validated = GenerationOutputSchema.safeParse(parsed);
+      if (!validated.success) {
+        logBatchError("post_batch.schema_validation_failed", "schema validation failed", {
+          communityId: community.id,
+          issues: validated.error.format(),
+        });
+        throw new RetryableGenerationError(`${community.id}: スキーマ検証失敗`);
+      }
 
-  // Zod スキーマ検証。
-  const validated = GenerationOutputSchema.safeParse(parsed);
-  if (!validated.success) {
-    logBatchError("post_batch.schema_validation_failed", "schema validation failed", {
-      communityId: community.id,
-      issues: validated.error.format(),
-    });
-    throw new Error(`${community.id}: スキーマ検証失敗`);
-  }
+      // author 検証（既知 workerId のみ許可）。
+      try {
+        validateGenerationOutput({ output: validated.data, knownWorkerIds: workerIds });
+      } catch (err) {
+        logBatchError("post_batch.author_validation_failed", err, { communityId: community.id });
+        throw new RetryableGenerationError(`${community.id}: author 検証失敗`);
+      }
 
-  const output = validated.data;
-
-  // author 検証（既知 workerId のみ許可）。
-  try {
-    validateGenerationOutput({ output, knownWorkerIds: workerIds });
-  } catch (err) {
-    logBatchError("post_batch.author_validation_failed", err, {
-      communityId: community.id,
-    });
-    throw new Error(`${community.id}: author 検証失敗`);
-  }
+      // usage が取得できた場合に記録する（#663）。
+      let resolvedUsage: { model: string; inputTokens: number; outputTokens: number } | undefined;
+      if (
+        generationResult.model !== undefined &&
+        generationResult.inputTokens !== undefined &&
+        generationResult.outputTokens !== undefined
+      ) {
+        resolvedUsage = {
+          model: generationResult.model,
+          inputTokens: generationResult.inputTokens,
+          outputTokens: generationResult.outputTokens,
+        };
+      }
+      return { output: validated.data, usage: resolvedUsage };
+    },
+    maxRetries: 2,
+    label: `post_batch.${community.id}`,
+  });
 
   // post に drip タイムスタンプを割り当てて永続化する（#672 AC4）。
   const totalPostCount = output.posts.length;
@@ -271,8 +273,8 @@ async function processCommunitePosts({
 /**
  * post 専用の定時バッチ本体（#672）。
  *
- * 1 日 1 回起動し、全コミュニティを Promise.allSettled で並列処理する（ADR-0033 踏襲）。
- * 各コミュニティで 1〜3 件の独立 post を生成し、24h 窓内に createdAt を分散させる。
+ * 1 日 1 回起動し、全コミュニティを Promise.allSettled で並列処理する（ADR-0033 蹏襲）。
+ * 各コミュニティで 1～3 件の独立 post を生成し、24h 窓内に createdAt を分散させる。
  * comment は生成しない（comment バッチは #673 で別途実装）。
  */
 export async function runPostBatch(deps: RunPostBatchDeps): Promise<RunPostBatchResult> {
@@ -306,7 +308,7 @@ export async function runPostBatch(deps: RunPostBatchDeps): Promise<RunPostBatch
     ? deps.botWorkerProvider()
     : Promise.resolve([]);
 
-  // 全コミュニティを並列処理する（ADR-0033 踏襲）。
+  // 全コミュニティを並列処理する（ADR-0033 蹏襲）。
   const results = await Promise.allSettled(
     communities.map((community) =>
       processCommunitePosts({

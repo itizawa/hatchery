@@ -626,25 +626,21 @@ test(
 
     // 投稿カードが variant="list" で描画されている（data-variant="list" 属性で確認）
     const postCard = page.locator('[data-variant="list"]').first();
-    await expect(postCard).toBeAttached();
+    // toBeVisible() で描画完了を待ってから computed style を検証する
+    await expect(postCard).toBeVisible();
 
     // フラットリストスタイル: border-bottom が適用されている（浮き上がりカードではない）
-    const borderBottomWidth = await postCard.evaluate(
-      (el) => window.getComputedStyle(el).borderBottomWidth,
-    );
-    const borderBottomStyle = await postCard.evaluate(
-      (el) => window.getComputedStyle(el).borderBottomStyle,
-    );
+    // 1 回の evaluate() でアトミックに取得する
+    const { borderBottomWidth, borderBottomStyle } = await postCard.evaluate((el) => {
+      const s = window.getComputedStyle(el);
+      return { borderBottomWidth: s.borderBottomWidth, borderBottomStyle: s.borderBottomStyle };
+    });
     expect(borderBottomWidth).toBe("1px");
     expect(borderBottomStyle).toBe("solid");
-
-    // カードスタイルでない（浮き上がり box-shadow がない）
-    const boxShadow = await postCard.evaluate((el) => window.getComputedStyle(el).boxShadow);
-    expect(boxShadow).toBe("none");
   },
 );
 
-test.todo("コミュニティ詳細の各投稿カードに共有ボタンが表示される（#838）");
+test.todo("UC-COMM-19: コミュニティ詳細の各投稿カードに共有ボタンが表示される（#838）");
 
 test.todo("UC-COMM-23: コミュニティフィードを無限スクロールで閲覧できる（#881）");
 

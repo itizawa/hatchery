@@ -12,6 +12,7 @@ import { CommentCard } from "./CommentCard.js";
  * #807: PostCard / CommunitySidebarCard の loading prop を使い、Skeleton 専用の手書きレイアウトを廃止。
  *       レイアウトの単一情報源を実 UI コンポーネントに統一する。
  * #857: CommentCard の loading prop を使い、手書き CommentCardSkeleton を廃止。
+ * #955: 右カラムに position:sticky / top:24 を追加し、PostThreadScene.SidebarColumn と sx を一致させる。
  */
 
 export const PostThreadSkeleton = (): ReactElement => (
@@ -22,7 +23,7 @@ export const PostThreadSkeleton = (): ReactElement => (
   >
     <Box sx={{ display: "flex", gap: 3, alignItems: "flex-start" }}>
       {/* 左カラム: コミュニティパンくず + PostCard + コメントセクション */}
-      <Box sx={{ flex: 1, minWidth: 0 }}>
+      <Box sx={{ flex: 1, minWidth: 0 }} data-testid="post-thread-skeleton-left">
         {/* コミュニティパンくず相当（#692 受け入れ条件 1） */}
         <Skeleton variant="text" width={80} sx={{ mb: 1 }} />
         {/* PostCard（loading 状態）相当（#692 受け入れ条件 2 / #807） */}
@@ -34,8 +35,18 @@ export const PostThreadSkeleton = (): ReactElement => (
           <CommentCard loading />
         </Box>
       </Box>
-      {/* 右カラム: CommunitySidebarCard（loading 状態）相当（#692 受け入れ条件 4 / #807） */}
-      <Box sx={{ width: 312, flexShrink: 0, display: { xs: "none", md: "block" } }}>
+      {/* 右カラム: PostThreadScene の SidebarColumn と同一の sx（#955）。
+          position:sticky / top:24 を追加し CLS を最小化する。 */}
+      <Box
+        sx={{
+          width: 312,
+          flexShrink: 0,
+          display: { xs: "none", md: "block" },
+          position: "sticky",
+          top: 24,
+        }}
+        data-testid="post-thread-skeleton-sidebar"
+      >
         <CommunitySidebarCard loading />
       </Box>
     </Box>

@@ -412,6 +412,8 @@ export const createAppRouter = (options: CreateAppRouterOptions = {}) =>
     history: options.history,
     defaultPreload: "intent",
     defaultViewTransition: true,
+    scrollRestoration: true,
+    scrollToTopSelectors: ['[data-scroll-restoration-id="main-content"]'],
   });
 
 /** アプリのルータ型（AppRoot への注入や Register augmentation で共有する）。 */

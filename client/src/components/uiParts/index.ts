@@ -15,7 +15,7 @@ export { default as DialogActions } from "@mui/material/DialogActions";
 export { default as DialogContent } from "@mui/material/DialogContent";
 export { default as DialogTitle } from "@mui/material/DialogTitle";
 export { default as IconButton } from "@mui/material/IconButton";
-export { default as Menu } from "@mui/material/Menu";
+export { Menu } from "./Menu";
 export { Tooltip } from "./Tooltip";
 export { default as Checkbox } from "@mui/material/Checkbox";
 export { default as Chip } from "@mui/material/Chip";

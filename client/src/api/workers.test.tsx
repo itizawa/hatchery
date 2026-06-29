@@ -151,6 +151,7 @@ const mockWorkerRankingItem = {
   display_name: "haru",
   view_count: 42,
   vote_net_score: 10,
+  image_url: null,
 };
 
 describe("useWorkerRanking (GET /api/workers/ranking, useSuspenseQuery)", () => {

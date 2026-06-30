@@ -606,10 +606,8 @@ test(
     await upVoteButton.click();
     await voteRequestPromise;
 
-    // ミューテーション進行中: up vote ボタンが disabled になる
     await expect(upVoteButton).toBeDisabled();
 
-    // ミューテーション完了後: ボタンが再度有効化される
     resolveVote();
     await expect(upVoteButton).not.toBeDisabled();
   },

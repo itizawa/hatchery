@@ -166,7 +166,7 @@ describe("CommentCard", () => {
       expect(screen.queryByText("uuid-ken")).not.toBeInTheDocument();
     });
 
-    it("image_url が null のとき DiceBear アバター画像と display_name を表示する (#884)", () => {
+    it("image_url が null のとき Boring Avatars アバター画像と display_name を表示する (#884)", () => {
       const comment = {
         ...mockComment,
         author: "uuid-mei",
@@ -175,7 +175,7 @@ describe("CommentCard", () => {
       render(<CommentCard comment={comment} onVote={vi.fn()} />);
       expect(screen.getByText("mei")).toBeInTheDocument();
       const img = screen.getByRole("img", { name: "mei" });
-      expect(img).toHaveAttribute("src", expect.stringContaining("api.dicebear.com"));
+      expect(img).toHaveAttribute("src", expect.stringContaining("source.boringavatars.com"));
     });
 
     it("author_worker が無いときは生の author 文字列を表示する（フォールバック・破綻しない）", () => {

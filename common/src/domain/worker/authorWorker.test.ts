@@ -51,18 +51,18 @@ describe("buildAuthorWorkerResolver", () => {
     });
   });
 
-  it("画像未設定のワーカーは DiceBear URL が image_url に設定される (#884)", () => {
+  it("画像未設定のワーカーは Boring Avatars URL が image_url に設定される (#884)", () => {
     const resolve = buildAuthorWorkerResolver(workers);
     const kenResult = resolve("ken");
     expect(kenResult).toBeDefined();
-    expect(kenResult?.image_url).toContain("api.dicebear.com");
-    expect(kenResult?.image_url).toContain("seed=d89954ec-uuid");
+    expect(kenResult?.image_url).toContain("source.boringavatars.com");
+    expect(kenResult?.image_url).toContain("d89954ec-uuid");
 
-    // imageUrl プロパティ自体が無いワーカーも DiceBear URL に正規化する
+    // imageUrl プロパティ自体が無いワーカーも Boring Avatars URL に正規化する
     const meiResult = resolve("mei");
     expect(meiResult).toBeDefined();
-    expect(meiResult?.image_url).toContain("api.dicebear.com");
-    expect(meiResult?.image_url).toContain("seed=e0000000-uuid");
+    expect(meiResult?.image_url).toContain("source.boringavatars.com");
+    expect(meiResult?.image_url).toContain("e0000000-uuid");
   });
 
   it("解決できない author は undefined を返す", () => {

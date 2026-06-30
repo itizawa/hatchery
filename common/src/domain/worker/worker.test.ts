@@ -275,16 +275,15 @@ describe("createDisplayNameResolver", () => {
 });
 
 describe("generateWorkerAvatarUrl (#884)", () => {
-  it("DiceBear bottts-neutral の SVG URL を返す", () => {
+  it("Boring Avatars beam スタイルの URL を返す", () => {
     const url = generateWorkerAvatarUrl({ id: "haru" });
-    expect(url).toContain("api.dicebear.com");
-    expect(url).toContain("bottts-neutral");
-    expect(url).toContain("svg");
+    expect(url).toContain("source.boringavatars.com");
+    expect(url).toContain("beam");
   });
 
-  it("URL の seed パラメータにワーカー ID を含む", () => {
+  it("URL にワーカー ID を含む", () => {
     const url = generateWorkerAvatarUrl({ id: "haru" });
-    expect(url).toContain("seed=haru");
+    expect(url).toContain("haru");
   });
 
   it("同じ worker ID は常に同じ URL を返す（決定論的）", () => {
@@ -308,22 +307,22 @@ describe("resolveWorkerImageUrl (#884)", () => {
     );
   });
 
-  it("imageUrl が null のとき DiceBear URL を返す", () => {
+  it("imageUrl が null のとき Boring Avatars URL を返す", () => {
     const url = resolveWorkerImageUrl({ id: "haru", imageUrl: null });
-    expect(url).toContain("api.dicebear.com");
-    expect(url).toContain("seed=haru");
+    expect(url).toContain("source.boringavatars.com");
+    expect(url).toContain("haru");
   });
 
-  it("imageUrl が undefined のとき DiceBear URL を返す", () => {
+  it("imageUrl が undefined のとき Boring Avatars URL を返す", () => {
     const url = resolveWorkerImageUrl({ id: "haru", imageUrl: undefined });
-    expect(url).toContain("api.dicebear.com");
-    expect(url).toContain("seed=haru");
+    expect(url).toContain("source.boringavatars.com");
+    expect(url).toContain("haru");
   });
 
-  it("imageUrl を省略したとき DiceBear URL を返す", () => {
+  it("imageUrl を省略したとき Boring Avatars URL を返す", () => {
     const url = resolveWorkerImageUrl({ id: "ken" });
-    expect(url).toContain("api.dicebear.com");
-    expect(url).toContain("seed=ken");
+    expect(url).toContain("source.boringavatars.com");
+    expect(url).toContain("ken");
   });
 });
 
@@ -338,12 +337,12 @@ describe("createAvatarUrlResolver (#300)", () => {
     expect(resolve("haru")).toBe("https://example.com/haru.png");
   });
 
-  it("imageUrl が未設定の既知ワーカーは DiceBear URL を返す (#884)", () => {
+  it("imageUrl が未設定の既知ワーカーは Boring Avatars URL を返す (#884)", () => {
     const resolve = createAvatarUrlResolver(workers);
     const url = resolve("ken");
     expect(url).toBeDefined();
-    expect(url).toContain("api.dicebear.com");
-    expect(url).toContain("seed=ken");
+    expect(url).toContain("source.boringavatars.com");
+    expect(url).toContain("ken");
   });
 
   it("未解決の worker ID は undefined を返す", () => {
@@ -351,12 +350,12 @@ describe("createAvatarUrlResolver (#300)", () => {
     expect(resolve("unknown-id")).toBeUndefined();
   });
 
-  it("引数省略時は DEFAULT_WORKERS で解決する（imageUrl 未設定 → DiceBear URL）(#884)", () => {
+  it("引数省略時は DEFAULT_WORKERS で解決する（imageUrl 未設定 → Boring Avatars URL）(#884)", () => {
     const resolve = createAvatarUrlResolver();
     const url = resolve("haru");
     expect(url).toBeDefined();
-    expect(url).toContain("api.dicebear.com");
-    expect(url).toContain("seed=haru");
+    expect(url).toContain("source.boringavatars.com");
+    expect(url).toContain("haru");
   });
 });
 

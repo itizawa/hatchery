@@ -12,7 +12,7 @@ vi.mock("../api/workers.js", () => ({
 }));
 
 describe("WorkerImageUpload（#204）", () => {
-  it("currentImageUrl が null のとき DiceBear アバター画像を表示する (#884)", () => {
+  it("currentImageUrl が null のとき Boring Avatars アバター画像を表示する (#884)", () => {
     render(
       <WorkerImageUpload
         workerId="haru"
@@ -21,7 +21,7 @@ describe("WorkerImageUpload（#204）", () => {
       />,
     );
     const img = screen.getByRole("img", { name: /haru/ });
-    expect(img).toHaveAttribute("src", expect.stringContaining("api.dicebear.com"));
+    expect(img).toHaveAttribute("src", expect.stringContaining("source.boringavatars.com"));
   });
 
   it("imageUrl が設定されている場合は画像 Avatar が表示される", () => {

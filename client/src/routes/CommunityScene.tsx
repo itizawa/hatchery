@@ -11,7 +11,7 @@ import {
   useRecentWorkers,
 } from "../api/communities.js";
 import { useAuth } from "../api/auth.js";
-import { useMarkCommunityViewed } from "../api/subscriptions.js";
+import { useMarkCommunityViewed, useUnreadCountsForNewLabel } from "../api/subscriptions.js";
 import { CommunityHeader } from "../components/CommunityHeader.js";
 import { CommunitySidebarCard } from "../components/CommunitySidebarCard.js";
 import { PostCard } from "../components/PostCard.js";
@@ -72,6 +72,13 @@ const CommunityContent = ({
   const { openLogin } = useLoginModal();
   const navigate = useNavigate();
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  // #935: 購読コミュニティの lastViewedAt。未認証時はリクエストしない。
+  const { data: unreadCountsData } = useUnreadCountsForNewLabel({ enabled: !!authUser });
+  const lastViewedAt =
+    unreadCountsData?.unread_counts.find((item) => item.community_id === community.id)
+      ?.last_viewed_at ?? null;
+  const lastViewedAtDate = lastViewedAt ? new Date(lastViewedAt) : null;
 
   useEffect(() => {
     const el = sentinelRef.current;
@@ -141,37 +148,45 @@ const CommunityContent = ({
                 </Box>
               ) : (
                 <Box sx={{ borderTop: "1px solid", borderColor: "divider" }}>
-                  {posts.map((post) => (
-                    <Box
-                      key={post.id}
-                      sx={listItemSx}
-                    >
-                      <RouterLink
-                        to="/posts/$postId"
-                        params={{ postId: post.id }}
-                        style={{ display: "block", textDecoration: "none", color: "inherit" }}
+                  {posts.map((post) => {
+                    const isNew =
+                      subscribed &&
+                      lastViewedAtDate != null &&
+                      post.created_at != null &&
+                      new Date(post.created_at) > lastViewedAtDate;
+                    return (
+                      <Box
+                        key={post.id}
+                        sx={listItemSx}
                       >
-                        <PostCard
-                          post={post}
-                          onVote={(direction: VoteDirection) =>
-                            votePost({ postId: post.id, direction })
-                          }
-                          upVoteDisabled={isVotingPost && votingPostVars?.postId === post.id && votingPostVars?.direction === "up"}
-                          downVoteDisabled={isVotingPost && votingPostVars?.postId === post.id && votingPostVars?.direction === "down"}
-                          voteStopPropagation
-                          truncateText
-                          variant="list"
-                          currentVote={post.my_vote ?? null}
-                          postUrl={`${window.location.origin}/posts/${post.id}`}
-                          onCommentClick={
-                            post.comment_count
-                              ? () => void navigate({ to: "/posts/$postId", params: { postId: post.id }, hash: "comments" })
-                              : undefined
-                          }
-                        />
-                      </RouterLink>
-                    </Box>
-                  ))}
+                        <RouterLink
+                          to="/posts/$postId"
+                          params={{ postId: post.id }}
+                          style={{ display: "block", textDecoration: "none", color: "inherit" }}
+                        >
+                          <PostCard
+                            post={post}
+                            onVote={(direction: VoteDirection) =>
+                              votePost({ postId: post.id, direction })
+                            }
+                            upVoteDisabled={isVotingPost && votingPostVars?.postId === post.id && votingPostVars?.direction === "up"}
+                            downVoteDisabled={isVotingPost && votingPostVars?.postId === post.id && votingPostVars?.direction === "down"}
+                            voteStopPropagation
+                            truncateText
+                            variant="list"
+                            currentVote={post.my_vote ?? null}
+                            postUrl={`${window.location.origin}/posts/${post.id}`}
+                            isNew={isNew}
+                            onCommentClick={
+                              post.comment_count
+                                ? () => void navigate({ to: "/posts/$postId", params: { postId: post.id }, hash: "comments" })
+                                : undefined
+                            }
+                          />
+                        </RouterLink>
+                      </Box>
+                    );
+                  })}
                   <Box ref={sentinelRef} sx={{ py: 1 }}>
                     {isFetchingNextPage && (
                       <Typography variant="body2" color="text.secondary" sx={{ textAlign: "center" }}>

@@ -38,11 +38,20 @@ export function createCommunitiesRouter(
   // community 一覧（認証不要・公共コミュニティ）
   // CommunityRecord（camelCase）を OpenAPI 契約（snake_case created_at）に整形して返す（#477）
   // post_count / last_post_at を活気指標として付与する（N+1 回避・#527）
+  // subscriber_count を社会的証明として付与する（N+1 回避・#930）
   // eslint-disable-next-line max-params
   router.get("/", (_req, res, next) => {
-    Promise.all([communityRepo.list(), postRepo.getStatsByCommunity()])
-      .then(([communities, statsMap]) =>
-        res.status(200).json(communities.map((c) => toCommunityResponse(c, statsMap.get(c.id)))),
+    Promise.all([
+      communityRepo.list(),
+      postRepo.getStatsByCommunity(),
+      subscriptionRepo.subscriberCountPerCommunity(),
+    ])
+      .then(([communities, statsMap, subscriberMap]) =>
+        res.status(200).json(
+          communities.map((c) =>
+            toCommunityResponse(c, statsMap.get(c.id), subscriberMap.get(c.id) ?? 0),
+          ),
+        ),
       )
       .catch(next);
   });

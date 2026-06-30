@@ -14,6 +14,7 @@ export interface SubscriptionWithUnreadCount {
   communityId: string;
   communitySlug: string;
   unreadCount: number;
+  lastViewedAt: Date | null;
 }
 
 export interface SubscriptionRepository {
@@ -108,6 +109,7 @@ export function createInMemorySubscriptionRepository(): SubscriptionRepository {
         communityId: r.communityId,
         communitySlug: "",
         unreadCount: 0,
+        lastViewedAt: r.lastViewedAt,
       }));
       return Promise.resolve(result);
     },

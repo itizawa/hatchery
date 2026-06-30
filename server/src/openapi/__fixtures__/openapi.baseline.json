@@ -402,6 +402,10 @@
               "null"
             ],
             "format": "date-time"
+          },
+          "subscriber_count": {
+            "type": "integer",
+            "minimum": 0
           }
         },
         "required": [
@@ -411,7 +415,8 @@
           "description",
           "created_at",
           "post_count",
-          "last_post_at"
+          "last_post_at",
+          "subscriber_count"
         ],
         "description": "コミュニティ（サブレディット相当）。ADR-0019"
       },
@@ -475,6 +480,10 @@
             ],
             "format": "date-time"
           },
+          "subscriber_count": {
+            "type": "integer",
+            "minimum": 0
+          },
           "generationInstruction": {
             "type": [
               "string",
@@ -498,7 +507,8 @@
           "description",
           "created_at",
           "post_count",
-          "last_post_at"
+          "last_post_at",
+          "subscriber_count"
         ],
         "description": "admin 向けコミュニティ（generationInstruction を含む。公開 API には含めない・#488）"
       },
@@ -973,13 +983,22 @@
           },
           "vote_net_score": {
             "type": "integer"
+          },
+          "image_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 500,
+            "format": "uri"
           }
         },
         "required": [
           "worker_id",
           "display_name",
           "view_count",
-          "vote_net_score"
+          "vote_net_score",
+          "image_url"
         ],
         "description": "ワーカーランキング項目（閲覧数・純 vote スコア・#665）"
       },
@@ -1107,12 +1126,19 @@
           "unread_count": {
             "type": "integer",
             "minimum": 0
+          },
+          "last_viewed_at": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "required": [
           "community_id",
           "community_slug",
-          "unread_count"
+          "unread_count",
+          "last_viewed_at"
         ],
         "description": "購読コミュニティの未読数アイテム（#933）"
       },
@@ -1135,12 +1161,19 @@
                 "unread_count": {
                   "type": "integer",
                   "minimum": 0
+                },
+                "last_viewed_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 }
               },
               "required": [
                 "community_id",
                 "community_slug",
-                "unread_count"
+                "unread_count",
+                "last_viewed_at"
               ]
             }
           }
@@ -1451,6 +1484,34 @@
     "/health": {
       "get": {
         "summary": "ヘルスチェック",
+        "responses": {
+          "200": {
+            "description": "稼働中",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "ok"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/health": {
+      "get": {
+        "summary": "ヘルスチェック（Cloud Scheduler warmup 用）",
         "responses": {
           "200": {
             "description": "稼働中",

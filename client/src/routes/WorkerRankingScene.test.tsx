@@ -13,8 +13,8 @@ import { WorkerRankingScene } from "./WorkerRankingScene.js";
 import type { WorkerRankingItem } from "@hatchery/common";
 
 const mockWorkers: WorkerRankingItem[] = [
-  { worker_id: "worker-1", display_name: "Alice", view_count: 100, vote_net_score: 5 },
-  { worker_id: "worker-2", display_name: "Bob", view_count: 50, vote_net_score: -3 },
+  { worker_id: "worker-1", display_name: "Alice", view_count: 100, vote_net_score: 5, image_url: null },
+  { worker_id: "worker-2", display_name: "Bob", view_count: 50, vote_net_score: -3, image_url: "https://example.com/bob.png" },
 ];
 
 function renderWithData(workers: WorkerRankingItem[] = mockWorkers) {
@@ -32,8 +32,8 @@ function renderWithData(workers: WorkerRankingItem[] = mockWorkers) {
 }
 
 const bigWorkers: WorkerRankingItem[] = [
-  { worker_id: "worker-big", display_name: "Charlie", view_count: 12345, vote_net_score: 10 },
-  { worker_id: "worker-neg", display_name: "Dave", view_count: 678, vote_net_score: -7 },
+  { worker_id: "worker-big", display_name: "Charlie", view_count: 12345, vote_net_score: 10, image_url: null },
+  { worker_id: "worker-neg", display_name: "Dave", view_count: 678, vote_net_score: -7, image_url: "https://example.com/dave.png" },
 ];
 
 describe("WorkerRankingScene (#784) — 順位番号・閲覧数・スコア色分け", () => {
@@ -110,5 +110,25 @@ describe("WorkerRankingScene (#774)", () => {
     expect(
       await screen.findByText("まだランキングデータがありません。"),
     ).toBeInTheDocument();
+  });
+});
+
+describe("WorkerRankingScene (#956) — アバター表示", () => {
+  it("各ランキング行にワーカー名を alt とした Avatar が表示される", async () => {
+    renderWithData();
+    expect(await screen.findByRole("img", { name: "Alice" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Bob" })).toBeInTheDocument();
+  });
+
+  it("image_url が null のとき Avatar が存在し alt に表示名が設定される（自動生成 URL がフォールバックとして使われる）", async () => {
+    renderWithData([{ worker_id: "w-1", display_name: "Alice", view_count: 10, vote_net_score: 1, image_url: null }]);
+    await screen.findByText("Alice");
+    expect(screen.getByRole("img", { name: "Alice" })).toBeInTheDocument();
+  });
+
+  it("データが空のとき Avatar は表示されない", async () => {
+    renderWithData([]);
+    await screen.findByTestId("ranking-empty");
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
   });
 });

@@ -63,11 +63,11 @@ describe("WorkerTable", () => {
     expect(img).toHaveAttribute("src", "https://example.com/avatar.png");
   });
 
-  it("imageUrl 未設定の Worker は DiceBear アバター画像を表示する (#884)", () => {
+  it("imageUrl 未設定の Worker は Boring Avatars アバター画像を表示する (#884)", () => {
     const workers = [{ id: "w2", displayName: "フォールバックワーカー" }];
     renderWithClient(<WorkerTable workers={workers} />);
     const img = screen.getByRole("img", { name: "フォールバックワーカー" });
-    expect(img).toHaveAttribute("src", expect.stringContaining("api.dicebear.com"));
+    expect(img).toHaveAttribute("src", expect.stringContaining("source.boringavatars.com"));
   });
 
   it("isLoading=true のとき画像列もスケルトン表示される（#220）", () => {

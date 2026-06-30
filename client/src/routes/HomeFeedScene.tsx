@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, type ReactElement } from "react";
 import { useInfiniteHomeFeed, usePublicCommunities, useVotePost } from "../api/communities.js";
 import { useRecentPostsSidebar } from "../api/feed.js";
 import { useAuth } from "../api/auth.js";
+import { useUnreadCountsForNewLabel } from "../api/subscriptions.js";
 import { PostCard } from "../components/PostCard.js";
 import { QueryBoundary } from "../components/QueryBoundary.js";
 import { RecentPostsSidebarCard } from "../components/RecentPostsSidebarCard.js";
@@ -68,6 +69,16 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
     return map;
   }, [communities]);
 
+  // #935: 購読コミュニティの lastViewedAt マップ。未認証時はリクエストしない。
+  const { data: unreadCountsData } = useUnreadCountsForNewLabel({ enabled: !!user });
+  const lastViewedAtById = useMemo(() => {
+    const map = new Map<string, string | null>();
+    for (const item of unreadCountsData?.unread_counts ?? []) {
+      map.set(item.community_id, item.last_viewed_at);
+    }
+    return map;
+  }, [unreadCountsData]);
+
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el) return;
@@ -105,6 +116,11 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
             <Box sx={{ borderTop: "1px solid", borderColor: "divider" }}>
               {posts.map((post) => {
                 const community = communityById.get(post.community_id);
+                const lastViewedAt = lastViewedAtById.get(post.community_id);
+                const isNew =
+                  lastViewedAt != null &&
+                  post.created_at != null &&
+                  new Date(post.created_at) > new Date(lastViewedAt);
                 return (
                   <Box key={post.id} sx={listItemSx}>
                     <RouterLink
@@ -125,6 +141,7 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
                         community={community}
                         currentVote={post.my_vote ?? null}
                         postUrl={`${window.location.origin}/posts/${post.id}`}
+                        isNew={isNew}
                         onCommunityClick={
                           community
                             ? () =>

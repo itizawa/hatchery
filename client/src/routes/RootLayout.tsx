@@ -248,6 +248,7 @@ export const RootLayout = (): ReactElement => {
         <Box
           component="main"
           ref={mainRef}
+          data-scroll-restoration-id="main-content"
           sx={{
             flexGrow: 1,
             minWidth: 0,

@@ -16,6 +16,7 @@ import { buildCommentBatchPrompt, type TargetPostForComment } from "./buildComme
 import type { WorkerDef } from "./buildCommunityPrompt.js";
 import { calcCommentCount, pickOldPostForRevival, REVIVAL_PROBABILITY } from "./calcCommentCounts.js";
 import { extractErrorMessage, logBatchError, logBatchInfo } from "./logger.js";
+import { withGenerationRetry, RetryableGenerationError } from "./withGenerationRetry.js";
 
 /** comment バッチが対象とする直近 post の日数（#673）。 */
 export const COMMENT_TARGET_WINDOW_DAYS = 3;
@@ -130,60 +131,63 @@ async function processCommunityComments({
     targetPosts,
   });
 
-  // AI 生成（1 コミュニティ = 1 API コール）。
-  const generationResult = await generate(prompt, apiKey);
-  const raw = generationResult.text;
-
-  // usage が取得できた場合に記録する。
-  let usage: { model: string; inputTokens: number; outputTokens: number } | undefined;
-  if (
-    generationResult.model !== undefined &&
-    generationResult.inputTokens !== undefined &&
-    generationResult.outputTokens !== undefined
-  ) {
-    usage = {
-      model: generationResult.model,
-      inputTokens: generationResult.inputTokens,
-      outputTokens: generationResult.outputTokens,
-    };
-  }
-
-  // JSON パース。
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    logBatchError("comment_batch.json_parse_failed", "JSON parse failed", {
-      communityId: community.id,
-    });
-    throw new Error(`${community.id}: JSON パース失敗`);
-  }
-
-  // Zod スキーマ検証。
-  const validated = CommentBatchOutputSchema.safeParse(parsed);
-  if (!validated.success) {
-    logBatchError("comment_batch.schema_validation_failed", "schema validation failed", {
-      communityId: community.id,
-      issues: validated.error.format(),
-    });
-    throw new Error(`${community.id}: スキーマ検証失敗`);
-  }
-
-  const output = validated.data;
-
-  // author 検証（既知 workerId のみ許可）。
+  // AI 生成 → JSON パース → スキーマ検証 → author 検証（最大 2 回リトライ、#626）。
   const knownWorkerIds = new Set(workerIds);
-  for (const postOutput of output.posts) {
-    for (const comment of postOutput.comments) {
-      if (!knownWorkerIds.has(comment.author)) {
-        logBatchError("comment_batch.author_validation_failed", "unknown author", {
-          communityId: community.id,
-          author: comment.author,
-        });
-        throw new Error(`${community.id}: author 検証失敗`);
+  const { output, usage } = await withGenerationRetry({
+    fn: async () => {
+      const generationResult = await generate(prompt, apiKey);
+      const raw = generationResult.text;
+
+      // JSON パース。
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        logBatchError("comment_batch.json_parse_failed", "JSON parse failed", { communityId: community.id });
+        throw new RetryableGenerationError(`${community.id}: JSON パース失敗`);
       }
-    }
-  }
+
+      // Zod スキーマ検証。
+      const validated = CommentBatchOutputSchema.safeParse(parsed);
+      if (!validated.success) {
+        logBatchError("comment_batch.schema_validation_failed", "schema validation failed", {
+          communityId: community.id,
+          issues: validated.error.format(),
+        });
+        throw new RetryableGenerationError(`${community.id}: スキーマ検証失敗`);
+      }
+
+      // author 検証（既知 workerId のみ許可）。
+      for (const postOutput of validated.data.posts) {
+        for (const comment of postOutput.comments) {
+          if (!knownWorkerIds.has(comment.author)) {
+            logBatchError("comment_batch.author_validation_failed", "unknown author", {
+              communityId: community.id,
+              author: comment.author,
+            });
+            throw new RetryableGenerationError(`${community.id}: author 検証失敗`);
+          }
+        }
+      }
+
+      // usage が取得できた場合に記録する。
+      let resolvedUsage: { model: string; inputTokens: number; outputTokens: number } | undefined;
+      if (
+        generationResult.model !== undefined &&
+        generationResult.inputTokens !== undefined &&
+        generationResult.outputTokens !== undefined
+      ) {
+        resolvedUsage = {
+          model: generationResult.model,
+          inputTokens: generationResult.inputTokens,
+          outputTokens: generationResult.outputTokens,
+        };
+      }
+      return { output: validated.data, usage: resolvedUsage };
+    },
+    maxRetries: 2,
+    label: `comment_batch.${community.id}`,
+  });
 
   // コメントに drip タイムスタンプを割り当てて永続化する。
   // eslint-disable-next-line max-params
@@ -268,7 +272,7 @@ async function processCommunityComments({
 /**
  * comment 専用の定時バッチ本体（#673）。
  *
- * 1 日 4 回起動し、全コミュニティを Promise.allSettled で並列処理する（ADR-0033 踏襲）。
+ * 1 日 4 回起動し、全コミュニティを Promise.allSettled で並列処理する（ADR-0033 蹏襲）。
  * 直近3日の post を対象に vote 重み付きコメント数を生成し、3h 窓内に createdAt を分散させる。
  */
 export async function runCommentBatch(deps: RunCommentBatchDeps): Promise<RunCommentBatchResult> {
@@ -296,7 +300,7 @@ export async function runCommentBatch(deps: RunCommentBatchDeps): Promise<RunCom
     ? deps.botWorkerProvider()
     : Promise.resolve([]);
 
-  // 全コミュニティを並列処理する（ADR-0033 踏襲）。
+  // 全コミュニティを並列処理する（ADR-0033 蹏襲）。
   const results = await Promise.allSettled(
     communities.map((community) =>
       processCommunityComments({

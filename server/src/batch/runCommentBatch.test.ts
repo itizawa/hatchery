@@ -417,10 +417,10 @@ describe("runCommentBatch (#673)", () => {
         },
       ]);
 
-      let callCount = 0;
-      const generate = vi.fn().mockImplementation(async () => {
-        callCount++;
-        if (callCount === 1) {
+      // community1（テクノロジー）は常に失敗、community2（日常）は常に成功
+      // プロンプトにコミュニティ名が含まれるため識別可能
+      const generate = vi.fn().mockImplementation(async (prompt: string) => {
+        if (prompt.includes(community1.name)) {
           return { text: "INVALID JSON" };
         }
         return { text: makeCommentOutput("ref-1") };
@@ -443,9 +443,10 @@ describe("runCommentBatch (#673)", () => {
         revivalProbability: 0,
       });
 
-      // community2 のコメントは保存されている
+      // community2 のコメントは保存されている（community1 はリトライ上限到達で失敗）
       expect(result.comments.length).toBeGreaterThan(0);
-      expect(generate).toHaveBeenCalledTimes(2);
+      // community1: 3回（initial + 2 retries）、community2: 1回
+      expect(generate).toHaveBeenCalledTimes(4);
     });
 
     it("成功コミュニティに BatchRunLog(success)・失敗コミュニティに BatchRunLog(failure) が記録される", async () => {
@@ -471,10 +472,11 @@ describe("runCommentBatch (#673)", () => {
         },
       ]);
 
-      let callCount = 0;
-      const generate = vi.fn().mockImplementation(async () => {
-        callCount++;
-        if (callCount === 1) return { text: "INVALID JSON" };
+      // community1（テクノロジー）は常に失敗（リトライ上限到達）、community2（日常）は成功
+      const generate = vi.fn().mockImplementation(async (prompt: string) => {
+        if (prompt.includes(community1.name)) {
+          return { text: "INVALID JSON" };
+        }
         return { text: makeCommentOutput("ref-1") };
       });
 
@@ -549,6 +551,117 @@ describe("runCommentBatch (#673)", () => {
 
       expect(result.comments).toHaveLength(0);
       expect(createSpy).toHaveBeenCalledWith(expect.objectContaining({ status: "failure" }));
+    });
+  });
+
+  describe("リトライ (#626)", () => {
+    it("JSON パース失敗が 1 回でリトライ成功する場合、generate が 2 回呼ばれコメントが永続化される", async () => {
+      const postRepo = createInMemoryPostRepository();
+      await postRepo.createMany(community1.id, [
+        {
+          slotKey: "slot-retry",
+          seq: 0,
+          author: botWorker.id,
+          title: "投稿",
+          text: "本文",
+          createdAt: recentDate(),
+        },
+      ]);
+
+      const generate = vi.fn()
+        .mockResolvedValueOnce({ text: "INVALID JSON" })
+        .mockResolvedValueOnce({ text: makeCommentOutput("ref-1") });
+
+      const commentRepo = createInMemoryCommentRepository();
+      const result = await runCommentBatch({
+        communityRepo: createInMemoryCommunityRepository([community1]),
+        postRepo,
+        commentRepo,
+        workerCommunityRepo: createInMemoryWorkerCommunityRepository({
+          workers: [botWorker],
+          links: [{ workerId: botWorker.id, communityId: community1.id }],
+        }),
+        generate,
+        anthropicApiKey: "test-key",
+        now: NOW,
+        revivalProbability: 0,
+      });
+
+      expect(generate).toHaveBeenCalledTimes(2);
+      expect(result.comments.length).toBeGreaterThan(0);
+    });
+
+    it("リトライ上限到達（3回連続失敗）で BatchRunLog(failure) が記録されコメントは保存されない", async () => {
+      const postRepo = createInMemoryPostRepository();
+      await postRepo.createMany(community1.id, [
+        {
+          slotKey: "slot-exhaust",
+          seq: 0,
+          author: botWorker.id,
+          title: "投稿",
+          text: "本文",
+          createdAt: recentDate(),
+        },
+      ]);
+
+      const generate = vi.fn().mockResolvedValue({ text: "INVALID JSON" });
+      const batchRunLogRepo = createInMemoryBatchRunLogRepository();
+      const createSpy = vi.spyOn(batchRunLogRepo, "create");
+
+      const result = await runCommentBatch({
+        communityRepo: createInMemoryCommunityRepository([community1]),
+        postRepo,
+        commentRepo: createInMemoryCommentRepository(),
+        workerCommunityRepo: createInMemoryWorkerCommunityRepository({
+          workers: [botWorker],
+          links: [{ workerId: botWorker.id, communityId: community1.id }],
+        }),
+        batchRunLogRepository: batchRunLogRepo,
+        generate,
+        anthropicApiKey: "test-key",
+        now: NOW,
+        revivalProbability: 0,
+      });
+
+      expect(generate).toHaveBeenCalledTimes(3);
+      expect(result.comments).toHaveLength(0);
+      expect(createSpy).toHaveBeenCalledWith(expect.objectContaining({ status: "failure" }));
+    });
+
+    it("スキーマ検証失敗が 1 回でリトライ成功する", async () => {
+      const postRepo = createInMemoryPostRepository();
+      await postRepo.createMany(community1.id, [
+        {
+          slotKey: "slot-schema",
+          seq: 0,
+          author: botWorker.id,
+          title: "投稿",
+          text: "本文",
+          createdAt: recentDate(),
+        },
+      ]);
+
+      const badSchema = JSON.stringify({ topic: "test", posts: "not-an-array" });
+      const generate = vi.fn()
+        .mockResolvedValueOnce({ text: badSchema })
+        .mockResolvedValueOnce({ text: makeCommentOutput("ref-1") });
+
+      const result = await runCommentBatch({
+        communityRepo: createInMemoryCommunityRepository([community1]),
+        postRepo,
+        commentRepo: createInMemoryCommentRepository(),
+        workerCommunityRepo: createInMemoryWorkerCommunityRepository({
+          workers: [botWorker],
+          links: [{ workerId: botWorker.id, communityId: community1.id }],
+        }),
+        generate,
+        anthropicApiKey: "test-key",
+        now: NOW,
+        revivalProbability: 0,
+      });
+
+      expect(generate).toHaveBeenCalledTimes(2);
+      expect(result.comments.length).toBeGreaterThan(0);
     });
   });
 

@@ -341,6 +341,43 @@ Cloudflare ダッシュボード → Workers & Pages → `hatchery` → **Settin
 
 ---
 
+## 7. 本番 Cloud Run のウォームアップ設定（#925）
+
+本番 Cloud Run（`hatchery-prod`）は `--min-instances=0` のためアイドル後にゼロスケールし、
+次のリクエストでコールドスタートが発生する。Cloud Scheduler で 10 分おきに `/api/health` を
+ping することでインスタンスをウォームに保ちコールドスタートを防ぐ（ADR-0011 参照）。
+
+### 7-1. Cloud Scheduler ジョブの作成
+
+```bash
+gcloud scheduler jobs create http hatchery-prod-warmup \
+  --location=asia-northeast1 \
+  --schedule="*/10 * * * *" \
+  --uri="https://hatchery-works.com/api/health" \
+  --http-method=GET \
+  --description="Hatchery 本番 Cloud Run のコールドスタート防止 ping（10 分おき）"
+```
+
+- **ジョブ名**: `hatchery-prod-warmup`
+- **スケジュール**: `*/10 * * * *`（10 分おき）
+- **ターゲット**: `https://hatchery-works.com/api/health`（HTTP GET）
+- **リージョン**: `asia-northeast1`（既存バッチと同一）
+- **認証**: 不要（`/api/health` は公開エンドポイント）
+
+> **注意**: Cloud Scheduler は月 3 ジョブまで無料。既存の定時バッチ（GitHub Actions）と合わせてもこの無料枠内に収まる。
+
+### 7-2. 動作確認
+
+```bash
+# ジョブを手動実行してログを確認
+gcloud scheduler jobs run hatchery-prod-warmup --location=asia-northeast1
+
+# ジョブの最終実行結果を確認
+gcloud scheduler jobs describe hatchery-prod-warmup --location=asia-northeast1
+```
+
+---
+
 ## 関連
 
 - ADR-0009: 定時バッチ方式（常時稼働せず外部スケジューラから起動）

@@ -4,7 +4,7 @@ import { useForm } from "@tanstack/react-form";
 import { PushSubscribeButton } from "../components/PushSubscribeButton.js";
 import { useSearch } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { type ReactElement, useEffect, useRef, useState } from "react";
+import { type ReactElement, useEffect, useState } from "react";
 
 import { AVATAR_URL_MAX_LENGTH, DISPLAY_NAME_MAX_LENGTH } from "@hatchery/common";
 import * as authApi from "../api/auth.js";
@@ -33,9 +33,6 @@ export const AccountScene = (): ReactElement => {
   });
 
   const [snackbarOpen, setSnackbarOpen] = useState(false);
-
-  // authUser ロード後の保存済み値を ref で保持（dirty 判定用）
-  const savedValuesRef = useRef<{ displayName: string; avatarUrl: string } | null>(null);
 
   const form = useForm({
     defaultValues: {
@@ -66,7 +63,6 @@ export const AccountScene = (): ReactElement => {
         displayName: authUser.displayName,
         avatarUrl: authUser.avatarUrl ?? "",
       };
-      savedValuesRef.current = values;
       form.reset(values);
     }
   }, [authUser]); // form は stable なので依存配列から除外
@@ -141,34 +137,27 @@ export const AccountScene = (): ReactElement => {
         <form.Subscribe
           selector={(state) => ({
             displayName: state.values.displayName,
-            avatarUrl: state.values.avatarUrl,
             canSubmit: state.canSubmit,
             isSubmitting: state.isSubmitting,
+            isDirty: !state.isDefaultValue,
           })}
         >
-          {({ displayName, avatarUrl, canSubmit, isSubmitting }) => {
-            // savedValuesRef との比較で dirty を判定（savedValuesRef は authUser ロード後にセットされる）
-            const saved = savedValuesRef.current;
-            const isDirty =
-              saved !== null &&
-              (displayName !== saved.displayName || avatarUrl !== saved.avatarUrl);
-            return (
-              <Button
-                type="submit"
-                variant="contained"
-                disabled={
-                  !displayName.trim() ||
-                  !canSubmit ||
-                  isSubmitting ||
-                  updateMutation.isPending ||
-                  !isDirty
-                }
-                sx={{ alignSelf: "flex-start" }}
-              >
-                保存
-              </Button>
-            );
-          }}
+          {({ displayName, canSubmit, isSubmitting, isDirty }) => (
+            <Button
+              type="submit"
+              variant="contained"
+              disabled={
+                !displayName.trim() ||
+                !canSubmit ||
+                isSubmitting ||
+                updateMutation.isPending ||
+                !isDirty
+              }
+              sx={{ alignSelf: "flex-start" }}
+            >
+              保存
+            </Button>
+          )}
         </form.Subscribe>
       </Box>
 

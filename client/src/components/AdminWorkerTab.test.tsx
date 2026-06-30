@@ -121,12 +121,12 @@ describe("AdminWorkerTab（useSuspenseQuery + QueryBoundary）", () => {
     expect(img).toHaveAttribute("src", "https://example.com/haru.png");
   });
 
-  it("imageUrl 未設定の worker は DiceBear アバター画像を表示する (#884)", async () => {
+  it("imageUrl 未設定の worker は Boring Avatars アバター画像を表示する (#884)", async () => {
     stubWorkers(200, [{ id: "mei", displayName: "mei", role: "新人" }] as Worker[]);
     renderWithClient(<AdminWorkerTab />);
     expect(await screen.findByText("mei")).toBeInTheDocument();
     const img = screen.getByRole("img", { name: "mei" });
-    expect(img).toHaveAttribute("src", expect.stringContaining("api.dicebear.com"));
+    expect(img).toHaveAttribute("src", expect.stringContaining("source.boringavatars.com"));
   });
 
   it("ローディング中は QueryBoundary の fallback（スケルトン）が表示される", async () => {

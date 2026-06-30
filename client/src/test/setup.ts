@@ -15,6 +15,13 @@ function installJsdomPolyfills(): void {
   // jsdom は window.scrollTo 未実装。TanStack Router のスクロール復元が呼ぶためスタブする。
   vi.stubGlobal("scrollTo", () => {});
 
+  // jsdom は HTMLElement.scrollTo 未実装。scrollToTopSelectors でスクロールコンテナを先頭に戻す
+  // 際に呼ばれるためスタブする。Node 環境（vite.config.test.ts 等）では HTMLElement が未定義なので
+  // typeof ガードを入れる。
+  if (typeof HTMLElement !== "undefined" && !HTMLElement.prototype.scrollTo) {
+    HTMLElement.prototype.scrollTo = () => {};
+  }
+
   // jsdom は IntersectionObserver 未実装。無限スクロールの sentinel 監視（HomeFeedScene 等）が
   // 構築するためスタブする（#462: Suspense 化で初回レンダリングから sentinel が存在し observe が走る）。
   vi.stubGlobal(

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { WORKER_IMAGE_URL_MAX_LENGTH } from "../worker/worker.js";
 import {
   CommentViewsRequestSchema,
   COMMENT_IDS_MAX_COUNT,
@@ -76,6 +77,7 @@ describe("WorkerRankingItemSchema", () => {
     display_name: "Worker Alpha",
     view_count: 42,
     vote_net_score: 10,
+    image_url: null,
   };
 
   it("有効なアイテムをパースできる", () => {
@@ -88,5 +90,28 @@ describe("WorkerRankingItemSchema", () => {
 
   it("vote_net_score は負数でも accept する（down vote で net マイナスはあり得る）", () => {
     expect(WorkerRankingItemSchema.safeParse({ ...valid, vote_net_score: -5 }).success).toBe(true);
+  });
+
+  it("image_url が null でも accept する", () => {
+    expect(WorkerRankingItemSchema.safeParse({ ...valid, image_url: null }).success).toBe(true);
+  });
+
+  it("image_url が有効な URL 文字列なら accept する", () => {
+    expect(
+      WorkerRankingItemSchema.safeParse({ ...valid, image_url: "https://example.com/img.png" }).success,
+    ).toBe(true);
+  });
+
+  it(`image_url が ${WORKER_IMAGE_URL_MAX_LENGTH} 文字を超える URL だと reject する`, () => {
+    const longPath = "a".repeat(WORKER_IMAGE_URL_MAX_LENGTH);
+    expect(
+      WorkerRankingItemSchema.safeParse({ ...valid, image_url: `https://example.com/${longPath}` }).success,
+    ).toBe(false);
+  });
+
+  it("image_url フィールドが欠落すると reject する", () => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { image_url: _imageUrl, ...withoutImageUrl } = valid;
+    expect(WorkerRankingItemSchema.safeParse(withoutImageUrl).success).toBe(false);
   });
 });

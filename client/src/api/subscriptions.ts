@@ -6,7 +6,7 @@
  * - GET    /api/subscriptions/unread-counts … 購読コミュニティ未読数（#934）
  * - PATCH  /api/communities/{slug}/mark-viewed … 購読コミュニティ既読化（#934）
  */
-import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 
 import { ensureOk, openApiClient, unwrap } from "./client.js";
 import { homeFeedQueryKeyPrefix } from "./feed.js";
@@ -60,6 +60,7 @@ export type UnreadCount = {
   community_id: string;
   community_slug: string;
   unread_count: number;
+  last_viewed_at: string | null;
 };
 
 export type UnreadCountsResponse = {
@@ -79,6 +80,18 @@ export function useUnreadCounts() {
   return useSuspenseQuery({
     queryKey: unreadCountsQueryKey(),
     queryFn: fetchUnreadCounts,
+  });
+}
+
+/**
+ * PostCard の「New」ラベル判定用 unread-counts フック（#935）。
+ * 非 Suspense で、`enabled=false` のとき（未認証等）リクエストを送らない。
+ */
+export function useUnreadCountsForNewLabel({ enabled }: { enabled: boolean }) {
+  return useQuery({
+    queryKey: unreadCountsQueryKey(),
+    queryFn: fetchUnreadCounts,
+    enabled,
   });
 }
 

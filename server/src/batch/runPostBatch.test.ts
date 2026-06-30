@@ -256,6 +256,72 @@ describe("runPostBatch (#672)", () => {
     expect(updatedCount).toBeGreaterThan(0);
   });
 
+  describe("リトライ (#626)", () => {
+    it("JSON パース失敗が 1 回でリトライ成功する場合、generate が 2 回呼ばれ post が永続化される", async () => {
+      const generate = vi.fn()
+        .mockResolvedValueOnce({ text: "INVALID JSON" })
+        .mockResolvedValueOnce({ text: validPostOutput });
+
+      const postRepo = createInMemoryPostRepository();
+      const result = await runPostBatch({
+        communityRepo: createInMemoryCommunityRepository([community1]),
+        postRepo,
+        workerCommunityRepo: createInMemoryWorkerCommunityRepository({ workers: [], links: [] }),
+        botWorkerProvider: () => Promise.resolve(botWorkers),
+        generate,
+        anthropicApiKey: "test-key",
+        rng: () => 0,
+      });
+
+      expect(generate).toHaveBeenCalledTimes(2);
+      expect(result.posts.length).toBeGreaterThan(0);
+    });
+
+    it("リトライ上限到達（3回連続失敗）で BatchRunLog(failure) が記録され post は保存されない", async () => {
+      const generate = vi.fn().mockResolvedValue({ text: "INVALID JSON" });
+      const batchRunLogRepo = createInMemoryBatchRunLogRepository();
+      const createSpy = vi.spyOn(batchRunLogRepo, "create");
+
+      const result = await runPostBatch({
+        communityRepo: createInMemoryCommunityRepository([community1]),
+        postRepo: createInMemoryPostRepository(),
+        workerCommunityRepo: createInMemoryWorkerCommunityRepository({ workers: [], links: [] }),
+        botWorkerProvider: () => Promise.resolve(botWorkers),
+        batchRunLogRepository: batchRunLogRepo,
+        generate,
+        anthropicApiKey: "test-key",
+        rng: () => 0,
+      });
+
+      expect(generate).toHaveBeenCalledTimes(3);
+      expect(result.posts).toHaveLength(0);
+      expect(createSpy).toHaveBeenCalledWith(expect.objectContaining({ status: "failure" }));
+    });
+
+    it("author 検証失敗が 1 回でリトライ成功する", async () => {
+      const badAuthorOutput = JSON.stringify({
+        topic: "test",
+        posts: [{ id: "p1", author: "unknown-xyz", title: "タイトル", text: "本文", comments: [] }],
+      });
+      const generate = vi.fn()
+        .mockResolvedValueOnce({ text: badAuthorOutput })
+        .mockResolvedValueOnce({ text: validPostOutput });
+
+      const result = await runPostBatch({
+        communityRepo: createInMemoryCommunityRepository([community1]),
+        postRepo: createInMemoryPostRepository(),
+        workerCommunityRepo: createInMemoryWorkerCommunityRepository({ workers: [], links: [] }),
+        botWorkerProvider: () => Promise.resolve(botWorkers),
+        generate,
+        anthropicApiKey: "test-key",
+        rng: () => 0,
+      });
+
+      expect(generate).toHaveBeenCalledTimes(2);
+      expect(result.posts.length).toBeGreaterThan(0);
+    });
+  });
+
   it("POST_COUNT_MIN / POST_COUNT_MAX の定数が 1 / 1 である（コミュニティごとに 1 件固定）", () => {
     expect(POST_COUNT_MIN).toBe(1);
     expect(POST_COUNT_MAX).toBe(1);

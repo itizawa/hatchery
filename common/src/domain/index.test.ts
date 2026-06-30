@@ -17,6 +17,6 @@ describe("domain フォルダ構成（#24）", () => {
   });
 
   it("community フォルダの index からスキーマを参照できる", () => {
-    expect(CommunitySchema.safeParse({ id: "c1", slug: "ai", name: "AI", description: "AI の話", created_at: new Date(), post_count: 0, last_post_at: null }).success).toBe(true);
+    expect(CommunitySchema.safeParse({ id: "c1", slug: "ai", name: "AI", description: "AI の話", created_at: new Date(), post_count: 0, last_post_at: null, subscriber_count: 0 }).success).toBe(true);
   });
 });

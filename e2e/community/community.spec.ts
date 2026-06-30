@@ -571,12 +571,117 @@ test(
   },
 );
 
-test.todo(
+test(
   "UC-COMM-16: vote ミューテーション進行中はコミュニティフィードの vote ボタンが disabled になる（#748）",
+  async ({ page }) => {
+    const MOCK_POST_VOTE = { ...MOCK_POST, my_vote: null as "up" | "down" | null };
+
+    await mockAuthenticated(page);
+    await mockCommunitiesApi(page);
+    await mockFeedApi(page);
+    await mockCommunityFeedApi(page, MOCK_COMMUNITY.slug, [MOCK_POST_VOTE]);
+    await mockRecentWorkersApi(page, MOCK_COMMUNITY.slug);
+    await mockSubscriptionApi(page, MOCK_COMMUNITY.slug, false);
+
+    // vote API レスポンスを保留して mutation 進行中状態を再現する
+    let resolveVote!: () => void;
+    await page.route("**/api/posts/*/vote", async (route) => {
+      await new Promise<void>((resolve) => {
+        resolveVote = resolve;
+      });
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ...MOCK_POST_VOTE, score: 4, my_vote: "up" }),
+      });
+    });
+
+    await page.goto(`/communities/${MOCK_COMMUNITY.slug}`);
+    await expect(page.getByRole("heading", { name: MOCK_POST.title })).toBeVisible();
+
+    const upVoteButton = page.getByRole("button", { name: "up vote" }).first();
+
+    // route handler が実行され resolveVote が代入されるのを確実に待つ
+    const voteRequestPromise = page.waitForRequest("**/api/posts/*/vote");
+    await upVoteButton.click();
+    await voteRequestPromise;
+
+    await expect(upVoteButton).toBeDisabled();
+
+    resolveVote();
+    await expect(upVoteButton).not.toBeDisabled();
+  },
 );
 
-test.todo("コミュニティ詳細の各投稿カードに共有ボタンが表示される（#838）");
+test(
+  "UC-COMM-17: コミュニティフィードのコメント Chip をクリックするとコメントセクションへ直接遷移する（#836）",
+  async ({ page }) => {
+    await mockUnauthenticated(page);
+    await mockCommunitiesApi(page);
+    await mockFeedApi(page);
+    await mockCommunityFeedApi(page, MOCK_COMMUNITY.slug);
+    await mockRecentWorkersApi(page, MOCK_COMMUNITY.slug);
+    await mockSubscriptionApi(page, MOCK_COMMUNITY.slug, false);
+
+    // 遷移先の投稿スレッドページ API をモック（遷移後のエラーを防ぐ）
+    await page.route(`**/api/posts/${MOCK_POST.id}`, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ post: MOCK_POST, comments: [] }),
+      }),
+    );
+
+    await page.goto(`/communities/${MOCK_COMMUNITY.slug}`);
+
+    // 投稿タイトルが表示されることを確認
+    await expect(page.getByRole("heading", { name: MOCK_POST.title })).toBeVisible();
+
+    // コメント Chip が表示される（aria-label で特定）
+    const commentChip = page.getByLabel(`コメント ${MOCK_POST.comment_count} 件`);
+    await expect(commentChip).toBeVisible();
+
+    // コメント Chip をクリック → /posts/$postId#comments へ遷移する
+    await commentChip.click();
+    await expect(page).toHaveURL(`/posts/${MOCK_POST.id}#comments`);
+  },
+);
+
+test(
+  "UC-COMM-18: コミュニティ詳細の投稿一覧がフラットリスト（border 区切り）で表示される（#834）",
+  async ({ page }) => {
+    await mockUnauthenticated(page);
+    await mockCommunitiesApi(page);
+    await mockFeedApi(page);
+    await mockCommunityFeedApi(page, MOCK_COMMUNITY.slug);
+    await mockRecentWorkersApi(page, MOCK_COMMUNITY.slug);
+    await mockSubscriptionApi(page, MOCK_COMMUNITY.slug, false);
+
+    await page.goto(`/communities/${MOCK_COMMUNITY.slug}`);
+
+    // 投稿タイトルが表示されることを確認
+    await expect(page.getByRole("heading", { name: MOCK_POST.title })).toBeVisible();
+
+    // 投稿カードが variant="list" で描画されている（data-variant="list" 属性で確認）
+    const postCard = page.locator('[data-variant="list"]').first();
+    // toBeVisible() で描画完了を待ってから computed style を検証する
+    await expect(postCard).toBeVisible();
+
+    // フラットリストスタイル: border-bottom が適用されている（浮き上がりカードではない）
+    // 1 回の evaluate() でアトミックに取得する
+    const { borderBottomWidth, borderBottomStyle } = await postCard.evaluate((el) => {
+      const s = window.getComputedStyle(el);
+      return { borderBottomWidth: s.borderBottomWidth, borderBottomStyle: s.borderBottomStyle };
+    });
+    expect(borderBottomWidth).toBe("1px");
+    expect(borderBottomStyle).toBe("solid");
+  },
+);
+
+test.todo("UC-COMM-19: コミュニティ詳細の各投稿カードに共有ボタンが表示される（#838）");
 
 test.todo("UC-COMM-23: コミュニティフィードを無限スクロールで閲覧できる（#881）");
 
 test.todo("UC-COMM-24: モバイル幅でもコミュニティ概要（description）が表示される（#883）");
+
+test.todo("UC-COMM-26: 購読コミュニティの新着投稿に「New」ラベルが表示される（#935）");

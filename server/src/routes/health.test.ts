@@ -15,6 +15,15 @@ describe("GET /health (AC-1)", () => {
   });
 });
 
+describe("GET /api/health (AC-2: Cloud Scheduler warmup 用エンドポイント #925)", () => {
+  it("200 と { status: 'ok' } を返す", async () => {
+    const app = createApp(await createTestDeps());
+    const res = await request(app).get("/api/health");
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ status: "ok" });
+  });
+});
+
 describe("createHealthRouter（AC-2: 異常系）", () => {
   function buildApp(healthCheck?: () => Promise<void>) {
     const app = express();

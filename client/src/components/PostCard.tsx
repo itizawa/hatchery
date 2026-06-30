@@ -11,6 +11,7 @@ import { ShareButton } from "./ShareButton.js";
 import { MarkdownContent } from "./MarkdownContent.js";
 import type { VoteDirection } from "./VoteControl.js";
 import CommentRounded from "@mui/icons-material/CommentRounded";
+import { SLACK_COLORS } from "../theme.js";
 
 /** 投稿カードに表示する所属コミュニティの最小情報（#503）。 */
 export interface PostCardCommunity {
@@ -53,6 +54,8 @@ type PostCardProps =
       onCommunityClick?: () => void;
       /** コメント数 Chip クリック時のコールバック。指定時はクリック可能になる。 */
       onCommentClick?: () => void;
+      /** 購読コミュニティの前回訪問後に投稿された新着投稿を示すラベル（#935）。 */
+      isNew?: boolean;
       /**
        * ワーカー名・アバタークリック時のコールバック（#929）。指定時は AuthorByline をクリック可能にし、
        * ワーカープロフィールページへ遷移する RouterLink に切り替える。
@@ -158,6 +161,7 @@ export const PostCard = (props: PostCardProps): ReactElement => {
     onCommentClick,
     onWorkerClick,
     variant = "card",
+    isNew = false,
   } = props;
 
   // comment_count はサーバ集計値（#500）。未指定（後方互換）は 0 として扱う。
@@ -173,13 +177,29 @@ export const PostCard = (props: PostCardProps): ReactElement => {
 
   return (
     <Box sx={variant === "list" ? listBoxSx : cardBoxSx} data-variant={variant}>
-      <Typography
-        variant="h6"
-        component="h3"
-        sx={{ fontWeight: 600, mb: 0.5 }}
-      >
-        {post.title}
-      </Typography>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5, flexWrap: "wrap" }}>
+        <Typography
+          variant="h6"
+          component="h3"
+          sx={{ fontWeight: 600 }}
+        >
+          {post.title}
+        </Typography>
+        {isNew && (
+          <Chip
+            label="New"
+            size="small"
+            sx={{
+              bgcolor: SLACK_COLORS.blue,
+              color: "#fff",
+              fontWeight: 600,
+              height: 20,
+              borderRadius: "4px",
+              "& .MuiChip-label": { px: "6px", fontSize: "0.7rem" },
+            }}
+          />
+        )}
+      </Box>
       <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1, flexWrap: "wrap" }}>
         {community && <CommunityByline community={community} onClick={onCommunityClick} />}
         <AuthorByline author={post.author} authorWorker={post.author_worker} onWorkerClick={onWorkerClick} />

@@ -6,9 +6,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   BOT_WORKERS_QUERY_KEY,
+  WORKER_RANKING_QUERY_KEY,
   useBotWorkers,
   useUpdateWorker,
   useUploadWorkerImage,
+  useWorkerRanking,
 } from "./workers.js";
 
 // eslint-disable-next-line max-params
@@ -141,6 +143,67 @@ describe("useUpdateWorker (PATCH /api/workers/{id})", () => {
         });
       }),
     ).rejects.toThrow();
+  });
+});
+
+const mockWorkerRankingItem = {
+  worker_id: "worker-haru",
+  display_name: "haru",
+  view_count: 42,
+  vote_net_score: 10,
+  image_url: null,
+};
+
+describe("useWorkerRanking (GET /api/workers/ranking, useSuspenseQuery)", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("200 のとき WorkerRankingItem[] が data として解決される（data は undefined を取らない）", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(jsonResponse(200, { workers: [mockWorkerRankingItem] })),
+    );
+    const { wrapper } = createSuspenseWrapper();
+    const { result } = renderHook(() => useWorkerRanking(), { wrapper });
+
+    await waitFor(() => expect(result.current.data).toEqual([mockWorkerRankingItem]));
+  });
+
+  it("エラー応答のとき throw されて ErrorBoundary に捕捉される", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(500, { error: "Server Error" })));
+    const { wrapper, errors } = createSuspenseWrapper();
+    renderHook(() => useWorkerRanking(), { wrapper });
+
+    await waitFor(() => expect(errors.length).toBeGreaterThan(0));
+    expect(errors[0]).toBeInstanceOf(Error);
+  });
+
+  it("正しいエンドポイント GET /api/workers/ranking が呼ばれる", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse(200, { workers: [mockWorkerRankingItem] }));
+    vi.stubGlobal("fetch", fetchMock);
+    const { wrapper } = createSuspenseWrapper();
+    const { result } = renderHook(() => useWorkerRanking(), { wrapper });
+
+    await waitFor(() => expect(result.current.data).toBeDefined());
+    const request = fetchMock.mock.calls[0][0] as Request;
+    expect(request.url).toContain("/api/workers/ranking");
+    expect(request.method).toBe("GET");
+  });
+
+  it("WORKER_RANKING_QUERY_KEY が queryKey として使われる", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(jsonResponse(200, { workers: [mockWorkerRankingItem] })),
+    );
+    const { queryClient, wrapper } = createSuspenseWrapper();
+    const { result } = renderHook(() => useWorkerRanking(), { wrapper });
+
+    await waitFor(() => expect(result.current.data).toBeDefined());
+    const cached = queryClient.getQueryData(WORKER_RANKING_QUERY_KEY);
+    expect(cached).toEqual([mockWorkerRankingItem]);
   });
 });
 

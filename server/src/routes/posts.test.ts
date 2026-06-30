@@ -146,7 +146,7 @@ describe("GET /api/posts/:postId", () => {
     expect(res.body.comments[0].author_worker).toEqual({
       id: "uuid-ken",
       display_name: "ken",
-      image_url: expect.stringContaining("api.dicebear.com"),
+      image_url: expect.stringContaining("source.boringavatars.com"),
     });
   });
 

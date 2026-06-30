@@ -25,6 +25,7 @@ export function createSubscriptionsRouter({
             community_id: item.communityId,
             community_slug: item.communitySlug,
             unread_count: item.unreadCount,
+            last_viewed_at: item.lastViewedAt?.toISOString() ?? null,
           })),
         }),
       )

@@ -166,7 +166,7 @@ describe("CommentCard", () => {
       expect(screen.queryByText("uuid-ken")).not.toBeInTheDocument();
     });
 
-    it("image_url が null のとき DiceBear アバター画像と display_name を表示する (#884)", () => {
+    it("image_url が null のとき Boring Avatars アバター画像と display_name を表示する (#884)", () => {
       const comment = {
         ...mockComment,
         author: "uuid-mei",
@@ -175,7 +175,7 @@ describe("CommentCard", () => {
       render(<CommentCard comment={comment} onVote={vi.fn()} />);
       expect(screen.getByText("mei")).toBeInTheDocument();
       const img = screen.getByRole("img", { name: "mei" });
-      expect(img).toHaveAttribute("src", expect.stringContaining("api.dicebear.com"));
+      expect(img).toHaveAttribute("src", expect.stringContaining("source.boringavatars.com"));
     });
 
     it("author_worker が無いときは生の author 文字列を表示する（フォールバック・破綻しない）", () => {
@@ -228,6 +228,58 @@ describe("CommentCard", () => {
       render(<CommentCard loading />);
       expect(screen.queryByRole("button", { name: /up vote/i })).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: /down vote/i })).not.toBeInTheDocument();
+    });
+  });
+
+  describe("引用プレビュー（#931）", () => {
+    const mockParentComment = {
+      id: "parent-1",
+      community_id: "community-1",
+      post_id: "post-1",
+      slot_key: "2026-06-01-morning",
+      seq: 0,
+      author: "worker-bob",
+      text: "これは親コメントです",
+      score: 1,
+      created_at: "2026-06-01T09:00:00Z",
+    };
+
+    it("parentComment が渡されたとき引用プレビューが描画される", () => {
+      const { container } = render(
+        <CommentCard comment={mockComment} onVote={vi.fn()} parentComment={mockParentComment} />,
+      );
+      expect(container.querySelector('[data-testid="comment-quote-preview"]')).toBeInTheDocument();
+    });
+
+    it("parentComment が null のとき引用プレビューは描画されない", () => {
+      const { container } = render(
+        <CommentCard comment={mockComment} onVote={vi.fn()} parentComment={null} />,
+      );
+      expect(container.querySelector('[data-testid="comment-quote-preview"]')).not.toBeInTheDocument();
+    });
+
+    it("parentComment が未指定のとき引用プレビューは描画されない", () => {
+      const { container } = render(<CommentCard comment={mockComment} onVote={vi.fn()} />);
+      expect(container.querySelector('[data-testid="comment-quote-preview"]')).not.toBeInTheDocument();
+    });
+
+    it("親コメントのテキストが 40 文字以内のときそのまま表示される", () => {
+      render(<CommentCard comment={mockComment} onVote={vi.fn()} parentComment={mockParentComment} />);
+      expect(screen.getByTestId("comment-quote-preview")).toHaveTextContent("これは親コメントです");
+    });
+
+    it("親コメントのテキストが 41 文字以上のとき 40 文字 + '…' に切り詰められる", () => {
+      const longParent = { ...mockParentComment, text: "あ".repeat(50) };
+      render(<CommentCard comment={mockComment} onVote={vi.fn()} parentComment={longParent} />);
+      expect(screen.getByTestId("comment-quote-preview")).toHaveTextContent("あ".repeat(40) + "…");
+    });
+
+    it("引用プレビューは href='#comment-<parentId>' を持つ", () => {
+      const { container } = render(
+        <CommentCard comment={mockComment} onVote={vi.fn()} parentComment={mockParentComment} />,
+      );
+      const link = container.querySelector('[data-testid="comment-quote-preview"] a');
+      expect(link).toHaveAttribute("href", `#comment-${mockParentComment.id}`);
     });
   });
 

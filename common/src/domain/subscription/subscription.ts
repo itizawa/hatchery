@@ -25,6 +25,7 @@ export const UnreadCountItemSchema = z.object({
   community_id: z.string().min(1),
   community_slug: z.string().min(1),
   unread_count: z.number().int().min(0),
+  last_viewed_at: z.string().nullable(),
 });
 
 export type UnreadCountItem = z.infer<typeof UnreadCountItemSchema>;

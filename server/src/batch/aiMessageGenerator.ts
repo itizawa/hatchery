@@ -31,12 +31,6 @@ export type ConversationGenerator = (
 export type SummaryGenerator = (prompt: string, apiKey: string) => Promise<string>;
 
 /**
- * あらすじ生成に使う Claude モデル（#53）。
- * 会話生成のモデルは #389 AC1 で env から切替可能になったため、ここはあらすじ専用の固定値。
- */
-const SUMMARY_MODEL: BatchModel = "claude-sonnet-4-6";
-
-/**
  * 会話生成の max_tokens（複数 post/comment の掛け合いを 1 コールで生成するため広めに取る）。
  * #401 で max_tokens 不足による会話 JSON の切り詰めを修正済み。切り詰め回避のため大きめに保つ。
  */
@@ -100,17 +94,26 @@ export function createClaudeConversationGenerator(model: BatchModel): Conversati
 export const generateConversationWithClaude: ConversationGenerator =
   createClaudeConversationGenerator(DEFAULT_BATCH_MODEL);
 
-/** Claude であらすじを生成する既定実装（#53）。 */
-// eslint-disable-next-line max-params
-export const generateSummaryWithClaude: SummaryGenerator = async (prompt, apiKey) => {
-  const result = await callClaudeText({
-    client: new Anthropic({ apiKey }),
-    prompt,
-    model: SUMMARY_MODEL,
-    maxTokens: SUMMARY_MAX_TOKENS,
-  });
-  return result.text;
-};
+/**
+ * 指定したモデルであらすじを生成する SummaryGenerator を作る（#940）。
+ * 会話生成の createClaudeConversationGenerator と対称的なパターンで、
+ * モデルを BATCH_MODEL 環境変数から注入できるようにする。
+ */
+export function createSummaryGenerator(model: BatchModel): SummaryGenerator {
+  // eslint-disable-next-line max-params
+  return async (prompt, apiKey) => {
+    const result = await callClaudeText({
+      client: new Anthropic({ apiKey }),
+      prompt,
+      model,
+      maxTokens: SUMMARY_MAX_TOKENS,
+    });
+    return result.text;
+  };
+}
+
+/** Claude であらすじを生成する既定実装（既定モデル = DEFAULT_BATCH_MODEL・#53 / #940）。 */
+export const generateSummaryWithClaude: SummaryGenerator = createSummaryGenerator(DEFAULT_BATCH_MODEL);
 
 /**
  * Batches API 経路の ConversationGenerator を作る依存（#389 AC3・DI でテスト可能にする）。

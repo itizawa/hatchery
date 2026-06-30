@@ -6,6 +6,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import {
   createBatchConversationGenerator,
   createClaudeConversationGenerator,
+  createSummaryGenerator,
   generateConversationWithClaude,
   generateSummaryWithClaude,
 } from "./aiMessageGenerator.js";
@@ -115,6 +116,37 @@ describe("aiMessageGenerator (#401)", () => {
       expect(mockCreate).toHaveBeenCalledOnce();
       const callArgs = mockCreate.mock.calls[0][0] as { max_tokens: number };
       expect(callArgs.max_tokens).toBe(512);
+    });
+
+    it("デフォルトモデル（claude-sonnet-4-6）で messages.create を呼ぶ", async () => {
+      mockCreate.mockResolvedValue(makeMessage("end_turn", "summary text"));
+
+      await generateSummaryWithClaude("test prompt", "api-key");
+
+      const callArgs = mockCreate.mock.calls[0][0] as { model: string };
+      expect(callArgs.model).toBe("claude-sonnet-4-6");
+    });
+  });
+
+  describe("createSummaryGenerator", () => {
+    it("指定したモデルで messages.create を呼ぶ（claude-haiku-4-5）", async () => {
+      mockCreate.mockResolvedValue(makeMessage("end_turn", "summary text"));
+
+      const generate = createSummaryGenerator("claude-haiku-4-5");
+      await generate("test prompt", "api-key");
+
+      const callArgs = mockCreate.mock.calls[0][0] as { model: string; max_tokens: number };
+      expect(callArgs.model).toBe("claude-haiku-4-5");
+      expect(callArgs.max_tokens).toBe(512);
+    });
+
+    it("生成テキストを文字列で返す", async () => {
+      mockCreate.mockResolvedValue(makeMessage("end_turn", "generated summary"));
+
+      const generate = createSummaryGenerator("claude-haiku-4-5");
+      const result = await generate("test prompt", "api-key");
+
+      expect(result).toBe("generated summary");
     });
   });
 

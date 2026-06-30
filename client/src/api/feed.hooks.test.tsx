@@ -35,17 +35,42 @@ function createWrapper({ authUser }: { authUser: { id: string } | null }) {
   };
 }
 
+/** Node.js 26 の実験的 localStorage は --localstorage-file 未指定で undefined になるため
+ * テスト用のインメモリ実装で置き換える。jsdom の Storage API と同等の動作をする。 */
+function createLocalStorageMock() {
+  let store: Record<string, string> = {};
+  return {
+    getItem: (key: string) => store[key] ?? null,
+    // eslint-disable-next-line max-params
+    setItem: (key: string, value: string) => {
+      store[key] = value;
+    },
+    removeItem: (key: string) => {
+      delete store[key];
+    },
+    clear: () => {
+      store = {};
+    },
+    get length() {
+      return Object.keys(store).length;
+    },
+    key: (index: number) => Object.keys(store)[index] ?? null,
+  };
+}
+
 describe("useInfiniteCommunityFeed — sessionId 注入テスト (#945)", () => {
   let fetchMock: ReturnType<typeof vi.fn>;
+  const localStorageMock = createLocalStorageMock();
 
   beforeEach(() => {
+    localStorageMock.clear();
+    vi.stubGlobal("localStorage", localStorageMock);
     fetchMock = vi.fn().mockResolvedValue(jsonResponse({ status: 200, body: mockFeedResponse }));
     vi.stubGlobal("fetch", fetchMock);
   });
 
   afterEach(() => {
     vi.unstubAllGlobals();
-    localStorage.clear();
   });
 
   it("未認証時に guestId（localStorage 由来）が sessionId として URL に含まれる", async () => {
@@ -75,15 +100,17 @@ describe("useInfiniteCommunityFeed — sessionId 注入テスト (#945)", () => 
 
 describe("useInfiniteHomeFeed — sessionId 注入テスト (#945)", () => {
   let fetchMock: ReturnType<typeof vi.fn>;
+  const localStorageMock = createLocalStorageMock();
 
   beforeEach(() => {
+    localStorageMock.clear();
+    vi.stubGlobal("localStorage", localStorageMock);
     fetchMock = vi.fn().mockResolvedValue(jsonResponse({ status: 200, body: mockFeedResponse }));
     vi.stubGlobal("fetch", fetchMock);
   });
 
   afterEach(() => {
     vi.unstubAllGlobals();
-    localStorage.clear();
   });
 
   it("未認証時に guestId が sessionId として URL に含まれる", async () => {

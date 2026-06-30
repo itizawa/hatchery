@@ -83,7 +83,7 @@ describe("useInfiniteCommunityFeed — sessionId 注入テスト (#945)", () => 
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
 
     const request = fetchMock.mock.calls[0][0] as Request;
-    expect(request.url).toContain(`sessionId=${guestId}`);
+    expect(new URL(request.url).searchParams.get("sessionId")).toBe(guestId);
   });
 
   it("認証済み時に userId が sessionId として URL に含まれる", async () => {
@@ -94,7 +94,7 @@ describe("useInfiniteCommunityFeed — sessionId 注入テスト (#945)", () => 
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
 
     const request = fetchMock.mock.calls[0][0] as Request;
-    expect(request.url).toContain(`sessionId=${userId}`);
+    expect(new URL(request.url).searchParams.get("sessionId")).toBe(userId);
   });
 });
 
@@ -123,7 +123,7 @@ describe("useInfiniteHomeFeed — sessionId 注入テスト (#945)", () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
 
     const request = fetchMock.mock.calls[0][0] as Request;
-    expect(request.url).toContain(`sessionId=${guestId}`);
+    expect(new URL(request.url).searchParams.get("sessionId")).toBe(guestId);
   });
 
   it("認証済み時に userId が sessionId として URL に含まれる", async () => {
@@ -134,6 +134,6 @@ describe("useInfiniteHomeFeed — sessionId 注入テスト (#945)", () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
 
     const request = fetchMock.mock.calls[0][0] as Request;
-    expect(request.url).toContain(`sessionId=${userId}`);
+    expect(new URL(request.url).searchParams.get("sessionId")).toBe(userId);
   });
 });

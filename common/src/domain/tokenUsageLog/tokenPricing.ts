@@ -1,6 +1,7 @@
 /**
- * シーン生成バッチで許可する Claude モデル。
- * server の ALLOWED_BATCH_MODELS と同一リスト。common に置くことで MODEL_PRICING の型安全を保証する。
+ * シーン生成バッチで許可する Claude モデルの公式リスト（正本）。
+ * server は @hatchery/common から import して再エクスポートする。
+ * common に置くことで MODEL_PRICING の型安全を satisfies で保証する。
  */
 export const ALLOWED_BATCH_MODELS = ["claude-sonnet-4-6", "claude-haiku-4-5"] as const;
 

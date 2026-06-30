@@ -8,6 +8,10 @@ describe("ALLOWED_BATCH_MODELS", () => {
       expect(MODEL_PRICING).toHaveProperty(model);
     }
   });
+
+  it("MODEL_PRICING のキーが ALLOWED_BATCH_MODELS と完全一致する（余剰エントリなし）", () => {
+    expect(Object.keys(MODEL_PRICING).sort()).toEqual([...ALLOWED_BATCH_MODELS].sort());
+  });
 });
 
 describe("MODEL_PRICING", () => {

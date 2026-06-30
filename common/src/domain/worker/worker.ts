@@ -97,15 +97,15 @@ export const createDisplayNameResolver = (
   return (workerId: string): string => displayNameById.get(workerId) ?? workerId;
 };
 
-const DICEBEAR_BASE_URL = "https://api.dicebear.com/9.x/bottts-neutral/svg";
+const BORING_AVATARS_BASE_URL = "https://source.boringavatars.com/beam/40";
 
-/** ワーカー ID をシードとした DiceBear 自動生成アバター URL を返す（#884）。 */
+/** ワーカー ID をシードとした Boring Avatars beam スタイルのアバター URL を返す（#959）。 */
 export function generateWorkerAvatarUrl({ id }: { id: string }): string {
-  return `${DICEBEAR_BASE_URL}?seed=${encodeURIComponent(id)}`;
+  return `${BORING_AVATARS_BASE_URL}/${encodeURIComponent(id)}`;
 }
 
 /**
- * imageUrl が設定されていればそれを返し、未設定なら DiceBear 自動生成 URL を返す（#884）。
+ * imageUrl が設定されていればそれを返し、未設定なら Boring Avatars 自動生成 URL を返す（#884）。
  * 画面表示で Avatar の src に渡す単一情報源として使う。
  */
 export function resolveWorkerImageUrl({ id, imageUrl }: { id: string; imageUrl?: string | null }): string {

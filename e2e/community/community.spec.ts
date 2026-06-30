@@ -571,8 +571,48 @@ test(
   },
 );
 
-test.todo(
+test(
   "UC-COMM-16: vote ミューテーション進行中はコミュニティフィードの vote ボタンが disabled になる（#748）",
+  async ({ page }) => {
+    const MOCK_POST_VOTE = { ...MOCK_POST, my_vote: null as "up" | "down" | null };
+
+    await mockAuthenticated(page);
+    await mockCommunitiesApi(page);
+    await mockFeedApi(page);
+    await mockCommunityFeedApi(page, MOCK_COMMUNITY.slug, [MOCK_POST_VOTE]);
+    await mockRecentWorkersApi(page, MOCK_COMMUNITY.slug);
+    await mockSubscriptionApi(page, MOCK_COMMUNITY.slug, false);
+
+    // vote API レスポンスを保留して mutation 進行中状態を再現する
+    let resolveVote!: () => void;
+    await page.route("**/api/posts/*/vote", async (route) => {
+      await new Promise<void>((resolve) => {
+        resolveVote = resolve;
+      });
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ...MOCK_POST_VOTE, score: 4, my_vote: "up" }),
+      });
+    });
+
+    await page.goto(`/communities/${MOCK_COMMUNITY.slug}`);
+    await expect(page.getByRole("heading", { name: MOCK_POST.title })).toBeVisible();
+
+    const upVoteButton = page.getByRole("button", { name: "up vote" }).first();
+
+    // route handler が実行され resolveVote が代入されるのを確実に待つ
+    const voteRequestPromise = page.waitForRequest("**/api/posts/*/vote");
+    await upVoteButton.click();
+    await voteRequestPromise;
+
+    // ミューテーション進行中: up vote ボタンが disabled になる
+    await expect(upVoteButton).toBeDisabled();
+
+    // ミューテーション完了後: ボタンが再度有効化される
+    resolveVote();
+    await expect(upVoteButton).not.toBeDisabled();
+  },
 );
 
 test(

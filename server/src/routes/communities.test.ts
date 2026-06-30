@@ -6,6 +6,7 @@ import { createInMemoryCommunityRepository } from "../persistence/communityRepos
 import type { CommunityRecord } from "../persistence/communityRepository.js";
 import { createInMemoryPostRepository } from "../persistence/postRepository.js";
 import { createInMemorySubscriptionRepository } from "../persistence/subscriptionRepository.js";
+import { createInMemoryVoteRepository } from "../persistence/voteRepository.js";
 import { createInMemoryWorkerRepository } from "../persistence/workerRepository.js";
 import { createTestDeps } from "../testing/createTestDeps.js";
 
@@ -621,5 +622,82 @@ describe("PATCH /api/communities/:slug/mark-viewed", () => {
 
     const res = await request(app).patch("/api/communities/technology/mark-viewed");
     expect(res.status).toBe(401);
+  });
+});
+
+describe("GET /api/communities/:slug/feed my_vote 付与（#831）", () => {
+  it("sessionId を付与すると投票済み post に my_vote が付く", async () => {
+    const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
+    const postRepo = createInMemoryPostRepository();
+    const [post] = await postRepo.createMany("community-1", [
+      { slotKey: "s", seq: 0, author: "w", title: "P", text: "t" },
+    ]);
+    const voteRepo = createInMemoryVoteRepository();
+    await voteRepo.vote({ sessionId: "00000000-0000-0000-0000-000000000001", userId: null, targetType: "post", targetId: post.id, direction: "up" });
+
+    const deps = await createTestDeps({
+      communityRepository: communityRepo,
+      postRepository: postRepo,
+      voteRepository: voteRepo,
+    });
+    const app = createApp(deps);
+
+    const res = await request(app).get("/api/communities/technology/feed?sessionId=00000000-0000-0000-0000-000000000001");
+    expect(res.status).toBe(200);
+    expect(res.body.posts[0].my_vote).toBe("up");
+  });
+
+  it("sessionId を付与しても未投票 post には my_vote が付かない", async () => {
+    const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
+    const postRepo = createInMemoryPostRepository();
+    await postRepo.createMany("community-1", [
+      { slotKey: "s", seq: 0, author: "w", title: "P", text: "t" },
+    ]);
+
+    const deps = await createTestDeps({
+      communityRepository: communityRepo,
+      postRepository: postRepo,
+    });
+    const app = createApp(deps);
+
+    const res = await request(app).get("/api/communities/technology/feed?sessionId=00000000-0000-0000-0000-000000000002");
+    expect(res.status).toBe(200);
+    expect(res.body.posts[0]).not.toHaveProperty("my_vote");
+  });
+
+  it("sessionId 未指定のときは my_vote を含まない（後方互換）", async () => {
+    const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
+    const postRepo = createInMemoryPostRepository();
+    await postRepo.createMany("community-1", [
+      { slotKey: "s", seq: 0, author: "w", title: "P", text: "t" },
+    ]);
+
+    const deps = await createTestDeps({
+      communityRepository: communityRepo,
+      postRepository: postRepo,
+    });
+    const app = createApp(deps);
+
+    const res = await request(app).get("/api/communities/technology/feed");
+    expect(res.status).toBe(200);
+    expect(res.body.posts[0]).not.toHaveProperty("my_vote");
+  });
+
+  it("不正な sessionId（UUID でない値）のときは my_vote を含まない", async () => {
+    const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
+    const postRepo = createInMemoryPostRepository();
+    await postRepo.createMany("community-1", [
+      { slotKey: "s", seq: 0, author: "w", title: "P", text: "t" },
+    ]);
+
+    const deps = await createTestDeps({
+      communityRepository: communityRepo,
+      postRepository: postRepo,
+    });
+    const app = createApp(deps);
+
+    const res = await request(app).get("/api/communities/technology/feed?sessionId=not-a-uuid");
+    expect(res.status).toBe(200);
+    expect(res.body.posts[0]).not.toHaveProperty("my_vote");
   });
 });

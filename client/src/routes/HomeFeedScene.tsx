@@ -1,7 +1,10 @@
 import { Box, Button, Typography } from "../components/uiParts";
 import type { HomeFeedSort } from "@hatchery/common";
 import { Link as RouterLink, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, type ReactElement } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
+
+/** localStorage キー: 初回訪問フラグ（#932）。 */
+const HATCHERY_VISITED_KEY = "hatchery_visited";
 
 import { useInfiniteHomeFeed, usePublicCommunities, useVotePost } from "../api/communities.js";
 import { useRecentPostsSidebar } from "../api/feed.js";
@@ -94,9 +97,17 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
     return () => observer.disconnect();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
+  const [hasVisited] = useState(() => localStorage.getItem(HATCHERY_VISITED_KEY) === "true");
+
   const posts = data.pages.flatMap((page) => page.posts);
   const hasPosts = posts.length > 0;
-  const showWelcome = !user || !hasPosts;
+  const showWelcome = !hasPosts || (!user && !hasVisited);
+
+  useEffect(() => {
+    if (showWelcome && !user && !hasVisited) {
+      localStorage.setItem(HATCHERY_VISITED_KEY, "true");
+    }
+  }, [showWelcome, user, hasVisited]);
 
   return (
     <Box component="section" sx={{ p: 3, maxWidth: 1200, mx: "auto" }}>

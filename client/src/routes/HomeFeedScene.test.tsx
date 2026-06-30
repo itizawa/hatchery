@@ -492,10 +492,12 @@ describe("HomeFeedScene — ようこそ演出（#482）", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
+    localStorage.clear();
   });
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    localStorage.clear();
   });
 
   it("未認証 + 投稿なし → ようこそセクションが表示される", async () => {
@@ -752,5 +754,63 @@ describe("HomeFeedScene — IntersectionObserver 無限スクロール（sentine
       return url.includes("/api/feed") && url.includes("cursor=");
     });
     expect(cursorCalls.length).toBe(1);
+  });
+});
+
+describe("HomeFeedScene — ゲスト初回/再訪問でのようこそ演出切り替え（#932）", () => {
+  const post = {
+    id: "post-1",
+    community_id: "c-1",
+    slot_key: "2026-06-10-morning",
+    seq: 1,
+    author: "worker-haru",
+    title: "再訪テスト投稿",
+    text: "内容",
+    score: 0,
+    created_at: "2026-06-10T00:00:00Z",
+  };
+
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    localStorage.clear();
+  });
+
+  it("初回訪問ゲスト（hatchery_visited なし）は投稿があっても WelcomeSection が表示される", async () => {
+    stubFetch({ authenticated: false, feedPosts: [post] });
+    renderApp("/");
+
+    expect(await screen.findByRole("heading", { name: /Hatchery へようこそ/ })).toBeInTheDocument();
+    expect((await screen.findAllByText("再訪テスト投稿"))[0]).toBeInTheDocument();
+  });
+
+  it("再訪問ゲスト（hatchery_visited=true）は投稿がある場合 WelcomeSection が表示されない", async () => {
+    localStorage.setItem("hatchery_visited", "true");
+    stubFetch({ authenticated: false, feedPosts: [post] });
+    renderApp("/");
+
+    expect((await screen.findAllByText("再訪テスト投稿"))[0]).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /Hatchery へようこそ/ })).not.toBeInTheDocument();
+  });
+
+  it("再訪問ゲスト（hatchery_visited=true）でも投稿が 0 件のときは WelcomeSection が表示される", async () => {
+    localStorage.setItem("hatchery_visited", "true");
+    stubFetch({ authenticated: false, feedPosts: [] });
+    renderApp("/");
+
+    expect(await screen.findByRole("heading", { name: /Hatchery へようこそ/ })).toBeInTheDocument();
+  });
+
+  it("WelcomeSection が表示されたとき localStorage に hatchery_visited が保存される", async () => {
+    expect(localStorage.getItem("hatchery_visited")).toBeNull();
+    stubFetch({ authenticated: false, feedPosts: [post] });
+    renderApp("/");
+
+    expect(await screen.findByRole("heading", { name: /Hatchery へようこそ/ })).toBeInTheDocument();
+    expect(localStorage.getItem("hatchery_visited")).toBe("true");
   });
 });

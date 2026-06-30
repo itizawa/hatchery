@@ -373,22 +373,22 @@ describe("GET /api/workers/ranking（ワーカーランキング・#665）", () 
     // recordPostView("workerId", sessionId) で view_count を注入する
     // eslint-disable-next-line max-params
     const viewRepo = createInMemoryViewRepository((_type, targetId) => targetId);
-    await viewRepo.recordPostView("w-low", "s1");
-    await viewRepo.recordPostView("w-high", "s1");
-    await viewRepo.recordPostView("w-high", "s2");
-    await viewRepo.recordPostView("w-high", "s3");
-    await viewRepo.recordPostView("w-high", "s4");
-    await viewRepo.recordPostView("w-high", "s5");
-    await viewRepo.recordPostView("w-high", "s6");
-    await viewRepo.recordPostView("w-high", "s7");
-    await viewRepo.recordPostView("w-high", "s8");
-    await viewRepo.recordPostView("w-high", "s9");
-    await viewRepo.recordPostView("w-high", "s10");
-    await viewRepo.recordPostView("w-mid", "s1");
-    await viewRepo.recordPostView("w-mid", "s2");
-    await viewRepo.recordPostView("w-mid", "s3");
-    await viewRepo.recordPostView("w-mid", "s4");
-    await viewRepo.recordPostView("w-mid", "s5");
+    await viewRepo.recordPostView("w-low", "s1", null);
+    await viewRepo.recordPostView("w-high", "s1", null);
+    await viewRepo.recordPostView("w-high", "s2", null);
+    await viewRepo.recordPostView("w-high", "s3", null);
+    await viewRepo.recordPostView("w-high", "s4", null);
+    await viewRepo.recordPostView("w-high", "s5", null);
+    await viewRepo.recordPostView("w-high", "s6", null);
+    await viewRepo.recordPostView("w-high", "s7", null);
+    await viewRepo.recordPostView("w-high", "s8", null);
+    await viewRepo.recordPostView("w-high", "s9", null);
+    await viewRepo.recordPostView("w-high", "s10", null);
+    await viewRepo.recordPostView("w-mid", "s1", null);
+    await viewRepo.recordPostView("w-mid", "s2", null);
+    await viewRepo.recordPostView("w-mid", "s3", null);
+    await viewRepo.recordPostView("w-mid", "s4", null);
+    await viewRepo.recordPostView("w-mid", "s5", null);
     const voteRepo = createInMemoryVoteRepository();
     const deps = await createTestDeps({ workerRepository: workerRepo, viewRepository: viewRepo, voteRepository: voteRepo });
     const app = createApp(deps);
@@ -411,10 +411,10 @@ describe("GET /api/workers/ranking（ワーカーランキング・#665）", () 
     // view_count は両方 2 で同数にする
     // eslint-disable-next-line max-params
     const viewRepo = createInMemoryViewRepository((_type, targetId) => targetId);
-    await viewRepo.recordPostView("w-lowscore", "s1");
-    await viewRepo.recordPostView("w-lowscore", "s2");
-    await viewRepo.recordPostView("w-highscore", "s1");
-    await viewRepo.recordPostView("w-highscore", "s2");
+    await viewRepo.recordPostView("w-lowscore", "s1", null);
+    await viewRepo.recordPostView("w-lowscore", "s2", null);
+    await viewRepo.recordPostView("w-highscore", "s1", null);
+    await viewRepo.recordPostView("w-highscore", "s2", null);
     // in-memory の netScoresByWorkerSince は targetId をそのまま workerId として扱う
     const voteRepo = createInMemoryVoteRepository();
     await voteRepo.vote({ sessionId: "v1", userId: null, targetType: "post", targetId: "w-lowscore", direction: "up" });

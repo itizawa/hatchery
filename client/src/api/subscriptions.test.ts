@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { subscribeCommunity, unsubscribeCommunity, fetchUnreadCounts, markCommunityViewed } from "./subscriptions.js";
+import { subscribeCommunity, unsubscribeCommunity, fetchSubscriptionStatus, fetchUnreadCounts, markCommunityViewed } from "./subscriptions.js";
 
 /** JSON ボディを持つ Response を組み立てる小ヘルパ。 */
 // eslint-disable-next-line max-params
@@ -77,6 +77,49 @@ describe("fetchUnreadCounts (GET /api/subscriptions/unread-counts)", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(fetchUnreadCounts()).rejects.toThrow();
+  });
+});
+
+describe("fetchSubscriptionStatus (GET /api/communities/{slug}/subscription)", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("200 + { subscribed: true } のとき { subscribed: true } を返す", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, { subscribed: true }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await fetchSubscriptionStatus("ai-dev");
+    expect(result).toEqual({ subscribed: true });
+  });
+
+  it("200 + { subscribed: false } のとき { subscribed: false } を返す", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, { subscribed: false }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await fetchSubscriptionStatus("ai-dev");
+    expect(result).toEqual({ subscribed: false });
+  });
+
+  it("4xx のとき例外を throw する", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 401 })));
+
+    await expect(fetchSubscriptionStatus("ai-dev")).rejects.toThrow();
+  });
+
+  it("5xx のとき例外を throw する", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 500 })));
+
+    await expect(fetchSubscriptionStatus("ai-dev")).rejects.toThrow();
+  });
+
+  it("slug に特殊文字が含まれる場合 URL に encodeURIComponent が適用される", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, { subscribed: false }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await fetchSubscriptionStatus("スラッグ/test");
+    const calledUrl = fetchMock.mock.calls[0][0] as string;
+    expect(calledUrl).toContain(encodeURIComponent("スラッグ/test"));
   });
 });
 

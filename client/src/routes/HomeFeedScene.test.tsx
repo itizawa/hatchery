@@ -674,8 +674,7 @@ describe("HomeFeedScene — IntersectionObserver 無限スクロール（sentine
 
     observerCallback!([{ isIntersecting: true } as IntersectionObserverEntry]);
 
-    await new Promise<void>((resolve) => setTimeout(resolve, 100));
-
+    // The callback checks hasNextPage synchronously; no timing delay needed.
     const countAfter = fetchMock.mock.calls.filter((args: unknown[]) => {
       const url = args[0] instanceof Request ? args[0].url : String(args[0]);
       return url.includes("/api/feed") && url.includes("cursor=");
@@ -722,8 +721,15 @@ describe("HomeFeedScene — IntersectionObserver 無限スクロール（sentine
     // 1回目の intersect → fetchNextPage 開始（isFetchingNextPage=true）
     observerCallback!([{ isIntersecting: true } as IntersectionObserverEntry]);
 
-    // React が isFetchingNextPage=true で re-render し新しい IntersectionObserver を作成するまで待つ
+    // Wait until the cursor fetch has started AND a new IO has been created.
+    // Checking both together ensures observerCallback captures isFetchingNextPage=true,
+    // guarding against an intermediate re-render that could install a stale closure.
     await waitFor(() => {
+      const started = fetchMock.mock.calls.filter((args: unknown[]) => {
+        const url = args[0] instanceof Request ? args[0].url : String(args[0]);
+        return url.includes("/api/feed") && url.includes("cursor=");
+      });
+      expect(started.length).toBeGreaterThan(0);
       expect(MockIO.mock.calls.length).toBeGreaterThan(ioCallsBefore);
     });
 

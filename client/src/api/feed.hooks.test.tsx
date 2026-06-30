@@ -10,8 +10,7 @@ import { useInfiniteCommunityFeed, useInfiniteHomeFeed } from "./feed.js";
 const GUEST_ID_KEY = "hatchery:guestId";
 
 /** JSON ボディを持つ Response を組み立てる小ヘルパ。 */
-// eslint-disable-next-line max-params
-function jsonResponse(status: number, body?: unknown): Response {
+function jsonResponse({ status, body }: { status: number; body?: unknown }): Response {
   return new Response(body === undefined ? null : JSON.stringify(body), {
     status,
     headers: { "Content-Type": "application/json" },
@@ -39,7 +38,7 @@ describe("useInfiniteCommunityFeed — sessionId 注入テスト (#945)", () => 
   let fetchMock: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
-    fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, mockFeedResponse));
+    fetchMock = vi.fn().mockResolvedValue(jsonResponse({ status: 200, body: mockFeedResponse }));
     vi.stubGlobal("fetch", fetchMock);
   });
 
@@ -77,7 +76,7 @@ describe("useInfiniteHomeFeed — sessionId 注入テスト (#945)", () => {
   let fetchMock: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
-    fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, mockFeedResponse));
+    fetchMock = vi.fn().mockResolvedValue(jsonResponse({ status: 200, body: mockFeedResponse }));
     vi.stubGlobal("fetch", fetchMock);
   });
 

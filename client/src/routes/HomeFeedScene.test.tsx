@@ -569,3 +569,182 @@ describe("HomeFeedScene — ようこそ演出（#482）", () => {
     expect((await screen.findAllByText("ゲスト閲覧テスト投稿"))[0]).toBeInTheDocument();
   });
 });
+
+describe("HomeFeedScene — IntersectionObserver 無限スクロール（sentinelRef）(#944)", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const buildPost = ({ id, title }: { id: string; title: string }) => ({
+    id,
+    title,
+    community_id: "community-1",
+    slot_key: "2026-06-10-morning",
+    seq: 1,
+    author: "worker-haru",
+    text: "内容",
+    score: 0,
+    created_at: "2026-06-10T00:00:00Z",
+  });
+
+  it("hasNextPage=true かつ番兵要素が intersect するとき fetchNextPage が呼ばれる（#944）", async () => {
+    let observerCallback: ((entries: IntersectionObserverEntry[]) => void) | null = null;
+    vi.stubGlobal(
+      "IntersectionObserver",
+      vi.fn((cb: (entries: IntersectionObserverEntry[]) => void) => {
+        observerCallback = cb;
+        return { observe: vi.fn(), disconnect: vi.fn() };
+      }),
+    );
+
+    const fetchMock = vi.fn().mockImplementation((input: RequestInfo | URL) => {
+      const url = input instanceof Request ? input.url : String(input);
+      if (url.includes("/auth/me")) return Promise.resolve(new Response(null, { status: 401 }));
+      if (url.includes("/api/feed")) {
+        const isNextPage = url.includes("cursor=");
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              posts: [buildPost({ id: isNextPage ? "post-2" : "post-1", title: isNextPage ? "2ページ目" : "1ページ目の投稿" })],
+              nextCursor: isNextPage ? null : "cursor1",
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          ),
+        );
+      }
+      return Promise.resolve(
+        new Response(JSON.stringify([]), { status: 200, headers: { "Content-Type": "application/json" } }),
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderApp("/");
+    await screen.findAllByText("1ページ目の投稿");
+    expect(observerCallback).not.toBeNull();
+
+    observerCallback!([{ isIntersecting: true } as IntersectionObserverEntry]);
+
+    await waitFor(() => {
+      const cursorCalls = fetchMock.mock.calls.filter((args: unknown[]) => {
+        const url = args[0] instanceof Request ? args[0].url : String(args[0]);
+        return url.includes("/api/feed") && url.includes("cursor=");
+      });
+      expect(cursorCalls.length).toBeGreaterThan(0);
+    });
+  });
+
+  it("hasNextPage=false のとき番兵要素が intersect しても fetchNextPage が呼ばれない（#944）", async () => {
+    let observerCallback: ((entries: IntersectionObserverEntry[]) => void) | null = null;
+    vi.stubGlobal(
+      "IntersectionObserver",
+      vi.fn((cb: (entries: IntersectionObserverEntry[]) => void) => {
+        observerCallback = cb;
+        return { observe: vi.fn(), disconnect: vi.fn() };
+      }),
+    );
+
+    const fetchMock = vi.fn().mockImplementation((input: RequestInfo | URL) => {
+      const url = input instanceof Request ? input.url : String(input);
+      if (url.includes("/auth/me")) return Promise.resolve(new Response(null, { status: 401 }));
+      if (url.includes("/api/feed")) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({ posts: [buildPost({ id: "post-1", title: "最終ページの投稿" })], nextCursor: null }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          ),
+        );
+      }
+      return Promise.resolve(
+        new Response(JSON.stringify([]), { status: 200, headers: { "Content-Type": "application/json" } }),
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderApp("/");
+    await screen.findAllByText("最終ページの投稿");
+
+    const countBefore = fetchMock.mock.calls.filter((args: unknown[]) => {
+      const url = args[0] instanceof Request ? args[0].url : String(args[0]);
+      return url.includes("/api/feed") && url.includes("cursor=");
+    }).length;
+
+    observerCallback!([{ isIntersecting: true } as IntersectionObserverEntry]);
+
+    await new Promise<void>((resolve) => setTimeout(resolve, 100));
+
+    const countAfter = fetchMock.mock.calls.filter((args: unknown[]) => {
+      const url = args[0] instanceof Request ? args[0].url : String(args[0]);
+      return url.includes("/api/feed") && url.includes("cursor=");
+    }).length;
+
+    expect(countAfter).toBe(countBefore);
+  });
+
+  it("isFetchingNextPage=true のとき番兵要素が intersect しても重複 fetch しない（#944）", async () => {
+    let observerCallback: ((entries: IntersectionObserverEntry[]) => void) | null = null;
+    const MockIO = vi.fn((cb: (entries: IntersectionObserverEntry[]) => void) => {
+      observerCallback = cb;
+      return { observe: vi.fn(), disconnect: vi.fn() };
+    });
+    vi.stubGlobal("IntersectionObserver", MockIO);
+
+    let resolveSecondPage: ((v: Response) => void) | null = null;
+    const fetchMock = vi.fn().mockImplementation((input: RequestInfo | URL) => {
+      const url = input instanceof Request ? input.url : String(input);
+      if (url.includes("/auth/me")) return Promise.resolve(new Response(null, { status: 401 }));
+      if (url.includes("/api/feed")) {
+        if (url.includes("cursor=")) {
+          return new Promise<Response>((resolve) => {
+            resolveSecondPage = resolve;
+          });
+        }
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({ posts: [buildPost({ id: "post-1", title: "1ページ目" })], nextCursor: "cursor1" }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          ),
+        );
+      }
+      return Promise.resolve(
+        new Response(JSON.stringify([]), { status: 200, headers: { "Content-Type": "application/json" } }),
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderApp("/");
+    await screen.findAllByText("1ページ目");
+    const ioCallsBefore = MockIO.mock.calls.length;
+
+    // 1回目の intersect → fetchNextPage 開始（isFetchingNextPage=true）
+    observerCallback!([{ isIntersecting: true } as IntersectionObserverEntry]);
+
+    // React が isFetchingNextPage=true で re-render し新しい IntersectionObserver を作成するまで待つ
+    await waitFor(() => {
+      expect(MockIO.mock.calls.length).toBeGreaterThan(ioCallsBefore);
+    });
+
+    // 新しいコールバック（isFetchingNextPage=true を閉じ込めている）で再 intersect → 無視される
+    observerCallback!([{ isIntersecting: true } as IntersectionObserverEntry]);
+
+    // 2ページ目を resolve
+    resolveSecondPage!(
+      new Response(
+        JSON.stringify({ posts: [buildPost({ id: "post-2", title: "2ページ目" })], nextCursor: null }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    await screen.findAllByText("2ページ目");
+
+    // cursor=... のフェッチは 1 回のみ
+    const cursorCalls = fetchMock.mock.calls.filter((args: unknown[]) => {
+      const url = args[0] instanceof Request ? args[0].url : String(args[0]);
+      return url.includes("/api/feed") && url.includes("cursor=");
+    });
+    expect(cursorCalls.length).toBe(1);
+  });
+});

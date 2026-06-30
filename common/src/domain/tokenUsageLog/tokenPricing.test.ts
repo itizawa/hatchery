@@ -1,6 +1,18 @@
 import { describe, expect, it } from "vitest";
 
-import { MODEL_PRICING, calculateCostUsd } from "./tokenPricing.js";
+import { ALLOWED_BATCH_MODELS, MODEL_PRICING, calculateCostUsd } from "./tokenPricing.js";
+
+describe("ALLOWED_BATCH_MODELS", () => {
+  it("全モデルが MODEL_PRICING に含まれる", () => {
+    for (const model of ALLOWED_BATCH_MODELS) {
+      expect(MODEL_PRICING).toHaveProperty(model);
+    }
+  });
+
+  it("MODEL_PRICING のキーが ALLOWED_BATCH_MODELS と完全一致する（余剰エントリなし）", () => {
+    expect(Object.keys(MODEL_PRICING).sort()).toEqual([...ALLOWED_BATCH_MODELS].sort());
+  });
+});
 
 describe("MODEL_PRICING", () => {
   it("claude-sonnet-4-6 の単価を含む", () => {

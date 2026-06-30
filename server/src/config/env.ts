@@ -1,6 +1,10 @@
 import { z } from "zod";
 
+import { ALLOWED_BATCH_MODELS, type BatchModel } from "@hatchery/common";
+
 import { CACHE_DEFAULTS } from "./security.js";
+
+export { ALLOWED_BATCH_MODELS, type BatchModel } from "@hatchery/common";
 
 /**
  * ドリップ窓のデフォルト値（ms）（#556）。
@@ -76,17 +80,6 @@ export interface ServerEnv {
   /** VAPID サブジェクト（mailto:xxx または URL）（#798）。未設定なら undefined。 */
   vapidSubject: string | undefined;
 }
-
-/**
- * シーン生成バッチで許可する Claude モデル（#389 AC1 / ADR-0023）。
- * - claude-sonnet-4-6: 既定。入力 $3 / 出力 $15 per 1M tok。
- * - claude-haiku-4-5: 低コスト枠。入力 $1 / 出力 $5 per 1M tok。品質許容ならコストを約 1/3 に。
- * 値を増やすときはここだけ書き換える（Zod enum と型が連動する）。
- */
-export const ALLOWED_BATCH_MODELS = ["claude-sonnet-4-6", "claude-haiku-4-5"] as const;
-
-/** 許可されたバッチモデルの型（#389 AC1）。 */
-export type BatchModel = (typeof ALLOWED_BATCH_MODELS)[number];
 
 /** バッチモデルの既定値（#389 AC1）。 */
 export const DEFAULT_BATCH_MODEL: BatchModel = "claude-sonnet-4-6";

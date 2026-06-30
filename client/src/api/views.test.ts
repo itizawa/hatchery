@@ -1,7 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { sendCommentViewsBeacon, sendPostViewBeacon, useCommentImpressions } from "./views.js";
+import { sendCommentViewsBeacon, sendPostViewBeacon, useCommentImpressions, usePostViewBeacon } from "./views.js";
 
 // ─── IntersectionObserver モック ────────────────────────────────────────────
 // jsdom は IntersectionObserver 未実装のため、コールバックを手動でトリガーできるモックを用意する。
@@ -51,7 +51,7 @@ function triggerIntersection({
   ]);
 }
 
-// ─── sendJsonBeacon / sendPostViewBeacon ──────────────────────────────────────
+// ─── sendJsonBeacon / sendPostViewBeacon ──────────────────────────────────
 
 describe("sendJsonBeacon（sendPostViewBeacon 経由）", () => {
   afterEach(() => {
@@ -147,7 +147,7 @@ describe("getOrCreateSessionId（sendPostViewBeacon 経由）", () => {
   });
 });
 
-// ─── sendCommentViewsBeacon ─────────────────────────────────────────────────
+// ─── sendCommentViewsBeacon ──────────────────────────────────────────
 
 describe("sendCommentViewsBeacon", () => {
   afterEach(() => {
@@ -198,7 +198,44 @@ describe("sendCommentViewsBeacon", () => {
   });
 });
 
-// ─── useCommentImpressions ──────────────────────────────────────────────────
+// ─── usePostViewBeacon ────────────────────────────────────────────
+
+describe("usePostViewBeacon", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    sessionStorage.clear();
+  });
+
+  it("マウント時に sendPostViewBeacon(postId) が呼ばれる", () => {
+    const sendBeaconMock = vi.fn().mockReturnValue(true);
+    vi.stubGlobal("navigator", { sendBeacon: sendBeaconMock });
+
+    renderHook(() => usePostViewBeacon("post-x"));
+
+    expect(sendBeaconMock).toHaveBeenCalledOnce();
+    const [url] = sendBeaconMock.mock.calls[0] as [string, unknown];
+    expect(url).toContain("/api/posts/post-x/view");
+  });
+
+  it("postId が変わると再度 beacon が送信される", () => {
+    const sendBeaconMock = vi.fn().mockReturnValue(true);
+    vi.stubGlobal("navigator", { sendBeacon: sendBeaconMock });
+
+    const { rerender } = renderHook(({ postId }: { postId: string }) => usePostViewBeacon(postId), {
+      initialProps: { postId: "post-a" },
+    });
+    expect(sendBeaconMock).toHaveBeenCalledOnce();
+
+    rerender({ postId: "post-b" });
+
+    expect(sendBeaconMock).toHaveBeenCalledTimes(2);
+    const [url2] = sendBeaconMock.mock.calls[1] as [string, unknown];
+    expect(url2).toContain("/api/posts/post-b/view");
+  });
+});
+
+// ─── useCommentImpressions ──────────────────────────────────────────
 
 describe("useCommentImpressions", () => {
   beforeEach(() => {
@@ -222,7 +259,7 @@ describe("useCommentImpressions", () => {
 
     const { result } = renderHook(() => useCommentImpressions("post-1"));
 
-    // コメント要素を作成・ref セット → IntersectionObserver に observe させる
+    // コメント要素を作成・ ref セット → IntersectionObserver に observe させる
     const el = document.createElement("div");
     el.dataset.commentId = "comment-a";
     act(() => {
@@ -275,6 +312,69 @@ describe("useCommentImpressions", () => {
     act(() => {
       vi.advanceTimersByTime(1000);
     });
+    expect(sendBeaconMock).not.toHaveBeenCalled();
+  });
+
+  it("commentRef(id)(el) を呼ぶと IntersectionObserver.observe が el に対して呼ばれる", () => {
+    const { result } = renderHook(() => useCommentImpressions("post-1"));
+
+    const el = document.createElement("div");
+    act(() => {
+      result.current.commentRef("comment-c")(el);
+    });
+
+    expect(observedElements).toContain(el);
+  });
+
+  it("アンマウント時に IntersectionObserver.disconnect が呼ばれる", () => {
+    const { result, unmount } = renderHook(() => useCommentImpressions("post-1"));
+
+    const el = document.createElement("div");
+    act(() => {
+      result.current.commentRef("comment-d")(el);
+    });
+
+    unmount();
+
+    // disconnect() が呼ばれると observedElements がクリアされ lastObserverCallback が null になる
+    expect(lastObserverCallback).toBeNull();
+    expect(observedElements).toHaveLength(0);
+  });
+
+  it("一度 dwell 送信済みのコメントは再び visible になっても再送されない", () => {
+    vi.useFakeTimers();
+    const sendBeaconMock = vi.fn().mockReturnValue(true);
+    vi.stubGlobal("navigator", { sendBeacon: sendBeaconMock });
+
+    const { result } = renderHook(() => useCommentImpressions("post-1"));
+
+    const el = document.createElement("div");
+    act(() => {
+      result.current.commentRef("comment-e")(el);
+    });
+
+    // 1 回目: 可視 → dwell 経過 → 送信
+    act(() => {
+      triggerIntersection({ el, isIntersecting: true });
+    });
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+    expect(sendBeaconMock).toHaveBeenCalledOnce();
+    sendBeaconMock.mockClear();
+
+    // 一度非表示にしてから再度表示
+    act(() => {
+      triggerIntersection({ el, isIntersecting: false });
+    });
+    act(() => {
+      triggerIntersection({ el, isIntersecting: true });
+    });
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+
+    // 既送済みなので再送されない
     expect(sendBeaconMock).not.toHaveBeenCalled();
   });
 });

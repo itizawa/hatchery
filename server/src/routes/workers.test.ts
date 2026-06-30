@@ -362,6 +362,92 @@ describe("GET /api/workers/ranking（ワーカーランキング・#665）", () 
     expect(res.status).toBe(200);
     expect(res.body.workers).toEqual([]);
   });
+
+  it("view_count 降順でソートされる（#942）", async () => {
+    const workerRepo = createInMemoryWorkerRepository([
+      { id: "w-low", displayName: "Low Views", role: null, personality: null, imageUrl: null },
+      { id: "w-high", displayName: "High Views", role: null, personality: null, imageUrl: null },
+      { id: "w-mid", displayName: "Mid Views", role: null, personality: null, imageUrl: null },
+    ]);
+    // resolveAuthor: targetId をそのまま workerId として扱うことで
+    // recordPostView("workerId", sessionId) で view_count を注入する
+    // eslint-disable-next-line max-params
+    const viewRepo = createInMemoryViewRepository((_type, targetId) => targetId);
+    await viewRepo.recordPostView("w-low", "s1");
+    await viewRepo.recordPostView("w-high", "s1");
+    await viewRepo.recordPostView("w-high", "s2");
+    await viewRepo.recordPostView("w-high", "s3");
+    await viewRepo.recordPostView("w-high", "s4");
+    await viewRepo.recordPostView("w-high", "s5");
+    await viewRepo.recordPostView("w-high", "s6");
+    await viewRepo.recordPostView("w-high", "s7");
+    await viewRepo.recordPostView("w-high", "s8");
+    await viewRepo.recordPostView("w-high", "s9");
+    await viewRepo.recordPostView("w-high", "s10");
+    await viewRepo.recordPostView("w-mid", "s1");
+    await viewRepo.recordPostView("w-mid", "s2");
+    await viewRepo.recordPostView("w-mid", "s3");
+    await viewRepo.recordPostView("w-mid", "s4");
+    await viewRepo.recordPostView("w-mid", "s5");
+    const voteRepo = createInMemoryVoteRepository();
+    const deps = await createTestDeps({ workerRepository: workerRepo, viewRepository: viewRepo, voteRepository: voteRepo });
+    const app = createApp(deps);
+
+    const res = await request(app).get("/api/workers/ranking");
+    expect(res.status).toBe(200);
+    // view_count: w-high=10, w-mid=5, w-low=1 の順で返る
+    expect(res.body.workers.map((w: { worker_id: string }) => w.worker_id)).toEqual([
+      "w-high",
+      "w-mid",
+      "w-low",
+    ]);
+  });
+
+  it("view_count が同数のとき vote_net_score 降順でソートされる（#942）", async () => {
+    const workerRepo = createInMemoryWorkerRepository([
+      { id: "w-lowscore", displayName: "Low Score", role: null, personality: null, imageUrl: null },
+      { id: "w-highscore", displayName: "High Score", role: null, personality: null, imageUrl: null },
+    ]);
+    // view_count は両方 2 で同数にする
+    // eslint-disable-next-line max-params
+    const viewRepo = createInMemoryViewRepository((_type, targetId) => targetId);
+    await viewRepo.recordPostView("w-lowscore", "s1");
+    await viewRepo.recordPostView("w-lowscore", "s2");
+    await viewRepo.recordPostView("w-highscore", "s1");
+    await viewRepo.recordPostView("w-highscore", "s2");
+    // in-memory の netScoresByWorkerSince は targetId をそのまま workerId として扱う
+    const voteRepo = createInMemoryVoteRepository();
+    await voteRepo.vote({ sessionId: "v1", userId: null, targetType: "post", targetId: "w-lowscore", direction: "up" });
+    await voteRepo.vote({ sessionId: "v1", userId: null, targetType: "post", targetId: "w-highscore", direction: "up" });
+    await voteRepo.vote({ sessionId: "v2", userId: null, targetType: "post", targetId: "w-highscore", direction: "up" });
+    await voteRepo.vote({ sessionId: "v3", userId: null, targetType: "post", targetId: "w-highscore", direction: "up" });
+    const deps = await createTestDeps({ workerRepository: workerRepo, viewRepository: viewRepo, voteRepository: voteRepo });
+    const app = createApp(deps);
+
+    const res = await request(app).get("/api/workers/ranking");
+    expect(res.status).toBe(200);
+    // view_count 同数（2）、vote_net_score: w-highscore=3, w-lowscore=1 の順で返る
+    expect(res.body.workers.map((w: { worker_id: string }) => w.worker_id)).toEqual([
+      "w-highscore",
+      "w-lowscore",
+    ]);
+  });
+
+  it("view_count・vote_net_score ともに 0 のとき全ワーカーが返る（順不問・#942）", async () => {
+    const workerRepo = createInMemoryWorkerRepository([
+      { id: "w-a", displayName: "Worker A", role: null, personality: null, imageUrl: null },
+      { id: "w-b", displayName: "Worker B", role: null, personality: null, imageUrl: null },
+    ]);
+    const viewRepo = createInMemoryViewRepository();
+    const voteRepo = createInMemoryVoteRepository();
+    const deps = await createTestDeps({ workerRepository: workerRepo, viewRepository: viewRepo, voteRepository: voteRepo });
+    const app = createApp(deps);
+
+    const res = await request(app).get("/api/workers/ranking");
+    expect(res.status).toBe(200);
+    expect(res.body.workers).toHaveLength(2);
+    expect(res.body.workers.every((w: { view_count: number; vote_net_score: number }) => w.view_count === 0 && w.vote_net_score === 0)).toBe(true);
+  });
 });
 
 const COMMUNITY_RECORD: CommunityRecord = {

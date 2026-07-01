@@ -69,6 +69,8 @@ function renderRouter(router: AppRouter): ReactElement {
 
 describe("ログインモーダル導線（#454）", () => {
   beforeEach(() => {
+    // #932: HomeFeedScene が hatchery_visited を読むため再訪問状態にして WelcomeSection を抑制する。
+    localStorage.setItem("hatchery_visited", "true");
     stubFetch({ authenticated: false });
   });
   afterEach(() => {
@@ -127,6 +129,8 @@ describe("AuthLayout（LP 専用レイアウト）", () => {
 // 受け入れ条件 #307: コードベース定義のルート確認。
 describe("createAppRouter", () => {
   beforeEach(() => {
+    // #932: HomeFeedScene が hatchery_visited を読むため再訪問状態にして WelcomeSection を抑制する。
+    localStorage.setItem("hatchery_visited", "true");
     stubFetch({ authenticated: true });
   });
   afterEach(() => {
@@ -196,6 +200,8 @@ describe("createAppRouter", () => {
 // 認証ガード: 未ログインで保護ルートを開くと /login へリダイレクトする。
 describe("認証ガード（未ログイン時のリダイレクト）", () => {
   beforeEach(() => {
+    // #932: HomeFeedScene が hatchery_visited を読むため再訪問状態にして WelcomeSection を抑制する。
+    localStorage.setItem("hatchery_visited", "true");
     stubFetch({ authenticated: false });
   });
   afterEach(() => {
@@ -298,6 +304,8 @@ describe("ビュー遷移（#967）", () => {
 // #950: スクロール復元 — ルータ設定とメインコンテナの検証
 describe("スクロール復元（#950）", () => {
   beforeEach(() => {
+    // #932: HomeFeedScene が hatchery_visited を読むため再訪問状態にして WelcomeSection を抑制する。
+    localStorage.setItem("hatchery_visited", "true");
     stubFetch({ authenticated: false });
   });
   afterEach(() => {

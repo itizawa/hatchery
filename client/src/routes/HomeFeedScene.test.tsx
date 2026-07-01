@@ -107,6 +107,10 @@ function renderApp(initialPath: string) {
 describe("HomeFeedScene — 未認証ユーザー (#347)", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    // #932: 再訪問ユーザー相当の localStorage 状態にして showWelcome を posts の有無のみに依存させる。
+    const lsMock = makeLocalStorageMock();
+    lsMock.setItem("hatchery_visited", "true");
+    vi.stubGlobal("localStorage", lsMock);
   });
 
   afterEach(() => {
@@ -162,6 +166,10 @@ describe("HomeFeedScene — 未認証ユーザー (#347)", () => {
 describe("HomeFeedScene — フィード表示 (#347)", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    // #932: 再訪問ユーザー相当の localStorage 状態にして showWelcome を posts の有無のみに依存させる。
+    const lsMock = makeLocalStorageMock();
+    lsMock.setItem("hatchery_visited", "true");
+    vi.stubGlobal("localStorage", lsMock);
   });
 
   afterEach(() => {
@@ -202,6 +210,10 @@ describe("HomeFeedScene — フィード表示 (#347)", () => {
 describe("HomeFeedScene — 人気フィード (/popular) (#435)", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    // #932: 再訪問ユーザー相当の localStorage 状態にして showWelcome を posts の有無のみに依存させる。
+    const lsMock = makeLocalStorageMock();
+    lsMock.setItem("hatchery_visited", "true");
+    vi.stubGlobal("localStorage", lsMock);
   });
 
   afterEach(() => {
@@ -272,6 +284,10 @@ describe("HomeFeedScene — 投稿カードからスレッドへ遷移 (#498)", 
 
   beforeEach(() => {
     vi.restoreAllMocks();
+    // #932: 再訪問ユーザー相当の localStorage 状態にして showWelcome を posts の有無のみに依存させる。
+    const lsMock = makeLocalStorageMock();
+    lsMock.setItem("hatchery_visited", "true");
+    vi.stubGlobal("localStorage", lsMock);
   });
 
   afterEach(() => {

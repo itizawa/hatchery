@@ -10,6 +10,8 @@ import { createAppRouter } from "./router";
 // テスト間の状態リークを避けるため memory history のルータを注入する。
 describe("AppRoot", () => {
   beforeEach(() => {
+    // #932: HomeFeedScene が hatchery_visited を読むため再訪問状態にして WelcomeSection を抑制する。
+    localStorage.setItem("hatchery_visited", "true");
     // URL ごとに応答を分ける: /auth/me はログイン済み(200 AuthUser)、GET /api/communities はコミュニティ一覧
     // ホーム（/）はログイン必須（router の requireAuth ガード）のため、ログイン済みでないと /login へ
     // リダイレクトされ、サイドバー＋ホーム框が描画されない。

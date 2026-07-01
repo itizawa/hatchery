@@ -166,7 +166,7 @@ describe("CommentCard", () => {
       expect(screen.queryByText("uuid-ken")).not.toBeInTheDocument();
     });
 
-    it("image_url が null のとき Boring Avatars アバター画像と display_name を表示する (#884)", () => {
+    it("image_url が null のとき boring-avatars で描画し display_name を表示する (#1015)", () => {
       const comment = {
         ...mockComment,
         author: "uuid-mei",
@@ -174,8 +174,9 @@ describe("CommentCard", () => {
       };
       render(<CommentCard comment={comment} onVote={vi.fn()} />);
       expect(screen.getByText("mei")).toBeInTheDocument();
-      const img = screen.getByRole("img", { name: "mei" });
-      expect(img).toHaveAttribute("src", expect.stringContaining("source.boringavatars.com"));
+      const avatar = screen.getByRole("img", { name: "mei" });
+      expect(avatar).toBeInTheDocument();
+      expect(avatar).not.toHaveAttribute("src");
     });
 
     it("author_worker が無いときは生の author 文字列を表示する（フォールバック・破綻しない）", () => {

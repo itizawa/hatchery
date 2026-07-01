@@ -12,7 +12,6 @@ import { RecentPostsSidebarCard } from "../components/RecentPostsSidebarCard.js"
 import { WelcomeSection } from "../components/WelcomeSection.js";
 import type { VoteDirection } from "../components/VoteControl.js";
 
-/** localStorage キー: 初回訪問フラグ（#932）。 */
 const HATCHERY_VISITED_KEY = "hatchery_visited";
 
 /** フラットリスト行の hover スタイル（#834）。borderRadius は付けず bgcolor 変化のみ。 */

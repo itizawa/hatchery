@@ -813,4 +813,13 @@ describe("HomeFeedScene — ゲスト初回/再訪問でのようこそ演出切
     expect(await screen.findByRole("heading", { name: /Hatchery へようこそ/ })).toBeInTheDocument();
     expect(localStorage.getItem("hatchery_visited")).toBe("true");
   });
+
+  it("認証済みユーザーが投稿 0 件で WelcomeSection が表示されても hatchery_visited は書かれない", async () => {
+    expect(localStorage.getItem("hatchery_visited")).toBeNull();
+    stubFetch({ authenticated: true, feedPosts: [] });
+    renderApp("/");
+
+    expect(await screen.findByRole("heading", { name: /Hatchery へようこそ/ })).toBeInTheDocument();
+    expect(localStorage.getItem("hatchery_visited")).toBeNull();
+  });
 });

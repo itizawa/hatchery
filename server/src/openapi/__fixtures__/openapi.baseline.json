@@ -498,6 +498,9 @@
             ],
             "maxLength": 500,
             "format": "uri"
+          },
+          "generationPaused": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -508,7 +511,8 @@
           "created_at",
           "post_count",
           "last_post_at",
-          "subscriber_count"
+          "subscriber_count",
+          "generationPaused"
         ],
         "description": "admin 向けコミュニティ（generationInstruction を含む。公開 API には含めない・#488）"
       },
@@ -867,6 +871,9 @@
             ],
             "maxLength": 500,
             "format": "uri"
+          },
+          "generationPaused": {
+            "type": "boolean"
           }
         },
         "description": "コミュニティ更新リクエストボディ（#310 / #337）"

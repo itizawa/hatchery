@@ -1,3 +1,4 @@
+import { useId } from "react";
 import type { ReactElement } from "react";
 import { generateCommunityCoverPattern } from "@hatchery/common";
 
@@ -18,6 +19,7 @@ function getPatternSize(density: number): number {
 /**
  * community id をシードにした決定的な幾何学パターンをカバー画像領域に SVG で描画する（#1021）。
  * coverUrl 未設定時のフォールバック用。外部サービスに依存しない。
+ * patternId は useId() でドキュメント内一意にする（同一ページに複数インスタンスが存在しても衝突しない）。
  */
 export function CommunityCoverPlaceholder({
   id,
@@ -26,7 +28,8 @@ export function CommunityCoverPlaceholder({
   const { variant, shade, angleDeg, density } = generateCommunityCoverPattern({ id });
   const bgColor = BG_COLORS[shade];
   const fgColor = FG_COLORS[shade];
-  const patternId = `cover-pattern-${id.replace(/[^a-zA-Z0-9]/g, "-")}`;
+  const uid = useId();
+  const patternId = `cover-pattern-${uid}`;
   const size = getPatternSize(density);
   const half = size / 2;
 

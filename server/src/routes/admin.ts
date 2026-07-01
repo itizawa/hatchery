@@ -7,6 +7,7 @@ import {
   CreateWorkerSchema,
   NotFoundError,
   UpdateCommunitySchema,
+  type UpdateCommunityInput,
 } from "@hatchery/common";
 import { randomUUID } from "crypto";
 import { Router } from "express";
@@ -113,12 +114,7 @@ export function createAdminRouter(
     async (req, res, next) => {
       try {
         const { id } = req.params as { id: string };
-        const input = req.body as {
-          name?: string;
-          description?: string;
-          generationInstruction?: string | null;
-          feedUrl?: string | null;
-        };
+        const input = req.body as UpdateCommunityInput;
         const community = await communityRepository.update(id, input);
         if (!community) {
           next(new NotFoundError("CommunityNotFound"));

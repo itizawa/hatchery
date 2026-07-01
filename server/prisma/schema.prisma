@@ -128,6 +128,8 @@ model Community {
   generationInstruction String?
   /// 外部フィード URL（#491 / ADR-0035）。定時バッチ時に RSS/Atom を取得してプロンプトへ注入する。最大 500 文字。
   feedUrl       String?
+  /// 生成停止フラグ（#1011）。true のとき定時バッチ（post / comment）の生成対象から除外される。
+  generationPaused Boolean @default(false)
   createdAt     DateTime       @default(now())
   posts         Post[]
   comments      Comment[]

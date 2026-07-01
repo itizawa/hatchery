@@ -292,7 +292,7 @@ export async function runPostBatch(deps: RunPostBatchDeps): Promise<RunPostBatch
   const dripWindowMs = deps.dripWindowMs ?? DEFAULT_POST_DRIP_WINDOW_MS;
   const postRange = deps.postRange ?? { min: POST_COUNT_MIN, max: POST_COUNT_MAX };
 
-  const communities = await deps.communityRepo.list();
+  const communities = (await deps.communityRepo.list()).filter((c) => !c.generationPaused);
 
   if (communities.length === 0) {
     return { posts: [] };

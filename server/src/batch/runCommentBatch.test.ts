@@ -32,6 +32,7 @@ const community1: CommunityRecord = {
   description: "テクノロジーの話題を楽しむコミュニティ。",
   generationInstruction: null,
   feedUrl: null,
+  generationPaused: false,
   synopsis: null,
   lastSlotKey: null,
   iconUrl: null,
@@ -46,6 +47,7 @@ const community2: CommunityRecord = {
   description: "日常のあれこれを話すコミュニティ。",
   generationInstruction: null,
   feedUrl: null,
+  generationPaused: false,
   synopsis: null,
   lastSlotKey: null,
   iconUrl: null,
@@ -673,5 +675,60 @@ describe("runCommentBatch (#673)", () => {
     it("DEFAULT_COMMENT_DRIP_WINDOW_MS は 3 時間（10800000ms）である", () => {
       expect(DEFAULT_COMMENT_DRIP_WINDOW_MS).toBe(3 * 60 * 60 * 1000);
     });
+  });
+
+  it("generationPaused=true のコミュニティは comment 生成から除外される（#1011）", async () => {
+    const pausedCommunity: CommunityRecord = {
+      id: "paused-community",
+      slug: "paused",
+      name: "停止中コミュニティ",
+      description: "生成が停止されているコミュニティ",
+      generationInstruction: null,
+      feedUrl: null,
+      synopsis: null,
+      lastSlotKey: null,
+      iconUrl: null,
+      coverUrl: null,
+      createdAt: new Date("2026-01-01"),
+      generationPaused: true,
+    };
+    const activeCommunity: CommunityRecord = {
+      ...community1,
+      id: "active-community",
+      slug: "active",
+      generationPaused: false,
+    };
+
+    const postRepo = createInMemoryPostRepository();
+    // paused と active 両方に直近 post を作成
+    await postRepo.createMany(pausedCommunity.id, [
+      { slotKey: "s1", seq: 0, author: botWorker.id, title: "停止中タイトル", text: "停止中本文", createdAt: recentDate(2) },
+    ]);
+    await postRepo.createMany(activeCommunity.id, [
+      { slotKey: "s2", seq: 0, author: botWorker.id, title: "稼働中タイトル", text: "稼働中本文", createdAt: recentDate(2) },
+    ]);
+
+    const generate = vi.fn().mockResolvedValue({ text: makeCommentOutput("ref-1", botWorker.id) });
+    const commentRepo = createInMemoryCommentRepository();
+
+    await runCommentBatch({
+      communityRepo: createInMemoryCommunityRepository([pausedCommunity, activeCommunity]),
+      postRepo,
+      commentRepo,
+      workerCommunityRepo: createInMemoryWorkerCommunityRepository({
+        workers: [botWorker],
+        links: [
+          { workerId: botWorker.id, communityId: pausedCommunity.id },
+          { workerId: botWorker.id, communityId: activeCommunity.id },
+        ],
+      }),
+      generate,
+      anthropicApiKey: "test-key",
+      now: NOW,
+      revivalProbability: 0,
+    });
+
+    // generate は稼働中コミュニティ（1件）のみ呼ばれる
+    expect(generate).toHaveBeenCalledTimes(1);
   });
 });

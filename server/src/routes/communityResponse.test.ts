@@ -13,6 +13,8 @@ const baseRecord: CommunityRecord = {
   iconUrl: "https://example.com/icon.png",
   coverUrl: "https://example.com/cover.png",
   generationInstruction: "Write in a casual tone",
+  feedUrl: null,
+  generationPaused: false,
   createdAt: new Date("2026-01-01T00:00:00Z"),
 };
 
@@ -108,9 +110,18 @@ describe("toAdminCommunityResponse", () => {
     const res = toAdminCommunityResponse({
       ...baseRecord,
       generationInstruction: null,
-  feedUrl: null,
     }) as Record<string, unknown>;
     expect(res).toHaveProperty("generationInstruction");
     expect(res.generationInstruction).toBeNull();
+  });
+
+  it("generationPaused: false のとき false がレスポンスに含まれる（#1011）", () => {
+    const res = toAdminCommunityResponse(baseRecord) as Record<string, unknown>;
+    expect(res).toHaveProperty("generationPaused", false);
+  });
+
+  it("generationPaused: true のとき true がレスポンスに含まれる（#1011）", () => {
+    const res = toAdminCommunityResponse({ ...baseRecord, generationPaused: true }) as Record<string, unknown>;
+    expect(res).toHaveProperty("generationPaused", true);
   });
 });

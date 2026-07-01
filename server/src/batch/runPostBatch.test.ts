@@ -41,6 +41,7 @@ const community1: CommunityRecord = {
   description: "テクノロジーとプログラミングの話題を楽しむコミュニティ。",
   generationInstruction: null,
   feedUrl: null,
+  generationPaused: false,
   synopsis: null,
   lastSlotKey: null,
   iconUrl: null,
@@ -55,6 +56,7 @@ const community2: CommunityRecord = {
   description: "日常のあれこれを話すコミュニティ。",
   generationInstruction: null,
   feedUrl: null,
+  generationPaused: false,
   synopsis: null,
   lastSlotKey: null,
   iconUrl: null,
@@ -329,5 +331,47 @@ describe("runPostBatch (#672)", () => {
 
   it("DEFAULT_POST_DRIP_WINDOW_MS は 24h（86400000ms）である", () => {
     expect(DEFAULT_POST_DRIP_WINDOW_MS).toBe(24 * 60 * 60 * 1000);
+  });
+
+  it("generationPaused=true のコミュニティは post 生成から除外される（#1011）", async () => {
+    const pausedCommunity: CommunityRecord = {
+      id: "paused-community",
+      slug: "paused",
+      name: "停止中コミュニティ",
+      description: "生成が停止されているコミュニティ",
+      generationInstruction: null,
+      feedUrl: null,
+      synopsis: null,
+      lastSlotKey: null,
+      iconUrl: null,
+      coverUrl: null,
+      createdAt: new Date("2026-01-01"),
+      generationPaused: true,
+    };
+    const activeCommunity: CommunityRecord = {
+      ...community2,
+      generationPaused: false,
+    };
+    const generate = vi.fn().mockResolvedValue({ text: validPostOutput });
+    const postRepo = createInMemoryPostRepository();
+
+    await runPostBatch({
+      communityRepo: createInMemoryCommunityRepository([pausedCommunity, activeCommunity]),
+      postRepo,
+      workerCommunityRepo: createInMemoryWorkerCommunityRepository({ workers: [], links: [] }),
+      botWorkerProvider: () => Promise.resolve(botWorkers),
+      generate,
+      anthropicApiKey: "test-key",
+      rng: () => 0,
+    });
+
+    // 稼働中のコミュニティには post が作られる
+    const activePosts = await postRepo.listByCommunity(activeCommunity.id);
+    expect(activePosts.length).toBeGreaterThan(0);
+    // paused コミュニティには post が作られない
+    const pausedPosts = await postRepo.listByCommunity(pausedCommunity.id);
+    expect(pausedPosts).toHaveLength(0);
+    // generate は稼働中の 1 件のみに対して呼ばれる
+    expect(generate).toHaveBeenCalledTimes(1);
   });
 });

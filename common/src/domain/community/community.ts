@@ -83,6 +83,7 @@ export const AdminCommunitySchema = CommunitySchema.extend({
     .nullable()
     .optional(),
   feedUrl: z.string().url().max(COMMUNITY_FEED_URL_MAX_LENGTH).nullable().optional(),
+  generationPaused: z.boolean(),
 });
 
 export type AdminCommunity = z.infer<typeof AdminCommunitySchema>;
@@ -119,6 +120,7 @@ export const UpdateCommunitySchema = z.object({
     .nullable()
     .optional(),
   feedUrl: z.string().url().max(COMMUNITY_FEED_URL_MAX_LENGTH).nullable().optional(),
+  generationPaused: z.boolean().optional(),
 });
 
 export type UpdateCommunityInput = z.infer<typeof UpdateCommunitySchema>;

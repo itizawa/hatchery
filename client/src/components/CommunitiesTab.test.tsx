@@ -32,6 +32,7 @@ const existingCommunity = {
   post_count: 3,
   last_post_at: "2026-06-10T09:00:00.000Z",
   subscriber_count: 0,
+  generationPaused: false,
 };
 
 const server = setupServer(

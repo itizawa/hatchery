@@ -289,7 +289,7 @@ export async function runCommentBatch(deps: RunCommentBatchDeps): Promise<RunCom
   const dripWindowMs = deps.dripWindowMs ?? DEFAULT_COMMENT_DRIP_WINDOW_MS;
   const revivalProbability = deps.revivalProbability ?? REVIVAL_PROBABILITY;
 
-  const communities = await deps.communityRepo.list();
+  const communities = (await deps.communityRepo.list()).filter((c) => !c.generationPaused);
 
   if (communities.length === 0) {
     return { comments: [] };

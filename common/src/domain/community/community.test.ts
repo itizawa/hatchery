@@ -264,6 +264,58 @@ describe("UpdateCommunitySchema（#310）", () => {
   });
 });
 
+describe("UpdateCommunitySchema の generationPaused（#1011）", () => {
+  it("generationPaused: true を受け入れてパース結果に含む", () => {
+    const result = UpdateCommunitySchema.safeParse({ generationPaused: true });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.generationPaused).toBe(true);
+    }
+  });
+
+  it("generationPaused: false を受け入れてパース結果に含む", () => {
+    const result = UpdateCommunitySchema.safeParse({ generationPaused: false });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.generationPaused).toBe(false);
+    }
+  });
+
+  it("generationPaused を省略できる（optional）", () => {
+    const result = UpdateCommunitySchema.safeParse({ name: "名前" });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("AdminCommunitySchema の generationPaused（#1011）", () => {
+  const base = {
+    id: "c1",
+    slug: "tech",
+    name: "Tech",
+    description: "公開概要",
+    created_at: new Date("2026-01-01"),
+    post_count: 0,
+    last_post_at: null,
+    subscriber_count: 0,
+    generationPaused: false,
+  };
+
+  it("generationPaused: false をパースできる", () => {
+    const result = AdminCommunitySchema.parse(base);
+    expect(result).toHaveProperty("generationPaused", false);
+  });
+
+  it("generationPaused: true をパースできる", () => {
+    const result = AdminCommunitySchema.parse({ ...base, generationPaused: true });
+    expect(result.generationPaused).toBe(true);
+  });
+
+  it("公開 CommunitySchema は generationPaused を含まない", () => {
+    const result = CommunitySchema.parse({ ...base });
+    expect(result).not.toHaveProperty("generationPaused");
+  });
+});
+
 describe("generateCommunityIconUrl（#960）", () => {
   it("コミュニティ id をシードにした Boring Avatars bauhaus URL を返す", () => {
     const url = generateCommunityIconUrl({ id: "comm-1" });
@@ -314,6 +366,7 @@ describe("CommunitySchema / AdminCommunitySchema のフィールド分離（#488
     post_count: 0,
     last_post_at: null,
     subscriber_count: 0,
+    generationPaused: false,
   };
 
   it("公開 CommunitySchema は generationInstruction を含まない", () => {

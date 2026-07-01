@@ -48,6 +48,7 @@ const mockCommunity: AdminCommunity = {
   created_at: new Date("2026-06-01T00:00:00.000Z"),
   post_count: 3,
   last_post_at: null,
+  generationPaused: false,
 };
 
 function renderWithClient(ui: React.ReactElement) {

@@ -7,7 +7,7 @@ import { useCommunities, useUpdateCommunity } from "../api/communities.js";
 import { getApiErrorMessage } from "../api/errors.js";
 import { CommunityFormFields } from "../components/CommunityFormFields.js";
 import { CommunityImageUpload } from "../components/CommunityImageUpload.js";
-import { Alert, Box, Button, Snackbar, Typography } from "../components/uiParts/index.js";
+import { Alert, Box, Button, FormControlLabel, Snackbar, Switch, Typography } from "../components/uiParts/index.js";
 
 function EditCommunityForm({ community }: { community: AdminCommunity }): ReactElement {
   const updateMutation = useUpdateCommunity();
@@ -18,6 +18,7 @@ function EditCommunityForm({ community }: { community: AdminCommunity }): ReactE
       name: community.name,
       description: community.description,
       generationInstruction: community.generationInstruction ?? "",
+      generationPaused: community.generationPaused ?? false,
     } as UpdateCommunityInput,
     onSubmit: async ({ value }) => {
       try {
@@ -61,6 +62,19 @@ function EditCommunityForm({ community }: { community: AdminCommunity }): ReactE
         sx={{ display: "flex", flexDirection: "column", gap: 2 }}
       >
         <CommunityFormFields form={form} />
+        <form.Field name="generationPaused">
+          {(field) => (
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={field.state.value ?? false}
+                  onChange={(e) => field.handleChange(e.target.checked)}
+                />
+              }
+              label="生成停止"
+            />
+          )}
+        </form.Field>
         <Box sx={{ display: "flex", gap: 1, justifyContent: "flex-end" }}>
           <Button type="submit" variant="contained" disabled={isPending}>
             保存

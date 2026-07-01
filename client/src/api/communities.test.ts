@@ -82,6 +82,7 @@ const mockAdminCommunityDto = {
   post_count: 5,
   last_post_at: null,
   subscriber_count: 0,
+  generationPaused: false,
 };
 
 describe("fetchAdminCommunities (GET /api/admin/communities)", () => {

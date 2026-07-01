@@ -484,6 +484,18 @@ describe("HomeFeedScene — 各 PostCard に ShareButton が表示される (#83
   });
 });
 
+function makeLocalStorageMock() {
+  let store: Record<string, string> = {};
+  return {
+    getItem: (key: string) => store[key] ?? null,
+    setItem: (key: string, value: string) => { store[key] = value; },
+    removeItem: (key: string) => { delete store[key]; },
+    clear: () => { store = {}; },
+    key: (index: number) => Object.keys(store)[index] ?? null,
+    get length() { return Object.keys(store).length; },
+  };
+}
+
 describe("HomeFeedScene — ようこそ演出（#482）", () => {
   const sampleCommunities = [
     { id: "c-1", slug: "ai-dev", name: "AI 開発者の集い" },
@@ -492,12 +504,11 @@ describe("HomeFeedScene — ようこそ演出（#482）", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
-    localStorage.clear();
+    vi.stubGlobal("localStorage", makeLocalStorageMock());
   });
 
   afterEach(() => {
     vi.unstubAllGlobals();
-    localStorage.clear();
   });
 
   it("未認証 + 投稿なし → ようこそセクションが表示される", async () => {
@@ -772,12 +783,11 @@ describe("HomeFeedScene — ゲスト初回/再訪問でのようこそ演出切
 
   beforeEach(() => {
     vi.restoreAllMocks();
-    localStorage.clear();
+    vi.stubGlobal("localStorage", makeLocalStorageMock());
   });
 
   afterEach(() => {
     vi.unstubAllGlobals();
-    localStorage.clear();
   });
 
   it("初回訪問ゲスト（hatchery_visited なし）は投稿があっても WelcomeSection が表示される", async () => {

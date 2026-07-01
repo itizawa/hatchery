@@ -83,8 +83,7 @@ describe("createPgSessionStore", () => {
     it("get で存在するセッションを取得できる", () => {
       const store = createPgSessionStore("postgres://test/db");
       const data: session.SessionData = { cookie: { originalMaxAge: null } };
-      const setCallback = vi.fn();
-      store.set("sid-get-exists", data, setCallback);
+      store.set("sid-get-exists", data);
 
       const getCallback = vi.fn();
       store.get("sid-get-exists", getCallback);

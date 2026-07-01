@@ -14,8 +14,9 @@ vi.mock("pg", () => ({
 }));
 
 // connect-pg-simple のファクトリをモックし、session.Store を継承したダミー Store を返す。
-// new PgSession(options) の options を捕捉して tableName / pool を検証する。
+// get / set / destroy は in-memory Map で実装し、DB 接続なしでセッション操作を検証する。
 const pgSessionOptions = vi.fn();
+const sessionDb = new Map<string, session.SessionData>();
 vi.mock("connect-pg-simple", () => {
   return {
     default: () =>
@@ -23,6 +24,20 @@ vi.mock("connect-pg-simple", () => {
         constructor(options: unknown) {
           super();
           pgSessionOptions(options);
+        }
+        // eslint-disable-next-line max-params
+        override get(sid: string, callback: (err: unknown, session?: session.SessionData | null) => void) {
+          callback(null, sessionDb.get(sid) ?? null);
+        }
+        // eslint-disable-next-line max-params
+        override set(sid: string, data: session.SessionData, callback?: (err?: unknown) => void) {
+          sessionDb.set(sid, data);
+          callback?.();
+        }
+        // eslint-disable-next-line max-params
+        override destroy(sid: string, callback?: (err?: unknown) => void) {
+          sessionDb.delete(sid);
+          callback?.();
         }
       },
   };
@@ -34,6 +49,7 @@ describe("createPgSessionStore", () => {
   beforeEach(() => {
     poolConstructor.mockClear();
     pgSessionOptions.mockClear();
+    sessionDb.clear();
   });
 
   it("session.Store を返す", () => {
@@ -54,5 +70,47 @@ describe("createPgSessionStore", () => {
     createPgSessionStore(url);
     expect(poolConstructor).toHaveBeenCalledOnce();
     expect(poolConstructor).toHaveBeenCalledWith({ connectionString: url });
+  });
+
+  describe("set / get / destroy", () => {
+    it("set でセッションを DB に保存する（コールバックが呼ばれる）", () => {
+      const store = createPgSessionStore("postgres://test/db");
+      const callback = vi.fn();
+      store.set("sid-set", { cookie: { originalMaxAge: null } }, callback);
+      expect(callback).toHaveBeenCalledOnce();
+    });
+
+    it("get で存在するセッションを取得できる", () => {
+      const store = createPgSessionStore("postgres://test/db");
+      const data: session.SessionData = { cookie: { originalMaxAge: null } };
+      const setCallback = vi.fn();
+      store.set("sid-get-exists", data, setCallback);
+
+      const getCallback = vi.fn();
+      store.get("sid-get-exists", getCallback);
+
+      expect(getCallback).toHaveBeenCalledWith(null, data);
+    });
+
+    it("get で存在しないセッションは null を返す", () => {
+      const store = createPgSessionStore("postgres://test/db");
+      const callback = vi.fn();
+      store.get("non-existent-sid", callback);
+      expect(callback).toHaveBeenCalledWith(null, null);
+    });
+
+    it("destroy でセッションを DB から削除する（コールバックが呼ばれ get で null を返す）", () => {
+      const store = createPgSessionStore("postgres://test/db");
+      const sid = "sid-destroy";
+      store.set(sid, { cookie: { originalMaxAge: null } });
+      const destroyCallback = vi.fn();
+      store.destroy(sid, destroyCallback);
+
+      expect(destroyCallback).toHaveBeenCalledOnce();
+
+      const getCallback = vi.fn();
+      store.get(sid, getCallback);
+      expect(getCallback).toHaveBeenCalledWith(null, null);
+    });
   });
 });

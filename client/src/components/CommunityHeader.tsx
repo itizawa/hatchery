@@ -2,6 +2,7 @@ import type { ReactElement, ReactNode } from "react";
 import { resolveCommunityIconUrl } from "@hatchery/common";
 
 import { Avatar, Box, Typography } from "./uiParts";
+import { CommunityCoverPlaceholder } from "./CommunityCoverPlaceholder.js";
 import type { Community } from "../api/communities.js";
 
 interface CommunityHeaderProps {
@@ -26,17 +27,16 @@ export const CommunityHeader = ({ community, actions }: CommunityHeaderProps): R
 
   return (
     <Box sx={{ mb: 3 }}>
-      {/* カバー画像（未設定はプレースホルダ矩形） */}
+      {/* カバー画像（未設定は id ベースの自動生成パターン #1021） */}
       <Box
         sx={{
           height: COVER_HEIGHT,
           borderRadius: 2,
           overflow: "hidden",
-          bgcolor: "action.hover",
           position: "relative",
         }}
       >
-        {coverUrl && (
+        {coverUrl ? (
           <Box
             component="img"
             data-testid="community-cover-image"
@@ -44,6 +44,8 @@ export const CommunityHeader = ({ community, actions }: CommunityHeaderProps): R
             alt=""
             sx={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
           />
+        ) : (
+          <CommunityCoverPlaceholder id={community.id} height={COVER_HEIGHT} />
         )}
       </Box>
 

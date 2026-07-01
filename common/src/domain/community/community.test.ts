@@ -9,6 +9,7 @@ import {
   CommunitySchema,
   CreateCommunitySchema,
   UpdateCommunitySchema,
+  generateCommunityCoverPattern,
   generateCommunityIconUrl,
   resolveCommunityIconUrl,
 } from "./community.js";
@@ -313,6 +314,65 @@ describe("AdminCommunitySchema の generationPaused（#1011）", () => {
   it("公開 CommunitySchema は generationPaused を含まない", () => {
     const result = CommunitySchema.parse({ ...base });
     expect(result).not.toHaveProperty("generationPaused");
+  });
+});
+
+describe("generateCommunityCoverPattern（#1021）", () => {
+  it("同じ id を渡すと常に同じ結果を返す", () => {
+    const a = generateCommunityCoverPattern({ id: "comm-1" });
+    const b = generateCommunityCoverPattern({ id: "comm-1" });
+    expect(a).toEqual(b);
+  });
+
+  it("異なる id を渡すとパラメータが変わる（variant / shade / angleDeg / density のいずれか）", () => {
+    const a = generateCommunityCoverPattern({ id: "comm-alpha" });
+    const b = generateCommunityCoverPattern({ id: "comm-beta" });
+    const sameAll =
+      a.variant === b.variant &&
+      a.shade === b.shade &&
+      a.angleDeg === b.angleDeg &&
+      a.density === b.density;
+    expect(sameAll).toBe(false);
+  });
+
+  it("variant が 0–3 の範囲に収まる", () => {
+    const ids = ["a", "b", "c", "d", "test-community", "comm-1234567890"];
+    for (const id of ids) {
+      const { variant } = generateCommunityCoverPattern({ id });
+      expect(variant).toBeGreaterThanOrEqual(0);
+      expect(variant).toBeLessThanOrEqual(3);
+    }
+  });
+
+  it("shade が 0–3 の範囲に収まる", () => {
+    const ids = ["a", "b", "c", "d", "test-community", "comm-1234567890"];
+    for (const id of ids) {
+      const { shade } = generateCommunityCoverPattern({ id });
+      expect(shade).toBeGreaterThanOrEqual(0);
+      expect(shade).toBeLessThanOrEqual(3);
+    }
+  });
+
+  it("density が 1–4 の範囲に収まる", () => {
+    const ids = ["a", "b", "c", "d", "test-community", "comm-1234567890"];
+    for (const id of ids) {
+      const { density } = generateCommunityCoverPattern({ id });
+      expect(density).toBeGreaterThanOrEqual(1);
+      expect(density).toBeLessThanOrEqual(4);
+    }
+  });
+
+  it("angleDeg が 0, 45, 90, 135 のいずれかである", () => {
+    const ids = ["a", "b", "c", "d", "test-community", "comm-1234567890"];
+    const validAngles = [0, 45, 90, 135];
+    for (const id of ids) {
+      const { angleDeg } = generateCommunityCoverPattern({ id });
+      expect(validAngles).toContain(angleDeg);
+    }
+  });
+
+  it("空文字の id でもエラーなくパラメータを返す", () => {
+    expect(() => generateCommunityCoverPattern({ id: "" })).not.toThrow();
   });
 });
 

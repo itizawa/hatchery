@@ -125,6 +125,43 @@ export const UpdateCommunitySchema = z.object({
 
 export type UpdateCommunityInput = z.infer<typeof UpdateCommunitySchema>;
 
+/** コミュニティのカバー画像フォールバック描画パラメータ（#1021）。 */
+export type CommunityCoverPattern = {
+  /** パターンバリエーション (0–3)。geometry タイプを決定する。 */
+  variant: number;
+  /** 色の濃淡 (0–3)。0が最も濃い。 */
+  shade: number;
+  /** パターン回転角度。0 / 45 / 90 / 135 のいずれか。 */
+  angleDeg: number;
+  /** パターン密度 (1–4)。 */
+  density: number;
+};
+
+const ANGLE_OPTIONS: readonly [0, 45, 90, 135] = [0, 45, 90, 135];
+
+/** id 文字列を 32bit 整数ハッシュに変換する。 */
+function hashId(id: string): number {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+  }
+  return hash;
+}
+
+/**
+ * community id をシードにして決定的なカバー画像描画パラメータを返す（#1021）。
+ * 外部 URL は生成しない。同じ id は常に同じ結果を返し、異なる id はパラメータが変わる。
+ */
+export function generateCommunityCoverPattern({ id }: { id: string }): CommunityCoverPattern {
+  const h = hashId(id);
+  return {
+    variant: h % 4,
+    shade: (h >>> 8) % 4,
+    angleDeg: ANGLE_OPTIONS[(h >>> 4) % 4] as number,
+    density: ((h >>> 12) % 4) + 1,
+  };
+}
+
 const BORING_AVATARS_COMMUNITY_BASE_URL = "https://source.boringavatars.com/bauhaus/40";
 
 /** コミュニティ id をシードにした Boring Avatars bauhaus スタイル自動生成アイコン URL を返す（#960）。 */

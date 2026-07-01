@@ -1,1 +1,415 @@
-aW1wb3J0IHsgZGVzY3JpYmUsIGV4cGVjdCwgaXQgfSBmcm9tICJ2aXRlc3QiOwoKaW1wb3J0IHsKICBXT1JLRVJfQVZBVEFSX1VSTF9NQVhfTEVOR1RILAogIFdPUktFUl9ESVNQTEFZX05BTUVfTUFYX0xFTkdUSCwKICBXT1JLRVJfSU1BR0VfVVJMX01BWF9MRU5HVEgsCiAgV09SS0VSX1BFUlNPTkFMSVRZX01BWF9MRU5HVEgsCiAgV09SS0VSX1JPTEVfTUFYX0xFTkdUSCwKICBjcmVhdGVEaXNwbGF5TmFtZVJlc29sdmVyLAogIGNyZWF0ZUF2YXRhclVybFJlc29sdmVyLAogIHJlc29sdmVXb3JrZXJJbWFnZVVybCwKICBDcmVhdGVXb3JrZXJTY2hlbWEsCiAgREVGQVVMVF9XT1JLRVJTLAogIFdvcmtlclNjaGVtYSwKICBVcGRhdGVXb3JrZXJTY2hlbWEsCiAgZm9ybWF0V29ya2VyRGlzcGxheU5hbWUsCn0gZnJvbSAiLi93b3JrZXIuanMiOwoKZGVzY3JpYmUoIuWQjeWJjeS7mOOBjeWumuaVsOOBruOCqOOCr+OCueODneODvOODiCAoIzU5MikiLCAoKSA9PiB7CiAgaXQoIldPUktFUl9QRVJTT05BTElUWV9NQVhfTEVOR1RIIOOBjCA1MDAg44Gn44Ko44Kv44K544Od44O844OI44GV44KM44KLIiwgKCkgPT4gewogICAgZXhwZWN0KFdPUktFUl9QRVJTT05BTElUWV9NQVhfTEVOR1RIKS50b0JlKDUwMCk7CiAgfSk7CgogIGl0KCJXT1JLRVJfQVZBVEFSX1VSTF9NQVhfTEVOR1RIIOOBjCAyMDQ4IOOBp+OCqOOCr+OCueODneODvOODiOOBleOCjOOCiyIsICgpID0+IHsKICAgIGV4cGVjdChXT1JLRVJfQVZBVEFSX1VSTF9NQVhfTEVOR1RIKS50b0JlKDIwNDgpOwogIH0pOwp9KTsKCmRlc2NyaWJlKCJXb3JrZXJTY2hlbWEgKEEtMSAvIEEtMikiLCAoKSA9PiB7CiAgaXQoImlkIC8gZGlzcGxheU5hbWUg44KS5oyB44Gk44Ov44O844Kr44O844GvIHBhcnNlIOaIkOWKn+OBmeOCi++8iHJvbGUg44Gv5Lu75oSP77yJIiwgKCkgPT4gewogICAgZXhwZWN0KFdvcmtlclNjaGVtYS5wYXJzZSh7IGlkOiAiaGFydSIsIGRpc3BsYXlOYW1lOiAiaGFydSIgfSkuaWQpLnRvQmUoImhhcnUiKTsKICAgIGNvbnN0IHdpdGhSb2xlID0gV29ya2VyU2NoZW1hLnBhcnNlKHsgaWQ6ICJtZWkiLCBkaXNwbGF5TmFtZTogIm1laSIsIHJvbGU6ICLmlrDkuroiIH0pOwogICAgZXhwZWN0KHdpdGhSb2xlLnJvbGUpLnRvQmUoIuaWsOS6uiIpOwogIH0pOwoKICBpdCgiaWQgLyBkaXNwbGF5TmFtZSDjgYznqbrmloflrZfjgarjgokgcGFyc2Ug44Gr5aSx5pWX44GZ44KLIiwgKCkgPT4gewogICAgZXhwZWN0KFdvcmtlclNjaGVtYS5zYWZlUGFyc2UoeyBpZDogIiIsIGRpc3BsYXlOYW1lOiAiaGFydSIgfSkuc3VjY2VzcykudG9CZShmYWxzZSk7CiAgICBleHBlY3QoV29ya2VyU2NoZW1hLnNhZmVQYXJzZSh7IGlkOiAiaGFydSIsIGRpc3BsYXlOYW1lOiAiIiB9KS5zdWNjZXNzKS50b0JlKGZhbHNlKTsKICB9KTsKCiAgLy8gIzMzMTogQURSLTAwMjAg5b6M5Yem55CG44CCV29ya2VyIOOBryBBSSDmipXnqL/ogIXjga7jgb/jgajjgarjgoogaXNCb3Qg5qaC5b+144KS5pKk5buD44GX44Gf44CCCiAgaXQoImlzQm90IOODleOCo+ODvOODq+ODieOCkuaMgeOBn+OBquOBhO+8iCMzMzHvvIkiLCAoKSA9PiB7CiAgICBjb25zdCBwYXJzZWQgPSBXb3JrZXJTY2hlbWEucGFyc2UoeyBpZDogImhhcnUiLCBkaXNwbGF5TmFtZTogImhhcnUiIH0pOwogICAgZXhwZWN0KHBhcnNlZCkubm90LnRvSGF2ZVByb3BlcnR5KCJpc0JvdCIpOwogIH0pOwoKICBpdCgiaXNCb3Qg44KS5rih44GX44Gm44KC44OR44O844K557WQ5p6c44Gr5ZCr44G+44KM44Gq44GE77yIIzMzMeODu+acquefpeOCreODvOOBr+eEoeimlu+8iSIsICgpID0+IHsKICAgIGNvbnN0IHBhcnNlZCA9IFdvcmtlclNjaGVtYS5wYXJzZSh7IGlkOiAiaGFydSIsIGRpc3BsYXlOYW1lOiAiaGFydSIsIGlzQm90OiB0cnVlIH0pOwogICAgZXhwZWN0KHBhcnNlZCkubm90LnRvSGF2ZVByb3BlcnR5KCJpc0JvdCIpOwogIH0pOwp9KTsKCmRlc2NyaWJlKCJERUZBVUxUX1dPUktFUlMgKCMyNSkiLCAoKSA9PiB7CiAgaXQoIuWFqOimgee0oOOBjCBXb3JrZXJTY2hlbWEg44KS5rqA44Gf44GZIiwgKCkgPT4gewogICAgZm9yIChjb25zdCB3b3JrZXIgb2YgREVGQVVMVF9XT1JLRVJTKSB7CiAgICAgIGV4cGVjdChXb3JrZXJTY2hlbWEuc2FmZVBhcnNlKHdvcmtlcikuc3VjY2VzcykudG9CZSh0cnVlKTsKICAgIH0KICB9KTsKCiAgaXQoIk1WUCDjga4gMyDkurrvvIhoYXJ1IC8ga2VuIC8gbWVp77yJ44KS5ZCr44KAIiwgKCkgPT4gewogICAgZXhwZWN0KERFRkFVTFRfV09SS0VSUy5tYXAoKHcpID0+IHcuaWQpKS50b0VxdWFsKFsiaGFydSIsICJrZW4iLCAibWVpIl0pOwogIH0pOwoKICBpdCgiaWQg44GM5LiA5oSP44Gn44GC44KLIiwgKCkgPT4gewogICAgY29uc3QgaWRzID0gREVGQVVMVF9XT1JLRVJTLm1hcCgodykgPT4gdy5pZCk7CiAgICBleHBlY3QobmV3IFNldChpZHMpLnNpemUpLnRvQmUoaWRzLmxlbmd0aCk7CiAgfSk7CgogIGl0KCLlhajlk6HjgYwgaXNCb3Qg44OV44Kj44O844Or44OJ44KS5oyB44Gf44Gq44GE77yIIzMzMe+8iSIsICgpID0+IHsKICAgIGV4cGVjdChERUZBVUxUX1dPUktFUlMuZXZlcnkoKHcpID0+ICEoImlzQm90IiBpbiB3KSkpLnRvQmUodHJ1ZSk7CiAgfSk7Cn0pOwoKZGVzY3JpYmUoIldvcmtlclNjaGVtYTogcGVyc29uYWxpdHkg44OV44Kj44O844Or44OJICgjMzgpIiwgKCkgPT4gewogIGl0KCJwZXJzb25hbGl0eSDjgYwgV09SS0VSX1BFUlNPTkFMSVRZX01BWF9MRU5HVEgg5paH5a2X5Lul5YaF44Gq44KJIHBhcnNlIOaIkOWKn+OBmeOCiyAoIzU5MikiLCAoKSA9PiB7CiAgICBjb25zdCByZXN1bHQgPSBXb3JrZXJTY2hlbWEuc2FmZVBhcnNlKHsgaWQ6ICJoYXJ1IiwgZGlzcGxheU5hbWU6ICJoYXJ1IiwgcGVyc29uYWxpdHk6ICJhIi5yZXBlYXQoV09SS0VSX1BFUlNPTkFMSVRZX01BWF9MRU5HVEgpIH0pOwogICAgZXhwZWN0KHJlc3VsdC5zdWNjZXNzKS50b0JlKHRydWUpOwogIH0pOwoKICBpdCgicGVyc29uYWxpdHkg44GMIFdPUktFUl9QRVJTT05BTElUWV9NQVhfTEVOR1RIICsgMSDmloflrZfjgarjgokgcGFyc2Ug44Gr5aSx5pWX44GZ44KLICgjNTkyKSIsICgpID0+IHsKICAgIGNvbnN0IHJlc3VsdCA9IFdvcmtlclNjaGVtYS5zYWZlUGFyc2UoeyBpZDogImhhcnUiLCBkaXNwbGF5TmFtZTogImhhcnUiLCBwZXJzb25hbGl0eTogImEiLnJlcGVhdChXT1JLRVJfUEVSU09OQUxJVFlfTUFYX0xFTkdUSCArIDEpIH0pOwogICAgZXhwZWN0KHJlc3VsdC5zdWNjZXNzKS50b0JlKGZhbHNlKTsKICB9KTsKCiAgaXQoInBlcnNvbmFsaXR5IOOCkuecgeeVpeOBl+OBpuOCgiBwYXJzZSDmiJDlip/jgZnjgovvvIjku7vmhI/jg5XjgqPjg7zjg6vjg4nvvIkiLCAoKSA9PiB7CiAgICBleHBlY3QoV29ya2VyU2NoZW1hLnNhZmVQYXJzZSh7IGlkOiAiaGFydSIsIGRpc3BsYXlOYW1lOiAiaGFydSIgfSkuc3VjY2VzcykudG9CZSh0cnVlKTsKICB9KTsKCiAgaXQoImRpc3BsYXlOYW1lIOOBjCBXT1JLRVJfRElTUExBWV9OQU1FX01BWF9MRU5HVEgg5paH5a2X44Gh44KH44GG44Gp44Gq44KJIHBhcnNlIOaIkOWKn+OBmeOCi++8iCM5Me+8iSIsICgpID0+IHsKICAgIGV4cGVjdChXb3JrZXJTY2hlbWEuc2FmZVBhcnNlKHsgaWQ6ICJoYXJ1IiwgZGlzcGxheU5hbWU6ICJhIi5yZXBlYXQoV09SS0VSX0RJU1BMQVlfTkFNRV9NQVhfTEVOR1RIKSB9KS5zdWNjZXNzKS50b0JlKHRydWUpOwogIH0pOwoKICBpdCgiZGlzcGxheU5hbWUg44GMIFdPUktFUl9ESVNQTEFZX05BTUVfTUFYX0xFTkdUSCArIDEg5paH5a2X44Gq44KJIHBhcnNlIOWkseaVl+OBmeOCi++8iCM5Me+8iSIsICgpID0+IHsKICAgIGV4cGVjdChXb3JrZXJTY2hlbWEuc2FmZVBhcnNlKHsgaWQ6ICJoYXJ1IiwgZGlzcGxheU5hbWU6ICJhIi5yZXBlYXQoV09SS0VSX0RJU1BMQVlfTkFNRV9NQVhfTEVOR1RIICsgMSkgfSkuc3VjY2VzcykudG9CZShmYWxzZSk7CiAgfSk7CgogIGl0KCJyb2xlIOOBjCBXT1JLRVJfUk9MRV9NQVhfTEVOR1RIIOaWh+Wtl+OBoeOCh+OBhuOBqeOBquOCiSBwYXJzZSDmiJDlip/jgZnjgovvvIgjOTHvvIkiLCAoKSA9PiB7CiAgICBleHBlY3QoV29ya2VyU2NoZW1hLnNhZmVQYXJzZSh7IGlkOiAiaGFydSIsIGRpc3BsYXlOYW1lOiAiaGFydSIsIHJvbGU6ICJhIi5yZXBlYXQoV09SS0VSX1JPTEVfTUFYX0xFTkdUSCkgfSkuc3VjY2VzcykudG9CZSh0cnVlKTsKICB9KTsKCiAgaXQoInJvbGUg44GMIFdPUktFUl9ST0xFX01BWF9MRU5HVEggKyAxIOaWh+Wtl+OBquOCiSBwYXJzZSDlpLHmlZfjgZnjgovvvIgjOTHvvIkiLCAoKSA9PiB7CiAgICBleHBlY3QoV29ya2VyU2NoZW1hLnNhZmVQYXJzZSh7IGlkOiAiaGFydSIsIGRpc3BsYXlOYW1lOiAiaGFydSIsIHJvbGU6ICJhIi5yZXBlYXQoV09SS0VSX1JPTEVfTUFYX0xFTkdUSCArIDEpIH0pLnN1Y2Nlc3MpLnRvQmUoZmFsc2UpOwogIH0pOwp9KTsKCmRlc2NyaWJlKCJXb3JrZXJTY2hlbWE6IGltYWdlVXJsIOODleOCo+ODvOODq+ODiSAoIzIyMCkiLCAoKSA9PiB7CiAgaXQoImltYWdlVXJsIOOBjOacieWKueOBqiBVUkwg44Gq44KJIHBhcnNlIOaIkOWKn+OBmeOCiyIsICgpID0+IHsKICAgIGV4cGVjdChXb3JrZXJTY2hlbWEuc2FmZVBhcnNlKHsgaWQ6ICJoYXJ1IiwgZGlzcGxheU5hbWU6ICJoYXJ1IiwgaW1hZ2VVcmw6ICJodHRwczovL2V4YW1wbGUuY29tL2F2YXRhci5wbmciIH0pLnN1Y2Nlc3MpLnRvQmUodHJ1ZSk7CiAgfSk7CgogIGl0KCJpbWFnZVVybCDjgpLnnIHnlaXjgZfjgabjgoIgcGFyc2Ug5oiQ5Yqf44GZ44KL77yI5Lu75oSP44OV44Kj44O844Or44OJ77yJIiwgKCkgPT4gewogICAgY29uc3QgcmVzdWx0ID0gV29ya2VyU2NoZW1hLnNhZmVQYXJzZSh7IGlkOiAiaGFydSIsIGRpc3BsYXlOYW1lOiAiaGFydSIgfSk7CiAgICBleHBlY3QocmVzdWx0LnN1Y2Nlc3MpLnRvQmUodHJ1ZSk7CiAgICBpZiAocmVzdWx0LnN1Y2Nlc3MpIGV4cGVjdChyZXN1bHQuZGF0YS5pbWFnZVVybCkudG9CZVVuZGVmaW5lZCgpOwogIH0pOwoKICBpdCgiaW1hZ2VVcmwg44GM5LiN5q2j44GqIFVSTCDlvaLlvI/jgarjgokgcGFyc2Ug5aSx5pWX44GZ44KLIiwgKCkgPT4gewogICAgZXhwZWN0KFdvcmtlclNjaGVtYS5zYWZlUGFyc2UoeyBpZDogImhhcnUiLCBkaXNwbGF5TmFtZTogImhhcnUiLCBpbWFnZVVybDogIm5vdC1hLXVybCIgfSkuc3VjY2VzcykudG9CZShmYWxzZSk7CiAgfSk7CgogIGl0KGBpbWFnZVVybCDjgYwgV09SS0VSX0lNQUdFX1VSTF9NQVhfTEVOR1RIIOaWh+Wtl+OBoeOCh+OBhuOBqeOBquOCiSBwYXJzZSDmiJDlip/jgZnjgovvvIgjOTHvvIlgLCAoKSA9PiB7CiAgICBjb25zdCBiYXNlID0gImh0dHBzOi8vZXhhbXBsZS5jb20vIjsKICAgIGNvbnN0IHVybCA9IGJhc2UgKyAiYSIucmVwZWF0KFdPUktFUl9JTUFHRV9VUkxfTUFYX0xFTkdUSCAtIGJhc2UubGVuZ3RoKTsKICAgIGV4cGVjdCh1cmwubGVuZ3RoKS50b0JlKFdPUktFUl9JTUFHRV9VUkxfTUFYX0xFTkdUSCk7CiAgICBleHBlY3QoV29ya2VyU2NoZW1hLnNhZmVQYXJzZSh7IGlkOiAiaGFydSIsIGRpc3BsYXlOYW1lOiAiaGFydSIsIGltYWdlVXJsOiB1cmwgfSkuc3VjY2VzcykudG9CZSh0cnVlKTsKICB9KTsKCiAgaXQoYGltYWdlVXJsIOOBjCBXT1JLRVJfSU1BR0VfVVJMX01BWF9MRU5HVEggKyAxIOaWh+Wtl+OBquOCiSBwYXJzZSDlpLHmlZfjgZnjgovvvIgjOTHvvIlgLCAoKSA9PiB7CiAgICBjb25zdCBiYXNlID0gImh0dHBzOi8vZXhhbXBsZS5jb20vIjsKICAgIGNvbnN0IHVybCA9IGJhc2UgKyAiYSIucmVwZWF0KFdPUktFUl9JTUFHRV9VUkxfTUFYX0xFTkdUSCAtIGJhc2UubGVuZ3RoICsgMSk7CiAgICBleHBlY3QodXJsLmxlbmd0aCkudG9CZShXT1JLRVJfSU1BR0VfVVJMX01BWF9MRU5HVEggKyAxKTsKICAgIGV4cGVjdChXb3JrZXJTY2hlbWEuc2FmZVBhcnNlKHsgaWQ6ICJoYXJ1IiwgZGlzcGxheU5hbWU6ICJoYXJ1IiwgaW1hZ2VVcmw6IHVybCB9KS5zdWNjZXNzKS50b0JlKGZhbHNlKTsKICB9KTsKfSk7CgpkZXNjcmliZSgiVXBkYXRlV29ya2VyU2NoZW1hICgjMzgpIiwgKCkgPT4gewogIGl0KCJkaXNwbGF5TmFtZSAvIHJvbGUgLyBwZXJzb25hbGl0eSDjgpLpg6jliIbmm7TmlrDjgafjgY3jgosiLCAoKSA9PiB7CiAgICBleHBlY3QoVXBkYXRlV29ya2VyU2NoZW1hLnNhZmVQYXJzZSh7IGRpc3BsYXlOYW1lOiAibmV3IG5hbWUiLCByb2xlOiAi44Oe44ON44O844K444Oj44O8IiwgcGVyc29uYWxpdHk6ICLmmI7jgovjgY/nqY3mpbXnmoQiIH0pLnN1Y2Nlc3MpLnRvQmUodHJ1ZSk7CiAgfSk7CgogIGl0KCJkaXNwbGF5TmFtZSDjgYznqbrmloflrZfjgarjgokgaW52YWxpZCIsICgpID0+IHsKICAgIGV4cGVjdChVcGRhdGVXb3JrZXJTY2hlbWEuc2FmZVBhcnNlKHsgZGlzcGxheU5hbWU6ICIiIH0pLnN1Y2Nlc3MpLnRvQmUoZmFsc2UpOwogIH0pOwoKICBpdCgicGVyc29uYWxpdHkg44GMIFdPUktFUl9QRVJTT05BTElUWV9NQVhfTEVOR1RIICsgMSDmloflrZfjgarjgokgaW52YWxpZCAoIzU5MikiLCAoKSA9PiB7CiAgICBleHBlY3QoVXBkYXRlV29ya2VyU2NoZW1hLnNhZmVQYXJzZSh7IHBlcnNvbmFsaXR5OiAiYSIucmVwZWF0KFdPUktFUl9QRVJTT05BTElUWV9NQVhfTEVOR1RIICsgMSkgfSkuc3VjY2VzcykudG9CZShmYWxzZSk7CiAgfSk7CgogIGl0KCLjgZnjgbnjgabjga7jg5XjgqPjg7zjg6vjg4njgpLnnIHnlaXjgafjgY3jgovvvIjnqbrmm7TmlrDjga8gdmFsaWTvvIkiLCAoKSA9PiB7CiAgICBleHBlY3QoVXBkYXRlV29ya2VyU2NoZW1hLnNhZmVQYXJzZSh7fSkuc3VjY2VzcykudG9CZSh0cnVlKTsKICB9KTsKCiAgaXQoImRpc3BsYXlOYW1lIOOBjCBXT1JLRVJfRElTUExBWV9OQU1FX01BWF9MRU5HVEgg5paH5a2X44Gh44KH44GG44Gp44Gq44KJIHZhbGlk77yIIzkx77yJIiwgKCkgPT4gewogICAgZXhwZWN0KFVwZGF0ZVdvcmtlclNjaGVtYS5zYWZlUGFyc2UoeyBkaXNwbGF5TmFtZTogImEiLnJlcGVhdChXT1JLRVJfRElTUExBWV9OQU1FX01BWF9MRU5HVEgpIH0pLnN1Y2Nlc3MpLnRvQmUodHJ1ZSk7CiAgfSk7CgogIGl0KCJkaXNwbGF5TmFtZSDjgYwgV09SS0VSX0RJU1BMQVlfTkFNRV9NQVhfTEVOR1RIICsgMSDmloflrZfjgarjgokgaW52YWxpZO+8iCM5Me+8iSIsICgpID0+IHsKICAgIGV4cGVjdChVcGRhdGVXb3JrZXJTY2hlbWEuc2FmZVBhcnNlKHsgZGlzcGxheU5hbWU6ICJhIi5yZXBlYXQoV09SS0VSX0RJU1BMQVlfTkFNRV9NQVhfTEVOR1RIICsgMSkgfSkuc3VjY2VzcykudG9CZShmYWxzZSk7CiAgfSk7CgogIGl0KCJyb2xlIOOBjCBXT1JLRVJfUk9MRV9NQVhfTEVOR1RIIOaWh+Wtl+OBoeOCh+OBhuOBqeOBquOCiSB2YWxpZO+8iCM5Me+8iSIsICgpID0+IHsKICAgIGV4cGVjdChVcGRhdGVXb3JrZXJTY2hlbWEuc2FmZVBhcnNlKHsgcm9sZTogImEiLnJlcGVhdChXT1JLRVJfUk9MRV9NQVhfTEVOR1RIKSB9KS5zdWNjZXNzKS50b0JlKHRydWUpOwogIH0pOwoKICBpdCgicm9sZSDjgYwgV09SS0VSX1JPTEVfTUFYX0xFTkdUSCArIDEg5paH5a2X44Gq44KJIGludmFsaWTvvIgjOTHvvIkiLCAoKSA9PiB7CiAgICBleHBlY3QoVXBkYXRlV29ya2VyU2NoZW1hLnNhZmVQYXJzZSh7IHJvbGU6ICJhIi5yZXBlYXQoV09SS0VSX1JPTEVfTUFYX0xFTkdUSCArIDEpIH0pLnN1Y2Nlc3MpLnRvQmUoZmFsc2UpOwogIH0pOwp9KTsKCmRlc2NyaWJlKCJXb3JrZXJTY2hlbWE6IOatu+iUteODleOCo+ODvOODq+ODiSBhdmF0YXJVcmwg44Gu5YmK6Zmk77yIIzU0Me+8iSIsICgpID0+IHsKICBpdCgiV29ya2VyU2NoZW1hIOOBriBzaGFwZSDjgasgYXZhdGFyVXJsIOOCreODvOOCkuaMgeOBn+OBquOBhCIsICgpID0+IHsKICAgIGV4cGVjdChPYmplY3Qua2V5cyhXb3JrZXJTY2hlbWEuc2hhcGUpKS5ub3QudG9Db250YWluKCJhdmF0YXJVcmwiKTsKICB9KTsKCiAgaXQoImF2YXRhclVybCDjgpLmuKHjgZfjgabjgoIgcGFyc2Ug57WQ5p6c44Gr5q6L44KJ44Gq44GE77yIc3RyaXAg44GV44KM44KL77yJIiwgKCkgPT4gewogICAgY29uc3QgcmVzdWx0ID0gV29ya2VyU2NoZW1hLnBhcnNlKHsKICAgICAgaWQ6ICJoYXJ1IiwKICAgICAgZGlzcGxheU5hbWU6ICJoYXJ1IiwKICAgICAgYXZhdGFyVXJsOiAiaHR0cHM6Ly9zdG9yYWdlLmdvb2dsZWFwaXMuY29tL2J1Y2tldC93b3JrZXJzL2hhcnUvdXVpZC5wbmciLAogICAgfSk7CiAgICBleHBlY3QocmVzdWx0KS5ub3QudG9IYXZlUHJvcGVydHkoImF2YXRhclVybCIpOwogIH0pOwoKICBpdCgi55S75YOP44GvIGltYWdlVXJsIOOBq+S4gOacrOWMluOBleOCjOOBpuOBhOOCi++8iGltYWdlVXJsIOOBr+OBneOBruOBvuOBviBwYXJzZSDjgZXjgozjgovvvIkiLCAoKSA9PiB7CiAgICBjb25zdCByZXN1bHQgPSBXb3JrZXJTY2hlbWEucGFyc2UoewogICAgICBpZDogImhhcnUiLAogICAgICBkaXNwbGF5TmFtZTogImhhcnUiLAogICAgICBpbWFnZVVybDogImh0dHBzOi8vc3RvcmFnZS5nb29nbGVhcGlzLmNvbS9idWNrZXQvd29ya2Vycy9oYXJ1L3V1aWQucG5nIiwKICAgIH0pOwogICAgZXhwZWN0KHJlc3VsdC5pbWFnZVVybCkudG9CZSgiaHR0cHM6Ly9zdG9yYWdlLmdvb2dsZWFwaXMuY29tL2J1Y2tldC93b3JrZXJzL2hhcnUvdXVpZC5wbmciKTsKICB9KTsKfSk7CgpkZXNjcmliZSgiZm9ybWF0V29ya2VyRGlzcGxheU5hbWUgKCMyMTgpIiwgKCkgPT4gewogIGl0KCJkZWxldGVkQXQg44GMIG51bGwg44Gu5aC05ZCI44GvIGRpc3BsYXlOYW1lIOOCkuOBneOBruOBvuOBvui/lOOBmSIsICgpID0+IHsKICAgIGV4cGVjdChmb3JtYXRXb3JrZXJEaXNwbGF5TmFtZSh7IGRpc3BsYXlOYW1lOiAi55Sw5LitIOWkqumDjiIsIGRlbGV0ZWRBdDogbnVsbCB9KSkudG9CZSgi55Sw5LitIOWkqumDjiIpOwogIH0pOwoKICBpdCgiZGVsZXRlZEF0IOOBjCB1bmRlZmluZWQg44Gu5aC05ZCI44GvIGRpc3BsYXlOYW1lIOOCkuOBneOBruOBvuOBvui/lOOBmSIsICgpID0+IHsKICAgIGV4cGVjdChmb3JtYXRXb3JrZXJEaXNwbGF5TmFtZSh7IGRpc3BsYXlOYW1lOiAi55Sw5LitIOWkqumDjiIgfSkpLnRvQmUoIueUsOS4rSDlpKrpg44iKTsKICB9KTsKCiAgaXQoImRlbGV0ZWRBdCDjgYwgRGF0ZSDjga7loLTlkIjjga/jgIrliYrpmaTmuIjjgb/jgIvjg5fjg6zjg5XjgqPjg4Pjgq/jgrnjgpLku5jjgZHjgosiLCAoKSA9PiB7CiAgICBleHBlY3QoZm9ybWF0V29ya2VyRGlzcGxheU5hbWUoeyBkaXNwbGF5TmFtZTogIueUsOS4rSDlpKrpg44iLCBkZWxldGVkQXQ6IG5ldyBEYXRlKCIyMDI0LTAxLTAxIikgfSkpLnRvQmUoIuOAi+WJiumZpOa4iOOBv+OAiueUsOS4rSDlpKrpg44iKTsKICB9KTsKfSk7CgpkZXNjcmliZSgiQ3JlYXRlV29ya2VyU2NoZW1hICgjMjE3KSIsICgpID0+IHsKICBpdCgiZGlzcGxheU5hbWUg44Gu44G/44GnIHBhcnNlIOaIkOWKn+OBmeOCiyIsICgpID0+IHsKICAgIGV4cGVjdChDcmVhdGVXb3JrZXJTY2hlbWEuc2FmZVBhcnNlKHsgZGlzcGxheU5hbWU6ICLmlrDjgZfjgYTjg6/jg7zjgqvjg7wiIH0pLnN1Y2Nlc3MpLnRvQmUodHJ1ZSk7CiAgfSk7CgogIGl0KCJkaXNwbGF5TmFtZSDjgYznqbrmloflrZfjgarjgokgaW52YWxpZCIsICgpID0+IHsKICAgIGV4cGVjdChDcmVhdGVXb3JrZXJTY2hlbWEuc2FmZVBhcnNlKHsgZGlzcGxheU5hbWU6ICIiIH0pLnN1Y2Nlc3MpLnRvQmUoZmFsc2UpOwogIH0pOwoKICBpdCgiZGlzcGxheU5hbWUg44GMIFdPUktFUl9ESVNQTEFZX05BTUVfTUFYX0xFTkdUSCDmloflrZfjgaHjgofjgYbjganjgarjgokgdmFsaWQiLCAoKSA9PiB7CiAgICBleHBlY3QoQ3JlYXRlV29ya2VyU2NoZW1hLnNhZmVQYXJzZSh7IGRpc3BsYXlOYW1lOiAiYSIucmVwZWF0KFdPUktFUl9ESVNQTEFZX05BTUVfTUFYX0xFTkdUSCkgfSkuc3VjY2VzcykudG9CZSh0cnVlKTsKICB9KTsKCiAgaXQoImRpc3BsYXlOYW1lIOOBjCBXT1JLRVJfRElTUExBWV9OQU1FX01BWF9MRU5HVEggKyAxIOaWh+Wtl+OBquOCiSBpbnZhbGlkIiwgKCkgPT4gewogICAgZXhwZWN0KENyZWF0ZVdvcmtlclNjaGVtYS5zYWZlUGFyc2UoeyBkaXNwbGF5TmFtZTogImEiLnJlcGVhdChXT1JLRVJfRElTUExBWV9OQU1FX01BWF9MRU5HVEggKyAxKSB9KS5zdWNjZXNzKS50b0JlKGZhbHNlKTsKICB9KTsKCiAgaXQoInJvbGUg44KS55yB55Wl44GX44Gm44KCIHBhcnNlIOaIkOWKn+OBmeOCi++8iOS7u+aEj+ODleOCo+ODvOODq+ODie+8iSIsICgpID0+IHsKICAgIGV4cGVjdChDcmVhdGVXb3JrZXJTY2hlbWEuc2FmZVBhcnNlKHsgZGlzcGxheU5hbWU6ICLjg6/jg7zjgqvjg7xBIiB9KS5zdWNjZXNzKS50b0JlKHRydWUpOwogIH0pOwoKICBpdCgicm9sZSDjgpLmjIflrprjgZnjgovjgajlj43mmKDjgZXjgozjgosiLCAoKSA9PiB7CiAgICBjb25zdCByZXN1bHQgPSBDcmVhdGVXb3JrZXJTY2hlbWEuc2FmZVBhcnNlKHsgZGlzcGxheU5hbWU6ICLjg6/jg7zjgqvjg7xBIiwgcm9sZTogIuOCqOODs+OCuOODi+OCoiIgfSk7CiAgICBleHBlY3QocmVzdWx0LnN1Y2Nlc3MpLnRvQmUodHJ1ZSk7CiAgICBpZiAocmVzdWx0LnN1Y2Nlc3MpIGV4cGVjdChyZXN1bHQuZGF0YS5yb2xlKS50b0JlKCLjgqjjg7Pjgrjjg4vjgqIiKTsKICB9KTsKCiAgaXQoInJvbGUg44GMIFdPUktFUl9ST0xFX01BWF9MRU5HVEggKyAxIOaWh+Wtl+OBquOCiSBpbnZhbGlkIiwgKCkgPT4gewogICAgZXhwZWN0KENyZWF0ZVdvcmtlclNjaGVtYS5zYWZlUGFyc2UoeyBkaXNwbGF5TmFtZTogIuODr+ODvOOCq+ODvEEiLCByb2xlOiAiYSIucmVwZWF0KFdPUktFUl9ST0xFX01BWF9MRU5HVEggKyAxKSB9KS5zdWNjZXNzKS50b0JlKGZhbHNlKTsKICB9KTsKCiAgaXQoInBlcnNvbmFsaXR5IOOCkuecgeeVpeOBl+OBpuOCgiBwYXJzZSDmiJDlip/jgZnjgovvvIjku7vmhI/jg5XjgqPjg7zjg6vjg4nvvIkiLCAoKSA9PiB7CiAgICBleHBlY3QoQ3JlYXRlV29ya2VyU2NoZW1hLnNhZmVQYXJzZSh7IGRpc3BsYXlOYW1lOiAi44Ov44O844Kr44O8QSIgfSkuc3VjY2VzcykudG9CZSh0cnVlKTsKICB9KTsKCiAgaXQoInBlcnNvbmFsaXR5IOOBjCBXT1JLRVJfUEVSU09OQUxJVFlfTUFYX0xFTkdUSCDmloflrZfjgaHjgofjgYbjganjgarjgokgdmFsaWQgKCM1OTIpIiwgKCkgPT4gewogICAgZXhwZWN0KENyZWF0ZVdvcmtlclNjaGVtYS5zYWZlUGFyc2UoeyBkaXNwbGF5TmFtZTogIuODr+ODvOOCq+ODvEEiLCBwZXJzb25hbGl0eTogImEiLnJlcGVhdChXT1JLRVJfUEVSU09OQUxJVFlfTUFYX0xFTkdUSCkgfSkuc3VjY2VzcykudG9CZSh0cnVlKTsKICB9KTsKCiAgaXQoInBlcnNvbmFsaXR5IOOBjCBXT1JLRVJfUEVSU09OQUxJVFlfTUFYX0xFTkdUSCArIDEg5paH5a2X44Gq44KJIGludmFsaWQgKCM1OTIpIiwgKCkgPT4gewogICAgZXhwZWN0KENyZWF0ZVdvcmtlclNjaGVtYS5zYWZlUGFyc2UoeyBkaXNwbGF5TmFtZTogIuODr+ODvOOCq+ODvEEiLCBwZXJzb25hbGl0eTogImEiLnJlcGVhdChXT1JLRVJfUEVSU09OQUxJVFlfTUFYX0xFTkdUSCArIDEpIH0pLnN1Y2Nlc3MpLnRvQmUoZmFsc2UpOwogIH0pOwp9KTsKCmRlc2NyaWJlKCJjcmVhdGVEaXNwbGF5TmFtZVJlc29sdmVyIiwgKCkgPT4gewogIGNvbnN0IHdvcmtlcnMgPSBbCiAgICB7IGlkOiAiaGFydSIsIGRpc3BsYXlOYW1lOiAi44OP44OrIiB9LAogICAgeyBpZDogImtlbiIsIGRpc3BsYXlOYW1lOiAi44Kx44OzIiB9LAogIF07CgogIGl0KCLml6Lnn6Xjga4gd29ya2VyIElEIOOCkiBkaXNwbGF5TmFtZSDjgavop6PmsbrjgZnjgosiLCAoKSA9PiB7CiAgICBjb25zdCByZXNvbHZlID0gY3JlYXRlRGlzcGxheU5hbWVSZXNvbHZlcih3b3JrZXJzKTsKICAgIGV4cGVjdChyZXNvbHZlKCJoYXJ1IikpLnRvQmUoIuODj+ODqyIpOwogICAgZXhwZWN0KHJlc29sdmUoImtlbiIpKS50b0JlKCLjgrHjg7MiKTsKICB9KTsKCiAgaXQoIuacquefpeOBriBJRCDjga/jgZ3jga4gSUQg44KS44Gd44Gu44G+44G+44OV44Kp44O844Or44OQ44OD44Kv6KGo56S644GZ44KLIiwgKCkgPT4gewogICAgY29uc3QgcmVzb2x2ZSA9IGNyZWF0ZURpc3BsYXlOYW1lUmVzb2x2ZXIod29ya2Vycyk7CiAgICBleHBlY3QocmVzb2x2ZSgidW5rbm93bi1pZCIpKS50b0JlKCJ1bmtub3duLWlkIik7CiAgfSk7CgogIGl0KCLlvJXmlbDnnIHnlaXmmYLjga8gREVGQVVMVF9XT1JLRVJTIOOBp+ino+axuuOBmeOCiyIsICgpID0+IHsKICAgIGNvbnN0IHJlc29sdmUgPSBjcmVhdGVEaXNwbGF5TmFtZVJlc29sdmVyKCk7CiAgICBjb25zdCBoYXJ1ID0gREVGQVVMVF9XT1JLRVJTLmZpbmQoKHcpID0+IHcuaWQgPT09ICJoYXJ1IikhOwogICAgZXhwZWN0KHJlc29sdmUoImhhcnUiKSkudG9CZShoYXJ1LmRpc3BsYXlOYW1lKTsKICB9KTsKfSk7CgpkZXNjcmliZSgicmVzb2x2ZVdvcmtlckltYWdlVXJsICgjMTAxNSkiLCAoKSA9PiB7CiAgaXQoImltYWdlVXJsIOOBjOioreWumuOBleOCjOOBpuOBhOOCjOOBsOOBneOBruOBvuOBvui/lOOBmSIsICgpID0+IHsKICAgIGV4cGVjdChyZXNvbHZlV29ya2VySW1hZ2VVcmwoeyBpbWFnZVVybDogImh0dHBzOi8vZXhhbXBsZS5jb20vaGFydS5wbmciIH0pKS50b0JlKAogICAgICAiaHR0cHM6Ly9leGFtcGxlLmNvbS9oYXJ1LnBuZyIsCiAgICApOwogIH0pOwoKICBpdCgiaW1hZ2VVcmwg44GMIG51bGwg44Gu44Go44GNIG51bGwg44KS6L+U44GZ77yIVVJMIOOCkuaNj+mAoOOBl+OBquOBhOODuyMxMDE177yJIiwgKCkgPT4gewogICAgZXhwZWN0KHJlc29sdmVXb3JrZXJJbWFnZVVybCh7IGltYWdlVXJsOiBudWxsIH0pKS50b0JlTnVsbCgpOwogIH0pOwoKICBpdCgiaW1hZ2VVcmwg44GMIHVuZGVmaW5lZCDjga7jgajjgY0gbnVsbCDjgpLov5TjgZnvvIgjMTAxNe+8iSIsICgpID0+IHsKICAgIGV4cGVjdChyZXNvbHZlV29ya2VySW1hZ2VVcmwoeyBpbWFnZVVybDogdW5kZWZpbmVkIH0pKS50b0JlTnVsbCgpOwogIH0pOwoKICBpdCgiaW1hZ2VVcmwg44KS55yB55Wl44GX44Gf44Go44GNIG51bGwg44KS6L+U44GZ77yIIzEwMTXvvIkiLCAoKSA9PiB7CiAgICBleHBlY3QocmVzb2x2ZVdvcmtlckltYWdlVXJsKHt9KSkudG9CZU51bGwoKTsKICB9KTsKfSk7CgpkZXNjcmliZSgiY3JlYXRlQXZhdGFyVXJsUmVzb2x2ZXIgKCMzMDApIiwgKCkgPT4gewogIGNvbnN0IHdvcmtlcnMgPSBbCiAgICB7IGlkOiAiaGFydSIsIGRpc3BsYXlOYW1lOiAi44OP44OrIiwgaW1hZ2VVcmw6ICJodHRwczovL2V4YW1wbGUuY29tL2hhcnUucG5nIiB9LAogICAgeyBpZDogImtlbiIsIGRpc3BsYXlOYW1lOiAi44Kx44OzIiB9LAogIF07CgogIGl0KCJpbWFnZVVybCDjgYzoqK3lrprjgZXjgozjgabjgYTjgosgd29ya2VyIElEIOOBryBVUkwg44KS6L+U44GZIiwgKCkgPT4gewogICAgY29uc3QgcmVzb2x2ZSA9IGNyZWF0ZUF2YXRhclVybFJlc29sdmVyKHdvcmtlcnMpOwogICAgZXhwZWN0KHJlc29sdmUoImhhcnUiKSkudG9CZSgiaHR0cHM6Ly9leGFtcGxlLmNvbS9oYXJ1LnBuZyIpOwogIH0pOwoKICBpdCgiaW1hZ2VVcmwg44GM5pyq6Kit5a6a44Gu5pei55+l44Ov44O844Kr44O844GvIG51bGwg44KS6L+U44GZ77yIIzEwMTU6IOatu+OCk+OBoCBVUkwg44KS6L+U44GV44Gq44GE77yJIiwgKCkgPT4gewogICAgY29uc3QgcmVzb2x2ZSA9IGNyZWF0ZUF2YXRhclVybFJlc29sdmVyKHdvcmtlcnMpOwogICAgZXhwZWN0KHJlc29sdmUoImtlbiIpKS50b0JlTnVsbCgpOwogIH0pOwoKICBpdCgi5pyq6Kej5rG644GuIHdvcmtlciBJRCDjga8gdW5kZWZpbmVkIOOCkui/lOOBmSIsICgpID0+IHsKICAgIGNvbnN0IHJlc29sdmUgPSBjcmVhdGVBdmF0YXJVcmxSZXNvbHZlcih3b3JrZXJzKTsKICAgIGV4cGVjdChyZXNvbHZlKCJ1bmtub3duLWlkIikpLnRvQmVVbmRlZmluZWQoKTsKICB9KTsKCiAgaXQoIuW8leaVsOecgeeVpeaZguOBryBERUZBVUxUX1dPUktFUlMg44Gn6Kej5rG644GZ44KL77yIaW1hZ2VVcmwg5pyq6Kit5a6aIOKGkiBudWxs77yJKCMxMDE1KSIsICgpID0+IHsKICAgIGNvbnN0IHJlc29sdmUgPSBjcmVhdGVBdmF0YXJVcmxSZXNvbHZlcigpOwogICAgZXhwZWN0KHJlc29sdmUoImhhcnUiKSkudG9CZU51bGwoKTsKICB9KTsKfSk7CgpkZXNjcmliZSgiV29ya2VyVmVyYm9zaXR5U2NoZW1hICgjNjI1KSIsICgpID0+IHsKICBpdCgiY29uY2lzZSAvIHN0YW5kYXJkIC8gZGV0YWlsZWQg44KS5Y+X55CG44GZ44KLIiwgYXN5bmMgKCkgPT4gewogICAgY29uc3QgeyBXb3JrZXJWZXJib3NpdHlTY2hlbWEgfSA9IGF3YWl0IGltcG9ydCgiLi93b3JrZXIuanMiKTsKICAgIGV4cGVjdChXb3JrZXJWZXJib3NpdHlTY2hlbWEuc2FmZVBhcnNlKCJjb25jaXNlIikuc3VjY2VzcykudG9CZSh0cnVlKTsKICAgIGV4cGVjdChXb3JrZXJWZXJib3NpdHlTY2hlbWEuc2FmZVBhcnNlKCJzdGFuZGFyZCIpLnN1Y2Nlc3MpLnRvQmUodHJ1ZSk7CiAgICBleHBlY3QoV29ya2VyVmVyYm9zaXR5U2NoZW1hLnNhZmVQYXJzZSgiZGV0YWlsZWQiKS5zdWNjZXNzKS50b0JlKHRydWUpOwogIH0pOwoKICBpdCgi5pyq55+l5YCk44Gv5by+44GPIiwgYXN5bmMgKCkgPT4gewogICAgY29uc3QgeyBXb3JrZXJWZXJib3NpdHlTY2hlbWEgfSA9IGF3YWl0IGltcG9ydCgiLi93b3JrZXIuanMiKTsKICAgIGV4cGVjdChXb3JrZXJWZXJib3NpdHlTY2hlbWEuc2FmZVBhcnNlKCJ2ZXJib3NlIikuc3VjY2VzcykudG9CZShmYWxzZSk7CiAgICBleHBlY3QoV29ya2VyVmVyYm9zaXR5U2NoZW1hLnNhZmVQYXJzZSgiIikuc3VjY2VzcykudG9CZShmYWxzZSk7CiAgICBleHBlY3QoV29ya2VyVmVyYm9zaXR5U2NoZW1hLnNhZmVQYXJzZSgiQ09OQ0lTRSIpLnN1Y2Nlc3MpLnRvQmUoZmFsc2UpOwogIH0pOwp9KTsKCmRlc2NyaWJlKCJXb3JrZXJTY2hlbWE6IHZlcmJvc2l0eSDjg5XjgqPjg7zjg6vjg4kgKCM2MjUpIiwgKCkgPT4gewogIGl0KCJ2ZXJib3NpdHkg44KS55yB55Wl44GX44Gm44KCIHBhcnNlIOaIkOWKn+OBmeOCi++8iOS7u+aEj+ODleOCo+ODvOODq+ODie+8iSIsICgpID0+IHsKICAgIGV4cGVjdChXb3JrZXJTY2hlbWEuc2FmZVBhcnNlKHsgaWQ6ICJoYXJ1IiwgZGlzcGxheU5hbWU6ICJoYXJ1IiB9KS5zdWNjZXNzKS50b0JlKHRydWUpOwogIH0pOwoKICBpdCgidmVyYm9zaXR5IOOBqyBjb25jaXNlIOOCkuaMh+WumuOBmeOCi+OBqCBwYXJzZSDmiJDlip/jgZnjgosiLCAoKSA9PiB7CiAgICBjb25zdCByZXN1bHQgPSBXb3JrZXJTY2hlbWEuc2FmZVBhcnNlKHsgaWQ6ICJoYXJ1IiwgZGlzcGxheU5hbWU6ICJoYXJ1IiwgdmVyYm9zaXR5OiAiY29uY2lzZSIgfSk7CiAgICBleHBlY3QocmVzdWx0LnN1Y2Nlc3MpLnRvQmUodHJ1ZSk7CiAgICBpZiAocmVzdWx0LnN1Y2Nlc3MpIGV4cGVjdChyZXN1bHQuZGF0YS52ZXJib3NpdHkpLnRvQmUoImNvbmNpc2UiKTsKICB9KTsKCiAgaXQoInZlcmJvc2l0eSDjgasgc3RhbmRhcmQg44KS5oyH5a6a44GZ44KL44GoIHBhcnNlIOaIkOWKn+OBmeOCiyIsICgpID0+IHsKICAgIGNvbnN0IHJlc3VsdCA9IFdvcmtlclNjaGVtYS5zYWZlUGFyc2UoeyBpZDogImhhcnUiLCBkaXNwbGF5TmFtZTogImhhcnUiLCB2ZXJib3NpdHk6ICJzdGFuZGFyZCIgfSk7CiAgICBleHBlY3QocmVzdWx0LnN1Y2Nlc3MpLnRvQmUodHJ1ZSk7CiAgICBpZiAocmVzdWx0LnN1Y2Nlc3MpIGV4cGVjdChyZXN1bHQuZGF0YS52ZXJib3NpdHkpLnRvQmUoInN0YW5kYXJkIik7CiAgfSk7CgogIGl0KCJ2ZXJib3NpdHkg44GrIGRldGFpbGVkIOOCkuaMh+WumuOBmeOCi+OBqCBwYXJzZSDmiJDlip/jgZnjgosiLCAoKSA9PiB7CiAgICBjb25zdCByZXN1bHQgPSBXb3JrZXJTY2hlbWEuc2FmZVBhcnNlKHsgaWQ6ICJoYXJ1IiwgZGlzcGxheU5hbWU6ICJoYXJ1IiwgdmVyYm9zaXR5OiAiZGV0YWlsZWQiIH0pOwogICAgZXhwZWN0KHJlc3VsdC5zdWNjZXNzKS50b0JlKHRydWUpOwogICAgaWYgKHJlc3VsdC5zdWNjZXNzKSBleHBlY3QocmVzdWx0LmRhdGEudmVyYm9zaXR5KS50b0JlKCJkZXRhaWxlZCIpOwogIH0pOwoKICBpdCgidmVyYm9zaXR5IOOBq+acquefpeWApOOCkuaMh+WumuOBmeOCi+OBqCBwYXJzZSDlpLHmlZfjgZnjgosiLCAoKSA9PiB7CiAgICBleHBlY3QoV29ya2VyU2NoZW1hLnNhZmVQYXJzZSh7IGlkOiAiaGFydSIsIGRpc3BsYXlOYW1lOiAiaGFydSIsIHZlcmJvc2l0eTogInVua25vd24iIH0pLnN1Y2Nlc3MpLnRvQmUoZmFsc2UpOwogIH0pOwp9KTsKCmRlc2NyaWJlKCJVcGRhdGVXb3JrZXJTY2hlbWE6IHZlcmJvc2l0eSDjg5XjgqPjg7zjg6vjg4kgKCM2MjUpIiwgKCkgPT4gewogIGl0KCJ2ZXJib3NpdHkg44KS55yB55Wl44GX44Gm44KCIHZhbGlk77yI5Lu75oSP77yJIiwgKCkgPT4gewogICAgZXhwZWN0KFVwZGF0ZVdvcmtlclNjaGVtYS5zYWZlUGFyc2Uoe30pLnN1Y2Nlc3MpLnRvQmUodHJ1ZSk7CiAgfSk7CgogIGl0KCJ2ZXJib3NpdHkg44GrIGNvbmNpc2UgLyBzdGFuZGFyZCAvIGRldGFpbGVkIOOCkuaMh+WumuOBmeOCi+OBqCB2YWxpZCIsICgpID0+IHsKICAgIGV4cGVjdChVcGRhdGVXb3JrZXJTY2hlbWEuc2FmZVBhcnNlKHsgdmVyYm9zaXR5OiAiY29uY2lzZSIgfSkuc3VjY2VzcykudG9CZSh0cnVlKTsKICAgIGV4cGVjdChVcGRhdGVXb3JrZXJTY2hlbWEuc2FmZVBhcnNlKHsgdmVyYm9zaXR5OiAic3RhbmRhcmQiIH0pLnN1Y2Nlc3MpLnRvQmUodHJ1ZSk7CiAgICBleHBlY3QoVXBkYXRlV29ya2VyU2NoZW1hLnNhZmVQYXJzZSh7IHZlcmJvc2l0eTogImRldGFpbGVkIiB9KS5zdWNjZXNzKS50b0JlKHRydWUpOwogIH0pOwoKICBpdCgidmVyYm9zaXR5IOOBq+acquefpeWApOOCkuaMh+WumuOBmeOCi+OBqCBpbnZhbGlkIiwgKCkgPT4gewogICAgZXhwZWN0KFVwZGF0ZVdvcmtlclNjaGVtYS5zYWZlUGFyc2UoeyB2ZXJib3NpdHk6ICJ1bmtub3duIiB9KS5zdWNjZXNzKS50b0JlKGZhbHNlKTsKICB9KTsKfSk7CgpkZXNjcmliZSgiQ3JlYXRlV29ya2VyU2NoZW1hOiB2ZXJib3NpdHkg44OV44Kj44O844Or44OJICgjNjI1KSIsICgpID0+IHsKICBpdCgidmVyYm9zaXR5IOOCkuecgeeVpeOBl+OBpuOCgiBwYXJzZSDmiJDlip/jgZnjgovvvIjku7vmhI/vvIkiLCAoKSA9PiB7CiAgICBleHBlY3QoQ3JlYXRlV29ya2VyU2NoZW1hLnNhZmVQYXJzZSh7IGRpc3BsYXlOYW1lOiAi44Ov44O844Kr44O8QSIgfSkuc3VjY2VzcykudG9CZSh0cnVlKTsKICB9KTsKCiAgaXQoInZlcmJvc2l0eSDjgasgY29uY2lzZSAvIHN0YW5kYXJkIC8gZGV0YWlsZWQg44KS5oyH5a6a44GZ44KL44GoIHZhbGlkIiwgKCkgPT4gewogICAgZXhwZWN0KENyZWF0ZVdvcmtlclNjaGVtYS5zYWZlUGFyc2UoeyBkaXNwbGF5TmFtZTogIuODr+ODvOOCq+ODvEEiLCB2ZXJib3NpdHk6ICJjb25jaXNlIiB9KS5zdWNjZXNzKS50b0JlKHRydWUpOwogICAgZXhwZWN0KENyZWF0ZVdvcmtlclNjaGVtYS5zYWZlUGFyc2UoeyBkaXNwbGF5TmFtZTogIuODr+ODvOOCq+ODvEEiLCB2ZXJib3NpdHk6ICJzdGFuZGFyZCIgfSkuc3VjY2VzcykudG9CZSh0cnVlKTsKICAgIGV4cGVjdChDcmVhdGVXb3JrZXJTY2hlbWEuc2FmZVBhcnNlKHsgZGlzcGxheU5hbWU6ICLjg6/jg7zjgqvjg7xBIiwgdmVyYm9zaXR5OiAiZGV0YWlsZWQiIH0pLnN1Y2Nlc3MpLnRvQmUodHJ1ZSk7CiAgfSk7CgogIGl0KCJ2ZXJib3NpdHkg44Gr5pyq55+l5YCk44KS5oyH5a6a44GZ44KL44GoIGludmFsaWQiLCAoKSA9PiB7CiAgICBleHBlY3QoQ3JlYXRlV29ya2VyU2NoZW1hLnNhZmVQYXJzZSh7IGRpc3BsYXlOYW1lOiAi44Ov44O844Kr44O8QSIsIHZlcmJvc2l0eTogInVua25vd24iIH0pLnN1Y2Nlc3MpLnRvQmUoZmFsc2UpOwogIH0pOwp9KTsKCmRlc2NyaWJlKCJXb3JrZXJTY2hlbWE6IGRlbGV0ZWRBdCDjg5XjgqPjg7zjg6vjg4nvvIgjMzcyIEhUVFAg5aKD55WM5Z6L5pW05ZCI77yJIiwgKCkgPT4gewogIGl0KCJkZWxldGVkQXQg44GrIERhdGUg44Kq44OW44K444Kn44Kv44OI44KS5rih44GZ44GoIHBhcnNlIOWkseaVl+OBmeOCi++8iEhUVFAg5aKD55WM44Gn44Gv5paH5a2X5YiX44Gu44G/77yJIiwgKCkgPT4gewogICAgZXhwZWN0KFdvcmtlclNjaGVtYS5zYWZlUGFyc2UoeyBpZDogIncxIiwgZGlzcGxheU5hbWU6ICJBbGljZSIsIGRlbGV0ZWRBdDogbmV3IERhdGUoKSB9KS5zdWNjZXNzKS50b0JlKGZhbHNlKTsKICB9KTsKCiAgaXQoImRlbGV0ZWRBdCDjgasgSVNPIOaWh+Wtl+WIl+OCkua4oeOBmeOBqCBwYXJzZSDmiJDlip/jgZnjgosiLCAoKSA9PiB7CiAgICBleHBlY3QoV29ya2VyU2NoZW1hLnNhZmVQYXJzZSh7IGlkOiAidzEiLCBkaXNwbGF5TmFtZTogIkFsaWNlIiwgZGVsZXRlZEF0OiAiMjAyNC0wMS0wMVQwMDowMDowMC4wMDBaIiB9KS5zdWNjZXNzKS50b0JlKHRydWUpOwogIH0pOwoKICBpdCgiZGVsZXRlZEF0IOOBqyBudWxsIOOCkua4oeOBmeOBqCBwYXJzZSDmiJDlip/jgZnjgosiLCAoKSA9PiB7CiAgICBleHBlY3QoV29ya2VyU2NoZW1hLnNhZmVQYXJzZSh7IGlkOiAidzEiLCBkaXNwbGF5TmFtZTogIkFsaWNlIiwgZGVsZXRlZEF0OiBudWxsIH0pLnN1Y2Nlc3MpLnRvQmUodHJ1ZSk7CiAgfSk7CgogIGl0KCJkZWxldGVkQXQg44KS55yB55Wl44GX44Gm44KCIHBhcnNlIOaIkOWKn+OBmeOCi++8iG9wdGlvbmFs77yJIiwgKCkgPT4gewogICAgZXhwZWN0KFdvcmtlclNjaGVtYS5zYWZlUGFyc2UoeyBpZDogIncxIiwgZGlzcGxheU5hbWU6ICJBbGljZSIgfSkuc3VjY2VzcykudG9CZSh0cnVlKTsKICB9KTsKfSk7Cg==
+import { describe, expect, it } from "vitest";
+
+import {
+  WORKER_AVATAR_URL_MAX_LENGTH,
+  WORKER_DISPLAY_NAME_MAX_LENGTH,
+  WORKER_IMAGE_URL_MAX_LENGTH,
+  WORKER_PERSONALITY_MAX_LENGTH,
+  WORKER_ROLE_MAX_LENGTH,
+  createDisplayNameResolver,
+  createAvatarUrlResolver,
+  resolveWorkerImageUrl,
+  CreateWorkerSchema,
+  DEFAULT_WORKERS,
+  WorkerSchema,
+  UpdateWorkerSchema,
+  formatWorkerDisplayName,
+} from "./worker.js";
+
+describe("名前付き定数のエクスポート (#592)", () => {
+  it("WORKER_PERSONALITY_MAX_LENGTH が 500 でエクスポートされる", () => {
+    expect(WORKER_PERSONALITY_MAX_LENGTH).toBe(500);
+  });
+
+  it("WORKER_AVATAR_URL_MAX_LENGTH が 2048 でエクスポートされる", () => {
+    expect(WORKER_AVATAR_URL_MAX_LENGTH).toBe(2048);
+  });
+});
+
+describe("WorkerSchema (A-1 / A-2)", () => {
+  it("id / displayName を持つワーカーは parse 成功する（role は任意）", () => {
+    expect(WorkerSchema.parse({ id: "haru", displayName: "haru" }).id).toBe("haru");
+    const withRole = WorkerSchema.parse({ id: "mei", displayName: "mei", role: "新人" });
+    expect(withRole.role).toBe("新人");
+  });
+
+  it("id / displayName が空文字なら parse に失敗する", () => {
+    expect(WorkerSchema.safeParse({ id: "", displayName: "haru" }).success).toBe(false);
+    expect(WorkerSchema.safeParse({ id: "haru", displayName: "" }).success).toBe(false);
+  });
+
+  // #331: ADR-0020 後処理。Worker は AI 投稿者のみとなり isBot 概念を撤廃した。
+  it("isBot フィールドを持たない（#331）", () => {
+    const parsed = WorkerSchema.parse({ id: "haru", displayName: "haru" });
+    expect(parsed).not.toHaveProperty("isBot");
+  });
+
+  it("isBot を渡してもパース結果に含まれない（#331・未知キーは無視）", () => {
+    const parsed = WorkerSchema.parse({ id: "haru", displayName: "haru", isBot: true });
+    expect(parsed).not.toHaveProperty("isBot");
+  });
+});
+
+describe("DEFAULT_WORKERS (#25)", () => {
+  it("全要素が WorkerSchema を満たす", () => {
+    for (const worker of DEFAULT_WORKERS) {
+      expect(WorkerSchema.safeParse(worker).success).toBe(true);
+    }
+  });
+
+  it("MVP の 3 人（haru / ken / mei）を含む", () => {
+    expect(DEFAULT_WORKERS.map((w) => w.id)).toEqual(["haru", "ken", "mei"]);
+  });
+
+  it("id が一意である", () => {
+    const ids = DEFAULT_WORKERS.map((w) => w.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("全員が isBot フィールドを持たない（#331）", () => {
+    expect(DEFAULT_WORKERS.every((w) => !("isBot" in w))).toBe(true);
+  });
+});
+
+describe("WorkerSchema: personality フィールド (#38)", () => {
+  it("personality が WORKER_PERSONALITY_MAX_LENGTH 文字以内なら parse 成功する (#592)", () => {
+    const result = WorkerSchema.safeParse({ id: "haru", displayName: "haru", personality: "a".repeat(WORKER_PERSONALITY_MAX_LENGTH) });
+    expect(result.success).toBe(true);
+  });
+
+  it("personality が WORKER_PERSONALITY_MAX_LENGTH + 1 文字なら parse に失敗する (#592)", () => {
+    const result = WorkerSchema.safeParse({ id: "haru", displayName: "haru", personality: "a".repeat(WORKER_PERSONALITY_MAX_LENGTH + 1) });
+    expect(result.success).toBe(false);
+  });
+
+  it("personality を省略しても parse 成功する（任意フィールド）", () => {
+    expect(WorkerSchema.safeParse({ id: "haru", displayName: "haru" }).success).toBe(true);
+  });
+
+  it("displayName が WORKER_DISPLAY_NAME_MAX_LENGTH 文字ちょうどなら parse 成功する（#91）", () => {
+    expect(WorkerSchema.safeParse({ id: "haru", displayName: "a".repeat(WORKER_DISPLAY_NAME_MAX_LENGTH) }).success).toBe(true);
+  });
+
+  it("displayName が WORKER_DISPLAY_NAME_MAX_LENGTH + 1 文字なら parse 失敗する（#91）", () => {
+    expect(WorkerSchema.safeParse({ id: "haru", displayName: "a".repeat(WORKER_DISPLAY_NAME_MAX_LENGTH + 1) }).success).toBe(false);
+  });
+
+  it("role が WORKER_ROLE_MAX_LENGTH 文字ちょうどなら parse 成功する（#91）", () => {
+    expect(WorkerSchema.safeParse({ id: "haru", displayName: "haru", role: "a".repeat(WORKER_ROLE_MAX_LENGTH) }).success).toBe(true);
+  });
+
+  it("role が WORKER_ROLE_MAX_LENGTH + 1 文字なら parse 失敗する（#91）", () => {
+    expect(WorkerSchema.safeParse({ id: "haru", displayName: "haru", role: "a".repeat(WORKER_ROLE_MAX_LENGTH + 1) }).success).toBe(false);
+  });
+});
+
+describe("WorkerSchema: imageUrl フィールド (#220)", () => {
+  it("imageUrl が有効な URL なら parse 成功する", () => {
+    expect(WorkerSchema.safeParse({ id: "haru", displayName: "haru", imageUrl: "https://example.com/avatar.png" }).success).toBe(true);
+  });
+
+  it("imageUrl を省略しても parse 成功する（任意フィールド）", () => {
+    const result = WorkerSchema.safeParse({ id: "haru", displayName: "haru" });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.imageUrl).toBeUndefined();
+  });
+
+  it("imageUrl が不正な URL 形式なら parse 失敗する", () => {
+    expect(WorkerSchema.safeParse({ id: "haru", displayName: "haru", imageUrl: "not-a-url" }).success).toBe(false);
+  });
+
+  it(`imageUrl が WORKER_IMAGE_URL_MAX_LENGTH 文字ちょうどなら parse 成功する（#91）`, () => {
+    const base = "https://example.com/";
+    const url = base + "a".repeat(WORKER_IMAGE_URL_MAX_LENGTH - base.length);
+    expect(url.length).toBe(WORKER_IMAGE_URL_MAX_LENGTH);
+    expect(WorkerSchema.safeParse({ id: "haru", displayName: "haru", imageUrl: url }).success).toBe(true);
+  });
+
+  it(`imageUrl が WORKER_IMAGE_URL_MAX_LENGTH + 1 文字なら parse 失敗する（#91）`, () => {
+    const base = "https://example.com/";
+    const url = base + "a".repeat(WORKER_IMAGE_URL_MAX_LENGTH - base.length + 1);
+    expect(url.length).toBe(WORKER_IMAGE_URL_MAX_LENGTH + 1);
+    expect(WorkerSchema.safeParse({ id: "haru", displayName: "haru", imageUrl: url }).success).toBe(false);
+  });
+});
+
+describe("UpdateWorkerSchema (#38)", () => {
+  it("displayName / role / personality を部分更新できる", () => {
+    expect(UpdateWorkerSchema.safeParse({ displayName: "new name", role: "マネージャー", personality: "明るく積極的" }).success).toBe(true);
+  });
+
+  it("displayName が空文字なら invalid", () => {
+    expect(UpdateWorkerSchema.safeParse({ displayName: "" }).success).toBe(false);
+  });
+
+  it("personality が WORKER_PERSONALITY_MAX_LENGTH + 1 文字なら invalid (#592)", () => {
+    expect(UpdateWorkerSchema.safeParse({ personality: "a".repeat(WORKER_PERSONALITY_MAX_LENGTH + 1) }).success).toBe(false);
+  });
+
+  it("すべてのフィールドを省略できる（空更新は valid）", () => {
+    expect(UpdateWorkerSchema.safeParse({}).success).toBe(true);
+  });
+
+  it("displayName が WORKER_DISPLAY_NAME_MAX_LENGTH 文字ちょうどなら valid（#91）", () => {
+    expect(UpdateWorkerSchema.safeParse({ displayName: "a".repeat(WORKER_DISPLAY_NAME_MAX_LENGTH) }).success).toBe(true);
+  });
+
+  it("displayName が WORKER_DISPLAY_NAME_MAX_LENGTH + 1 文字なら invalid（#91）", () => {
+    expect(UpdateWorkerSchema.safeParse({ displayName: "a".repeat(WORKER_DISPLAY_NAME_MAX_LENGTH + 1) }).success).toBe(false);
+  });
+
+  it("role が WORKER_ROLE_MAX_LENGTH 文字ちょうどなら valid（#91）", () => {
+    expect(UpdateWorkerSchema.safeParse({ role: "a".repeat(WORKER_ROLE_MAX_LENGTH) }).success).toBe(true);
+  });
+
+  it("role が WORKER_ROLE_MAX_LENGTH + 1 文字なら invalid（#91）", () => {
+    expect(UpdateWorkerSchema.safeParse({ role: "a".repeat(WORKER_ROLE_MAX_LENGTH + 1) }).success).toBe(false);
+  });
+});
+
+describe("WorkerSchema: 死蔵フィールド avatarUrl の削除（#541）", () => {
+  it("WorkerSchema の shape に avatarUrl キーを持たない", () => {
+    expect(Object.keys(WorkerSchema.shape)).not.toContain("avatarUrl");
+  });
+
+  it("avatarUrl を渡しても parse 結果に残らない（strip される）", () => {
+    const result = WorkerSchema.parse({
+      id: "haru",
+      displayName: "haru",
+      avatarUrl: "https://storage.googleapis.com/bucket/workers/haru/uuid.png",
+    });
+    expect(result).not.toHaveProperty("avatarUrl");
+  });
+
+  it("画像は imageUrl に一本化されている（imageUrl はそのまま parse される）", () => {
+    const result = WorkerSchema.parse({
+      id: "haru",
+      displayName: "haru",
+      imageUrl: "https://storage.googleapis.com/bucket/workers/haru/uuid.png",
+    });
+    expect(result.imageUrl).toBe("https://storage.googleapis.com/bucket/workers/haru/uuid.png");
+  });
+});
+
+describe("formatWorkerDisplayName (#218)", () => {
+  it("deletedAt が null の場合は displayName をそのまま返す", () => {
+    expect(formatWorkerDisplayName({ displayName: "田中 太郎", deletedAt: null })).toBe("田中 太郎");
+  });
+
+  it("deletedAt が undefined の場合は displayName をそのまま返す", () => {
+    expect(formatWorkerDisplayName({ displayName: "田中 太郎" })).toBe("田中 太郎");
+  });
+
+  it("deletedAt が Date の場合は《削除済み》プレフィックスを付ける", () => {
+    expect(formatWorkerDisplayName({ displayName: "田中 太郎", deletedAt: new Date("2024-01-01") })).toBe("》削除済み《田中 太郎");
+  });
+});
+
+describe("CreateWorkerSchema (#217)", () => {
+  it("displayName のみで parse 成功する", () => {
+    expect(CreateWorkerSchema.safeParse({ displayName: "新しいワーカー" }).success).toBe(true);
+  });
+
+  it("displayName が空文字なら invalid", () => {
+    expect(CreateWorkerSchema.safeParse({ displayName: "" }).success).toBe(false);
+  });
+
+  it("displayName が WORKER_DISPLAY_NAME_MAX_LENGTH 文字ちょうどなら valid", () => {
+    expect(CreateWorkerSchema.safeParse({ displayName: "a".repeat(WORKER_DISPLAY_NAME_MAX_LENGTH) }).success).toBe(true);
+  });
+
+  it("displayName が WORKER_DISPLAY_NAME_MAX_LENGTH + 1 文字なら invalid", () => {
+    expect(CreateWorkerSchema.safeParse({ displayName: "a".repeat(WORKER_DISPLAY_NAME_MAX_LENGTH + 1) }).success).toBe(false);
+  });
+
+  it("role を省略しても parse 成功する（任意フィールド）", () => {
+    expect(CreateWorkerSchema.safeParse({ displayName: "ワーカーA" }).success).toBe(true);
+  });
+
+  it("role を指定すると反映される", () => {
+    const result = CreateWorkerSchema.safeParse({ displayName: "ワーカーA", role: "エンジニア" });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.role).toBe("エンジニア");
+  });
+
+  it("role が WORKER_ROLE_MAX_LENGTH + 1 文字なら invalid", () => {
+    expect(CreateWorkerSchema.safeParse({ displayName: "ワーカーA", role: "a".repeat(WORKER_ROLE_MAX_LENGTH + 1) }).success).toBe(false);
+  });
+
+  it("personality を省略しても parse 成功する（任意フィールド）", () => {
+    expect(CreateWorkerSchema.safeParse({ displayName: "ワーカーA" }).success).toBe(true);
+  });
+
+  it("personality が WORKER_PERSONALITY_MAX_LENGTH 文字ちょうどなら valid (#592)", () => {
+    expect(CreateWorkerSchema.safeParse({ displayName: "ワーカーA", personality: "a".repeat(WORKER_PERSONALITY_MAX_LENGTH) }).success).toBe(true);
+  });
+
+  it("personality が WORKER_PERSONALITY_MAX_LENGTH + 1 文字なら invalid (#592)", () => {
+    expect(CreateWorkerSchema.safeParse({ displayName: "ワーカーA", personality: "a".repeat(WORKER_PERSONALITY_MAX_LENGTH + 1) }).success).toBe(false);
+  });
+});
+
+describe("createDisplayNameResolver", () => {
+  const workers = [
+    { id: "haru", displayName: "ハル" },
+    { id: "ken", displayName: "ケン" },
+  ];
+
+  it("既知の worker ID を displayName に解決する", () => {
+    const resolve = createDisplayNameResolver(workers);
+    expect(resolve("haru")).toBe("ハル");
+    expect(resolve("ken")).toBe("ケン");
+  });
+
+  it("未知の ID はその ID をそのままフォールバック表示する", () => {
+    const resolve = createDisplayNameResolver(workers);
+    expect(resolve("unknown-id")).toBe("unknown-id");
+  });
+
+  it("引数省略時は DEFAULT_WORKERS で解決する", () => {
+    const resolve = createDisplayNameResolver();
+    const haru = DEFAULT_WORKERS.find((w) => w.id === "haru")!;
+    expect(resolve("haru")).toBe(haru.displayName);
+  });
+});
+
+describe("resolveWorkerImageUrl (#1015)", () => {
+  it("imageUrl が設定されていればそのまま返す", () => {
+    expect(resolveWorkerImageUrl({ imageUrl: "https://example.com/haru.png" })).toBe(
+      "https://example.com/haru.png",
+    );
+  });
+
+  it("imageUrl が null のとき null を返す（URL を捏造しない・#1015）", () => {
+    expect(resolveWorkerImageUrl({ imageUrl: null })).toBeNull();
+  });
+
+  it("imageUrl が undefined のとき null を返す（#1015）", () => {
+    expect(resolveWorkerImageUrl({ imageUrl: undefined })).toBeNull();
+  });
+
+  it("imageUrl を省略したとき null を返す（#1015）", () => {
+    expect(resolveWorkerImageUrl({})).toBeNull();
+  });
+});
+
+describe("createAvatarUrlResolver (#300)", () => {
+  const workers = [
+    { id: "haru", displayName: "ハル", imageUrl: "https://example.com/haru.png" },
+    { id: "ken", displayName: "ケン" },
+  ];
+
+  it("imageUrl が設定されている worker ID は URL を返す", () => {
+    const resolve = createAvatarUrlResolver(workers);
+    expect(resolve("haru")).toBe("https://example.com/haru.png");
+  });
+
+  it("imageUrl が未設定の既知ワーカーは null を返す（#1015: 死んだ URL を返さない）", () => {
+    const resolve = createAvatarUrlResolver(workers);
+    expect(resolve("ken")).toBeNull();
+  });
+
+  it("未解決の worker ID は undefined を返す", () => {
+    const resolve = createAvatarUrlResolver(workers);
+    expect(resolve("unknown-id")).toBeUndefined();
+  });
+
+  it("引数省略時は DEFAULT_WORKERS で解決する（imageUrl 未設定 → null）(#1015)", () => {
+    const resolve = createAvatarUrlResolver();
+    expect(resolve("haru")).toBeNull();
+  });
+});
+
+describe("WorkerVerbositySchema (#625)", () => {
+  it("concise / standard / detailed を受理する", async () => {
+    const { WorkerVerbositySchema } = await import("./worker.js");
+    expect(WorkerVerbositySchema.safeParse("concise").success).toBe(true);
+    expect(WorkerVerbositySchema.safeParse("standard").success).toBe(true);
+    expect(WorkerVerbositySchema.safeParse("detailed").success).toBe(true);
+  });
+
+  it("未知値は弾く", async () => {
+    const { WorkerVerbositySchema } = await import("./worker.js");
+    expect(WorkerVerbositySchema.safeParse("verbose").success).toBe(false);
+    expect(WorkerVerbositySchema.safeParse("").success).toBe(false);
+    expect(WorkerVerbositySchema.safeParse("CONCISE").success).toBe(false);
+  });
+});
+
+describe("WorkerSchema: verbosity フィールド (#625)", () => {
+  it("verbosity を省略しても parse 成功する（任意フィールド）", () => {
+    expect(WorkerSchema.safeParse({ id: "haru", displayName: "haru" }).success).toBe(true);
+  });
+
+  it("verbosity に concise を指定すると parse 成功する", () => {
+    const result = WorkerSchema.safeParse({ id: "haru", displayName: "haru", verbosity: "concise" });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.verbosity).toBe("concise");
+  });
+
+  it("verbosity に standard を指定すると parse 成功する", () => {
+    const result = WorkerSchema.safeParse({ id: "haru", displayName: "haru", verbosity: "standard" });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.verbosity).toBe("standard");
+  });
+
+  it("verbosity に detailed を指定すると parse 成功する", () => {
+    const result = WorkerSchema.safeParse({ id: "haru", displayName: "haru", verbosity: "detailed" });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.verbosity).toBe("detailed");
+  });
+
+  it("verbosity に未知値を指定すると parse 失敗する", () => {
+    expect(WorkerSchema.safeParse({ id: "haru", displayName: "haru", verbosity: "unknown" }).success).toBe(false);
+  });
+});
+
+describe("UpdateWorkerSchema: verbosity フィールド (#625)", () => {
+  it("verbosity を省略しても valid（任意）", () => {
+    expect(UpdateWorkerSchema.safeParse({}).success).toBe(true);
+  });
+
+  it("verbosity に concise / standard / detailed を指定すると valid", () => {
+    expect(UpdateWorkerSchema.safeParse({ verbosity: "concise" }).success).toBe(true);
+    expect(UpdateWorkerSchema.safeParse({ verbosity: "standard" }).success).toBe(true);
+    expect(UpdateWorkerSchema.safeParse({ verbosity: "detailed" }).success).toBe(true);
+  });
+
+  it("verbosity に未知値を指定すると invalid", () => {
+    expect(UpdateWorkerSchema.safeParse({ verbosity: "unknown" }).success).toBe(false);
+  });
+});
+
+describe("CreateWorkerSchema: verbosity フィールド (#625)", () => {
+  it("verbosity を省略しても parse 成功する（任意）", () => {
+    expect(CreateWorkerSchema.safeParse({ displayName: "ワーカーA" }).success).toBe(true);
+  });
+
+  it("verbosity に concise / standard / detailed を指定すると valid", () => {
+    expect(CreateWorkerSchema.safeParse({ displayName: "ワーカーA", verbosity: "concise" }).success).toBe(true);
+    expect(CreateWorkerSchema.safeParse({ displayName: "ワーカーA", verbosity: "standard" }).success).toBe(true);
+    expect(CreateWorkerSchema.safeParse({ displayName: "ワーカーA", verbosity: "detailed" }).success).toBe(true);
+  });
+
+  it("verbosity に未知値を指定すると invalid", () => {
+    expect(CreateWorkerSchema.safeParse({ displayName: "ワーカーA", verbosity: "unknown" }).success).toBe(false);
+  });
+});
+
+describe("WorkerSchema: deletedAt フィールド（#372 HTTP 境界型整合）", () => {
+  it("deletedAt に Date オブジェクトを渡すと parse 失敗する（HTTP 境界では文字列のみ）", () => {
+    expect(WorkerSchema.safeParse({ id: "w1", displayName: "Alice", deletedAt: new Date() }).success).toBe(false);
+  });
+
+  it("deletedAt に ISO 文字列を渡すと parse 成功する", () => {
+    expect(WorkerSchema.safeParse({ id: "w1", displayName: "Alice", deletedAt: "2024-01-01T00:00:00.000Z" }).success).toBe(true);
+  });
+
+  it("deletedAt に null を渡すと parse 成功する", () => {
+    expect(WorkerSchema.safeParse({ id: "w1", displayName: "Alice", deletedAt: null }).success).toBe(true);
+  });
+
+  it("deletedAt を省略しても parse 成功する（optional）", () => {
+    expect(WorkerSchema.safeParse({ id: "w1", displayName: "Alice" }).success).toBe(true);
+  });
+});

@@ -63,6 +63,21 @@ describe("CommunityHeader（#457 Reddit 風ヘッダー）", () => {
     expect(screen.queryByTestId("community-cover-image")).not.toBeInTheDocument();
   });
 
+  it("coverUrl 未設定のとき CommunityCoverPlaceholder（SVG フォールバック）が表示される（#1021）", () => {
+    render(<CommunityHeader community={baseCommunity} />);
+    expect(screen.getByTestId("community-cover-placeholder")).toBeInTheDocument();
+  });
+
+  it("coverUrl 設定済みのとき実画像が表示され CommunityCoverPlaceholder は表示されない（#1021）", () => {
+    render(
+      <CommunityHeader
+        community={{ ...baseCommunity, coverUrl: "https://example.com/cover.png" }}
+      />,
+    );
+    expect(screen.getByTestId("community-cover-image")).toBeInTheDocument();
+    expect(screen.queryByTestId("community-cover-placeholder")).not.toBeInTheDocument();
+  });
+
   it("iconUrl 未設定のとき Avatar src が bauhaus 自動生成 URL になる（#960）", () => {
     render(<CommunityHeader community={baseCommunity} />);
     const img = screen.getByRole("img", { name: "テクノロジー" });

@@ -1,1 +1,41 @@
-aW1wb3J0IEJvcmluZ0F2YXRhciBmcm9tICJib3JpbmctYXZhdGFycyI7CmltcG9ydCB0eXBlIHsgUmVhY3RFbGVtZW50IH0gZnJvbSAicmVhY3QiOwoKaW1wb3J0IHsgQXZhdGFyLCBCb3ggfSBmcm9tICIuL3VpUGFydHMvaW5kZXguanMiOwoKaW50ZXJmYWNlIFdvcmtlckF2YXRhclByb3BzIHsKICBpZDogc3RyaW5nOwogIGltYWdlVXJsPzogc3RyaW5nIHwgbnVsbDsKICBzaXplPzogbnVtYmVyOwogIGFsdD86IHN0cmluZzsKICBkaXNwbGF5TmFtZT86IHN0cmluZzsKfQoKZXhwb3J0IGNvbnN0IFdvcmtlckF2YXRhciA9ICh7CiAgaWQsCiAgaW1hZ2VVcmwsCiAgc2l6ZSA9IDQwLAogIGFsdCwKICBkaXNwbGF5TmFtZSwKfTogV29ya2VyQXZhdGFyUHJvcHMpOiBSZWFjdEVsZW1lbnQgPT4gewogIGNvbnN0IGxhYmVsID0gYWx0ID8/IGRpc3BsYXlOYW1lID8/IGlkOwoKICBpZiAoaW1hZ2VVcmwpIHsKICAgIHJldHVybiAoCiAgICAgIDxBdmF0YXIKICAgICAgICBzcmM9e2ltYWdlVXJsfQogICAgICAgIGFsdD17bGFiZWx9CiAgICAgICAgc3g9e3sgd2lkdGg6IHNpemUsIGhlaWdodDogc2l6ZSB9fQogICAgICA+CiAgICAgICAge2xhYmVsLmNoYXJBdCgwKS50b1VwcGVyQ2FzZSgpfQogICAgICA8L0F2YXRhcj4KICAgICk7CiAgfQoKICAvLyBib3JpbmctYXZhdGFycyBhbHJlYWR5IHJlbmRlcnMgcm9sZT0iaW1nIiBvbiBpdHMgU1ZHOyBhcmlhLWxhYmVsIHNwcmVhZHMgdG8gdGhlIFNWRyBmb3IgYWNjZXNzaWJsZSBuYW1lLgogIHJldHVybiAoCiAgICA8Qm94IHN4PXt7IHdpZHRoOiBzaXplLCBoZWlnaHQ6IHNpemUsIGRpc3BsYXk6ICJpbmxpbmUtZmxleCIsIGZsZXhTaHJpbms6IDAgfX0+CiAgICAgIDxCb3JpbmdBdmF0YXIgc2l6ZT17c2l6ZX0gbmFtZT17aWR9IHZhcmlhbnQ9ImJlYW0iIGFyaWEtbGFiZWw9e2xhYmVsfSAvPgogICAgPC9Cb3g+CiAgKTsKfTsK
+import BoringAvatar from "boring-avatars";
+import type { ReactElement } from "react";
+
+import { Avatar, Box } from "./uiParts/index.js";
+
+interface WorkerAvatarProps {
+  id: string;
+  imageUrl?: string | null;
+  size?: number;
+  alt?: string;
+  displayName?: string;
+}
+
+export const WorkerAvatar = ({
+  id,
+  imageUrl,
+  size = 40,
+  alt,
+  displayName,
+}: WorkerAvatarProps): ReactElement => {
+  const label = alt ?? displayName ?? id;
+
+  if (imageUrl) {
+    return (
+      <Avatar
+        src={imageUrl}
+        alt={label}
+        sx={{ width: size, height: size }}
+      >
+        {label.charAt(0).toUpperCase()}
+      </Avatar>
+    );
+  }
+
+  // boring-avatars already renders role="img" on its SVG; aria-label spreads to the SVG for accessible name.
+  return (
+    <Box sx={{ width: size, height: size, display: "inline-flex", flexShrink: 0 }}>
+      <BoringAvatar size={size} name={id} variant="beam" aria-label={label} />
+    </Box>
+  );
+};

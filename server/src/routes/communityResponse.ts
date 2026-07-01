@@ -41,5 +41,6 @@ export function toAdminCommunityResponse(r: CommunityRecord) {
     ...toCommunityResponse(r),
     generationInstruction: r.generationInstruction ?? null,
     feedUrl: r.feedUrl ?? null,
+    generationPaused: r.generationPaused ?? false,
   };
 }

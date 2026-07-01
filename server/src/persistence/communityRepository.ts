@@ -21,6 +21,8 @@ export interface CommunityRecord {
   generationInstruction: string | null;
   /** 外部フィード URL（#491 / ADR-0035）。定時バッチ時にプロンプトへ最新記事を注入する。admin のみが設定・閲覧できる。 */
   feedUrl: string | null;
+  /** 生成停止フラグ（#1011）。true のとき定時バッチの生成対象から除外される。 */
+  generationPaused?: boolean;
   createdAt: Date;
 }
 
@@ -44,6 +46,8 @@ export interface UpdateCommunityRecordInput {
   generationInstruction?: string | null;
   /** 外部フィード URL の更新（#491）。null でクリア。 */
   feedUrl?: string | null;
+  /** 生成停止フラグの更新（#1011）。 */
+  generationPaused?: boolean;
 }
 
 export interface CommunityRepository {
@@ -98,6 +102,7 @@ export function createInMemoryCommunityRepository(
         coverUrl: null,
         generationInstruction: input.generationInstruction ?? null,
         feedUrl: null,
+        generationPaused: false,
         createdAt: new Date(),
       };
       records.push(record);
@@ -115,6 +120,7 @@ export function createInMemoryCommunityRepository(
       if (input.generationInstruction !== undefined)
         record.generationInstruction = input.generationInstruction;
       if (input.feedUrl !== undefined) record.feedUrl = input.feedUrl;
+      if (input.generationPaused !== undefined) record.generationPaused = input.generationPaused;
       return Promise.resolve(cloneRecord(record));
     },
   };

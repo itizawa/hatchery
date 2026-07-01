@@ -38,6 +38,7 @@ export { default as RadioGroup } from "@mui/material/RadioGroup";
 export { default as Select } from "@mui/material/Select";
 export { default as Skeleton } from "@mui/material/Skeleton";
 export { default as Snackbar } from "@mui/material/Snackbar";
+export { default as Switch } from "@mui/material/Switch";
 export { default as Stack } from "@mui/material/Stack";
 export { default as Tab } from "@mui/material/Tab";
 export { default as Table } from "@mui/material/Table";

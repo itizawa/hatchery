@@ -18,6 +18,7 @@ function toRecord(row: {
   coverUrl: string | null;
   generationInstruction: string | null;
   feedUrl: string | null;
+  generationPaused: boolean;
   createdAt: Date;
 }): CommunityRecord {
   return {
@@ -31,6 +32,7 @@ function toRecord(row: {
     coverUrl: row.coverUrl,
     generationInstruction: row.generationInstruction,
     feedUrl: row.feedUrl,
+    generationPaused: row.generationPaused,
     createdAt: row.createdAt,
   };
 }
@@ -81,6 +83,9 @@ export function createPrismaCommunityRepository(prisma: PrismaClient): Community
               generationInstruction: input.generationInstruction,
             }),
             ...(input.feedUrl !== undefined && { feedUrl: input.feedUrl }),
+            ...(input.generationPaused !== undefined && {
+              generationPaused: input.generationPaused,
+            }),
           },
         });
         return toRecord(row);

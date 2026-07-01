@@ -8,7 +8,7 @@ interface CommunityCoverPlaceholderProps {
 
 // SLACK_COLORS.blue (#1164A3) ベースの4段階濃淡パレット（デザインシステム準拠）
 const BG_COLORS = ["#0A3A5E", "#0D4F82", "#1164A3", "#1A7AC8"] as const;
-const FG_COLORS = ["#1164A3", "#1A7AC8", "#5DA8D8", "#E8F4FC"] as const;
+const FG_COLORS = ["#C5E4F5", "#D2EBF8", "#DFF1FA", "#E8F4FC"] as const;
 
 /** パターン幅（density に反比例して密になる）。 */
 function getPatternSize(density: number): number {
@@ -37,7 +37,7 @@ export function CommunityCoverPlaceholder({
         return <line x1="0" y1={half} x2={size} y2={half} stroke={fgColor} strokeWidth="2" />;
       case 1:
         // ドット: 中心に円
-        return <circle cx={half} cy={half} r={size * 0.12} fill={fgColor} />;
+        return <circle cx={half} cy={half} r={Math.max(size * 0.12, 2)} fill={fgColor} />;
       case 2:
         // 菱形: 頂点4点のポリゴン
         return (
@@ -93,7 +93,7 @@ export function CommunityCoverPlaceholder({
         width="800"
         height={height}
         fill={`url(#${patternId})`}
-        opacity="0.4"
+        opacity="0.6"
         data-testid="cover-pattern-rect"
       />
     </svg>

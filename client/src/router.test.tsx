@@ -6,6 +6,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createAppRouter, type AppRouter } from "./router";
 
+function makeLocalStorageMock() {
+  let store: Record<string, string> = {};
+  return {
+    getItem: (key: string) => store[key] ?? null,
+    // eslint-disable-next-line max-params
+    setItem: (key: string, value: string) => { store[key] = value; },
+    removeItem: (key: string) => { delete store[key]; },
+    clear: () => { store = {}; },
+    key: (index: number) => Object.keys(store)[index] ?? null,
+    get length() { return Object.keys(store).length; },
+  };
+}
+
 const COMMUNITIES_DATA = [
   { id: "community-1", slug: "ai-dev", name: "AI 開発者の集い", description: "AI の話", created_at: "2026-06-01T00:00:00Z" },
 ];
@@ -69,8 +82,10 @@ function renderRouter(router: AppRouter): ReactElement {
 
 describe("ログインモーダル導線（#454）", () => {
   beforeEach(() => {
-    // #932: HomeFeedScene が hatchery_visited を読むため再訪問状態にして WelcomeSection を抑制する。
-    localStorage.setItem("hatchery_visited", "true");
+    // #932: vi.unstubAllGlobals() で localStorage が undefined になる場合があるため stub で確保する。
+    const lsMock = makeLocalStorageMock();
+    lsMock.setItem("hatchery_visited", "true");
+    vi.stubGlobal("localStorage", lsMock);
     stubFetch({ authenticated: false });
   });
   afterEach(() => {
@@ -129,8 +144,10 @@ describe("AuthLayout（LP 専用レイアウト）", () => {
 // 受け入れ条件 #307: コードベース定義のルート確認。
 describe("createAppRouter", () => {
   beforeEach(() => {
-    // #932: HomeFeedScene が hatchery_visited を読むため再訪問状態にして WelcomeSection を抑制する。
-    localStorage.setItem("hatchery_visited", "true");
+    // #932: vi.unstubAllGlobals() で localStorage が undefined になる場合があるため stub で確保する。
+    const lsMock = makeLocalStorageMock();
+    lsMock.setItem("hatchery_visited", "true");
+    vi.stubGlobal("localStorage", lsMock);
     stubFetch({ authenticated: true });
   });
   afterEach(() => {
@@ -200,8 +217,10 @@ describe("createAppRouter", () => {
 // 認証ガード: 未ログインで保護ルートを開くと /login へリダイレクトする。
 describe("認証ガード（未ログイン時のリダイレクト）", () => {
   beforeEach(() => {
-    // #932: HomeFeedScene が hatchery_visited を読むため再訪問状態にして WelcomeSection を抑制する。
-    localStorage.setItem("hatchery_visited", "true");
+    // #932: vi.unstubAllGlobals() で localStorage が undefined になる場合があるため stub で確保する。
+    const lsMock = makeLocalStorageMock();
+    lsMock.setItem("hatchery_visited", "true");
+    vi.stubGlobal("localStorage", lsMock);
     stubFetch({ authenticated: false });
   });
   afterEach(() => {
@@ -304,8 +323,10 @@ describe("ビュー遷移（#967）", () => {
 // #950: スクロール復元 — ルータ設定とメインコンテナの検証
 describe("スクロール復元（#950）", () => {
   beforeEach(() => {
-    // #932: HomeFeedScene が hatchery_visited を読むため再訪問状態にして WelcomeSection を抑制する。
-    localStorage.setItem("hatchery_visited", "true");
+    // #932: vi.unstubAllGlobals() で localStorage が undefined になる場合があるため stub で確保する。
+    const lsMock = makeLocalStorageMock();
+    lsMock.setItem("hatchery_visited", "true");
+    vi.stubGlobal("localStorage", lsMock);
     stubFetch({ authenticated: false });
   });
   afterEach(() => {

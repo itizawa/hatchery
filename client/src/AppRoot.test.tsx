@@ -5,13 +5,28 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppRoot } from "./AppRoot";
 import { createAppRouter } from "./router";
 
+function makeLocalStorageMock() {
+  let store: Record<string, string> = {};
+  return {
+    getItem: (key: string) => store[key] ?? null,
+    // eslint-disable-next-line max-params
+    setItem: (key: string, value: string) => { store[key] = value; },
+    removeItem: (key: string) => { delete store[key]; },
+    clear: () => { store = {}; },
+    key: (index: number) => Object.keys(store)[index] ?? null,
+    get length() { return Object.keys(store).length; },
+  };
+}
+
 // 受け入れ条件 #307: ThemeProvider + QueryClientProvider + RouterProvider を合成し、
 // クラッシュせずコミュニティ一覧とホームフィード框を描画する。
 // テスト間の状態リークを避けるため memory history のルータを注入する。
 describe("AppRoot", () => {
   beforeEach(() => {
-    // #932: HomeFeedScene が hatchery_visited を読むため再訪問状態にして WelcomeSection を抑制する。
-    localStorage.setItem("hatchery_visited", "true");
+    // #932: vi.unstubAllGlobals() で localStorage が undefined になる場合があるため stub で確保する。
+    const lsMock = makeLocalStorageMock();
+    lsMock.setItem("hatchery_visited", "true");
+    vi.stubGlobal("localStorage", lsMock);
     // URL ごとに応答を分ける: /auth/me はログイン済み(200 AuthUser)、GET /api/communities はコミュニティ一覧
     // ホーム（/）はログイン必須（router の requireAuth ガード）のため、ログイン済みでないと /login へ
     // リダイレクトされ、サイドバー＋ホーム框が描画されない。

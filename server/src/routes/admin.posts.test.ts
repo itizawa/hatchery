@@ -8,6 +8,8 @@
 import request from "supertest";
 import { describe, expect, it } from "vitest";
 
+import { COMMENT_TEXT_MAX_LENGTH, POST_TEXT_MAX_LENGTH, POST_TITLE_MAX_LENGTH } from "@hatchery/common";
+
 import { createApp } from "../app.js";
 import {
   type CommentRepository,
@@ -184,6 +186,24 @@ describe("POST /api/admin/posts (#433)", () => {
     const res = await agent.post("/api/admin/posts").send({ ...validBody, communityId: "abc" });
     expect(res.status).toBe(400);
   });
+
+  it("title が最大文字数を超える場合は 400 を返す", async () => {
+    const app = await makeApp(makeRepos());
+    const agent = await loginAgent(app);
+    const res = await agent
+      .post("/api/admin/posts")
+      .send({ ...validBody, title: "a".repeat(POST_TITLE_MAX_LENGTH + 1) });
+    expect(res.status).toBe(400);
+  });
+
+  it("text が最大文字数を超える場合は 400 を返す", async () => {
+    const app = await makeApp(makeRepos());
+    const agent = await loginAgent(app);
+    const res = await agent
+      .post("/api/admin/posts")
+      .send({ ...validBody, text: "a".repeat(POST_TEXT_MAX_LENGTH + 1) });
+    expect(res.status).toBe(400);
+  });
 });
 
 describe("POST /api/admin/comments (#433)", () => {
@@ -281,6 +301,15 @@ describe("POST /api/admin/comments (#433)", () => {
     const { app } = await makeAppWithPost();
     const agent = await loginAgent(app);
     const res = await agent.post("/api/admin/comments").send({ ...validBody("abc"), postId: "abc" });
+    expect(res.status).toBe(400);
+  });
+
+  it("text が最大文字数を超える場合は 400 を返す", async () => {
+    const { app, postId } = await makeAppWithPost();
+    const agent = await loginAgent(app);
+    const res = await agent
+      .post("/api/admin/comments")
+      .send({ ...validBody(postId), text: "a".repeat(COMMENT_TEXT_MAX_LENGTH + 1) });
     expect(res.status).toBe(400);
   });
 });

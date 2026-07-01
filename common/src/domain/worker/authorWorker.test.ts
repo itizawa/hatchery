@@ -51,18 +51,16 @@ describe("buildAuthorWorkerResolver", () => {
     });
   });
 
-  it("画像未設定のワーカーは Boring Avatars URL が image_url に設定される (#884)", () => {
+  it("画像未設定のワーカーは image_url が null になる (#1015)", () => {
     const resolve = buildAuthorWorkerResolver(workers);
     const kenResult = resolve("ken");
     expect(kenResult).toBeDefined();
-    expect(kenResult?.image_url).toContain("source.boringavatars.com");
-    expect(kenResult?.image_url).toContain("d89954ec-uuid");
+    expect(kenResult?.image_url).toBeNull();
 
-    // imageUrl プロパティ自体が無いワーカーも Boring Avatars URL に正規化する
+    // imageUrl プロパティ自体が無いワーカーも null に正規化する
     const meiResult = resolve("mei");
     expect(meiResult).toBeDefined();
-    expect(meiResult?.image_url).toContain("source.boringavatars.com");
-    expect(meiResult?.image_url).toContain("e0000000-uuid");
+    expect(meiResult?.image_url).toBeNull();
   });
 
   it("解決できない author は undefined を返す", () => {

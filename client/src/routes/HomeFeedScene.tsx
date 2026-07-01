@@ -2,10 +2,6 @@ import { Box, Button, Typography } from "../components/uiParts";
 import type { HomeFeedSort } from "@hatchery/common";
 import { Link as RouterLink, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
-
-/** localStorage キー: 初回訪問フラグ（#932）。 */
-const HATCHERY_VISITED_KEY = "hatchery_visited";
-
 import { useInfiniteHomeFeed, usePublicCommunities, useVotePost } from "../api/communities.js";
 import { useRecentPostsSidebar } from "../api/feed.js";
 import { useAuth } from "../api/auth.js";
@@ -15,6 +11,9 @@ import { QueryBoundary } from "../components/QueryBoundary.js";
 import { RecentPostsSidebarCard } from "../components/RecentPostsSidebarCard.js";
 import { WelcomeSection } from "../components/WelcomeSection.js";
 import type { VoteDirection } from "../components/VoteControl.js";
+
+/** localStorage キー: 初回訪問フラグ（#932）。 */
+const HATCHERY_VISITED_KEY = "hatchery_visited";
 
 /** フラットリスト行の hover スタイル（#834）。borderRadius は付けず bgcolor 変化のみ。 */
 const listItemSx = {

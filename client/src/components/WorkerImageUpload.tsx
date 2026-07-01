@@ -1,8 +1,8 @@
 import { type ReactElement } from "react";
-import { Avatar, Box, CircularProgress, Tooltip } from "./uiParts";
+import { Box, CircularProgress, Tooltip } from "./uiParts";
 
-import { resolveWorkerImageUrl } from "@hatchery/common";
 import { useUploadWorkerImage } from "../api/workers.js";
+import { WorkerAvatar } from "./WorkerAvatar.js";
 import { useImageUpload, ACCEPTED_MIME } from "../hooks/useImageUpload.js";
 
 export interface WorkerImageUploadProps {
@@ -52,17 +52,15 @@ export const WorkerImageUpload = ({
         tabIndex={0}
         onKeyDown={handleKeyDown}
       >
-        <Avatar
-          src={resolveWorkerImageUrl({ id: workerId, imageUrl: currentImageUrl })}
-          alt={displayName}
-          sx={{
-            width: AVATAR_SIZE,
-            height: AVATAR_SIZE,
-            opacity: upload.isPending ? 0.5 : 1,
-          }}
-        >
-          {displayName[0]}
-        </Avatar>
+        <Box sx={{ opacity: upload.isPending ? 0.5 : 1 }}>
+          <WorkerAvatar
+            id={workerId}
+            imageUrl={currentImageUrl}
+            size={AVATAR_SIZE}
+            alt={displayName}
+            displayName={displayName}
+          />
+        </Box>
         {upload.isPending && (
           <Box
             sx={{

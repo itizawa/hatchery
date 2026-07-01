@@ -3,11 +3,11 @@
  * ワーカーの displayName・role・personality・アバターと最新投稿一覧、
  * 所属コミュニティ一覧、コメント一覧を表示する。認証不要の公開ページ。
  */
-import { Avatar, Box, Typography } from "../components/uiParts";
+import { Box, Typography } from "../components/uiParts";
 import { Link, useParams } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 
-import { resolveWorkerImageUrl } from "@hatchery/common";
+import { WorkerAvatar } from "../components/WorkerAvatar.js";
 import { useWorkerComments, useWorkerDetail, useWorkerPosts, useWorkerPublicCommunities } from "../api/workers.js";
 import type { Comment, Community } from "../api/workers.js";
 import { PostCard } from "../components/PostCard.js";
@@ -53,13 +53,13 @@ const WorkerProfileHeader = ({ workerId }: { workerId: string }): ReactElement =
 
   return (
     <Box sx={{ display: "flex", alignItems: "flex-start", gap: 2, mb: 3 }}>
-      <Avatar
-        src={resolveWorkerImageUrl({ id: worker.id, imageUrl: worker.imageUrl })}
+      <WorkerAvatar
+        id={worker.id}
+        imageUrl={worker.imageUrl}
+        size={56}
         alt={worker.displayName}
-        sx={{ width: 56, height: 56, fontSize: "1.5rem" }}
-      >
-        {worker.displayName.charAt(0).toUpperCase()}
-      </Avatar>
+        displayName={worker.displayName}
+      />
       <Box>
         <Typography
           variant="h5"

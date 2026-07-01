@@ -33,7 +33,7 @@ export interface HomeFeedSceneProps {
 
 /**
  * 右サイドバー内に新着ポスト一覧を表示するパネル（#928）。
- * useRecentPostsSidebar は Suspense 化済みのため、QueryBoundary で局所フォールバックを与える。
+ * useRecentPostsSidebar は Suspense 化済のため、QueryBoundary で局所フォールバックを与える。
  */
 const RecentPostsSidebarPanel = ({
   communityById,
@@ -151,6 +151,7 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
                         currentVote={post.my_vote ?? null}
                         postUrl={`${window.location.origin}/posts/${post.id}`}
                         isNew={isNew}
+                        onWorkerClick={post.author_worker ? () => {} : undefined}
                         onCommunityClick={
                           community
                             ? () =>

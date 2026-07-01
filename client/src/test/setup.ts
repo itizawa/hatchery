@@ -49,6 +49,12 @@ installJsdomPolyfills();
 // 各テスト後に React Testing Library のマウントを破棄する（テスト間の DOM 汚染を防ぐ）。
 afterEach(() => {
   cleanup();
+  // #932: HomeFeedScene が localStorage("hatchery_visited") を書くため、jsdom の localStorage が
+  // テスト間をまたいで汚染する。vi.restoreAllMocks() では localStorage は消えないため、
+  // 各テスト後にグローバルでリセットする。jsdom 以外の Node 環境ではガードする。
+  if (typeof localStorage !== "undefined") {
+    localStorage.clear();
+  }
   // MUI Modal/Dialog（#454 のログインモーダル等）はポータル先（document.body）の兄弟要素へ
   // aria-hidden を付与する。モーダルを開いたままテストが終わると、cleanup 後も body 配下に
   // aria-hidden が残り、後続テストの role ベースクエリが要素を見つけられなくなる（ファイル跨ぎの汚染）。

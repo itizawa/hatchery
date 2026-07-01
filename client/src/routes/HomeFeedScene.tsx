@@ -1,8 +1,7 @@
 import { Box, Button, Typography } from "../components/uiParts";
 import type { HomeFeedSort } from "@hatchery/common";
 import { Link as RouterLink, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, type ReactElement } from "react";
-
+import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 import { useInfiniteHomeFeed, usePublicCommunities, useVotePost } from "../api/communities.js";
 import { useRecentPostsSidebar } from "../api/feed.js";
 import { useAuth } from "../api/auth.js";
@@ -12,6 +11,8 @@ import { QueryBoundary } from "../components/QueryBoundary.js";
 import { RecentPostsSidebarCard } from "../components/RecentPostsSidebarCard.js";
 import { WelcomeSection } from "../components/WelcomeSection.js";
 import type { VoteDirection } from "../components/VoteControl.js";
+
+const HATCHERY_VISITED_KEY = "hatchery_visited";
 
 /** フラットリスト行の hover スタイル（#834）。borderRadius は付けず bgcolor 変化のみ。 */
 const listItemSx = {
@@ -94,9 +95,17 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
     return () => observer.disconnect();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
+  const [hasVisited] = useState(() => localStorage.getItem(HATCHERY_VISITED_KEY) === "true");
+
   const posts = data.pages.flatMap((page) => page.posts);
   const hasPosts = posts.length > 0;
-  const showWelcome = !user || !hasPosts;
+  const showWelcome = !hasPosts || (!user && !hasVisited);
+
+  useEffect(() => {
+    if (showWelcome && !user && !hasVisited) {
+      localStorage.setItem(HATCHERY_VISITED_KEY, "true");
+    }
+  }, [showWelcome, user, hasVisited]);
 
   return (
     <Box component="section" sx={{ p: 3, maxWidth: 1200, mx: "auto" }}>

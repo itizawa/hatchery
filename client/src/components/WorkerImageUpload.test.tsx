@@ -12,7 +12,7 @@ vi.mock("../api/workers.js", () => ({
 }));
 
 describe("WorkerImageUpload（#204）", () => {
-  it("currentImageUrl が null のとき Boring Avatars アバター画像を表示する (#884)", () => {
+  it("currentImageUrl が null のとき boring-avatars で描画する (#1015)", () => {
     render(
       <WorkerImageUpload
         workerId="haru"
@@ -20,8 +20,9 @@ describe("WorkerImageUpload（#204）", () => {
         currentImageUrl={null}
       />,
     );
-    const img = screen.getByRole("img", { name: /haru/ });
-    expect(img).toHaveAttribute("src", expect.stringContaining("source.boringavatars.com"));
+    const avatar = screen.getByRole("img", { name: /haru/ });
+    expect(avatar).toBeInTheDocument();
+    expect(avatar).not.toHaveAttribute("src");
   });
 
   it("imageUrl が設定されている場合は画像 Avatar が表示される", () => {

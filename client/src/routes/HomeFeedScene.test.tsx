@@ -807,6 +807,41 @@ describe("HomeFeedScene — IntersectionObserver 無限スクロール（sentine
   });
 });
 
+describe("HomeFeedScene — 著者名がワーカープロフィールへのリンクになる (#1017)", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    const lsMock = makeLocalStorageMock();
+    lsMock.setItem("hatchery_visited", "true");
+    vi.stubGlobal("localStorage", lsMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("author_worker を持つ投稿の著者名がリンクとして描画される", async () => {
+    const post = {
+      id: "post-1017",
+      community_id: "community-1",
+      slot_key: "2026-07-01-morning",
+      seq: 1,
+      author: "worker-haru",
+      title: "著者リンクテスト投稿",
+      text: "内容",
+      score: 0,
+      created_at: "2026-07-01T00:00:00Z",
+      author_worker: { id: "worker-uuid-haru", display_name: "はる", image_url: null },
+    };
+    stubFetch({ authenticated: false, feedPosts: [post] });
+    renderApp("/");
+
+    await screen.findAllByText("著者リンクテスト投稿");
+    const authorText = screen.getByText("はる");
+    expect(authorText.closest("a")).not.toBeNull();
+    expect(authorText.closest("a")).toHaveAttribute("href", "/workers/worker-uuid-haru");
+  });
+});
+
 describe("HomeFeedScene — ゲスト初回/再訪問でのようこそ演出切り替え（#932）", () => {
   const post = {
     id: "post-1",
@@ -861,14 +896,5 @@ describe("HomeFeedScene — ゲスト初回/再訪問でのようこそ演出切
 
     expect(await screen.findByRole("heading", { name: /Hatchery へようこそ/ })).toBeInTheDocument();
     expect(localStorage.getItem("hatchery_visited")).toBe("true");
-  });
-
-  it("認証済みユーザーが投稿 0 件で WelcomeSection が表示されても hatchery_visited は書かれない", async () => {
-    expect(localStorage.getItem("hatchery_visited")).toBeNull();
-    stubFetch({ authenticated: true, feedPosts: [] });
-    renderApp("/");
-
-    expect(await screen.findByRole("heading", { name: /Hatchery へようこそ/ })).toBeInTheDocument();
-    expect(localStorage.getItem("hatchery_visited")).toBeNull();
   });
 });

@@ -387,6 +387,46 @@ describe("PostThreadScene コミュニティパンくず アイコン追加 (#78
   });
 });
 
+// #1017: 著者名・アバターをワーカープロフィールへのリンクとして配線する。
+describe("PostThreadScene — 著者名がワーカープロフィールへのリンクになる (#1017)", () => {
+  it("author_worker を持つ post の著者名がリンクとして描画される", async () => {
+    server.use(
+      http.get("/api/posts/:postId", () =>
+        HttpResponse.json({
+          post: { ...mockPosts[0], author_worker: { id: "worker-uuid-haru", display_name: "はる", image_url: null } },
+          comments: [],
+        }),
+      ),
+    );
+    render(<BoundedScene />, { wrapper: Wrapper });
+
+    await screen.findByText("今日も元気に始めましょう");
+    const authorText = screen.getByText("はる");
+    expect(authorText.closest("a")).not.toBeNull();
+  });
+
+  it("author_worker を持つコメントの著者名がリンクとして描画される", async () => {
+    server.use(
+      http.get("/api/posts/:postId", () =>
+        HttpResponse.json({
+          post: { ...mockPosts[0], author_worker: { id: "worker-uuid-haru", display_name: "はる", image_url: null } },
+          comments: [
+            {
+              ...mockComments[0],
+              author_worker: { id: "worker-uuid-ken", display_name: "けん", image_url: null },
+            },
+          ],
+        }),
+      ),
+    );
+    render(<BoundedScene />, { wrapper: Wrapper });
+
+    await screen.findByText("いい一日になりそうですね！");
+    const commentAuthorText = screen.getByText("けん");
+    expect(commentAuthorText.closest("a")).not.toBeNull();
+  });
+});
+
 // #861: コメントリンクをクリップボードにコピー＆自動スクロール。
 describe("PostThreadScene コメントアンカー＆自動スクロール (#861)", () => {
   it("コメントの wrapper div に id='comment-{comment.id}' が付与されている", async () => {

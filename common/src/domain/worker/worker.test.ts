@@ -8,7 +8,6 @@ import {
   WORKER_ROLE_MAX_LENGTH,
   createDisplayNameResolver,
   createAvatarUrlResolver,
-  generateWorkerAvatarUrl,
   resolveWorkerImageUrl,
   CreateWorkerSchema,
   DEFAULT_WORKERS,
@@ -274,55 +273,23 @@ describe("createDisplayNameResolver", () => {
   });
 });
 
-describe("generateWorkerAvatarUrl (#884)", () => {
-  it("Boring Avatars beam スタイルの URL を返す", () => {
-    const url = generateWorkerAvatarUrl({ id: "haru" });
-    expect(url).toContain("source.boringavatars.com");
-    expect(url).toContain("beam");
-  });
-
-  it("URL にワーカー ID を含む", () => {
-    const url = generateWorkerAvatarUrl({ id: "haru" });
-    expect(url).toContain("haru");
-  });
-
-  it("同じ worker ID は常に同じ URL を返す（決定論的）", () => {
-    expect(generateWorkerAvatarUrl({ id: "haru" })).toBe(generateWorkerAvatarUrl({ id: "haru" }));
-  });
-
-  it("異なる worker ID は異なる URL を返す", () => {
-    expect(generateWorkerAvatarUrl({ id: "haru" })).not.toBe(generateWorkerAvatarUrl({ id: "ken" }));
-  });
-
-  it("特殊文字を含む ID は URL エンコードされる", () => {
-    const url = generateWorkerAvatarUrl({ id: "worker with spaces" });
-    expect(url).not.toContain(" ");
-  });
-});
-
-describe("resolveWorkerImageUrl (#884)", () => {
+describe("resolveWorkerImageUrl (#1015)", () => {
   it("imageUrl が設定されていればそのまま返す", () => {
-    expect(resolveWorkerImageUrl({ id: "haru", imageUrl: "https://example.com/haru.png" })).toBe(
+    expect(resolveWorkerImageUrl({ imageUrl: "https://example.com/haru.png" })).toBe(
       "https://example.com/haru.png",
     );
   });
 
-  it("imageUrl が null のとき Boring Avatars URL を返す", () => {
-    const url = resolveWorkerImageUrl({ id: "haru", imageUrl: null });
-    expect(url).toContain("source.boringavatars.com");
-    expect(url).toContain("haru");
+  it("imageUrl が null のとき null を返す（URL を捏造しない・#1015）", () => {
+    expect(resolveWorkerImageUrl({ imageUrl: null })).toBeNull();
   });
 
-  it("imageUrl が undefined のとき Boring Avatars URL を返す", () => {
-    const url = resolveWorkerImageUrl({ id: "haru", imageUrl: undefined });
-    expect(url).toContain("source.boringavatars.com");
-    expect(url).toContain("haru");
+  it("imageUrl が undefined のとき null を返す（#1015）", () => {
+    expect(resolveWorkerImageUrl({ imageUrl: undefined })).toBeNull();
   });
 
-  it("imageUrl を省略したとき Boring Avatars URL を返す", () => {
-    const url = resolveWorkerImageUrl({ id: "ken" });
-    expect(url).toContain("source.boringavatars.com");
-    expect(url).toContain("ken");
+  it("imageUrl を省略したとき null を返す（#1015）", () => {
+    expect(resolveWorkerImageUrl({})).toBeNull();
   });
 });
 
@@ -337,12 +304,9 @@ describe("createAvatarUrlResolver (#300)", () => {
     expect(resolve("haru")).toBe("https://example.com/haru.png");
   });
 
-  it("imageUrl が未設定の既知ワーカーは Boring Avatars URL を返す (#884)", () => {
+  it("imageUrl が未設定の既知ワーカーは null を返す（#1015: 死んだ URL を返さない）", () => {
     const resolve = createAvatarUrlResolver(workers);
-    const url = resolve("ken");
-    expect(url).toBeDefined();
-    expect(url).toContain("source.boringavatars.com");
-    expect(url).toContain("ken");
+    expect(resolve("ken")).toBeNull();
   });
 
   it("未解決の worker ID は undefined を返す", () => {
@@ -350,12 +314,9 @@ describe("createAvatarUrlResolver (#300)", () => {
     expect(resolve("unknown-id")).toBeUndefined();
   });
 
-  it("引数省略時は DEFAULT_WORKERS で解決する（imageUrl 未設定 → Boring Avatars URL）(#884)", () => {
+  it("引数省略時は DEFAULT_WORKERS で解決する（imageUrl 未設定 → null）(#1015)", () => {
     const resolve = createAvatarUrlResolver();
-    const url = resolve("haru");
-    expect(url).toBeDefined();
-    expect(url).toContain("source.boringavatars.com");
-    expect(url).toContain("haru");
+    expect(resolve("haru")).toBeNull();
   });
 });
 

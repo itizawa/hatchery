@@ -420,6 +420,48 @@ describe("CommunityScene — mark-viewed（#934）", () => {
   });
 });
 
+describe("CommunityScene — 著者名がワーカープロフィールへのリンクになる (#1017)", () => {
+  it("author_worker を持つ投稿の著者名がリンクとして描画される", async () => {
+    const postWithWorker = {
+      id: "post-1017",
+      community_id: "community-1",
+      slot_key: "2026-07-01-morning",
+      seq: 1,
+      author: "worker-haru",
+      title: "著者リンクテスト投稿",
+      text: "内容",
+      score: 0,
+      created_at: "2026-07-01T00:00:00Z",
+      comment_count: 0,
+      author_worker: { id: "worker-uuid-haru", display_name: "はる", image_url: null },
+    };
+    const qc = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    });
+    qc.setQueryData(["communities"], [mockCommunity]);
+    qc.setQueryData(communityFeedQueryKey("ai-dev"), {
+      pages: [{ posts: [postWithWorker], nextCursor: null }],
+      pageParams: [undefined],
+    });
+    qc.setQueryData(communitySubscriptionQueryKey("ai-dev"), { subscribed: false });
+    qc.setQueryData(AUTH_ME_QUERY_KEY, null);
+    qc.setQueryData(communityRecentWorkersQueryKey("ai-dev"), mockRecentWorkers);
+
+    render(
+      <QueryClientProvider client={qc}>
+        <QueryBoundary fallback={<MainContentSkeleton />}>
+          <CommunityScene />
+        </QueryBoundary>
+      </QueryClientProvider>,
+    );
+
+    await screen.findByText("著者リンクテスト投稿");
+    const authorText = screen.getByText("はる");
+    expect(authorText.closest("a")).not.toBeNull();
+    expect(authorText.closest("a")).toHaveAttribute("href", "/workers/$workerId");
+  });
+});
+
 describe("CommunityScene — ゲスト購読誘導（#882）", () => {
   const mockUser = {
     id: "user-1",

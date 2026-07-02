@@ -25,6 +25,7 @@ export { default as FormControl } from "@mui/material/FormControl";
 export { default as FormControlLabel } from "@mui/material/FormControlLabel";
 export { default as FormHelperText } from "@mui/material/FormHelperText";
 export { default as FormLabel } from "@mui/material/FormLabel";
+export { default as InputAdornment } from "@mui/material/InputAdornment";
 export { default as InputLabel } from "@mui/material/InputLabel";
 export { default as Link } from "@mui/material/Link";
 export { default as List } from "@mui/material/List";

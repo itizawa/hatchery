@@ -177,6 +177,7 @@ const CommunityContent = ({
                             currentVote={post.my_vote ?? null}
                             postUrl={`${window.location.origin}/posts/${post.id}`}
                             isNew={isNew}
+                            onWorkerClick={post.author_worker ? () => {} : undefined}
                             onCommentClick={
                               post.comment_count
                                 ? () => void navigate({ to: "/posts/$postId", params: { postId: post.id }, hash: "comments" })

@@ -23,11 +23,12 @@ describe("AuthorByline", () => {
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
   });
 
-  it("authorWorker.image_url が null のとき Boring Avatars アバター画像と display_name を表示する (#884)", () => {
+  it("authorWorker.image_url が null のとき boring-avatars で描画し display_name を表示する (#1015)", () => {
     render(<AuthorByline author="uuid-mei" authorWorker={workerWithoutImage} />);
     expect(screen.getByText("mei")).toBeInTheDocument();
-    const img = screen.getByRole("img", { name: "mei" });
-    expect(img).toHaveAttribute("src", expect.stringContaining("source.boringavatars.com"));
+    const avatar = screen.getByRole("img", { name: "mei" });
+    expect(avatar).toBeInTheDocument();
+    expect(avatar).not.toHaveAttribute("src");
   });
 
   it("authorWorker.image_url があるとき img の src にその URL が適用される", () => {

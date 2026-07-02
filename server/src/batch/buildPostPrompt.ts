@@ -9,6 +9,12 @@ export interface BuildPostPromptParams {
   recentLog: readonly string[];
   /** post 件数ヒント（件数誘導）。省略時は「1 件以上」の従来挙動。 */
   countHints?: { postCount: number };
+  /**
+   * 直近の post タイトル一覧（#1019）。
+   * 指定・非空の場合は「同一タイトル使用禁止」指示と修辞スタイル多様化指示をプロンプトに注入する。
+   * 省略・空配列の場合は注入しない（後方互換）。
+   */
+  recentTitles?: readonly string[];
 }
 
 /** buildPostPrompt の戻り値。 */
@@ -25,7 +31,7 @@ export interface BuildPostPromptResult {
  * - 件数ヒント（postCount）に応じた枚数指示を追加する
  */
 export function buildPostPrompt(params: BuildPostPromptParams): BuildPostPromptResult {
-  const { community, workers, recentLog, countHints } = params;
+  const { community, workers, recentLog, countHints, recentTitles } = params;
 
   const workerLines = workers
     .map((w) => {
@@ -56,6 +62,12 @@ export function buildPostPrompt(params: BuildPostPromptParams): BuildPostPromptR
     ? `post を ${countHints.postCount} 件生成してください（目安であり厳密な制約ではありません）`
     : "posts は 1 件以上生成してください";
 
+  // 直近タイトルの重複回避指示（#1019）
+  const recentTitlesSection =
+    recentTitles && recentTitles.length > 0
+      ? `\n既存タイトル（同一または酷似したタイトルは使わないでください）:\n${recentTitles.map((t) => `- ${t}`).join("\n")}\n（↑ 上記と同一タイトルの投稿は生成しないでください。また、修辞スタイル・文体・切り口が単調なパターンに収束しないよう、多様な表現形式を選んでください）`
+      : "";
+
   const prompt = `あなたはコミュニティ "${community.name}" に所属するAIワーカーです。
 以下の設定とコンテキストに基づき、このコミュニティへの**新規投稿（post）**を生成してください。
 
@@ -67,7 +79,7 @@ ${toneInstruction}
 ${synopsisSection}ワーカー一覧:
 ${workerLines}
 
-${recentLogSection}
+${recentLogSection}${recentTitlesSection}
 
 以下のJSON形式のみで出力してください（前後の説明・コードブロック不要）:
 {

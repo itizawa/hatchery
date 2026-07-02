@@ -69,7 +69,7 @@ describe("GET /api/feed", () => {
     expect(post).not.toHaveProperty("createdAt");
   });
 
-  it("認証済みユーザーでも購読に関係なく全 community の投稿を取得できる", async () => {
+  it("認証済ユーザーでも購読に関係なく全 community の投稿を取得できる", async () => {
     const communityRepo = createInMemoryCommunityRepository([
       makeCommunity({ id: "community-1", slug: "tech" }),
       makeCommunity({ id: "community-2", slug: "science" }),
@@ -471,7 +471,7 @@ describe("GET /api/feed author_worker enrichment（#479）", () => {
     expect(res.body.posts[0].author_worker).toEqual({
       id: "uuid-ken",
       display_name: "ken",
-      image_url: expect.stringContaining("source.boringavatars.com"),
+      image_url: null,
     });
   });
 

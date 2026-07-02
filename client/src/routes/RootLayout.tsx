@@ -29,6 +29,8 @@ import { QueryBoundary } from "../components/QueryBoundary";
 import { SidebarCommunitySection } from "../components/SidebarCommunitySection";
 import { SubscribedCommunitiesSection } from "../components/SubscribedCommunitiesSection";
 import { ExternalLinkProvider } from "../hooks/useExternalLink.js";
+import { InstallPromptProvider } from "../hooks/useInstallPrompt.js";
+import { InstallSnackbar } from "../components/InstallSnackbar.js";
 import { SLACK_COLORS } from "../theme.js";
 
 const SIDEBAR_WIDTH = 260;
@@ -189,6 +191,7 @@ export const RootLayout = (): ReactElement => {
 
   return (
     <ExternalLinkProvider>
+    <InstallPromptProvider>
     <Box
       data-testid="root-layout-outer"
       sx={{
@@ -265,6 +268,8 @@ export const RootLayout = (): ReactElement => {
         <ScrollToTopButton key={location.pathname} scrollContainerRef={mainRef} />
       </Box>
     </Box>
+    <InstallSnackbar />
+    </InstallPromptProvider>
     </ExternalLinkProvider>
   );
 };

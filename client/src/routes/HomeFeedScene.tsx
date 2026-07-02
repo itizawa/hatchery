@@ -1,17 +1,19 @@
 import { Box, Button, Typography } from "../components/uiParts";
 import type { HomeFeedSort } from "@hatchery/common";
 import { Link as RouterLink, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, type ReactElement } from "react";
-
+import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 import { useInfiniteHomeFeed, usePublicCommunities, useVotePost } from "../api/communities.js";
 import { useRecentPostsSidebar } from "../api/feed.js";
 import { useAuth } from "../api/auth.js";
 import { useUnreadCountsForNewLabel } from "../api/subscriptions.js";
+import { useInstallPrompt } from "../hooks/useInstallPrompt.js";
 import { PostCard } from "../components/PostCard.js";
 import { QueryBoundary } from "../components/QueryBoundary.js";
 import { RecentPostsSidebarCard } from "../components/RecentPostsSidebarCard.js";
 import { WelcomeSection } from "../components/WelcomeSection.js";
 import type { VoteDirection } from "../components/VoteControl.js";
+
+const HATCHERY_VISITED_KEY = "hatchery_visited";
 
 /** フラットリスト行の hover スタイル（#834）。borderRadius は付けず bgcolor 変化のみ。 */
 const listItemSx = {
@@ -32,7 +34,7 @@ export interface HomeFeedSceneProps {
 
 /**
  * 右サイドバー内に新着ポスト一覧を表示するパネル（#928）。
- * useRecentPostsSidebar は Suspense 化済みのため、QueryBoundary で局所フォールバックを与える。
+ * useRecentPostsSidebar は Suspense 化済のため、QueryBoundary で局所フォールバックを与える。
  */
 const RecentPostsSidebarPanel = ({
   communityById,
@@ -58,6 +60,9 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
   const { mutate: votePost, isPending: isVotingPost, variables: votingPostVars } = useVotePost();
   const navigate = useNavigate();
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const postsContainerRef = useRef<HTMLDivElement | null>(null);
+  const { notifyScrolledPast, notifyFirstUpvote } = useInstallPrompt();
+  const seenPostIdsRef = useRef<Set<string>>(new Set());
 
   // #503: 混在フィードで「どの community の投稿か」を表示するため community_id → community を引く。
   const { data: communities } = usePublicCommunities();
@@ -79,6 +84,30 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
     return map;
   }, [unreadCountsData]);
 
+  const posts = data.pages.flatMap((page) => page.posts);
+
+  useEffect(() => {
+    const container = postsContainerRef.current;
+    if (!container) return;
+    const elements = container.querySelectorAll<HTMLElement>("[data-post-id]");
+    if (elements.length === 0) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!(entry.target instanceof HTMLElement)) continue;
+          const postId = entry.target.dataset.postId;
+          if (entry.isIntersecting && postId && !seenPostIdsRef.current.has(postId)) {
+            seenPostIdsRef.current.add(postId);
+            notifyScrolledPast();
+          }
+        }
+      },
+      { threshold: 0.1 },
+    );
+    elements.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, [posts.length, notifyScrolledPast]);
+
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el) return;
@@ -94,9 +123,15 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
     return () => observer.disconnect();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  const posts = data.pages.flatMap((page) => page.posts);
+  const [hasVisited] = useState(() => localStorage.getItem(HATCHERY_VISITED_KEY) === "true");
   const hasPosts = posts.length > 0;
-  const showWelcome = !user || !hasPosts;
+  const showWelcome = !hasPosts || (!user && !hasVisited);
+
+  useEffect(() => {
+    if (showWelcome && !user && !hasVisited) {
+      localStorage.setItem(HATCHERY_VISITED_KEY, "true");
+    }
+  }, [showWelcome, user, hasVisited]);
 
   return (
     <Box component="section" sx={{ p: 3, maxWidth: 1200, mx: "auto" }}>
@@ -113,7 +148,7 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
             <WelcomeSection communities={Array.isArray(communities) ? communities : []} />
           )}
           {hasPosts && (
-            <Box sx={{ borderTop: "1px solid", borderColor: "divider" }}>
+            <Box ref={postsContainerRef} sx={{ borderTop: "1px solid", borderColor: "divider" }}>
               {posts.map((post) => {
                 const community = communityById.get(post.community_id);
                 const lastViewedAt = lastViewedAtById.get(post.community_id);
@@ -122,7 +157,7 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
                   post.created_at != null &&
                   new Date(post.created_at) > new Date(lastViewedAt);
                 return (
-                  <Box key={post.id} sx={listItemSx}>
+                  <Box key={post.id} data-post-id={post.id} sx={listItemSx}>
                     <RouterLink
                       to="/posts/$postId"
                       params={{ postId: post.id }}
@@ -131,7 +166,11 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
                       <PostCard
                         post={post}
                         onVote={(direction: VoteDirection) =>
-                          votePost({ postId: post.id, direction })
+                          votePost({ postId: post.id, direction }, {
+                            onSuccess: () => {
+                              if (direction === "up") notifyFirstUpvote();
+                            },
+                          })
                         }
                         upVoteDisabled={isVotingPost && votingPostVars?.postId === post.id && votingPostVars?.direction === "up"}
                         downVoteDisabled={isVotingPost && votingPostVars?.postId === post.id && votingPostVars?.direction === "down"}
@@ -142,6 +181,7 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
                         currentVote={post.my_vote ?? null}
                         postUrl={`${window.location.origin}/posts/${post.id}`}
                         isNew={isNew}
+                        onWorkerClick={post.author_worker ? () => {} : undefined}
                         onCommunityClick={
                           community
                             ? () =>

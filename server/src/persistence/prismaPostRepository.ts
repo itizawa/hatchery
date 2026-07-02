@@ -289,6 +289,33 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
       return rows.map(toRecord);
     },
 
+    // eslint-disable-next-line max-params
+    async listRecentByCommunity(communityId: string, since: Date, limit = 100): Promise<PostRecord[]> {
+      const rows = await prisma.post.findMany({
+        where: {
+          communityId,
+          createdAt: { gte: since },
+        },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        take: limit,
+      });
+      return rows.map(toRecord);
+    },
+
+    // eslint-disable-next-line max-params
+    async listOldByCommunity(communityId: string, before: Date, limit = 20): Promise<PostRecord[]> {
+      const rows = await prisma.post.findMany({
+        where: {
+          communityId,
+          createdAt: { lt: before },
+          score: { gte: 0 },
+        },
+        orderBy: [{ score: "desc" }, { createdAt: "desc" }, { id: "desc" }],
+        take: limit,
+      });
+      return rows.map(toRecord);
+    },
+
     async listByAuthor({ authorId, limit = 20, now }: { authorId: string; limit?: number; now?: Date }): Promise<PostRecord[]> {
       const rows = await prisma.post.findMany({
         where: {

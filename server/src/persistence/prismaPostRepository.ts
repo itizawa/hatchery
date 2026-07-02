@@ -329,5 +329,21 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
       });
       return rows.map(toRecord);
     },
+
+    async search({ q, limit = 50, options }: { q: string; limit?: number; options?: RevealFilterOptions }): Promise<PostRecord[]> {
+      const now = options?.now;
+      const rows = await prisma.post.findMany({
+        where: {
+          OR: [
+            { title: { contains: q, mode: "insensitive" } },
+            { text: { contains: q, mode: "insensitive" } },
+          ],
+          ...(now !== undefined ? { createdAt: { lte: now } } : {}),
+        },
+        orderBy: { createdAt: "desc" },
+        take: limit,
+      });
+      return rows.map(toRecord);
+    },
   };
 }

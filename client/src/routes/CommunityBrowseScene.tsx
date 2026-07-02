@@ -10,8 +10,8 @@ import { PostedTime } from "../components/PostedTime.js";
  * コミュニティブラウズ（/communities）。全コミュニティ一覧を表示する（ADR-0018 / ADR-0019）。
  * 認証不要の公開ページ。
  * #462: usePublicCommunities は Suspense 化。ローディング/エラーは router の QueryBoundary に委譲する。
- * #527: コミュニティカードに post_countシlast_post_at の活気指標を表示する。
- * #1018: コミュニティカードにアイコン（Avatar）を表示する。SidebarCommunitySection と同パターン。
+ * #527: コミュニティカードに post_count・last_post_at の活気指標を表示する。
+ * #1018: コミュニティカードにアイコン（Avatar）を表示する。
  */
 export const CommunityBrowseScene = (): ReactElement => {
   const { data: communities } = usePublicCommunities();

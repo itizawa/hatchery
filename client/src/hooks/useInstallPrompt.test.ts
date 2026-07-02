@@ -12,7 +12,7 @@ const wrapper = ({ children }: { children: unknown }) =>
 
 describe("useInstallPrompt", () => {
   beforeEach(() => {
-    localStorage.clear();
+    window.localStorage.clear();
     // スタンドアロン起動でないと見せかける
     Object.defineProperty(window, "matchMedia", {
       writable: true,
@@ -86,7 +86,7 @@ describe("useInstallPrompt", () => {
     act(() => result.current.notifyFirstUpvote());
 
     expect(result.current.shouldShowSnackbar).toBe(true);
-    expect(localStorage.getItem(UPVOTE_KEY)).toBe("true");
+    expect(window.localStorage.getItem(UPVOTE_KEY)).toBe("true");
   });
 
   it("notifyFirstUpvote を複数回呼んでも localStorage.setItem は 1 回だけ呼ばれる", () => {
@@ -118,11 +118,11 @@ describe("useInstallPrompt", () => {
 
     act(() => result.current.dismissSnackbar());
     expect(result.current.shouldShowSnackbar).toBe(false);
-    expect(localStorage.getItem(DISMISS_KEY)).toBe("true");
+    expect(window.localStorage.getItem(DISMISS_KEY)).toBe("true");
   });
 
   it("localStorage に dismiss が保存済みなら初期状態から shouldShowSnackbar が false のまま", () => {
-    localStorage.setItem(DISMISS_KEY, "true");
+    window.localStorage.setItem(DISMISS_KEY, "true");
     const { result } = renderHook(() => useInstallPrompt(), { wrapper });
 
     act(() => {

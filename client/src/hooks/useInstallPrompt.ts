@@ -84,9 +84,8 @@ export function InstallPromptProvider({ children }: InstallPromptProviderProps) 
   const [hasDeferredPrompt, setHasDeferredPrompt] = useState(false);
   const [isInstalled, setIsInstalled] = useState(() => isStandalone());
   const [scrolledPastCount, setScrolledPastCount] = useState(0);
-  const [hasUpvotedOnce, setHasUpvotedOnce] = useState(
-    () => storageGet(UPVOTE_KEY) === "true",
-  );
+  const hasUpvotedOnceRef = useRef(storageGet(UPVOTE_KEY) === "true");
+  const [hasUpvotedOnce, setHasUpvotedOnce] = useState(() => hasUpvotedOnceRef.current);
   const [isSnackbarDismissed, setIsSnackbarDismissed] = useState(
     () => storageGet(DISMISS_KEY) === "true",
   );
@@ -126,10 +125,11 @@ export function InstallPromptProvider({ children }: InstallPromptProviderProps) 
   }, []);
 
   const notifyFirstUpvote = useCallback(() => {
-    if (hasUpvotedOnce) return;
+    if (hasUpvotedOnceRef.current) return;
+    hasUpvotedOnceRef.current = true;
     setHasUpvotedOnce(true);
     storageSet({ key: UPVOTE_KEY, value: "true" });
-  }, [hasUpvotedOnce]);
+  }, []);
 
   const dismissSnackbar = useCallback(() => {
     setIsSnackbarDismissed(true);

@@ -60,6 +60,7 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
   const { mutate: votePost, isPending: isVotingPost, variables: votingPostVars } = useVotePost();
   const navigate = useNavigate();
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const postsContainerRef = useRef<HTMLDivElement | null>(null);
   const { notifyScrolledPast, notifyFirstUpvote } = useInstallPrompt();
   const seenPostIdsRef = useRef<Set<string>>(new Set());
 
@@ -86,7 +87,9 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
   const posts = data.pages.flatMap((page) => page.posts);
 
   useEffect(() => {
-    const elements = document.querySelectorAll<HTMLElement>("[data-post-id]");
+    const container = postsContainerRef.current;
+    if (!container) return;
+    const elements = container.querySelectorAll<HTMLElement>("[data-post-id]");
     if (elements.length === 0) return;
     const observer = new IntersectionObserver(
       (entries) => {
@@ -145,7 +148,7 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
             <WelcomeSection communities={Array.isArray(communities) ? communities : []} />
           )}
           {hasPosts && (
-            <Box sx={{ borderTop: "1px solid", borderColor: "divider" }}>
+            <Box ref={postsContainerRef} sx={{ borderTop: "1px solid", borderColor: "divider" }}>
               {posts.map((post) => {
                 const community = communityById.get(post.community_id);
                 const lastViewedAt = lastViewedAtById.get(post.community_id);

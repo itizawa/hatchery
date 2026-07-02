@@ -10,9 +10,23 @@ const UPVOTE_KEY = "hatchery:pwa-install-upvoted";
 const wrapper = ({ children }: { children: unknown }) =>
   createElement(InstallPromptProvider, null, children);
 
+function makeLocalStorageMock() {
+  let store: Record<string, string> = {};
+  return {
+    getItem: (key: string) => store[key] ?? null,
+    // eslint-disable-next-line max-params
+    setItem: (key: string, value: string) => { store[key] = value; },
+    removeItem: (key: string) => { delete store[key]; },
+    clear: () => { store = {}; },
+    key: (index: number) => Object.keys(store)[index] ?? null,
+    get length() { return Object.keys(store).length; },
+  };
+}
+
 describe("useInstallPrompt", () => {
   beforeEach(() => {
-    window.localStorage.clear();
+    // #932: Node.js 26 環境で window.localStorage が undefined になるため stub で確保する。
+    vi.stubGlobal("localStorage", makeLocalStorageMock());
     // スタンドアロン起動でないと見せかける
     Object.defineProperty(window, "matchMedia", {
       writable: true,
@@ -27,6 +41,7 @@ describe("useInstallPrompt", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it("初期状態: isInstallable は false（beforeinstallprompt 未受信）", () => {
@@ -90,7 +105,7 @@ describe("useInstallPrompt", () => {
   });
 
   it("notifyFirstUpvote を複数回呼んでも localStorage.setItem は 1 回だけ呼ばれる", () => {
-    const setItemSpy = vi.spyOn(Storage.prototype, "setItem");
+    const setItemSpy = vi.spyOn(window.localStorage, "setItem");
     const { result } = renderHook(() => useInstallPrompt(), { wrapper });
 
     act(() => {

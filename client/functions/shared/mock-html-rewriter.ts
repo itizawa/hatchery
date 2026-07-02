@@ -41,7 +41,7 @@ export class MockHTMLRewriter {
                 if (!m) continue;
                 const [, attr, val] = m;
                 const esc = val.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-                const re = new RegExp(`<meta\\s[^>]*${attr}="${esc}"[^>]*\/?>`, "gi");
+                const re = new RegExp(`<meta\\s[^>]*${attr}="${esc}"[^>]*/?>`, "gi");
                 result = result.replace(re, (match) => {
                   let removed = false;
                   handler.element!({ remove: () => { removed = true; }, append: () => {} });

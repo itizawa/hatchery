@@ -1,12 +1,23 @@
 import MenuIcon from "@mui/icons-material/MenuRounded";
 import SearchIcon from "@mui/icons-material/SearchRounded";
-import { Avatar, Box, ButtonBase, IconButton, Link, Menu, MenuItem, Skeleton } from "./uiParts";
+import GetAppRounded from "@mui/icons-material/GetAppRounded";
+import {
+  Avatar,
+  Box,
+  ButtonBase,
+  IconButton,
+  Link,
+  Menu,
+  MenuItem,
+  Skeleton,
+} from "./uiParts";
 
 import { Link as RouterLink, useNavigate } from "@tanstack/react-router";
 import { type ReactElement, useState } from "react";
 
 import { useAuth, useLogout } from "../api/auth.js";
 import { useLoginModal } from "../hooks/useLoginModal.js";
+import { useInstallPrompt } from "../hooks/useInstallPrompt.js";
 import { QueryBoundary } from "./QueryBoundary.js";
 import { SLACK_COLORS } from "../theme.js";
 
@@ -135,6 +146,17 @@ const AppHeaderAuthSection = (): ReactElement => {
 };
 
 export const AppHeader = ({ onMenuOpen }: AppHeaderProps): ReactElement => {
+  const { isInstallable, isInstalled, isIOS, promptInstall, openIosInstructions } = useInstallPrompt();
+  const showInstallButton = isInstallable && !isInstalled;
+
+  const handleHeaderInstall = () => {
+    if (isIOS) {
+      openIosInstructions();
+    } else {
+      void promptInstall();
+    }
+  };
+
   return (
     <Box
       component="header"
@@ -183,6 +205,16 @@ export const AppHeader = ({ onMenuOpen }: AppHeaderProps): ReactElement => {
         <SearchIcon />
       </IconButton>
 
+      {showInstallButton && (
+        <IconButton
+          aria-label="アプリをインストール"
+          onClick={handleHeaderInstall}
+          sx={{ ml: 0.5, color: SLACK_COLORS.sidebarText }}
+        >
+          <GetAppRounded />
+        </IconButton>
+      )}
+
       <Box
         data-testid="header-right-slot"
         sx={{
@@ -200,6 +232,7 @@ export const AppHeader = ({ onMenuOpen }: AppHeaderProps): ReactElement => {
           <AppHeaderAuthSection />
         </QueryBoundary>
       </Box>
+
     </Box>
   );
 };

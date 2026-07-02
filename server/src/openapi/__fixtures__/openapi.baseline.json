@@ -3087,6 +3087,48 @@
         }
       }
     },
+    "/api/posts/search": {
+      "get": {
+        "summary": "投稿を全文検索（title / text ILIKE 部分一致・最大 50 件・新着順・認証不要・#751）",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "required": true,
+            "name": "q",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ヒットした post の一覧（最大 50 件・新着順）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Post"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "q が未指定または 0 文字 / 201 文字以上",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/posts/{postId}": {
       "get": {
         "summary": "スレッドを取得（post + comments・認証不要）",

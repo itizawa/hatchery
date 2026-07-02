@@ -103,7 +103,7 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
     );
     elements.forEach((el) => observer.observe(el));
     return () => observer.disconnect();
-  }, [posts, notifyScrolledPast]);
+  }, [posts.length, notifyScrolledPast]);
 
   useEffect(() => {
     const el = sentinelRef.current;

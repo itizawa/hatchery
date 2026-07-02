@@ -1,4 +1,5 @@
 import {
+  createElement,
   createContext,
   useCallback,
   useContext,
@@ -8,7 +9,6 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { createElement } from "react";
 
 const DISMISS_KEY = "hatchery:pwa-install-dismissed";
 const UPVOTE_KEY = "hatchery:pwa-install-upvoted";
@@ -48,7 +48,9 @@ const fallbackContextValue: InstallPromptContextValue = {
 const InstallPromptContext = createContext<InstallPromptContextValue>(fallbackContextValue);
 
 function detectIOS(): boolean {
-  return /iphone|ipad|ipod/i.test(navigator.userAgent);
+  if (/iphone|ipad|ipod/i.test(navigator.userAgent)) return true;
+  // iPadOS 13+ sends Macintosh UA; distinguish by touch points
+  return /Macintosh/i.test(navigator.userAgent) && navigator.maxTouchPoints > 1;
 }
 
 function isStandalone(): boolean {
@@ -56,11 +58,19 @@ function isStandalone(): boolean {
 }
 
 function storageGet(key: string): string | null {
-  return window.localStorage?.getItem(key) ?? null;
+  try {
+    return window.localStorage?.getItem(key) ?? null;
+  } catch {
+    return null;
+  }
 }
 
 function storageSet({ key, value }: { key: string; value: string }): void {
-  window.localStorage?.setItem(key, value);
+  try {
+    window.localStorage?.setItem(key, value);
+  } catch {
+    // QuotaExceededError or SecurityError — best-effort, ignore
+  }
 }
 
 interface InstallPromptProviderProps {
@@ -69,7 +79,7 @@ interface InstallPromptProviderProps {
 
 export function InstallPromptProvider({ children }: InstallPromptProviderProps) {
   const deferredPromptRef = useRef<BeforeInstallPromptEvent | null>(null);
-  const isIOS = useMemo(() => detectIOS(), []);
+  const isIOS = useMemo(detectIOS, []);
 
   const [hasDeferredPrompt, setHasDeferredPrompt] = useState(false);
   const [isInstalled, setIsInstalled] = useState(() => isStandalone());
@@ -127,10 +137,14 @@ export function InstallPromptProvider({ children }: InstallPromptProviderProps) 
   }, []);
 
   const promptInstall = useCallback(async () => {
-    if (deferredPromptRef.current) {
-      await deferredPromptRef.current.prompt();
-      deferredPromptRef.current = null;
-      setHasDeferredPrompt(false);
+    const prompt = deferredPromptRef.current;
+    if (!prompt) return;
+    deferredPromptRef.current = null;
+    setHasDeferredPrompt(false);
+    try {
+      await prompt.prompt();
+    } catch {
+      // prompt() can throw if called outside a user gesture; ignore
     }
   }, []);
 

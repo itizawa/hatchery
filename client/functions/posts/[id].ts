@@ -1,4 +1,4 @@
-import { buildOgpMetaHtml, isCrawler, resolveApiBase, type PagesContext } from "../shared/ogp";
+import { OGP_META_SELECTORS_TO_REMOVE, buildOgpMetaHtml, isCrawler, resolveApiBase, type PagesContext } from "../shared/ogp";
 import { buildPostOgpMeta, type PostLike } from "./ogp";
 
 interface PostApiResponse {
@@ -56,7 +56,12 @@ export const onRequest = async (context: PagesContext): Promise<Response> => {
   const metaHtml = buildOgpMetaHtml(meta);
 
   const response = await next();
-  return new HTMLRewriter()
+  const rewriter = OGP_META_SELECTORS_TO_REMOVE.reduce(
+    // eslint-disable-next-line max-params
+    (rw, sel) => rw.on(sel, { element(el) { el.remove(); } }),
+    new HTMLRewriter(),
+  );
+  return rewriter
     .on("head", {
       element(element) {
         element.append(metaHtml, { html: true });

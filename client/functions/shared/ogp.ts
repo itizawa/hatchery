@@ -66,6 +66,19 @@ export function escapeHtmlAttr(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
+/**
+ * HTMLRewriter で既存の静的 OGP meta タグを除去するセレクタ一覧。
+ * buildOgpMetaHtml が生成するプロパティ/名前と 1:1 対応しており、動的タグ追加前に
+ * 静的デフォルト（index.html 由来）を除去することで重複を防ぐ。
+ */
+export const OGP_META_SELECTORS_TO_REMOVE = [
+  'meta[property="og:title"]',
+  'meta[property="og:description"]',
+  'meta[property="og:url"]',
+  'meta[name="twitter:title"]',
+  'meta[name="twitter:description"]',
+] as const;
+
 export function buildOgpMetaHtml(meta: OgpMeta): string {
   const title = escapeHtmlAttr(meta.title);
   const description = escapeHtmlAttr(meta.description);

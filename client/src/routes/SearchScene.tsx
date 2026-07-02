@@ -114,13 +114,15 @@ export const SearchScene = (): ReactElement => {
               value={field.state.value}
               onChange={(e) => field.handleChange(e.target.value)}
               onBlur={field.handleBlur}
-              inputProps={{ maxLength: 200 }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchRoundedIcon sx={{ color: "text.secondary" }} />
-                  </InputAdornment>
-                ),
+              slotProps={{
+                htmlInput: { maxLength: 200 },
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchRoundedIcon sx={{ color: "text.secondary" }} />
+                    </InputAdornment>
+                  ),
+                },
               }}
               size="small"
               sx={{

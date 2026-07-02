@@ -52,6 +52,9 @@ function stubFetch(isLoggedIn: boolean, role: "member" | "admin" = "member") {
       if (url.includes("/api/feed")) {
         return Promise.resolve(jsonResponse(200, { posts: [], nextCursor: null }));
       }
+      if (url.includes("/api/subscriptions/unread-counts")) {
+        return Promise.resolve(jsonResponse(200, { unread_counts: [] }));
+      }
       return Promise.resolve(jsonResponse(200, []));
     }),
   );
@@ -119,6 +122,12 @@ function renderWithRouter(initialPath = "/") {
     ),
   });
 
+  const searchRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/search",
+    component: (): ReactElement => <RootLayout />,
+  });
+
   const router = createRouter({
     routeTree: rootRoute.addChildren([
       indexRoute,
@@ -128,6 +137,7 @@ function renderWithRouter(initialPath = "/") {
       adminRoute,
       termsRoute,
       privacyRoute,
+      searchRoute,
     ]),
     history: createMemoryHistory({ initialEntries: [initialPath] }),
   });

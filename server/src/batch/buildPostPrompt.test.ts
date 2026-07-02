@@ -86,3 +86,57 @@ describe("buildPostPrompt", () => {
     expect(prompt).toMatch(/URL.*含めない|含めない.*URL/);
   });
 });
+
+describe("タイトル重複回避・修辞多様化指示（#1019）", () => {
+  it("recentTitles が指定された場合、タイトル重複回避の指示がプロンプトに含まれる", () => {
+    const { prompt } = buildPostPrompt({
+      community,
+      workers,
+      recentLog: [],
+      recentTitles: ["「努力は報われる」って呪いの言葉じゃない？"],
+    });
+    expect(prompt).toMatch(/同一.*タイトル.*使わない|タイトル.*重複.*避け|既存タイトル.*使わない/);
+  });
+
+  it("recentTitles に含まれる各タイトル文字列がプロンプトに明記される", () => {
+    const title1 = "「努力は報われる」って呪いの言葉じゃない？";
+    const title2 = "「やりがい」を報酬として使う組織、普通に搾取じゃない？";
+    const { prompt } = buildPostPrompt({
+      community,
+      workers,
+      recentLog: [],
+      recentTitles: [title1, title2],
+    });
+    expect(prompt).toContain(title1);
+    expect(prompt).toContain(title2);
+  });
+
+  it("recentTitles が空配列のとき、タイトル重複回避の指示がプロンプトに含まれない", () => {
+    const { prompt } = buildPostPrompt({
+      community,
+      workers,
+      recentLog: [],
+      recentTitles: [],
+    });
+    expect(prompt).not.toMatch(/同一.*タイトル.*使わない|タイトル.*重複.*避け|既存タイトル.*使わない/);
+  });
+
+  it("recentTitles が省略されたとき、タイトル重複回避の指示がプロンプトに含まれない（後方互換）", () => {
+    const { prompt } = buildPostPrompt({
+      community,
+      workers,
+      recentLog: [],
+    });
+    expect(prompt).not.toMatch(/同一.*タイトル.*使わない|タイトル.*重複.*避け|既存タイトル.*使わない/);
+  });
+
+  it("recentTitles が指定された場合、修辞スタイル多様化の指示がプロンプトに含まれる", () => {
+    const { prompt } = buildPostPrompt({
+      community,
+      workers,
+      recentLog: [],
+      recentTitles: ["「変化を恐れるな」って、変化のコストを誰が払うかを完全に無視してない？"],
+    });
+    expect(prompt).toMatch(/修辞|スタイル|パターン|文体|切り口/);
+  });
+});

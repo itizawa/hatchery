@@ -38,10 +38,30 @@ describe("formatRelativeTime", () => {
     expect(formatRelativeTime({ target: new Date("2026-06-13T13:00:00Z"), now })).toBe("23時間前");
   });
 
-  it("24時間以上は絶対日付『YYYY/M/D』を返す", () => {
-    expect(formatRelativeTime({ target: new Date("2026-06-13T12:00:00Z"), now })).toBe("2026/6/13");
-    expect(formatRelativeTime({ target: new Date("2026-06-08T12:00:00Z"), now })).toBe("2026/6/8");
+  it("23時間59分は『23時間前』（24時間未満の境界）", () => {
+    expect(formatRelativeTime({ target: new Date("2026-06-13T12:01:00Z"), now })).toBe("23時間前");
+  });
+
+  it("ちょうど24時間は『1日前』", () => {
+    expect(formatRelativeTime({ target: new Date("2026-06-13T12:00:00Z"), now })).toBe("1日前");
+  });
+
+  it("24時間以上7日未満は『N日前』（端数切り捨て）", () => {
+    // 24時間1秒 → 1日前
+    expect(formatRelativeTime({ target: new Date("2026-06-13T11:59:59Z"), now })).toBe("1日前");
+    // ちょうど6日 → 6日前
+    expect(formatRelativeTime({ target: new Date("2026-06-08T12:00:00Z"), now })).toBe("6日前");
+    // 6日23時間59分59秒 → 6日前
+    expect(formatRelativeTime({ target: new Date("2026-06-07T12:00:01Z"), now })).toBe("6日前");
+  });
+
+  it("ちょうど7日は絶対日付『YYYY/M/D』を返す", () => {
     expect(formatRelativeTime({ target: new Date("2026-06-07T12:00:00Z"), now })).toBe("2026/6/7");
+  });
+
+  it("7日以上は絶対日付『YYYY/M/D』を返す", () => {
+    // 7日と1秒
+    expect(formatRelativeTime({ target: new Date("2026-06-07T11:59:59Z"), now })).toBe("2026/6/7");
     expect(formatRelativeTime({ target: new Date("2025-12-25T03:00:00Z"), now })).toBe("2025/12/25");
   });
 

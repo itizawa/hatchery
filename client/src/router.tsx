@@ -76,6 +76,10 @@ const LazyWorkerScene = lazyRouteComponent(
   () => import("./routes/WorkerScene"),
   "WorkerScene",
 );
+const LazySearchScene = lazyRouteComponent(
+  () => import("./routes/SearchScene"),
+  "SearchScene",
+);
 const LazyAddWorkerScene = lazyRouteComponent(
   () => import("./routes/AddWorkerScene"),
   "AddWorkerScene",
@@ -218,6 +222,21 @@ const postRoute = createRoute({
       <LazyPostThreadScene />
     </QueryBoundary>
   ),
+});
+
+/** 投稿全文検索ページ（/search）。認証不要・q クエリパラメータで title / text の ILIKE 部分一致検索（#751）。 */
+const searchRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/search",
+  component: () => (
+    <QueryBoundary fallback={<MainContentSkeleton />}>
+      <LazySearchScene />
+    </QueryBoundary>
+  ),
+  validateSearch: (search: Record<string, unknown>): { q?: string } => {
+    const q = typeof search.q === "string" && search.q.length > 0 ? search.q : undefined;
+    return q !== undefined ? { q } : {};
+  },
 });
 
 /**
@@ -384,6 +403,7 @@ const routeTree = rootRoute.addChildren([
   communitiesRoute,
   communityRoute,
   postRoute,
+  searchRoute,
   loginRoute,
   lpRoute,
   adminRoute,

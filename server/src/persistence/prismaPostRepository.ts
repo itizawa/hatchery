@@ -277,15 +277,14 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
       communityId: string,
       params: { since: Date; minScore: number; limit: number },
     ): Promise<PostRecord[]> {
-      const { since, minScore, limit } = params;
       const rows = await prisma.post.findMany({
         where: {
           communityId,
-          score: { gte: minScore },
-          createdAt: { gte: since },
+          score: { gte: params.minScore },
+          createdAt: { gte: params.since },
         },
-        orderBy: [{ score: "desc" }, { createdAt: "desc" }],
-        take: limit,
+        orderBy: [{ score: "desc" }, { createdAt: "desc" }, { id: "desc" }],
+        take: params.limit,
       });
       return rows.map(toRecord);
     },
@@ -297,7 +296,7 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
           communityId,
           createdAt: { gte: since },
         },
-        orderBy: { createdAt: "desc" },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
         take: limit,
       });
       return rows.map(toRecord);
@@ -311,7 +310,7 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
           createdAt: { lt: before },
           score: { gte: 0 },
         },
-        orderBy: [{ score: "desc" }, { createdAt: "desc" }],
+        orderBy: [{ score: "desc" }, { createdAt: "desc" }, { id: "desc" }],
         take: limit,
       });
       return rows.map(toRecord);
@@ -321,10 +320,25 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
       const rows = await prisma.post.findMany({
         where: {
           author: authorId,
-          // reveal フィルタ（#556 / #929）: now が渡された場合、createdAt > now の post を除外する。
           ...(now !== undefined ? { createdAt: { lte: now } } : {}),
         },
-        orderBy: { createdAt: "desc" },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        take: limit,
+      });
+      return rows.map(toRecord);
+    },
+
+    async search({ q, limit = 50, options }: { q: string; limit?: number; options?: RevealFilterOptions }): Promise<PostRecord[]> {
+      const now = options?.now;
+      const rows = await prisma.post.findMany({
+        where: {
+          OR: [
+            { title: { contains: q, mode: "insensitive" } },
+            { text: { contains: q, mode: "insensitive" } },
+          ],
+          ...(now !== undefined ? { createdAt: { lte: now } } : {}),
+        },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
         take: limit,
       });
       return rows.map(toRecord);

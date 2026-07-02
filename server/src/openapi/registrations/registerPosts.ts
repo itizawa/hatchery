@@ -1,5 +1,5 @@
 import type { OpenAPIRegistry } from "@asteasolutions/zod-to-openapi";
-import { CommentViewsRequestSchema, PostViewRequestSchema, VoteRequestSchema } from "@hatchery/common";
+import { CommentViewsRequestSchema, PostViewRequestSchema, SearchQuerySchema, VoteRequestSchema } from "@hatchery/common";
 import { z } from "zod";
 
 import { type RegistryContext, commentIdParam, postIdParam } from "./shared.js";
@@ -17,6 +17,27 @@ export function registerPosts(registry: OpenAPIRegistry, ctx: RegistryContext): 
       "registerPosts は registerCommunities の後に呼ぶ必要があります（Post / Comment component 未登録）",
     );
   }
+
+  // 投稿全文検索（title / text ILIKE 部分一致・認証不要・#751）
+  registry.registerPath({
+    method: "get",
+    path: "/api/posts/search",
+    summary: "投稿を全文検索（title / text ILIKE 部分一致・最大 50 件・新着順・認証不要・#751）",
+    request: {
+      query: SearchQuerySchema.openapi({ description: "検索クエリ（1〜200 文字）" }),
+    },
+    responses: {
+      200: {
+        description: "ヒットした post の一覧（最大 50 件・新着順）",
+        content: {
+          "application/json": {
+            schema: z.array(PostComponent),
+          },
+        },
+      },
+      400: { description: "q が未指定または 0 文字 / 201 文字以上", ...errorJson },
+    },
+  });
 
   // スレッド取得（post + comments）
   registry.registerPath({

@@ -1,4 +1,5 @@
 import MenuIcon from "@mui/icons-material/MenuRounded";
+import SearchIcon from "@mui/icons-material/SearchRounded";
 import { Avatar, Box, ButtonBase, IconButton, Link, Menu, MenuItem, Skeleton } from "./uiParts";
 
 import { Link as RouterLink, useNavigate } from "@tanstack/react-router";
@@ -172,6 +173,15 @@ export const AppHeader = ({ onMenuOpen }: AppHeaderProps): ReactElement => {
       >
         Hatchery
       </Link>
+
+      <IconButton
+        component={RouterLink}
+        to="/search"
+        aria-label="投稿を検索"
+        sx={{ ml: 1, color: SLACK_COLORS.sidebarText }}
+      >
+        <SearchIcon />
+      </IconButton>
 
       <Box
         data-testid="header-right-slot"

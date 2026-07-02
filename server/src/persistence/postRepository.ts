@@ -140,6 +140,12 @@ export interface PostRepository {
    * limit 省略時は 20 件。now を渡すと `createdAt <= now` の reveal フィルタが有効になる。
    */
   listByAuthor(params: { authorId: string; limit?: number; now?: Date }): Promise<PostRecord[]>;
+  /**
+   * title または text に q を含む post を新着順（createdAt 降順）で返す（#751 全文検索）。
+   * limit 省略時は 50 件。options.now を渡すと `createdAt <= now` の reveal フィルタが有効になる。
+   * 大文字小文字を区別しない部分一致（ILIKE 相当）で検索する。
+   */
+  search(params: { q: string; limit?: number; options?: RevealFilterOptions }): Promise<PostRecord[]>;
 }
 
 function cloneRecord(r: PostRecord): PostRecord {
@@ -516,6 +522,19 @@ export function createInMemoryPostRepository(): PostRepository {
     listByAuthor({ authorId, limit = 20, now }: { authorId: string; limit?: number; now?: Date }): Promise<PostRecord[]> {
       const result = records
         .filter((r) => r.author === authorId)
+        .filter((r) => now === undefined || r.createdAt.getTime() <= now.getTime())
+        // eslint-disable-next-line max-params
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+        .slice(0, limit)
+        .map(cloneRecord);
+      return Promise.resolve(result);
+    },
+
+    search({ q, limit = 50, options }: { q: string; limit?: number; options?: RevealFilterOptions }): Promise<PostRecord[]> {
+      const lower = q.toLowerCase();
+      const now = options?.now;
+      const result = records
+        .filter((r) => r.title.toLowerCase().includes(lower) || r.text.toLowerCase().includes(lower))
         .filter((r) => now === undefined || r.createdAt.getTime() <= now.getTime())
         // eslint-disable-next-line max-params
         .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())

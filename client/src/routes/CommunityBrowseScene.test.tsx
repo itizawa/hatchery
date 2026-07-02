@@ -3,6 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { http, HttpResponse, delay } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { generateCommunityIconUrl } from "@hatchery/common";
 
 import { CommunityBrowseScene } from "./CommunityBrowseScene";
 import { QueryBoundary } from "../components/QueryBoundary";
@@ -20,6 +21,7 @@ const mockCommunities: Community[] = [
     created_at: "2026-06-01T00:00:00Z",
     post_count: 5,
     last_post_at: "2026-06-10T09:00:00Z",
+    iconUrl: "https://example.com/icon1.png",
   },
   {
     id: "community-2",
@@ -31,6 +33,7 @@ const mockCommunities: Community[] = [
     created_at: "2026-06-02T00:00:00Z",
     post_count: 0,
     last_post_at: null,
+    iconUrl: null,
   },
 ];
 
@@ -130,5 +133,19 @@ describe("CommunityBrowseScene", () => {
     renderInBoundary(mockCommunities);
     await screen.findByText("AI 開発者の集い");
     expect(screen.getByText("未投稿")).toBeInTheDocument();
+  });
+
+  it("iconUrl が設定されているコミュニティでは Avatar の src がその URL になる（#1018）", async () => {
+    renderInBoundary(mockCommunities);
+    await screen.findByText("AI 開発者の集い");
+    const img = screen.getByRole("img", { name: "AI 開発者の集い" });
+    expect(img).toHaveAttribute("src", "https://example.com/icon1.png");
+  });
+
+  it("iconUrl が null のコミュニティでは Avatar の src が bauhaus 自動生成 URL になる（#1018）", async () => {
+    renderInBoundary(mockCommunities);
+    await screen.findByText("AI 開発者の集い");
+    const img = screen.getByRole("img", { name: "コーディング日常" });
+    expect(img).toHaveAttribute("src", generateCommunityIconUrl({ id: "community-2" }));
   });
 });

@@ -6,7 +6,7 @@ import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import { Box, CircularProgress, InputAdornment, TextField, Typography } from "../components/uiParts";
 import { Link as RouterLink, useNavigate, useSearch } from "@tanstack/react-router";
 import { useForm } from "@tanstack/react-form";
-import { type ReactElement } from "react";
+import { type ReactElement, useEffect } from "react";
 
 import { useSearchPosts } from "../api/search.js";
 import { PostCard } from "../components/PostCard.js";
@@ -18,7 +18,7 @@ const SearchResults = ({ q }: { q: string }): ReactElement => {
   const navigate = useNavigate();
   const { data: posts, isPending, isError } = useSearchPosts({ q });
 
-  if (!q) {
+  if (!q.trim()) {
     return (
       <Box sx={{ py: 8, textAlign: "center", color: "text.secondary" }}>
         <SearchRoundedIcon sx={{ fontSize: 48, mb: 1, opacity: 0.4 }} />
@@ -90,6 +90,13 @@ export const SearchScene = (): ReactElement => {
       void navigate({ to: "/search", search: trimmed ? { q: trimmed } : {} });
     },
   });
+
+  // TanStack Router does not remount on search-param-only transitions, so defaultValues
+  // captured at mount become stale after browser back/forward. Reset the form whenever
+  // the URL param changes.
+  useEffect(() => {
+    void form.reset({ q: currentQ });
+  }, [currentQ]);
 
   return (
     <Box sx={{ maxWidth: 720, mx: "auto", px: 2, py: 3 }}>

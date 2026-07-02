@@ -34,8 +34,8 @@ describe("fetchSearchPosts (GET /api/posts/search)", () => {
 
     const result = await fetchSearchPosts({ q: "テスト" });
     expect(result).toEqual([mockPost]);
-    const [url] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toContain("/api/posts/search");
+    const request = fetchMock.mock.calls[0][0] as Request;
+    expect(request.url).toContain("/api/posts/search");
   });
 
   it("q パラメータが URL に含まれる", async () => {
@@ -43,9 +43,9 @@ describe("fetchSearchPosts (GET /api/posts/search)", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     await fetchSearchPosts({ q: "検索ワード" });
-    const [url] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toContain("q=");
-    expect(decodeURIComponent(url)).toContain("検索ワード");
+    const request = fetchMock.mock.calls[0][0] as Request;
+    expect(request.url).toContain("q=");
+    expect(decodeURIComponent(request.url)).toContain("検索ワード");
   });
 
   it("空の結果を正常に返す", async () => {

@@ -234,7 +234,7 @@ const searchRoute = createRoute({
     </QueryBoundary>
   ),
   validateSearch: (search: Record<string, unknown>): { q?: string } => {
-    const q = typeof search.q === "string" && search.q.length > 0 ? search.q : undefined;
+    const q = typeof search.q === "string" && search.q.trim().length > 0 ? search.q.trim() : undefined;
     return q !== undefined ? { q } : {};
   },
 });

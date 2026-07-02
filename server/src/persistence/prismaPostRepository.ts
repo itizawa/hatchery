@@ -277,42 +277,14 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
       communityId: string,
       params: { since: Date; minScore: number; limit: number },
     ): Promise<PostRecord[]> {
-      const { since, minScore, limit } = params;
       const rows = await prisma.post.findMany({
         where: {
           communityId,
-          score: { gte: minScore },
-          createdAt: { gte: since },
+          score: { gte: params.minScore },
+          createdAt: { gte: params.since },
         },
-        orderBy: [{ score: "desc" }, { createdAt: "desc" }],
-        take: limit,
-      });
-      return rows.map(toRecord);
-    },
-
-    // eslint-disable-next-line max-params
-    async listRecentByCommunity(communityId: string, since: Date, limit = 100): Promise<PostRecord[]> {
-      const rows = await prisma.post.findMany({
-        where: {
-          communityId,
-          createdAt: { gte: since },
-        },
-        orderBy: { createdAt: "desc" },
-        take: limit,
-      });
-      return rows.map(toRecord);
-    },
-
-    // eslint-disable-next-line max-params
-    async listOldByCommunity(communityId: string, before: Date, limit = 20): Promise<PostRecord[]> {
-      const rows = await prisma.post.findMany({
-        where: {
-          communityId,
-          createdAt: { lt: before },
-          score: { gte: 0 },
-        },
-        orderBy: [{ score: "desc" }, { createdAt: "desc" }],
-        take: limit,
+        orderBy: [{ score: "desc" }, { createdAt: "desc" }, { id: "desc" }],
+        take: params.limit,
       });
       return rows.map(toRecord);
     },
@@ -321,10 +293,9 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
       const rows = await prisma.post.findMany({
         where: {
           author: authorId,
-          // reveal フィルタ（#556 / #929）: now が渡された場合、createdAt > now の post を除外する。
           ...(now !== undefined ? { createdAt: { lte: now } } : {}),
         },
-        orderBy: { createdAt: "desc" },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
         take: limit,
       });
       return rows.map(toRecord);
@@ -340,7 +311,7 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
           ],
           ...(now !== undefined ? { createdAt: { lte: now } } : {}),
         },
-        orderBy: { createdAt: "desc" },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
         take: limit,
       });
       return rows.map(toRecord);

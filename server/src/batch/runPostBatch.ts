@@ -140,8 +140,8 @@ async function processCommunitePosts({
   }));
   const workerIds = workers.map((w) => w.id);
 
-  // 直近 post/comment をコンテキストとして取得する（重複テーマ抑制のため）。
-  const { recentLog } = await fetchRecentContext({
+  // 直近 post/comment をコンテキストとして取得する（重複テーマ・タイトル抑制のため #1019）。
+  const { recentLog, recentPostsForReply } = await fetchRecentContext({
     postRepo: deps.postRepo,
     commentRepo: deps.commentRepo ?? {
       listByCommunity: async () => [],
@@ -154,7 +154,7 @@ async function processCommunitePosts({
     },
     community,
     recentLimit,
-    maxPostsForReply: 0,
+    maxPostsForReply: recentLimit,
     now,
     popularPostsWindowDays: 7,
     popularPostsMinScore: 1,
@@ -170,6 +170,7 @@ async function processCommunitePosts({
     workers,
     recentLog,
     countHints: { postCount },
+    recentTitles: recentPostsForReply.map((p) => p.title),
   });
 
   // AI 生成 → JSON パース → スキーマ検証 → author 検証（最大 2 回リトライ、#626）。
@@ -273,7 +274,7 @@ async function processCommunitePosts({
 /**
  * post 専用の定時バッチ本体（#672）。
  *
- * 1 日 1 回起動し、全コミュニティを Promise.allSettled で並列処理する（ADR-0033 蹏襲）。
+ * 1 日 1 回起動し、全コミュニティを Promise.allSettled で並列処理する（ADR-0033 踹襲）。
  * 各コミュニティで 1～3 件の独立 post を生成し、24h 窓内に createdAt を分散させる。
  * comment は生成しない（comment バッチは #673 で別途実装）。
  */
@@ -308,7 +309,7 @@ export async function runPostBatch(deps: RunPostBatchDeps): Promise<RunPostBatch
     ? deps.botWorkerProvider()
     : Promise.resolve([]);
 
-  // 全コミュニティを並列処理する（ADR-0033 蹏襲）。
+  // 全コミュニティを並列処理する（ADR-0033 踹襲）。
   const results = await Promise.allSettled(
     communities.map((community) =>
       processCommunitePosts({

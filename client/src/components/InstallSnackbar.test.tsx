@@ -14,10 +14,13 @@ const defaultContext = {
   isInstalled: false,
   isIOS: false,
   shouldShowSnackbar: false,
+  iosDialogOpen: false,
   notifyScrolledPast: vi.fn(),
   notifyFirstUpvote: vi.fn(),
   dismissSnackbar: vi.fn(),
   promptInstall: vi.fn().mockResolvedValue(undefined),
+  openIosInstructions: vi.fn(),
+  closeIosInstructions: vi.fn(),
 };
 
 describe("InstallSnackbar", () => {
@@ -25,7 +28,6 @@ describe("InstallSnackbar", () => {
     mockUseInstallPrompt.mockReturnValue({ ...defaultContext, shouldShowSnackbar: false });
     render(<InstallSnackbar />);
     expect(screen.queryByRole("alert")).toBeNull();
-    // Snackbar の message テキストも非表示
     expect(screen.queryByText(/ホーム画面に追加/)).toBeNull();
   });
 
@@ -38,13 +40,11 @@ describe("InstallSnackbar", () => {
 
   it("「追加する」押下で promptInstall() が呼ばれる（非 iOS）", async () => {
     const promptInstall = vi.fn().mockResolvedValue(undefined);
-    const dismissSnackbar = vi.fn();
     mockUseInstallPrompt.mockReturnValue({
       ...defaultContext,
       shouldShowSnackbar: true,
       isIOS: false,
       promptInstall,
-      dismissSnackbar,
     });
     render(<InstallSnackbar />);
     fireEvent.click(screen.getByRole("button", { name: "追加する" }));
@@ -59,25 +59,34 @@ describe("InstallSnackbar", () => {
       dismissSnackbar,
     });
     render(<InstallSnackbar />);
-    fireEvent.click(screen.getByRole("button", { name: "適じる" }));
+    fireEvent.click(screen.getByRole("button", { name: "閉じる" }));
     expect(dismissSnackbar).toHaveBeenCalledOnce();
   });
 
-  it("isIOS: true のとき「追加する」押下で iOS 案内 Dialog が開く（promptInstall は呼ばない）", () => {
+  it("isIOS: true のとき「追加する」押下で openIosInstructions() が呼ばれ promptInstall は呼ばない", () => {
     const promptInstall = vi.fn();
+    const openIosInstructions = vi.fn();
     mockUseInstallPrompt.mockReturnValue({
       ...defaultContext,
       shouldShowSnackbar: true,
       isIOS: true,
       promptInstall,
+      openIosInstructions,
     });
     render(<InstallSnackbar />);
     fireEvent.click(screen.getByRole("button", { name: "追加する" }));
-    // iOS 案内ダイアログが開く
+    expect(openIosInstructions).toHaveBeenCalledOnce();
+    expect(promptInstall).not.toHaveBeenCalled();
+  });
+
+  it("iosDialogOpen: true のとき iOS 案内 Dialog が表示される", () => {
+    mockUseInstallPrompt.mockReturnValue({
+      ...defaultContext,
+      iosDialogOpen: true,
+    });
+    render(<InstallSnackbar />);
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(screen.getByText(/共有ボタン/)).toBeInTheDocument();
-    // promptInstall は呼ばれない
-    expect(promptInstall).not.toHaveBeenCalled();
   });
 
   it("インストール済み（isInstalled: true）で shouldShowSnackbar が false なら非表示", () => {

@@ -1,4 +1,3 @@
-import { useState } from "react";
 import CloseRounded from "@mui/icons-material/CloseRounded";
 import GetAppRounded from "@mui/icons-material/GetAppRounded";
 import IosShareRounded from "@mui/icons-material/IosShareRounded";
@@ -18,12 +17,19 @@ import {
 import { useInstallPrompt } from "../hooks/useInstallPrompt.js";
 
 export function InstallSnackbar() {
-  const { shouldShowSnackbar, isIOS, dismissSnackbar, promptInstall } = useInstallPrompt();
-  const [iosDialogOpen, setIosDialogOpen] = useState(false);
+  const {
+    shouldShowSnackbar,
+    isIOS,
+    iosDialogOpen,
+    dismissSnackbar,
+    promptInstall,
+    openIosInstructions,
+    closeIosInstructions,
+  } = useInstallPrompt();
 
   const handleInstall = () => {
     if (isIOS) {
-      setIosDialogOpen(true);
+      openIosInstructions();
     } else {
       void promptInstall();
     }
@@ -52,7 +58,7 @@ export function InstallSnackbar() {
         </Snackbar>
       )}
 
-      <Dialog open={iosDialogOpen} onClose={() => setIosDialogOpen(false)}>
+      <Dialog open={iosDialogOpen} onClose={closeIosInstructions}>
         <DialogTitle>ホーム画面への追加方法</DialogTitle>
         <DialogContent>
           <Stack spacing={2}>
@@ -68,7 +74,7 @@ export function InstallSnackbar() {
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setIosDialogOpen(false)}>閉じる</Button>
+          <Button onClick={closeIosInstructions}>閉じる</Button>
         </DialogActions>
       </Dialog>
     </>

@@ -3,6 +3,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -21,10 +22,13 @@ export interface InstallPromptContextValue {
   isInstalled: boolean;
   isIOS: boolean;
   shouldShowSnackbar: boolean;
+  iosDialogOpen: boolean;
   notifyScrolledPast: () => void;
   notifyFirstUpvote: () => void;
   dismissSnackbar: () => void;
   promptInstall: () => Promise<void>;
+  openIosInstructions: () => void;
+  closeIosInstructions: () => void;
 }
 
 const fallbackContextValue: InstallPromptContextValue = {
@@ -32,10 +36,13 @@ const fallbackContextValue: InstallPromptContextValue = {
   isInstalled: false,
   isIOS: false,
   shouldShowSnackbar: false,
+  iosDialogOpen: false,
   notifyScrolledPast: () => {},
   notifyFirstUpvote: () => {},
   dismissSnackbar: () => {},
   promptInstall: async () => {},
+  openIosInstructions: () => {},
+  closeIosInstructions: () => {},
 };
 
 const InstallPromptContext = createContext<InstallPromptContextValue>(fallbackContextValue);
@@ -62,7 +69,7 @@ interface InstallPromptProviderProps {
 
 export function InstallPromptProvider({ children }: InstallPromptProviderProps) {
   const deferredPromptRef = useRef<BeforeInstallPromptEvent | null>(null);
-  const isIOS = detectIOS();
+  const isIOS = useMemo(() => detectIOS(), []);
 
   const [hasDeferredPrompt, setHasDeferredPrompt] = useState(false);
   const [isInstalled, setIsInstalled] = useState(() => isStandalone());
@@ -73,6 +80,7 @@ export function InstallPromptProvider({ children }: InstallPromptProviderProps) 
   const [isSnackbarDismissed, setIsSnackbarDismissed] = useState(
     () => storageGet(DISMISS_KEY) === "true",
   );
+  const [iosDialogOpen, setIosDialogOpen] = useState(false);
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: Event) => {
@@ -108,9 +116,10 @@ export function InstallPromptProvider({ children }: InstallPromptProviderProps) 
   }, []);
 
   const notifyFirstUpvote = useCallback(() => {
+    if (hasUpvotedOnce) return;
     setHasUpvotedOnce(true);
     storageSet({ key: UPVOTE_KEY, value: "true" });
-  }, []);
+  }, [hasUpvotedOnce]);
 
   const dismissSnackbar = useCallback(() => {
     setIsSnackbarDismissed(true);
@@ -120,19 +129,47 @@ export function InstallPromptProvider({ children }: InstallPromptProviderProps) 
   const promptInstall = useCallback(async () => {
     if (deferredPromptRef.current) {
       await deferredPromptRef.current.prompt();
+      deferredPromptRef.current = null;
+      setHasDeferredPrompt(false);
     }
   }, []);
 
-  const value: InstallPromptContextValue = {
-    isInstallable,
-    isInstalled,
-    isIOS,
-    shouldShowSnackbar,
-    notifyScrolledPast,
-    notifyFirstUpvote,
-    dismissSnackbar,
-    promptInstall,
-  };
+  const openIosInstructions = useCallback(() => {
+    setIosDialogOpen(true);
+  }, []);
+
+  const closeIosInstructions = useCallback(() => {
+    setIosDialogOpen(false);
+  }, []);
+
+  const value = useMemo<InstallPromptContextValue>(
+    () => ({
+      isInstallable,
+      isInstalled,
+      isIOS,
+      shouldShowSnackbar,
+      iosDialogOpen,
+      notifyScrolledPast,
+      notifyFirstUpvote,
+      dismissSnackbar,
+      promptInstall,
+      openIosInstructions,
+      closeIosInstructions,
+    }),
+    [
+      isInstallable,
+      isInstalled,
+      isIOS,
+      shouldShowSnackbar,
+      iosDialogOpen,
+      notifyScrolledPast,
+      notifyFirstUpvote,
+      dismissSnackbar,
+      promptInstall,
+      openIosInstructions,
+      closeIosInstructions,
+    ],
+  );
 
   return createElement(InstallPromptContext.Provider, { value }, children);
 }

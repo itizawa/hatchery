@@ -83,6 +83,28 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
     return map;
   }, [unreadCountsData]);
 
+  const posts = data.pages.flatMap((page) => page.posts);
+
+  useEffect(() => {
+    const elements = document.querySelectorAll<HTMLElement>("[data-post-id]");
+    if (elements.length === 0) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!(entry.target instanceof HTMLElement)) continue;
+          const postId = entry.target.dataset.postId;
+          if (entry.isIntersecting && postId && !seenPostIdsRef.current.has(postId)) {
+            seenPostIdsRef.current.add(postId);
+            notifyScrolledPast();
+          }
+        }
+      },
+      { threshold: 0.1 },
+    );
+    elements.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, [posts, notifyScrolledPast]);
+
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el) return;
@@ -98,28 +120,7 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
     return () => observer.disconnect();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  useEffect(() => {
-    const elements = document.querySelectorAll<HTMLElement>("[data-post-id]");
-    if (elements.length === 0) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          const postId = (entry.target as HTMLElement).dataset.postId;
-          if (entry.isIntersecting && postId && !seenPostIdsRef.current.has(postId)) {
-            seenPostIdsRef.current.add(postId);
-            notifyScrolledPast();
-          }
-        }
-      },
-      { threshold: 0.1 },
-    );
-    elements.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
-  }, [notifyScrolledPast]);
-
   const [hasVisited] = useState(() => localStorage.getItem(HATCHERY_VISITED_KEY) === "true");
-
-  const posts = data.pages.flatMap((page) => page.posts);
   const hasPosts = posts.length > 0;
   const showWelcome = !hasPosts || (!user && !hasVisited);
 

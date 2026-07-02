@@ -89,6 +89,22 @@ describe("useInstallPrompt", () => {
     expect(localStorage.getItem(UPVOTE_KEY)).toBe("true");
   });
 
+  it("notifyFirstUpvote を複数回呼んでも localStorage.setItem は 1 回だけ呼ばれる", () => {
+    const setItemSpy = vi.spyOn(Storage.prototype, "setItem");
+    const { result } = renderHook(() => useInstallPrompt(), { wrapper });
+
+    act(() => {
+      const event = new Event("beforeinstallprompt");
+      (event as unknown as { prompt: () => Promise<{ outcome: string }> }).prompt = vi.fn();
+      window.dispatchEvent(event);
+    });
+    act(() => result.current.notifyFirstUpvote());
+    act(() => result.current.notifyFirstUpvote());
+    act(() => result.current.notifyFirstUpvote());
+
+    expect(setItemSpy).toHaveBeenCalledTimes(1);
+  });
+
   it("dismissSnackbar を呼ぶと shouldShowSnackbar が false になり localStorage に保存される", () => {
     const { result } = renderHook(() => useInstallPrompt(), { wrapper });
 
@@ -156,8 +172,8 @@ describe("useInstallPrompt", () => {
     expect(result.current.shouldShowSnackbar).toBe(false);
   });
 
-  it("promptInstall を呼ぶと deferred prompt の prompt() が呼ばれる", async () => {
-    const mockPrompt = vi.fn().mockResolvedValue({ outcome: "accepted" });
+  it("promptInstall を呼ぶと deferred prompt の prompt() が呼ばれ isInstallable が false になる", async () => {
+    const mockPrompt = vi.fn().mockResolvedValue({ outcome: "dismissed" });
     const { result } = renderHook(() => useInstallPrompt(), { wrapper });
 
     act(() => {
@@ -166,11 +182,15 @@ describe("useInstallPrompt", () => {
       window.dispatchEvent(event);
     });
 
+    expect(result.current.isInstallable).toBe(true);
+
     await act(async () => {
       await result.current.promptInstall();
     });
 
     expect(mockPrompt).toHaveBeenCalledOnce();
+    // dismiss 後も ref がクリアされ isInstallable が false になる
+    expect(result.current.isInstallable).toBe(false);
   });
 
   it("iOS UA の場合 isIOS が true になる", () => {
@@ -183,5 +203,17 @@ describe("useInstallPrompt", () => {
     expect(result.current.isIOS).toBe(true);
     // beforeinstallprompt なしでも isInstallable = true（iOS のため）
     expect(result.current.isInstallable).toBe(true);
+  });
+
+  it("openIosInstructions/closeIosInstructions で iosDialogOpen が切り替わる", () => {
+    const { result } = renderHook(() => useInstallPrompt(), { wrapper });
+
+    expect(result.current.iosDialogOpen).toBe(false);
+
+    act(() => result.current.openIosInstructions());
+    expect(result.current.iosDialogOpen).toBe(true);
+
+    act(() => result.current.closeIosInstructions());
+    expect(result.current.iosDialogOpen).toBe(false);
   });
 });

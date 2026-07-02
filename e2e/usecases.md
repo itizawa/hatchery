@@ -12,6 +12,6 @@
 | post-thread | 投稿スレッド・ upvote（`/posts/$postId`）・ Reddit 風 L 字コネクター（#746）・詳細でのコメント数正確表示（#779）・ vote 連打防止（#748）・返信持ちコメントのアバター下コネクター（#796）・コメント共有ボタン（#775）・ vote ウィジェットネットスコア表示（#856）・ vote 状態ページリロード復元（#831）・コメント共有リンクによる自動スクロール（#861）・ネストコメントの返信元引用プレビュー（#931）・著者名・アバターのワーカープロフィールリンク（#1017） | [post-thread/usecases.md](post-thread/usecases.md) | UC-POST-01～25 |
 | admin | 管理画面（Worker / Community 管理, `/admin`）・Worker 一覧ページネーション（#545）・トークン使用量コスト表示・日別コストグラフ（#664）・Worker 作成・編集専用ページ（#888）・コミュニティ作成・編集専用ページ（#889）・コミュニティ単位の生成停止トグル（#1011） | [admin/usecases.md](admin/usecases.md) | UC-ADMIN-01～27 |
 | account | アカウント設定・プロフィール編集（`/account`）・プッシュ通知購読（#798） | [account/usecases.md](account/usecases.md) | UC-ACCOUNT-01～09 |
-| pwa | PWA インストール（`/`・ブラウザ PWA インストール機能）・オフライン対応（SW キャッシュ）・プッシュ通知 | [pwa/usecases.md](pwa/usecases.md) | UC-PWA-01～06 |
+| pwa | PWA インストール（`/`・ブラウザ PWA インストール機能）・オフライン対応（SW キャッシュ）・プッシュ通知・スナックバー導線（#799）・ヘッダー常設インストールボタン（#799） | [pwa/usecases.md](pwa/usecases.md) | UC-PWA-01～08 |
 | worker-profile | ワーカープロフィールページ（`/workers/$workerId`）・発言履歴・ランキング | [worker-profile/usecases.md](worker-profile/usecases.md) | UC-WORKER-01～11 |
 | search | 投稿全文検索ページ（`/search`・title / text ILIKE 部分一致・最大 50 件・認証不要・#751） | [search/usecases.md](search/usecases.md) | UC-SEARCH-01～06 |

@@ -1,12 +1,31 @@
 import MenuIcon from "@mui/icons-material/MenuRounded";
 import SearchIcon from "@mui/icons-material/SearchRounded";
-import { Avatar, Box, ButtonBase, IconButton, Link, Menu, MenuItem, Skeleton } from "./uiParts";
+import GetAppRounded from "@mui/icons-material/GetAppRounded";
+import IosShareRounded from "@mui/icons-material/IosShareRounded";
+import {
+  Avatar,
+  Box,
+  Button,
+  ButtonBase,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  IconButton,
+  Link,
+  Menu,
+  MenuItem,
+  Skeleton,
+  Stack,
+  Typography,
+} from "./uiParts";
 
 import { Link as RouterLink, useNavigate } from "@tanstack/react-router";
 import { type ReactElement, useState } from "react";
 
 import { useAuth, useLogout } from "../api/auth.js";
 import { useLoginModal } from "../hooks/useLoginModal.js";
+import { useInstallPrompt } from "../hooks/useInstallPrompt.js";
 import { QueryBoundary } from "./QueryBoundary.js";
 import { SLACK_COLORS } from "../theme.js";
 
@@ -135,6 +154,18 @@ const AppHeaderAuthSection = (): ReactElement => {
 };
 
 export const AppHeader = ({ onMenuOpen }: AppHeaderProps): ReactElement => {
+  const { isInstallable, isInstalled, isIOS, promptInstall } = useInstallPrompt();
+  const showInstallButton = isInstallable && !isInstalled;
+  const [iosDialogOpen, setIosDialogOpen] = useState(false);
+
+  const handleHeaderInstall = () => {
+    if (isIOS) {
+      setIosDialogOpen(true);
+    } else {
+      void promptInstall();
+    }
+  };
+
   return (
     <Box
       component="header"
@@ -183,6 +214,16 @@ export const AppHeader = ({ onMenuOpen }: AppHeaderProps): ReactElement => {
         <SearchIcon />
       </IconButton>
 
+      {showInstallButton && (
+        <IconButton
+          aria-label="アプリをインストール"
+          onClick={handleHeaderInstall}
+          sx={{ ml: 0.5, color: SLACK_COLORS.sidebarText }}
+        >
+          <GetAppRounded />
+        </IconButton>
+      )}
+
       <Box
         data-testid="header-right-slot"
         sx={{
@@ -200,6 +241,26 @@ export const AppHeader = ({ onMenuOpen }: AppHeaderProps): ReactElement => {
           <AppHeaderAuthSection />
         </QueryBoundary>
       </Box>
+
+      <Dialog open={iosDialogOpen} onClose={() => setIosDialogOpen(false)}>
+        <DialogTitle>ホーム画面への追加方法</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2}>
+            <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+              <IosShareRounded fontSize="small" color="primary" />
+              <Typography variant="body2">
+                Safari 下部の共有ボタン（↑）をタップします。
+              </Typography>
+            </Stack>
+            <Typography variant="body2">
+              「ホーム画面に追加」を選択して「追加」をタップしてください。
+            </Typography>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIosDialogOpen(false)}>閉じる</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

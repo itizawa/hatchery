@@ -6,6 +6,7 @@ import { useInfiniteHomeFeed, usePublicCommunities, useVotePost } from "../api/c
 import { useRecentPostsSidebar } from "../api/feed.js";
 import { useAuth } from "../api/auth.js";
 import { useUnreadCountsForNewLabel } from "../api/subscriptions.js";
+import { useInstallPrompt } from "../hooks/useInstallPrompt.js";
 import { PostCard } from "../components/PostCard.js";
 import { QueryBoundary } from "../components/QueryBoundary.js";
 import { RecentPostsSidebarCard } from "../components/RecentPostsSidebarCard.js";
@@ -59,6 +60,8 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
   const { mutate: votePost, isPending: isVotingPost, variables: votingPostVars } = useVotePost();
   const navigate = useNavigate();
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const { notifyScrolledPast, notifyFirstUpvote } = useInstallPrompt();
+  const seenPostIdsRef = useRef<Set<string>>(new Set());
 
   // #503: 混在フィードで「どの community の投稿か」を表示するため community_id → community を引く。
   const { data: communities } = usePublicCommunities();
@@ -94,6 +97,25 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
     observer.observe(el);
     return () => observer.disconnect();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  useEffect(() => {
+    const elements = document.querySelectorAll<HTMLElement>("[data-post-id]");
+    if (elements.length === 0) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          const postId = (entry.target as HTMLElement).dataset.postId;
+          if (entry.isIntersecting && postId && !seenPostIdsRef.current.has(postId)) {
+            seenPostIdsRef.current.add(postId);
+            notifyScrolledPast();
+          }
+        }
+      },
+      { threshold: 0.1 },
+    );
+    elements.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, [notifyScrolledPast]);
 
   const [hasVisited] = useState(() => localStorage.getItem(HATCHERY_VISITED_KEY) === "true");
 
@@ -131,7 +153,7 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
                   post.created_at != null &&
                   new Date(post.created_at) > new Date(lastViewedAt);
                 return (
-                  <Box key={post.id} sx={listItemSx}>
+                  <Box key={post.id} data-post-id={post.id} sx={listItemSx}>
                     <RouterLink
                       to="/posts/$postId"
                       params={{ postId: post.id }}
@@ -140,7 +162,11 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
                       <PostCard
                         post={post}
                         onVote={(direction: VoteDirection) =>
-                          votePost({ postId: post.id, direction })
+                          votePost({ postId: post.id, direction }, {
+                            onSuccess: () => {
+                              if (direction === "up") notifyFirstUpvote();
+                            },
+                          })
                         }
                         upVoteDisabled={isVotingPost && votingPostVars?.postId === post.id && votingPostVars?.direction === "up"}
                         downVoteDisabled={isVotingPost && votingPostVars?.postId === post.id && votingPostVars?.direction === "down"}

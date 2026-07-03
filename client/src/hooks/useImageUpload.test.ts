@@ -40,6 +40,30 @@ describe("useImageUpload", () => {
     expect(onSuccess).toHaveBeenCalledWith({ id: "x", imageUrl: "https://example.com/a.png" });
   });
 
+  it("handleFileChange: upload が reject したとき onError が呼ばれ onSuccess は呼ばれない", async () => {
+    const upload = vi.fn().mockRejectedValue(new Error("アップロード失敗"));
+    const onSuccess = vi.fn();
+    const onError = vi.fn();
+    const { result } = renderHook(() =>
+      useImageUpload({ upload, isPending: false, onSuccess, onError }),
+    );
+
+    const file = new File(["data"], "test.png", { type: "image/png" });
+    const input = document.createElement("input");
+    input.type = "file";
+    Object.defineProperty(input, "files", { value: [file] });
+
+    await act(async () => {
+      await result.current.handleFileChange({
+        target: input,
+      } as unknown as React.ChangeEvent<HTMLInputElement>);
+    });
+
+    expect(upload).toHaveBeenCalledWith(file);
+    expect(onError).toHaveBeenCalledWith(expect.any(Error));
+    expect(onSuccess).not.toHaveBeenCalled();
+  });
+
   it("handleFileChange: ファイルが空の場合 upload を呼ばない", async () => {
     const upload = vi.fn();
     const { result } = renderHook(() =>

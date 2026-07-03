@@ -1,5 +1,5 @@
-import { type ReactElement } from "react";
-import { Avatar, Box, CircularProgress, Tooltip } from "./uiParts";
+import { useState, type ReactElement } from "react";
+import { Avatar, Box, CircularProgress, Tooltip, Typography } from "./uiParts";
 
 import { useUploadCommunityImage, type CommunityImageKind } from "../api/communities.js";
 import { useImageUpload, ACCEPTED_MIME } from "../hooks/useImageUpload.js";
@@ -35,11 +35,15 @@ export const CommunityImageUpload = ({
   currentImageUrl,
   onSuccess,
 }: CommunityImageUploadProps): ReactElement => {
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const upload = useUploadCommunityImage();
   const { inputRef, handleClick, handleFileChange, handleKeyDown } = useImageUpload({
     upload: (file) => upload.mutateAsync({ communityId, kind, file }),
     isPending: upload.isPending,
     onSuccess,
+    onError: (err) => {
+      setErrorMessage(err instanceof Error ? err.message : "アップロードに失敗しました");
+    },
   });
 
   const kindLabel = kind === "icon" ? "アイコン" : "カバー";
@@ -110,11 +114,15 @@ export const CommunityImageUpload = ({
           accept={ACCEPTED_MIME}
           style={{ display: "none" }}
           onChange={(e) => {
+            setErrorMessage(null);
             void handleFileChange(e);
           }}
           aria-hidden="true"
         />
       </Box>
+      {errorMessage && (
+        <Typography variant="body2" color="error">{errorMessage}</Typography>
+      )}
     </Tooltip>
   );
 };

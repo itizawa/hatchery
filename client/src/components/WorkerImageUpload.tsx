@@ -1,5 +1,5 @@
-import { type ReactElement } from "react";
-import { Box, CircularProgress, Tooltip } from "./uiParts";
+import { useState, type ReactElement } from "react";
+import { Box, CircularProgress, Tooltip, Typography } from "./uiParts";
 
 import { useUploadWorkerImage } from "../api/workers.js";
 import { WorkerAvatar } from "./WorkerAvatar.js";
@@ -31,11 +31,15 @@ export const WorkerImageUpload = ({
   currentImageUrl,
   onSuccess,
 }: WorkerImageUploadProps): ReactElement => {
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const upload = useUploadWorkerImage();
   const { inputRef, handleClick, handleFileChange, handleKeyDown } = useImageUpload({
     upload: (file) => upload.mutateAsync({ workerId, file }),
     isPending: upload.isPending,
     onSuccess,
+    onError: (err) => {
+      setErrorMessage(err instanceof Error ? err.message : "アップロードに失敗しました");
+    },
   });
 
   return (
@@ -79,10 +83,13 @@ export const WorkerImageUpload = ({
           type="file"
           accept={ACCEPTED_MIME}
           style={{ display: "none" }}
-          onChange={(e) => { void handleFileChange(e); }}
+          onChange={(e) => { setErrorMessage(null); void handleFileChange(e); }}
           aria-hidden="true"
         />
       </Box>
+      {errorMessage && (
+        <Typography variant="body2" color="error">{errorMessage}</Typography>
+      )}
     </Tooltip>
   );
 };

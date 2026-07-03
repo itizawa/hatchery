@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   fetchPublicCommunities,
-  // 分割先モジュールが communities.ts から後方互換 re-export されることを確認する（#533）。
+  // 分割先モジュールが communities.ts から後方互改 re-export されることを確認する（#533）。
   fetchPostThread,
   fetchCommunityFeedPage,
   fetchHomeFeedPage,
@@ -70,7 +70,7 @@ describe("communities.ts の後方互換 re-export（#533）", () => {
   });
 });
 
-// ─── admin 系関数のテスト（#785）────────────────────────────────────────────────
+// ─── admin 系関数のテスト（#785）────────────────────────────────────────────
 
 /** AdminCommunitySchema を満たすサーバ応答 DTO（created_at は文字列形式）。 */
 const mockAdminCommunityDto = {
@@ -193,9 +193,9 @@ describe("fetchRecentWorkers (GET /api/communities/:slug/recent-workers)", () =>
 
     expect(result).toHaveLength(1);
     expect(result[0].id).toBe("worker-1");
-    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toContain("/api/communities/ai-dev/recent-workers");
-    expect(init.credentials).toBe("include");
+    const request = fetchMock.mock.calls[0][0] as Request;
+    expect(request.url).toContain("/api/communities/ai-dev/recent-workers");
+    expect(request.credentials).toBe("include");
   });
 
   it("エラー応答では例外を投げる", async () => {

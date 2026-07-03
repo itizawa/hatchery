@@ -32,7 +32,7 @@ const mockCommunity: Community = {
 };
 
 const mockRecentWorkers: RecentWorker[] = [
-  { id: "worker-1", displayName: "haru", role: "ムードメーカー", imageUrl: null },
+  { id: "worker-1", displayName: "haru", role: "ムードメーカー" },
 ];
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {

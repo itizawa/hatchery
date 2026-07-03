@@ -96,6 +96,7 @@ describe("fetchSubscriptionStatus (GET /api/communities/{slug}/subscription)", (
     expect(request.url).toContain("/api/communities/ai-dev/subscription");
     expect(request.url).toMatch(/^https?:\/\//);
     expect(request.method).toBe("GET");
+    expect(request.credentials).toBe("include");
   });
 
   it("200 + { subscribed: false } のとき { subscribed: false } を返す", async () => {

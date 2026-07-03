@@ -1,17 +1,23 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "vitest";
 
 import { WorkerImageUpload } from "./WorkerImageUpload.js";
+
+const mockMutateAsync = vi.hoisted(() => vi.fn());
 
 // uploadWorkerImage をモック
 vi.mock("../api/workers.js", () => ({
   useUploadWorkerImage: () => ({
-    mutateAsync: vi.fn().mockResolvedValue({ id: "haru", imageUrl: "https://example.com/new.png" }),
+    mutateAsync: mockMutateAsync,
     isPending: false,
   }),
 }));
 
 describe("WorkerImageUpload（#204）", () => {
+  beforeEach(() => {
+    mockMutateAsync.mockResolvedValue({ id: "haru", imageUrl: "https://example.com/new.png" });
+  });
+
   it("currentImageUrl が null のとき boring-avatars で描画する (#1015)", () => {
     render(
       <WorkerImageUpload
@@ -67,6 +73,19 @@ describe("WorkerImageUpload（#204）", () => {
         id: "haru",
         imageUrl: "https://example.com/new.png",
       });
+    });
+  });
+
+  it("mutateAsync が reject した際にエラーメッセージが表示される", async () => {
+    mockMutateAsync.mockRejectedValue(new Error("ネットワークエラー"));
+    const { container } = render(
+      <WorkerImageUpload workerId="haru" displayName="haru" currentImageUrl={null} />,
+    );
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = new File(["fake"], "avatar.png", { type: "image/png" });
+    fireEvent.change(input, { target: { files: [file] } });
+    await waitFor(() => {
+      expect(screen.getByText("ネットワークエラー")).toBeInTheDocument();
     });
   });
 });

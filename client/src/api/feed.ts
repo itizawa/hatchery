@@ -4,7 +4,7 @@
  * - GET /api/feed … ホームフィード（カーソルページネーション・並び順）
  */
 import { useSuspenseQuery, useSuspenseInfiniteQuery } from "@tanstack/react-query";
-import type { HomeFeedSort } from "@hatchery/common";
+import type { CommunityFeedSort, HomeFeedSort } from "@hatchery/common";
 
 import { useAuth } from "./auth.js";
 import { openApiClient, unwrap } from "./client.js";
@@ -12,7 +12,11 @@ import type { Post } from "./posts.js";
 import { getOrCreateGuestId } from "./votes.js";
 
 // ─── Query Keys ─────────────────────────────────────────────────────────────────────────────
-export const communityFeedQueryKey = (slug: string) => ["communities", slug, "feed"] as const;
+/** コミュニティフィードのキャッシュキープレフィックス。全 sort をまとめて無効化する際に使う（#886）。 */
+export const communityFeedQueryKeyPrefix = (slug: string) =>
+  ["communities", slug, "feed"] as const;
+export const communityFeedQueryKey = ({ slug, sort = "latest" }: { slug: string; sort?: CommunityFeedSort }) =>
+  ["communities", slug, "feed", sort] as const;
 /** ホームフィードのキャッシュキープレフィックス。全 sort をまとめて無効化する際に使う。 */
 export const homeFeedQueryKeyPrefix = () => ["feed"] as const;
 export const homeFeedQueryKey = (sort: HomeFeedSort = "latest") =>
@@ -27,15 +31,18 @@ export async function fetchCommunityFeedPage({
   cursor,
   limit = 20,
   sessionId,
+  sort = "latest",
 }: {
   slug: string;
   cursor?: string;
   limit?: number;
   sessionId?: string;
+  sort?: CommunityFeedSort;
 }): Promise<{ posts: Post[]; nextCursor: string | null }> {
-  const query: { cursor?: string; limit: number; sessionId?: string } = { limit };
+  const query: { cursor?: string; limit: number; sessionId?: string; sort?: CommunityFeedSort } = { limit };
   if (cursor) query.cursor = cursor;
   if (sessionId) query.sessionId = sessionId;
+  if (sort === "popular") query.sort = sort;
   const result = await openApiClient.GET("/api/communities/{slug}/feed", {
     params: { path: { slug }, query: query as Record<string, string | number | undefined> },
     credentials: "include",
@@ -79,13 +86,13 @@ export async function fetchHomeFeedPage({
  * コミュニティフィードを TanStack Query（Suspense）の無限スクロールで取得するフック（#881 / #831）。
  * sessionId を付与してサーバに my_vote を問い合わせる。
  */
-export function useInfiniteCommunityFeed(slug: string) {
+export function useInfiniteCommunityFeed({ slug, sort = "latest" }: { slug: string; sort?: CommunityFeedSort }) {
   const { data: authUser } = useAuth();
   const sessionId = authUser?.id ?? getOrCreateGuestId();
   return useSuspenseInfiniteQuery({
-    queryKey: communityFeedQueryKey(slug),
+    queryKey: communityFeedQueryKey({ slug, sort }),
     queryFn: ({ pageParam }) =>
-      fetchCommunityFeedPage({ slug, cursor: pageParam as string | undefined, sessionId }),
+      fetchCommunityFeedPage({ slug, cursor: pageParam as string | undefined, sessionId, sort }),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     staleTime: 30_000,

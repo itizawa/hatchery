@@ -255,7 +255,7 @@ reply_to の使い方（#520 ネスト返信）:
 - score フィールドは生成しないでください
 - ${countHints ? `post を ${countHints.postCount} 件、各 post に ${countHints.commentCount} 件前後のコメントを生成してください（目安であり厳密な制約ではありません）` : "posts は 1 件以上生成してください"}
 ${repliesInstruction}- 会話は自然で読みやすい日本語で書いてください
-- 投稿本文（text フィールド）およびコメント本文（text）に URL（http または https から始まる文字列）を含めないこと
+- 投稿タイトル（title フィールド）・投稿本文（text フィールド）およびコメント本文（text）に URL（http または https から始まる文字列）を含めないこと
 
 自己監査（出力前に必ず確認）:
 - 互いを「さん付け」で呼んでいないか（トーン規約どおりフランクな呼び方になっているか）。

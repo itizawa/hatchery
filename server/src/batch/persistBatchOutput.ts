@@ -4,6 +4,9 @@ import type { CommentRecord, CommentRepository } from "../persistence/commentRep
 import type { PostRecord, PostRepository } from "../persistence/postRepository.js";
 
 import { assignDripTimestamps } from "./assignDripTimestamps.js";
+import { logBatchInfo } from "./logger.js";
+
+const URL_PATTERN = /https?:\/\//;
 
 export interface PersistBatchOutputResult {
   savedPosts: PostRecord[];
@@ -35,6 +38,12 @@ export async function persistBatchOutput({
 }): Promise<PersistBatchOutputResult> {
   const savedPosts: PostRecord[] = [];
   const savedComments: CommentRecord[] = [];
+
+  for (const post of output.posts) {
+    if (URL_PATTERN.test(post.title)) {
+      logBatchInfo("persist_batch.title_url_detected", { title: post.title });
+    }
+  }
 
   // Post 作成（createdAt は now + 軽いオフセット）
   const postCount = output.posts.length;

@@ -1,9 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { createInMemoryCommentRepository } from "../persistence/commentRepository.js";
 import { createInMemoryPostRepository } from "../persistence/postRepository.js";
 import type { GenerationOutput } from "@hatchery/common";
 
+import * as logger from "./logger.js";
 import { persistBatchOutput } from "./persistBatchOutput.js";
 
 const now = new Date("2026-06-18T12:00:00Z");
@@ -222,5 +223,83 @@ describe("persistBatchOutput (#716)", () => {
 
     expect(result.savedPosts).toHaveLength(2);
     expect(result.savedComments).toHaveLength(3);
+  });
+});
+
+describe("persistBatchOutput: タイトル URL 検出ログ（#1022）", () => {
+  it("タイトルに URL が含まれる場合 persist_batch.title_url_detected をログ出力する", async () => {
+    const postRepo = createInMemoryPostRepository();
+    const commentRepo = createInMemoryCommentRepository();
+    const spy = vi.spyOn(logger, "logBatchInfo").mockImplementation(() => {});
+
+    const output: GenerationOutput = {
+      topic: "テスト",
+      posts: [
+        {
+          id: "p1",
+          author: "worker1",
+          title: "詳細はこちら https://example.com/article",
+          text: "本文",
+          comments: [],
+        },
+      ],
+      replies: [],
+    };
+
+    await persistBatchOutput({
+      postRepo,
+      commentRepo,
+      communityId: "c1",
+      output,
+      postRefMap: new Map(),
+      slotKey: "2026-06-18T12:00",
+      commentSeqStart: 0,
+      now: new Date("2026-06-18T12:00:00Z"),
+      dripWindowMs: 3 * 60 * 60 * 1000,
+      rng: () => 0.5,
+    });
+
+    expect(spy).toHaveBeenCalledWith("persist_batch.title_url_detected", {
+      title: "詳細はこちら https://example.com/article",
+    });
+
+    spy.mockRestore();
+  });
+
+  it("タイトルに URL が含まれない場合はログ出力しない", async () => {
+    const postRepo = createInMemoryPostRepository();
+    const commentRepo = createInMemoryCommentRepository();
+    const spy = vi.spyOn(logger, "logBatchInfo").mockImplementation(() => {});
+
+    const output: GenerationOutput = {
+      topic: "テスト",
+      posts: [
+        {
+          id: "p1",
+          author: "worker1",
+          title: "普通のタイトル",
+          text: "本文",
+          comments: [],
+        },
+      ],
+      replies: [],
+    };
+
+    await persistBatchOutput({
+      postRepo,
+      commentRepo,
+      communityId: "c1",
+      output,
+      postRefMap: new Map(),
+      slotKey: "2026-06-18T12:00",
+      commentSeqStart: 0,
+      now: new Date("2026-06-18T12:00:00Z"),
+      dripWindowMs: 3 * 60 * 60 * 1000,
+      rng: () => 0.5,
+    });
+
+    expect(spy).not.toHaveBeenCalledWith("persist_batch.title_url_detected", expect.anything());
+
+    spy.mockRestore();
   });
 });

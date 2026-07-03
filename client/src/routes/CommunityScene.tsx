@@ -1,6 +1,7 @@
-import { Box, Button, Stack, Typography } from "../components/uiParts";
+import { Box, Button, Stack, Tab, Tabs, Typography } from "../components/uiParts";
 import { Link as RouterLink, useNavigate, useParams } from "@tanstack/react-router";
-import { useEffect, useRef, type ReactElement } from "react";
+import { useEffect, useRef, useState, type ReactElement } from "react";
+import type { CommunityFeedSort } from "@hatchery/common";
 
 import {
   useInfiniteCommunityFeed,
@@ -67,7 +68,10 @@ const CommunityContent = ({
   community: Community;
   communitySlug: string;
 }): ReactElement => {
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteCommunityFeed(communitySlug);
+  const [sort, setSort] = useState<CommunityFeedSort>("latest");
+  // eslint-disable-next-line max-params
+  const handleSortChange = (_e: unknown, v: CommunityFeedSort) => setSort(v);
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteCommunityFeed({ slug: communitySlug, sort });
   const { data: authUser } = useAuth();
   const { openLogin } = useLoginModal();
   const navigate = useNavigate();
@@ -133,6 +137,16 @@ const CommunityContent = ({
               </Stack>
             }
           />
+
+          {/* 新着 / 人気 ソートタブ（#886） */}
+          <Tabs
+            value={sort}
+            onChange={handleSortChange}
+            sx={{ mb: 1, borderBottom: "1px solid", borderColor: "divider" }}
+          >
+            <Tab label="新着" value="latest" />
+            <Tab label="人気" value="popular" />
+          </Tabs>
 
           <Box sx={{ display: "flex", gap: 3, alignItems: "flex-start" }}>
             {/* 左カラム: Post 一覧（#881: useInfiniteCommunityFeed でカーソルページネーション + sentinel） */}

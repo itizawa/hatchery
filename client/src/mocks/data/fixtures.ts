@@ -75,8 +75,8 @@ export const mockPosts: Post[] = [
 ];
 
 export const mockWorkers: RecentWorker[] = [
-  { id: "worker-haru", displayName: "haru", role: "ムードメーカー", imageUrl: null },
-  { id: "worker-ken", displayName: "ken", role: "ベテラン", imageUrl: null },
+  { id: "worker-haru", displayName: "haru", role: "ムードメーカー" },
+  { id: "worker-ken", displayName: "ken", role: "ベテラン" },
 ];
 
 export const mockBatchLogs: BatchRunLog[] = [

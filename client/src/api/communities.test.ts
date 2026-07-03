@@ -195,7 +195,7 @@ describe("fetchRecentWorkers (GET /api/communities/:slug/recent-workers)", () =>
     expect(result[0].id).toBe("worker-1");
     const request = fetchMock.mock.calls[0][0] as Request;
     expect(request.url).toContain("/api/communities/ai-dev/recent-workers");
-    expect(request.method).toBe("GET");
+    expect(request.credentials).toBe("include");
   });
 
   it("エラー応答では例外を投げる", async () => {

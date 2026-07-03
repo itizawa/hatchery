@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse, delay } from "msw";
 import { setupServer } from "msw/node";
@@ -72,7 +72,7 @@ function renderScene({ seedRecentWorkers = true }: { seedRecentWorkers?: boolean
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   });
   qc.setQueryData(["communities"], [mockCommunity]);
-  qc.setQueryData(communityFeedQueryKey("ai-dev"), {
+  qc.setQueryData(communityFeedQueryKey({ slug: "ai-dev" }), {
     pages: [{ posts: [], nextCursor: null }],
     pageParams: [undefined],
   });
@@ -189,6 +189,66 @@ describe("CommunityScene", () => {
     expect(screen.getByText("このコミュニティにはまだ投稿がありません。")).toBeInTheDocument();
   });
 
+  it("「新着」「人気」タブが表示される（#886）", async () => {
+    renderScene();
+    await screen.findByRole("heading", { level: 1 });
+    expect(screen.getByRole("tab", { name: "新着" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "人気" })).toBeInTheDocument();
+  });
+
+  it("デフォルトは「新着」タブが選択状態（#886）", async () => {
+    renderScene();
+    await screen.findByRole("heading", { level: 1 });
+    const latestTab = screen.getByRole("tab", { name: "新着" });
+    expect(latestTab).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("「人気」タブをクリックすると選択状態が切り替わる（#886）", async () => {
+    server.use(
+      http.get("/api/communities/:slug/feed", ({ request }) => {
+        const url = new URL(request.url);
+        const sort = url.searchParams.get("sort");
+        if (sort === "popular") {
+          return HttpResponse.json({ posts: [], nextCursor: null });
+        }
+        return HttpResponse.json({ posts: [], nextCursor: null });
+      }),
+    );
+    const qc = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    });
+    qc.setQueryData(["communities"], [mockCommunity]);
+    qc.setQueryData(communityFeedQueryKey({ slug: "ai-dev", sort: "latest" }), {
+      pages: [{ posts: [], nextCursor: null }],
+      pageParams: [undefined],
+    });
+    qc.setQueryData(communityFeedQueryKey({ slug: "ai-dev", sort: "popular" }), {
+      pages: [{ posts: [], nextCursor: null }],
+      pageParams: [undefined],
+    });
+    qc.setQueryData(communitySubscriptionQueryKey("ai-dev"), { subscribed: false });
+    qc.setQueryData(AUTH_ME_QUERY_KEY, null);
+    qc.setQueryData(communityRecentWorkersQueryKey("ai-dev"), mockRecentWorkers);
+
+    render(
+      <QueryClientProvider client={qc}>
+        <QueryBoundary fallback={<MainContentSkeleton />}>
+          <CommunityScene />
+        </QueryBoundary>
+      </QueryClientProvider>,
+    );
+
+    await screen.findByRole("heading", { level: 1 });
+    const popularTab = screen.getByRole("tab", { name: "人気" });
+    await act(async () => {
+      await userEvent.click(popularTab);
+    });
+    await waitFor(() => {
+      expect(screen.getByRole("tab", { name: "人気" })).toHaveAttribute("aria-selected", "true");
+      expect(screen.getByRole("tab", { name: "新着" })).toHaveAttribute("aria-selected", "false");
+    });
+  });
+
   it("フィードに投稿がある場合、各 PostCard に共有ボタンが表示される（#838）", async () => {
     const mockPost = {
       id: "post-838",
@@ -206,7 +266,7 @@ describe("CommunityScene", () => {
       defaultOptions: { queries: { retry: false, gcTime: 0 } },
     });
     qc.setQueryData(["communities"], [mockCommunity]);
-    qc.setQueryData(communityFeedQueryKey("ai-dev"), {
+    qc.setQueryData(communityFeedQueryKey({ slug: "ai-dev" }), {
       pages: [{ posts: [mockPost], nextCursor: null }],
       pageParams: [undefined],
     });
@@ -249,7 +309,7 @@ describe("CommunityScene — vote 楽観的更新（#924）", () => {
       defaultOptions: { queries: { retry: false, gcTime: 0 } },
     });
     qc.setQueryData(["communities"], [mockCommunity]);
-    qc.setQueryData(communityFeedQueryKey("ai-dev"), {
+    qc.setQueryData(communityFeedQueryKey({ slug: "ai-dev" }), {
       pages: [{ posts: [post], nextCursor: null }],
       pageParams: [undefined],
     });
@@ -367,7 +427,7 @@ describe("CommunityScene — mark-viewed（#934）", () => {
       defaultOptions: { queries: { retry: false, gcTime: 0 } },
     });
     qc.setQueryData(["communities"], [mockCommunity]);
-    qc.setQueryData(communityFeedQueryKey("ai-dev"), {
+    qc.setQueryData(communityFeedQueryKey({ slug: "ai-dev" }), {
       pages: [{ posts: [], nextCursor: null }],
       pageParams: [undefined],
     });
@@ -439,7 +499,7 @@ describe("CommunityScene — 著者名がワーカープロフィールへのリ
       defaultOptions: { queries: { retry: false, gcTime: 0 } },
     });
     qc.setQueryData(["communities"], [mockCommunity]);
-    qc.setQueryData(communityFeedQueryKey("ai-dev"), {
+    qc.setQueryData(communityFeedQueryKey({ slug: "ai-dev" }), {
       pages: [{ posts: [postWithWorker], nextCursor: null }],
       pageParams: [undefined],
     });
@@ -477,7 +537,7 @@ describe("CommunityScene — ゲスト購読誘導（#882）", () => {
       defaultOptions: { queries: { retry: false, gcTime: 0 } },
     });
     qc.setQueryData(["communities"], [mockCommunity]);
-    qc.setQueryData(communityFeedQueryKey("ai-dev"), {
+    qc.setQueryData(communityFeedQueryKey({ slug: "ai-dev" }), {
       pages: [{ posts: [], nextCursor: null }],
       pageParams: [undefined],
     });

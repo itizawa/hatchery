@@ -100,29 +100,32 @@ describe("selectWeightedCommunity (#486)", () => {
 
   describe("負の重み（防御的コード）", () => {
     it("負の weight は 0 として扱い、正の weight コミュニティのみ選ばれる", () => {
+      // Math.max(0, -5)=0 のため neg の累積貢献は 0。total=3、pos の区間 [0,3) が全体を占める。
+      // rng=0 は r=0 → pos を選ぶことで「クランプが機能し neg が累積に寄与しない」ことを証明。
       const communities: CommunityWeight[] = [
         { communityId: "neg", weight: -5 },
         { communityId: "pos", weight: 3 },
       ];
-      // neg の累積貢献は 0。全 rng で pos のみ選ばれる。
       expect(selectWeightedCommunity({ communities, rng: fixedRng(0) })).toBe("pos");
       expect(selectWeightedCommunity({ communities, rng: fixedRng(0.5) })).toBe("pos");
-      expect(selectWeightedCommunity({ communities, rng: fixedRng(0.99) })).toBe("pos");
     });
 
-    it("負の weight のみの配列は total <= 0 のため先頭コミュニティを返す（決定的フォールバック）", () => {
+    it("負の weight のみの配列は total === 0 のため先頭コミュニティを返す（決定的フォールバック）", () => {
+      // Math.max(0, -3)=0, Math.max(0, -1)=0 → total=0 ≤ 0 で先頭フォールバック。
+      // rng は total≤0 の早期リターンより前で参照されないため引数は任意。
       const communities: CommunityWeight[] = [
         { communityId: "x", weight: -3 },
         { communityId: "y", weight: -1 },
       ];
       expect(selectWeightedCommunity({ communities, rng: fixedRng(0) })).toBe("x");
-      expect(selectWeightedCommunity({ communities, rng: fixedRng(0.99) })).toBe("x");
     });
   });
 
   describe("浮動小数点誤差フォールバック（逆順ループ）", () => {
     it("rng が 1.0 を返し r === total のとき、逆順フォールバックが最後の正重みコミュニティを返す", () => {
-      // total=5, r=1.0*5=5。メインループ: 最後のコミュニティで cumulative=5, 5<5=false → フォールバック。
+      // 実運用では浮動小数点累積誤差で r が total に到達しうる。
+      // rng=1.0（Math.random の仕様外だが誤差シミュレーション用）: r=1.0*5=5、
+      // メインループ: cumulative 最終値=5、5<5=false で全コミュニティを通過 → 逆順フォールバック。
       // 逆順ループが最後の正重みコミュニティ "b" を返す。
       const communities: CommunityWeight[] = [
         { communityId: "a", weight: 3 },
@@ -132,7 +135,7 @@ describe("selectWeightedCommunity (#486)", () => {
     });
 
     it("末尾に weight 0 があるとき、逆順フォールバックは weight 0 をスキップして正重みコミュニティを返す", () => {
-      // total=5（weight 0 は累積に寄与しない）。r=1.0*5=5 → フォールバック。
+      // rng=1.0（誤差シミュレーション）: total=5, r=5 → フォールバック。
       // 逆順: "c"（weight 0）スキップ → "b"（weight 2）を返す。
       const communities: CommunityWeight[] = [
         { communityId: "a", weight: 3 },

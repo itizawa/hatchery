@@ -64,7 +64,7 @@ export function createCommunitiesRouter(
       res.status(400).json({ error: "ValidationError", issues: parsed.error.issues });
       return;
     }
-    const { cursor, limit } = parsed.data;
+    const { cursor, limit, sort } = parsed.data;
     const { slug } = req.params as { slug: string };
     const sessionId = extractSessionId(req);
     const now = new Date();
@@ -74,7 +74,11 @@ export function createCommunitiesRouter(
         if (!community) {
           throw new NotFoundError("CommunityNotFound");
         }
-        return postRepo.listByCommunityPaged({ communityId: community.id, cursor, limit, options: { now } });
+        const fetchPage =
+          sort === "popular"
+            ? postRepo.listByCommunityPopularPaged({ communityId: community.id, cursor, limit, options: { now } })
+            : postRepo.listByCommunityPaged({ communityId: community.id, cursor, limit, options: { now } });
+        return fetchPage;
       })
       .then(async (result) => {
         const enriched = await attachAuthorWorker(result.posts, workerRepo);

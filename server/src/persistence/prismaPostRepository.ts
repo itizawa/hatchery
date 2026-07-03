@@ -132,6 +132,59 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
       return { posts: posts.map(toRecord), nextCursor };
     },
 
+    async listByCommunityPopularPaged({
+      communityId,
+      cursor,
+      limit = 20,
+      options,
+    }: {
+      communityId: string;
+      cursor?: string;
+      limit?: number;
+      options?: RevealFilterOptions;
+    }): Promise<{ posts: PostRecord[]; nextCursor: string | null }> {
+      const now = options?.now;
+      let where: Prisma.PostWhereInput = {
+        communityId,
+        ...(now !== undefined ? { createdAt: { lte: now } } : {}),
+      };
+
+      if (cursor !== undefined) {
+        const payload = decodePopularCursor(cursor);
+        if (!payload) throw new Error("INVALID_CURSOR");
+        const cursorDate = new Date(payload.createdAt);
+        // keyset: score 降順 → createdAt 降順 → id 降順
+        where = {
+          ...where,
+          AND: [
+            {
+              OR: [
+                { score: { lt: payload.score } },
+                { score: { equals: payload.score }, createdAt: { lt: cursorDate } },
+                {
+                  score: { equals: payload.score },
+                  createdAt: { equals: cursorDate },
+                  id: { lt: payload.id },
+                },
+              ],
+            },
+          ],
+        };
+      }
+
+      const rows = await prisma.post.findMany({
+        where,
+        orderBy: [{ score: "desc" }, { createdAt: "desc" }, { id: "desc" }],
+        take: limit + 1,
+      });
+
+      const hasMore = rows.length > limit;
+      const posts = hasMore ? rows.slice(0, limit) : rows;
+      const nextCursor = hasMore ? encodePopularCursor(toRecord(posts[posts.length - 1]!)) : null;
+
+      return { posts: posts.map(toRecord), nextCursor };
+    },
+
     async findById(id: string): Promise<PostRecord | null> {
       const row = await prisma.post.findUnique({ where: { id } });
       return row ? toRecord(row) : null;

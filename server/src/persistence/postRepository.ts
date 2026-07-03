@@ -117,6 +117,23 @@ export interface PostRepository {
     options?: RevealFilterOptions,
   ): Promise<{ posts: PostRecord[]; nextCursor: string | null }>;
   /**
+   * community 別のカーソルページネーション（#886）。人気順（score 降順 → createdAt 降順 → id 降順）。
+   * cursor は base64(JSON{ score, createdAt: ISO文字列, id: string })。
+   * nextCursor が null の場合は末尾（追加ページなし）。
+   * options.now を渡すと `createdAt <= now` の reveal フィルタが有効になる。
+   */
+  listByCommunityPopularPaged({
+    communityId,
+    cursor,
+    limit,
+    options,
+  }: {
+    communityId: string;
+    cursor?: string;
+    limit?: number;
+    options?: RevealFilterOptions;
+  }): Promise<{ posts: PostRecord[]; nextCursor: string | null }>;
+  /**
    * community 内で直近 since 以降かつ score >= minScore の post を
    * score 降順で最大 limit 件返す（#558）。
    * 定時バッチの「人気トピック還元」プロンプト構築に使う。
@@ -326,6 +343,55 @@ export function createInMemoryPostRepository(): PostRepository {
       const posts = hasMore ? fetched.slice(0, limit) : fetched;
       const last = posts.at(-1);
       const nextCursor = hasMore && last ? encodeCursor(last) : null;
+
+      return Promise.resolve({ posts: posts.map(cloneRecord), nextCursor });
+    },
+
+    listByCommunityPopularPaged({
+      communityId,
+      cursor,
+      limit = 20,
+      options,
+    }: {
+      communityId: string;
+      cursor?: string;
+      limit?: number;
+      options?: RevealFilterOptions;
+    }): Promise<{ posts: PostRecord[]; nextCursor: string | null }> {
+      let cursorPayload: PopularCursorPayload | null = null;
+      if (cursor !== undefined) {
+        cursorPayload = decodePopularCursor(cursor);
+        if (!cursorPayload) {
+          return Promise.reject(new Error("INVALID_CURSOR"));
+        }
+      }
+
+      const now = options?.now;
+      const sorted = [...records]
+        .filter((r) => r.communityId === communityId)
+        .filter((r) => now === undefined || r.createdAt.getTime() <= now.getTime())
+        .sort(comparePopular);
+
+      let filtered = sorted;
+      if (cursorPayload) {
+        const cursorScore = cursorPayload.score;
+        const cursorTime = new Date(cursorPayload.createdAt).getTime();
+        const cursorId = cursorPayload.id;
+        filtered = sorted.filter((r) => {
+          if (r.score < cursorScore) return true;
+          if (r.score > cursorScore) return false;
+          const rTime = r.createdAt.getTime();
+          if (rTime < cursorTime) return true;
+          if (rTime === cursorTime) return r.id < cursorId;
+          return false;
+        });
+      }
+
+      const fetched = filtered.slice(0, limit + 1);
+      const hasMore = fetched.length > limit;
+      const posts = hasMore ? fetched.slice(0, limit) : fetched;
+      const last = posts.at(-1);
+      const nextCursor = hasMore && last ? encodePopularCursor(last) : null;
 
       return Promise.resolve({ posts: posts.map(cloneRecord), nextCursor });
     },

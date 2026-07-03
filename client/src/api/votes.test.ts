@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import * as authApi from "./auth.js";
-import { communityFeedQueryKey, homeFeedQueryKey, homeFeedQueryKeyPrefix } from "./feed.js";
+import { communityFeedQueryKey, communityFeedQueryKeyPrefix, homeFeedQueryKey, homeFeedQueryKeyPrefix } from "./feed.js";
 import { postThreadQueryKey } from "./posts.js";
 import { votePost, voteComment, useVotePost, useVoteComment } from "./votes.js";
 
@@ -191,7 +191,7 @@ describe("useVotePost (楽観更新フック)", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(invalidateSpy).not.toHaveBeenCalledWith({ queryKey: postThreadQueryKey("post-1") });
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: communityFeedQueryKey("tech") });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: communityFeedQueryKeyPrefix("tech") });
     expect(invalidateSpy).not.toHaveBeenCalledWith({ queryKey: homeFeedQueryKeyPrefix() });
   });
 
@@ -271,7 +271,7 @@ describe("useVotePost (フィードキャッシュ楽観更新)", () => {
 
     const { queryClient, wrapper } = createHookWrapper();
     queryClient.setQueryData(
-      communityFeedQueryKey("tech"),
+      communityFeedQueryKey({ slug: "tech" }),
       makeCommunityFeedData([{ ...feedBasePost, score: 5, my_vote: null }]),
     );
 
@@ -279,11 +279,11 @@ describe("useVotePost (フィードキャッシュ楽観更新)", () => {
     act(() => { result.current.mutate({ postId: "post-1", direction: "up" }); });
 
     await waitFor(() => {
-      const d = queryClient.getQueryData<HomeFeedData>(communityFeedQueryKey("tech"));
+      const d = queryClient.getQueryData<HomeFeedData>(communityFeedQueryKey({ slug: "tech" }));
       expect(d?.pages[0]?.posts[0]?.my_vote).toBe("up");
     });
 
-    const d = queryClient.getQueryData<HomeFeedData>(communityFeedQueryKey("tech"));
+    const d = queryClient.getQueryData<HomeFeedData>(communityFeedQueryKey({ slug: "tech" }));
     expect(d?.pages[0]?.posts[0]?.score).toBe(6);
 
     resolveFetch(jsonResponse(200, { ...feedBasePost, score: 6, my_vote: "up" }));
@@ -343,7 +343,7 @@ describe("useVotePost (フィードキャッシュ楽観更新)", () => {
 
     const { queryClient, wrapper } = createHookWrapper();
     queryClient.setQueryData(
-      communityFeedQueryKey("tech"),
+      communityFeedQueryKey({ slug: "tech" }),
       makeCommunityFeedData([{ ...feedBasePost, score: 5, my_vote: null }]),
     );
 
@@ -352,7 +352,7 @@ describe("useVotePost (フィードキャッシュ楽観更新)", () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true));
 
-    const d = queryClient.getQueryData<HomeFeedData>(communityFeedQueryKey("tech"));
+    const d = queryClient.getQueryData<HomeFeedData>(communityFeedQueryKey({ slug: "tech" }));
     expect(d?.pages[0]?.posts[0]?.score).toBe(5);
     expect(d?.pages[0]?.posts[0]?.my_vote).toBeNull();
   });
@@ -385,7 +385,7 @@ describe("useVotePost (フィードキャッシュ楽観更新)", () => {
 
     const { queryClient, wrapper } = createHookWrapper();
     queryClient.setQueryData(
-      communityFeedQueryKey("tech"),
+      communityFeedQueryKey({ slug: "tech" }),
       makeCommunityFeedData([{ ...feedBasePost, score: 5, my_vote: null }]),
     );
 
@@ -394,7 +394,7 @@ describe("useVotePost (フィードキャッシュ楽観更新)", () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    const d = queryClient.getQueryData<HomeFeedData>(communityFeedQueryKey("tech"));
+    const d = queryClient.getQueryData<HomeFeedData>(communityFeedQueryKey({ slug: "tech" }));
     expect(d?.pages[0]?.posts[0]?.score).toBe(6);
     expect(d?.pages[0]?.posts[0]?.my_vote).toBe("up");
   });

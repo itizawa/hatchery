@@ -2,6 +2,7 @@ import type { OpenAPIRegistry } from "@asteasolutions/zod-to-openapi";
 import {
   AdminCommunitySchema,
   AuthorWorkerSchema,
+  CommunityFeedSortSchema,
   CommentSchema,
   CommunitySchema,
   CreateCommentRequestSchema,
@@ -292,6 +293,9 @@ export function registerCommunities(registry: OpenAPIRegistry, ctx: RegistryCont
           .uuid()
           .optional()
           .openapi({ description: "セッション ID（付与すると各 post に my_vote を付与・#831）" }),
+        sort: CommunityFeedSortSchema.default("latest").openapi({
+          description: "並び順（latest=新着順 / popular=投票数降順・デフォルト latest・#886）",
+        }),
       }),
     },
     responses: {

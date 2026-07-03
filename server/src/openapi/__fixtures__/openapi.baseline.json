@@ -2119,6 +2119,20 @@
             "required": false,
             "name": "sessionId",
             "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "latest",
+                "popular"
+              ],
+              "default": "latest",
+              "description": "並び順（latest=新着順 / popular=投票数降順・デフォルト latest・#886）"
+            },
+            "required": false,
+            "name": "sort",
+            "in": "query"
           }
         ],
         "responses": {

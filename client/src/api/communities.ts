@@ -34,6 +34,7 @@ export {
   useInfiniteCommunityFeed,
   useInfiniteHomeFeed,
   communityFeedQueryKey,
+  communityFeedQueryKeyPrefix,
   homeFeedQueryKeyPrefix,
   homeFeedQueryKey,
 } from "./feed.js";

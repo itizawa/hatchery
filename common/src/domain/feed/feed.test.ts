@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { HomeFeedQuerySchema } from "./feed.js";
+import { CommunityFeedQuerySchema, HomeFeedQuerySchema } from "./feed.js";
 
 describe("HomeFeedQuerySchema", () => {
   it("デフォルト値: limit=20", () => {
@@ -72,5 +72,39 @@ describe("HomeFeedQuerySchema", () => {
   it("sort が enum 外の値は無効", () => {
     const result = HomeFeedQuerySchema.safeParse({ sort: "hot" });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("CommunityFeedQuerySchema", () => {
+  it("デフォルト値: limit=20, sort=latest", () => {
+    const result = CommunityFeedQuerySchema.safeParse({});
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.limit).toBe(20);
+      expect(result.data.sort).toBe("latest");
+    }
+  });
+
+  it("sort=popular は有効", () => {
+    const result = CommunityFeedQuerySchema.safeParse({ sort: "popular" });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.sort).toBe("popular");
+  });
+
+  it("sort=latest は有効", () => {
+    const result = CommunityFeedQuerySchema.safeParse({ sort: "latest" });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.sort).toBe("latest");
+  });
+
+  it("sort が enum 外の値は無効", () => {
+    const result = CommunityFeedQuerySchema.safeParse({ sort: "hot" });
+    expect(result.success).toBe(false);
+  });
+
+  it("cursor は省略可能", () => {
+    const result = CommunityFeedQuerySchema.safeParse({ limit: 20 });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.cursor).toBeUndefined();
   });
 });

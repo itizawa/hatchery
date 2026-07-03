@@ -27,10 +27,16 @@ export const HomeFeedResponseSchema = z.object({
 
 export type HomeFeedResponse = z.infer<typeof HomeFeedResponseSchema>;
 
-/** コミュニティフィード取得クエリのスキーマ（#881）。cursor・limit を検証する。 */
+/** コミュニティフィードの並び順（#886）。latest=新着順 / popular=vote 数（score）降順。 */
+export const CommunityFeedSortSchema = HomeFeedSortSchema;
+
+export type CommunityFeedSort = z.infer<typeof CommunityFeedSortSchema>;
+
+/** コミュニティフィード取得クエリのスキーマ（#881 / #886）。cursor・limit・sort を検証する。 */
 export const CommunityFeedQuerySchema = z.object({
   cursor: z.string().max(FEED_CURSOR_MAX_LENGTH).optional(),
   limit: z.coerce.number().int().min(1).max(100).default(20),
+  sort: CommunityFeedSortSchema.default("latest"),
 });
 
 export type CommunityFeedQuery = z.infer<typeof CommunityFeedQuerySchema>;

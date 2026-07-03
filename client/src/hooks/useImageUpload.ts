@@ -25,12 +25,14 @@ export function useImageUpload<TResult>({
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = "";
+    let result: TResult;
     try {
-      const result = await upload(file);
-      onSuccess?.(result);
+      result = await upload(file);
     } catch (err) {
       onError?.(err);
+      return;
     }
+    onSuccess?.(result);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

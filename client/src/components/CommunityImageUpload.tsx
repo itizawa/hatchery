@@ -80,49 +80,51 @@ export const CommunityImageUpload = ({
     );
 
   return (
-    <Tooltip title={`クリックして${kindLabel}画像をアップロード`} placement="top">
-      <Box
-        sx={{
-          position: "relative",
-          display: kind === "icon" ? "inline-block" : "block",
-          width: kind === "cover" ? "100%" : undefined,
-          cursor: upload.isPending ? "not-allowed" : "pointer",
-        }}
-        onClick={upload.isPending ? undefined : handleClick}
-        role="button"
-        aria-label={`${name} の${kindLabel}画像をアップロード`}
-        tabIndex={0}
-        onKeyDown={handleKeyDown}
-      >
-        {preview}
-        {upload.isPending && (
-          <Box
-            sx={{
-              position: "absolute",
-              inset: 0,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <CircularProgress size={24} />
-          </Box>
-        )}
-        <input
-          ref={inputRef}
-          type="file"
-          accept={ACCEPTED_MIME}
-          style={{ display: "none" }}
-          onChange={(e) => {
-            setErrorMessage(null);
-            void handleFileChange(e);
+    <>
+      <Tooltip title={`クリックして${kindLabel}画像をアップロード`} placement="top">
+        <Box
+          sx={{
+            position: "relative",
+            display: kind === "icon" ? "inline-block" : "block",
+            width: kind === "cover" ? "100%" : undefined,
+            cursor: upload.isPending ? "not-allowed" : "pointer",
           }}
-          aria-hidden="true"
-        />
-      </Box>
-      {errorMessage && (
+          onClick={upload.isPending ? undefined : handleClick}
+          role="button"
+          aria-label={`${name} の${kindLabel}画像をアップロード`}
+          tabIndex={0}
+          onKeyDown={handleKeyDown}
+        >
+          {preview}
+          {upload.isPending && (
+            <Box
+              sx={{
+                position: "absolute",
+                inset: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <CircularProgress size={24} />
+            </Box>
+          )}
+          <input
+            ref={inputRef}
+            type="file"
+            accept={ACCEPTED_MIME}
+            style={{ display: "none" }}
+            onChange={(e) => {
+              setErrorMessage(null);
+              void handleFileChange(e);
+            }}
+            aria-hidden="true"
+          />
+        </Box>
+      </Tooltip>
+      {errorMessage !== null && (
         <Typography variant="body2" color="error">{errorMessage}</Typography>
       )}
-    </Tooltip>
+    </>
   );
 };

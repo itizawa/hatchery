@@ -91,6 +91,11 @@ describe("fetchSubscriptionStatus (GET /api/communities/{slug}/subscription)", (
 
     const result = await fetchSubscriptionStatus("ai-dev");
     expect(result).toEqual({ subscribed: true });
+    const request = fetchMock.mock.calls[0][0] as Request;
+    expect(request).toBeInstanceOf(Request);
+    expect(request.url).toContain("/api/communities/ai-dev/subscription");
+    expect(request.url).toMatch(/^https?:\/\//);
+    expect(request.method).toBe("GET");
   });
 
   it("200 + { subscribed: false } のとき { subscribed: false } を返す", async () => {
@@ -118,8 +123,8 @@ describe("fetchSubscriptionStatus (GET /api/communities/{slug}/subscription)", (
     vi.stubGlobal("fetch", fetchMock);
 
     await fetchSubscriptionStatus("スラッグ/test");
-    const calledUrl = fetchMock.mock.calls[0][0] as string;
-    expect(calledUrl).toContain(encodeURIComponent("スラッグ/test"));
+    const request = fetchMock.mock.calls[0][0] as Request;
+    expect(request.url).toContain(encodeURIComponent("スラッグ/test"));
   });
 });
 

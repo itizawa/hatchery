@@ -147,7 +147,7 @@ describe.skipIf(!DATABASE_URL)("createPrismaPushSubscriptionRepository (integrat
       await repo.upsert({ userId: userId2, endpoint: "https://push.example.com/list-ep2", p256dh: "k2", auth: "a2" });
 
       const all = await repo.listAll();
-      expect(all.length).toBeGreaterThanOrEqual(2);
+      expect(all).toHaveLength(2);
       expect(all.some((s) => s.endpoint === "https://push.example.com/list-ep1")).toBe(true);
       expect(all.some((s) => s.endpoint === "https://push.example.com/list-ep2")).toBe(true);
     });

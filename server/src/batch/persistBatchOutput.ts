@@ -6,6 +6,8 @@ import type { PostRecord, PostRepository } from "../persistence/postRepository.j
 import { assignDripTimestamps } from "./assignDripTimestamps.js";
 import { logBatchInfo } from "./logger.js";
 
+const URL_PATTERN = /https?:\/\//;
+
 export interface PersistBatchOutputResult {
   savedPosts: PostRecord[];
   savedComments: CommentRecord[];
@@ -37,7 +39,6 @@ export async function persistBatchOutput({
   const savedPosts: PostRecord[] = [];
   const savedComments: CommentRecord[] = [];
 
-  const URL_PATTERN = /https?:\/\//;
   for (const post of output.posts) {
     if (URL_PATTERN.test(post.title)) {
       logBatchInfo("persist_batch.title_url_detected", { title: post.title });

@@ -97,4 +97,49 @@ describe("selectWeightedCommunity (#486)", () => {
       expect(["a", "b", "c"]).toContain(selected);
     }
   });
+
+  describe("負の重み（防御的コード）", () => {
+    it("負の weight は 0 として扱い、正の weight コミュニティのみ選ばれる", () => {
+      const communities: CommunityWeight[] = [
+        { communityId: "neg", weight: -5 },
+        { communityId: "pos", weight: 3 },
+      ];
+      // neg の累積貢献は 0。全 rng で pos のみ選ばれる。
+      expect(selectWeightedCommunity({ communities, rng: fixedRng(0) })).toBe("pos");
+      expect(selectWeightedCommunity({ communities, rng: fixedRng(0.5) })).toBe("pos");
+      expect(selectWeightedCommunity({ communities, rng: fixedRng(0.99) })).toBe("pos");
+    });
+
+    it("負の weight のみの配列は total <= 0 のため先頭コミュニティを返す（決定的フォールバック）", () => {
+      const communities: CommunityWeight[] = [
+        { communityId: "x", weight: -3 },
+        { communityId: "y", weight: -1 },
+      ];
+      expect(selectWeightedCommunity({ communities, rng: fixedRng(0) })).toBe("x");
+      expect(selectWeightedCommunity({ communities, rng: fixedRng(0.99) })).toBe("x");
+    });
+  });
+
+  describe("浮動小数点誤差フォールバック（逆順ループ）", () => {
+    it("rng が 1.0 を返し r === total のとき、逆順フォールバックが最後の正重みコミュニティを返す", () => {
+      // total=5, r=1.0*5=5。メインループ: 最後のコミュニティで cumulative=5, 5<5=false → フォールバック。
+      // 逆順ループが最後の正重みコミュニティ "b" を返す。
+      const communities: CommunityWeight[] = [
+        { communityId: "a", weight: 3 },
+        { communityId: "b", weight: 2 },
+      ];
+      expect(selectWeightedCommunity({ communities, rng: fixedRng(1.0) })).toBe("b");
+    });
+
+    it("末尾に weight 0 があるとき、逆順フォールバックは weight 0 をスキップして正重みコミュニティを返す", () => {
+      // total=5（weight 0 は累積に寄与しない）。r=1.0*5=5 → フォールバック。
+      // 逆順: "c"（weight 0）スキップ → "b"（weight 2）を返す。
+      const communities: CommunityWeight[] = [
+        { communityId: "a", weight: 3 },
+        { communityId: "b", weight: 2 },
+        { communityId: "c", weight: 0 },
+      ];
+      expect(selectWeightedCommunity({ communities, rng: fixedRng(1.0) })).toBe("b");
+    });
+  });
 });

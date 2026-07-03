@@ -78,7 +78,7 @@ describe("useInfiniteCommunityFeed — sessionId 注入テスト (#945)", () => 
     localStorage.setItem(GUEST_ID_KEY, guestId);
 
     const { wrapper } = createWrapper({ authUser: null });
-    renderHook(() => useInfiniteCommunityFeed("test-community"), { wrapper });
+    renderHook(() => useInfiniteCommunityFeed({ slug: "test-community" }), { wrapper });
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
 
@@ -89,7 +89,7 @@ describe("useInfiniteCommunityFeed — sessionId 注入テスト (#945)", () => 
   it("認証済み時に userId が sessionId として URL に含まれる", async () => {
     const userId = "user-auth-community-456";
     const { wrapper } = createWrapper({ authUser: { id: userId } });
-    renderHook(() => useInfiniteCommunityFeed("test-community"), { wrapper });
+    renderHook(() => useInfiniteCommunityFeed({ slug: "test-community" }), { wrapper });
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
 

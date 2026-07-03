@@ -176,6 +176,7 @@ export function useVotePost(communitySlug?: string) {
       }
       if (context?.previousCommunityFeedEntries) {
         for (const [queryKey, data] of context.previousCommunityFeedEntries) {
+          if (!data) continue;
           queryClient.setQueryData(queryKey, data);
         }
       }

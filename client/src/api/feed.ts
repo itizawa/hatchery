@@ -16,7 +16,7 @@ import { getOrCreateGuestId } from "./votes.js";
 export const communityFeedQueryKeyPrefix = (slug: string) =>
   ["communities", slug, "feed"] as const;
 export const communityFeedQueryKey = ({ slug, sort = "latest" }: { slug: string; sort?: CommunityFeedSort }) =>
-  ["communities", slug, "feed", sort] as const;
+  [...communityFeedQueryKeyPrefix(slug), sort] as const;
 /** ホームフィードのキャッシュキープレフィックス。全 sort をまとめて無効化する際に使う。 */
 export const homeFeedQueryKeyPrefix = () => ["feed"] as const;
 export const homeFeedQueryKey = (sort: HomeFeedSort = "latest") =>

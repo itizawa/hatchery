@@ -10,7 +10,7 @@ export const WORKER_AVATAR_URL_MAX_LENGTH = 2048;
 
 /**
  * ワーカーの文章量設定（#625）。
- * - concise: 簡潔（1、2 文程度）
+ * - concise: 簡潔（1、2文程度）
  * - standard: 標準（既定）
  * - detailed: 詳細（具体例や背景を交えてやや詳しめ）
  */
@@ -100,6 +100,17 @@ export const createDisplayNameResolver = (
 /** imageUrl が設定されていればそれを返し、未設定なら null を返す（#1015）。 */
 export function resolveWorkerImageUrl({ imageUrl }: { imageUrl?: string | null }): string | null {
   return imageUrl ?? null;
+}
+
+/**
+ * #1015 移行前に生成され DB に残っている、恒久的に死んだ boringavatars の外部URLプレフィックス（#1057）。
+ * このドメイン自体（source.boringavatars.com）が2024-10-19にSSL証明書失効・デプロイ削除済みで恒久的に死んでいる。
+ */
+export const DEAD_BORING_AVATARS_WORKER_URL_PREFIX = "https://source.boringavatars.com/";
+
+/** imageUrl が #1015 移行前の死んだ boringavatars URL かどうかを判定する（#1057）。 */
+export function isDeadBoringAvatarsWorkerImageUrl(imageUrl: string | null | undefined): boolean {
+  return typeof imageUrl === "string" && imageUrl.startsWith(DEAD_BORING_AVATARS_WORKER_URL_PREFIX);
 }
 
 export const createAvatarUrlResolver = (

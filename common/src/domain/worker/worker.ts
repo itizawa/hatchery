@@ -10,7 +10,7 @@ export const WORKER_AVATAR_URL_MAX_LENGTH = 2048;
 
 /**
  * ワーカーの文章量設定（#625）。
- * - concise: 簡潔（1、2文程度）
+ * - concise: 簡潔（1、2 文程度）
  * - standard: 標準（既定）
  * - detailed: 詳細（具体例や背景を交えてやや詳しめ）
  */

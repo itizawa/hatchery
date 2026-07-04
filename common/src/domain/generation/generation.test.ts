@@ -249,6 +249,22 @@ describe("validateGenerationOutput", () => {
     expect(() => validateGenerationOutput({ output: outputWithHuman, knownWorkerIds })).toThrow();
   });
 
+  it("comment の author が post の author と同一の場合はエラーを投げる（自己返信禁止・#1069）", () => {
+    const outputWithSelfReply = {
+      ...validOutput,
+      posts: [
+        {
+          ...validOutput.posts[0],
+          author: "worker-haru",
+          comments: [{ author: "worker-haru", text: "自分の投稿に自分でコメントしている" }],
+        },
+      ],
+    };
+    expect(() =>
+      validateGenerationOutput({ output: outputWithSelfReply, knownWorkerIds }),
+    ).toThrow();
+  });
+
   // replies 検証（#555）
   it("replies の author が既知 workerId の場合は検証を通る（#555）", () => {
     const outputWithReplies = {

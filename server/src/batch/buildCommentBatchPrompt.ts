@@ -10,6 +10,8 @@ export interface TargetPostForComment {
   id: string;
   title: string;
   text: string;
+  /** この post の投稿者ワーカーID。コメント候補から除外させるためプロンプトに明記する（#1069）。 */
+  authorId: string;
   /** この post に付けるコメントの目標件数。 */
   commentCount: number;
   /** 既存コメント（文脈提供のためプロンプトに含める）。 */
@@ -71,7 +73,7 @@ export function buildCommentBatchPrompt(params: {
         post.existingComments.length > 0
           ? `\n  既存コメント:\n${post.existingComments.map((c) => `    - ${c.author}: ${c.text}`).join("\n")}`
           : "";
-      return `  ref: ${post.ref}\n  title: ${post.title}\n  text: ${post.text}\n  コメント目標件数: ${post.commentCount} 件${existingSection}`;
+      return `  ref: ${post.ref}\n  title: ${post.title}\n  text: ${post.text}\n  投稿者ID: ${post.authorId}（この投稿者自身をコメント候補から除外すること）\n  コメント目標件数: ${post.commentCount} 件${existingSection}`;
     })
     .join("\n\n");
 
@@ -112,6 +114,7 @@ ${postLines}
 - author には必ず上記ワーカー一覧の UUID（「author に指定するID」）を使用してください
 - score フィールドは生成しないでください
 - 各 post の「コメント目標件数」を目安にコメントを生成してください
+- 各投稿の「投稿者ID」に一致するワーカーは、その投稿へのコメント候補から除外してください（自己返信禁止）
 - reply_to は同じ post 内コメントの 0 始まりインデックスを指定（返信でない場合は null）
 - 会話は自然で読みやすい日本語で書いてください
 - コメント本文（text フィールド）に URL（http または https から始まる文字列）を含めないこと

@@ -45,11 +45,19 @@
   ```
   DB 接続なしでテストできる判定ロジックをここに切り出し、`server` 側スクリプトはこれを呼ぶだけにする（ロジックの二重実装を避ける）。
 
-- **server 側スクリプト**（`server/src/scripts/cleanupDeadWorkerAvatarUrls.ts`）は `generateReleaseNotes.ts` と同じ構成パターンを踏襲する:
-  - DB アクセスを狭いインターフェース `WorkerAvatarCleanupClient`（`findWorkersWithImageUrl` / `clearImageUrl`）に抽象化し、コアロジック `runCleanupDeadWorkerAvatarUrls(client)` をテスト時にモック注入可能にする。
-  - 本番経路では `createPrismaWorkerAvatarCleanupClient(prisma)` が実装を提供する（`prisma.worker.findMany({ where: { imageUrl: { not: null } } })` → JS 側で `isDeadBoringAvatarsWorkerImageUrl` によるフィルタ → `prisma.worker.updateMany({ where: { id: { in: targetIds } }, data: { imageUrl: null } })`）。
-  - フィルタ判定を DB のクエリ演算子（`startsWith`）ではなく common の純粋関数で行うことで、判定ロジックの正本を 1 箇所（common）に保つ。
+- **server 側スクリプト**（`server/src/scripts/cleanupDeadWorkerAvatarUrls.ts`）は DB アクセスを既存の永続化層 `WorkerRepository`（`server/src/persistence/workerRepository.ts`）に委譲する（セルフレビューで方針変更・後述「セルフレビューでの修正」参照）:
+  - コアロジック `runCleanupDeadWorkerAvatarUrls(workerRepository: WorkerRepository)` は `listAllBotWorkers()`（既存メソッド・論理削除済含む全件取得）で全 Worker を取得し、`isDeadBoringAvatarsWorkerImageUrl` でフィルタした id のみ `clearImageUrl(id)`（新規追加メソッド）で 1 件ずつ null 更新する。
+  - `WorkerRepository` に `clearImageUrl(id: string): Promise<WorkerRecord | null>` を新規追加（`updateImageUrl` の null 版。既存の `updateImageUrl` と同じく `deletedAt` を問わず適用される仕様に揃える）。in-memory 実装・Prisma 実装の両方に追加し、それぞれテストする。
+  - テストは既存の `createInMemoryWorkerRepository`（`server/src/persistence/workerRepository.ts`）をそのまま注入して行う（新規のフェイクインターフェースは作らない）。
+  - `updatedIds` は実際に `clearImageUrl` が成功した id のみで構成するため、`updatedCount` と `updatedIds.length` は常に一致する。
   - CLI エントリポイントは `isDirectRun` ガードで、テストからの import 時には実行されない。
+
+### セルフレビューでの修正（/code-review）
+
+初版は DB アクセスを `WorkerAvatarCleanupClient` という本スクリプト専用の抽象（`prisma.worker.findMany`/`updateMany` を直接呼ぶ実装）で行っていたが、セルフレビューで以下 2 点の指摘を受け、上記の `WorkerRepository` 経由の設計に修正した:
+
+1. **アーキテクチャ逸脱**: `server/src/batch/*BatchIndex.ts` 等、既存の DB アクセスは全て `WorkerRepository`（永続化層）経由で行っており、本スクリプトだけが `PrismaClient` を直接叩き Worker 行の形状を二重に知っていた（CLAUDE.md の層分離方針に反する）。
+2. **`updatedIds`/`updatedCount` の不整合可能性**: 旧実装は `updateMany` の返り値（件数のみ）に関わらず `updatedIds` を「更新対象として抽出した id 一覧」で固定していたため、何らかの理由で実際の更新件数が対象数と食い違っても気づけなかった。id ごとに `clearImageUrl` を呼び成功した id のみを `updatedIds` に積む方式にしたことで、この不整合が構造的に起きなくなった。
 
 - **package.json**: `server/package.json` の `scripts` に `"cleanup:worker-avatars": "tsx src/scripts/cleanupDeadWorkerAvatarUrls.ts"` を追加。
 
@@ -63,8 +71,9 @@
 ## 6. テスト計画（TDD で書くテスト一覧）
 
 1. `common/src/domain/worker/worker.test.ts` に `isDeadBoringAvatarsWorkerImageUrl` のテストケースを追加（AC1〜3）。
-2. `server/src/scripts/cleanupDeadWorkerAvatarUrls.test.ts` を新設し、フェイクの `WorkerAvatarCleanupClient`（配列ベースの in-memory 実装）を使って `runCleanupDeadWorkerAvatarUrls` をテストする（AC4〜7）。
-3. 既存の `workerRepository.test.ts:16`（`create()` は imageUrl:null を返す）・`prismaWorkerRepository.test.ts:25`（同様）が AC4（今後のリグレッション防止）を既に満たしていることを確認する（新規テスト追加なし、設計書に明記）。
+2. `server/src/persistence/workerRepository.test.ts` / `prismaWorkerRepository.test.ts` に新規 `clearImageUrl` メソッドのテストを追加（存在する id で null 化・存在しない id で null 返却・論理削除済でも適用される現仕様）。
+3. `server/src/scripts/cleanupDeadWorkerAvatarUrls.test.ts` を新設し、`createInMemoryWorkerRepository` を注入して `runCleanupDeadWorkerAvatarUrls` をテストする（AC4〜7。死んだURLのみ抽出・正規URL/null/論理削除済ワーカーの扱い）。
+4. 既存の `workerRepository.test.ts:16`（`create()` は imageUrl:null を返す）・`prismaWorkerRepository.test.ts:25`（同様）が AC4（今後のリグレッション防止）を既に満たしていることを確認する（新規テスト追加なし、設計書に明記）。
 
 ## 7. リスク・未決事項
 

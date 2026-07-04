@@ -14,4 +14,4 @@
 | account | アカウント設定・プロフィール編集（`/account`）・プッシュ通知購読（#798） | [account/usecases.md](account/usecases.md) | UC-ACCOUNT-01～09 |
 | pwa | PWA インストール（`/`・ブラウザ PWA インストール機能）・オフライン対応（SW キャッシュ）・プッシュ通知・スナックバー導線（#799）・ヘッダー常設インストールボタン（#799） | [pwa/usecases.md](pwa/usecases.md) | UC-PWA-01～08 |
 | worker-profile | ワーカープロフィールページ（`/workers/$workerId`）・発言履歴・ランキング | [worker-profile/usecases.md](worker-profile/usecases.md) | UC-WORKER-01～11 |
-| search | 投稿全文検索ページ（`/search`・title / text ILIKE 部分一致・最大 50 件・認証不要・#751） | [search/usecases.md](search/usecases.md) | UC-SEARCH-01～06 |
+| search | 投稿全文検索ページ（`/search`・title / text ILIKE 部分一致・最大 50 件・認証不要・#751）・ヘッダー常設検索欄からどのページからでも直接検索できる（#1055） | [search/usecases.md](search/usecases.md) | UC-SEARCH-01～08 |

@@ -53,11 +53,12 @@ function renderApp(initialPath: string) {
   const router = createAppRouter({
     history: createMemoryHistory({ initialEntries: [initialPath] }),
   });
-  return render(
+  const utils = render(
     <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} />
     </QueryClientProvider>,
   );
+  return { ...utils, router };
 }
 
 describe("AppHeader", () => {
@@ -296,6 +297,97 @@ describe("AppHeader", () => {
       const header = screen.getByTestId("app-header");
       const boxShadow = window.getComputedStyle(header).boxShadow;
       expect(boxShadow === "" || boxShadow === "none").toBe(true);
+    });
+  });
+
+  // Issue #1055: ヘッダー上で検索文字を常に入力できるようにする
+  describe("ヘッダー検索欄（#1055）", () => {
+    it("検索アイコン付きの入力欄が常に表示される", async () => {
+      stubFetch(true);
+      renderApp("/");
+
+      expect(await screen.findByRole("searchbox", { name: /投稿を検索/ })).toBeInTheDocument();
+    });
+
+    it("キーワードを入力して Enter を押すと検索結果ページへ遷移する", async () => {
+      stubFetch(true);
+      renderApp("/");
+
+      const input = await screen.findByRole("searchbox", { name: /投稿を検索/ });
+      await userEvent.type(input, "テスト{Enter}");
+
+      expect(
+        await screen.findByText("「テスト」に一致する投稿が見つかりませんでした。"),
+      ).toBeInTheDocument();
+    });
+
+    it("何も入力せず Enter を押すと /search の案内テキストが表示される", async () => {
+      stubFetch(true);
+      renderApp("/");
+
+      const input = await screen.findByRole("searchbox", { name: /投稿を検索/ });
+      await userEvent.click(input);
+      await userEvent.keyboard("{Enter}");
+
+      expect(
+        await screen.findByText("キーワードを入力して投稿を検索できます。"),
+      ).toBeInTheDocument();
+    });
+
+    it("/search?q=foo を開いた状態でヘッダー検索欄の初期値が foo になっている", async () => {
+      stubFetch(true);
+      renderApp("/search?q=foo");
+
+      const input = await screen.findByRole<HTMLInputElement>("searchbox", { name: /投稿を検索/ });
+      expect(input.value).toBe("foo");
+    });
+
+    // 未送信の編集中に別ページへ遷移しても、ヘッダーは常設（アンマウントされない）ため
+    // ルートの q 変化に追従する effect が誤って上書きしないことを確認する。
+    it("未送信の編集中に別ページへ遷移しても入力中のテキストが保持される", async () => {
+      stubFetch(true);
+      renderApp("/search?q=foo");
+
+      const input = await screen.findByRole<HTMLInputElement>("searchbox", { name: /投稿を検索/ });
+      await userEvent.clear(input);
+      await userEvent.type(input, "foobar");
+      expect(input.value).toBe("foobar");
+
+      const homeLink = await screen.findByRole("link", { name: /ホーム/ });
+      await userEvent.click(homeLink);
+
+      await screen.findByRole("heading", { name: /ホームフィード/ });
+      expect(input.value).toBe("foobar");
+    });
+
+    // @tanstack/react-form の isDirty は一度編集すると reset() するまで true のまま残る
+    // 「一度きりのフラグ」であり、これをそのまま追従判定に使うと、入力を打ち消して既定値に
+    // 戻した後も「編集中」とみなされ続け、以後 q が変わっても二度と追従しなくなってしまう。
+    // ライブなフィールド値比較で判定していることを確認する。
+    it("入力を打ち消して既定値へ戻した後は、別ページ経由の q 変化に追従して更新される", async () => {
+      stubFetch(true);
+      const { router } = renderApp("/");
+
+      const input = await screen.findByRole<HTMLInputElement>("searchbox", { name: /投稿を検索/ });
+      await userEvent.type(input, "cats");
+      await userEvent.clear(input);
+      expect(input.value).toBe("");
+
+      await router.navigate({ to: "/search", search: { q: "cats" } });
+
+      await waitFor(() => {
+        expect(input.value).toBe("cats");
+      });
+    });
+
+    // `/search` 以外のルートは validateSearch を持たず未知の search param を素通りさせるため、
+    // 偶然 URL に `q` が含まれていてもヘッダー検索欄には無関係な文字列を出さないことを確認する。
+    it("/search 以外のページの URL に q が含まれていてもヘッダー検索欄には反映されない", async () => {
+      stubFetch(true);
+      renderApp("/ranking?q=leftover");
+
+      const input = await screen.findByRole<HTMLInputElement>("searchbox", { name: /投稿を検索/ });
+      expect(input.value).toBe("");
     });
   });
 });

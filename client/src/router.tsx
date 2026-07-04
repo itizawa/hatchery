@@ -66,6 +66,7 @@ const LazyPostThreadScene = lazyRouteComponent(
 const LazyLandingScene = lazyRouteComponent(() => import("./routes/LandingScene"), "LandingScene");
 const LazySettingsScene = lazyRouteComponent(() => import("./routes/SettingsScene"), "SettingsScene");
 const LazyAccountScene = lazyRouteComponent(() => import("./routes/AccountScene"), "AccountScene");
+const LazyAboutScene = lazyRouteComponent(() => import("./routes/AboutScene"), "AboutScene");
 const LazyTermsScene = lazyRouteComponent(() => import("./routes/TermsScene"), "TermsScene");
 const LazyPrivacyScene = lazyRouteComponent(() => import("./routes/PrivacyScene"), "PrivacyScene");
 const LazyWorkerRankingScene = lazyRouteComponent(
@@ -305,6 +306,17 @@ const accountRoute = createRoute({
   },
 });
 
+/** Hatchery 紹介ページ（/about）。認証不要の公開ページ。サイドバー付きの通常シェルで描画する（#1056）。 */
+const aboutRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/about",
+  component: () => (
+    <Suspense fallback={null}>
+      <LazyAboutScene />
+    </Suspense>
+  ),
+});
+
 /** 利用規約ページ（/terms）。認証不要の公開ページ。サイドバー付きの通常シェルで描画する（#484）。 */
 const termsRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -412,6 +424,7 @@ const routeTree = rootRoute.addChildren([
   adminCommunityNewRoute,
   adminCommunityEditRoute,
   accountRoute,
+  aboutRoute,
   termsRoute,
   privacyRoute,
   rankingRoute,

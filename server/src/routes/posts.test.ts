@@ -587,3 +587,41 @@ describe("GET /api/posts/:postId my_vote 付与（#831）", () => {
     expect(res.body.comments[0]).not.toHaveProperty("my_vote");
   });
 });
+
+describe("GET /api/posts/search author_worker 付与（#1058）", () => {
+  it("author が解決可能なワーカーのとき、検索結果に author_worker が付与される", async () => {
+    const postRepo = createInMemoryPostRepository();
+    await postRepo.createMany("community-1", [
+      { slotKey: "2026-06-10T09:00", seq: 0, author: "haru", title: "ライドシェアの話", text: "本文" },
+    ]);
+    const workerRepo = createInMemoryWorkerRepository([
+      { id: "uuid-haru", displayName: "haru", role: null, personality: null, imageUrl: "https://example.com/haru.png" },
+    ]);
+
+    const deps = await createTestDeps({ postRepository: postRepo, workerRepository: workerRepo });
+    const app = createApp(deps);
+
+    const res = await request(app).get("/api/posts/search").query({ q: "ライドシェア" });
+    expect(res.status).toBe(200);
+    expect(res.body[0].author_worker).toEqual({
+      id: "uuid-haru",
+      display_name: "haru",
+      image_url: "https://example.com/haru.png",
+    });
+  });
+
+  it("author が解決できないとき、author_worker を付与せず author の生文字列のまま返す", async () => {
+    const postRepo = createInMemoryPostRepository();
+    await postRepo.createMany("community-1", [
+      { slotKey: "2026-06-10T09:00", seq: 0, author: "unknown-worker-id", title: "ライドシェアの話2", text: "本文" },
+    ]);
+
+    const deps = await createTestDeps({ postRepository: postRepo });
+    const app = createApp(deps);
+
+    const res = await request(app).get("/api/posts/search").query({ q: "ライドシェア" });
+    expect(res.status).toBe(200);
+    expect(res.body[0].author).toBe("unknown-worker-id");
+    expect(res.body[0].author_worker).toBeUndefined();
+  });
+});

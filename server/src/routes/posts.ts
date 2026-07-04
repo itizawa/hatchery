@@ -8,7 +8,7 @@ import type { PostRepository } from "../persistence/postRepository.js";
 import type { ViewRepository } from "../persistence/viewRepository.js";
 import type { VoteRepository } from "../persistence/voteRepository.js";
 import type { WorkerRepository } from "../persistence/workerRepository.js";
-import { buildAuthorWorkerEnricher } from "./authorWorker.js";
+import { attachAuthorWorker, buildAuthorWorkerEnricher } from "./authorWorker.js";
 import { extractSessionId } from "./extractSessionId.js";
 import { toCommentResponse, toPostResponse } from "./postResponse.js";
 
@@ -45,7 +45,8 @@ export function createPostsRouter(
     const now = new Date();
     postRepo
       .search({ q, limit: 50, options: { now } })
-      .then((posts) => res.status(200).json(posts.map(toPostResponse)))
+      .then((posts) => attachAuthorWorker(posts, workerRepo))
+      .then((enriched) => res.status(200).json(enriched.map(toPostResponse)))
       .catch(next);
   });
 

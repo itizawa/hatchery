@@ -145,6 +145,21 @@ export function createPrismaWorkerRepository(prisma: PrismaClient): WorkerReposi
       }
     },
 
+    async clearImageUrl(id: string): Promise<WorkerRecord | null> {
+      try {
+        const row = await prisma.worker.update({
+          where: { id },
+          data: { imageUrl: null },
+        });
+        return toRecord(row);
+      } catch (err) {
+        if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025") {
+          return null;
+        }
+        throw err;
+      }
+    },
+
     async create(input: CreateWorkerInput): Promise<WorkerRecord> {
       const row = await prisma.worker.create({
         data: {

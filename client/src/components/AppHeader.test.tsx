@@ -305,14 +305,14 @@ describe("AppHeader", () => {
       stubFetch(true);
       renderApp("/");
 
-      expect(await screen.findByRole("textbox", { name: /投稿を検索/ })).toBeInTheDocument();
+      expect(await screen.findByRole("searchbox", { name: /投稿を検索/ })).toBeInTheDocument();
     });
 
     it("キーワードを入力して Enter を押すと検索結果ページへ遷移する", async () => {
       stubFetch(true);
       renderApp("/");
 
-      const input = await screen.findByRole("textbox", { name: /投稿を検索/ });
+      const input = await screen.findByRole("searchbox", { name: /投稿を検索/ });
       await userEvent.type(input, "テスト{Enter}");
 
       expect(
@@ -324,7 +324,7 @@ describe("AppHeader", () => {
       stubFetch(true);
       renderApp("/");
 
-      const input = await screen.findByRole("textbox", { name: /投稿を検索/ });
+      const input = await screen.findByRole("searchbox", { name: /投稿を検索/ });
       await userEvent.click(input);
       await userEvent.keyboard("{Enter}");
 
@@ -337,8 +337,26 @@ describe("AppHeader", () => {
       stubFetch(true);
       renderApp("/search?q=foo");
 
-      const input = await screen.findByRole<HTMLInputElement>("textbox", { name: /投稿を検索/ });
+      const input = await screen.findByRole<HTMLInputElement>("searchbox", { name: /投稿を検索/ });
       expect(input.value).toBe("foo");
+    });
+
+    // 未送信の編集中に別ページへ遷移しても、ヘッダーは常設（アンマウントされない）ため
+    // ルートの q 変化に追従する effect が誤って上書きしないことを確認する。
+    it("未送信の編集中に別ページへ遷移しても入力中のテキストが保持される", async () => {
+      stubFetch(true);
+      renderApp("/search?q=foo");
+
+      const input = await screen.findByRole<HTMLInputElement>("searchbox", { name: /投稿を検索/ });
+      await userEvent.clear(input);
+      await userEvent.type(input, "foobar");
+      expect(input.value).toBe("foobar");
+
+      const homeLink = await screen.findByRole("link", { name: /ホーム/ });
+      await userEvent.click(homeLink);
+
+      await screen.findByRole("heading", { name: /ホームフィード/ });
+      expect(input.value).toBe("foobar");
     });
   });
 });

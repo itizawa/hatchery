@@ -14,13 +14,13 @@ import {
   TextField,
 } from "./uiParts";
 
-import { useForm } from "@tanstack/react-form";
-import { Link as RouterLink, useNavigate, useSearch } from "@tanstack/react-router";
-import { type ReactElement, useEffect, useState } from "react";
+import { Link as RouterLink, useNavigate } from "@tanstack/react-router";
+import { type ReactElement, useState } from "react";
 
 import { useAuth, useLogout } from "../api/auth.js";
 import { useLoginModal } from "../hooks/useLoginModal.js";
 import { useInstallPrompt } from "../hooks/useInstallPrompt.js";
+import { useSearchQueryForm } from "../hooks/useSearchQueryForm.js";
 import { QueryBoundary } from "./QueryBoundary.js";
 import { SLACK_COLORS } from "../theme.js";
 
@@ -155,21 +155,7 @@ const AppHeaderAuthSection = (): ReactElement => {
  * 現在の `q` を初期値として表示する。
  */
 const HeaderSearchField = (): ReactElement => {
-  const navigate = useNavigate();
-  const { q: currentQ = "" } = useSearch({ strict: false }) as { q?: string };
-
-  const form = useForm({
-    defaultValues: { q: currentQ },
-    onSubmit: ({ value }) => {
-      const trimmed = value.q.trim();
-      void navigate({ to: "/search", search: trimmed ? { q: trimmed } : {} });
-    },
-  });
-
-  // AppHeader はルート跨ぎで再マウントされないため、/search の q が変わったら追従させる。
-  useEffect(() => {
-    void form.reset({ q: currentQ });
-  }, [currentQ]);
+  const form = useSearchQueryForm();
 
   return (
     <Box
@@ -186,6 +172,7 @@ const HeaderSearchField = (): ReactElement => {
           <TextField
             fullWidth
             size="small"
+            type="search"
             placeholder={`${HEADER_SEARCH_LABEL}...`}
             value={field.state.value}
             onChange={(e) => field.handleChange(e.target.value)}

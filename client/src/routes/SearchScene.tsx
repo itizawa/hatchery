@@ -5,12 +5,12 @@
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import { Box, CircularProgress, InputAdornment, TextField, Typography } from "../components/uiParts";
 import { Link as RouterLink, useNavigate, useSearch } from "@tanstack/react-router";
-import { useForm } from "@tanstack/react-form";
-import { type ReactElement, useEffect } from "react";
+import { type ReactElement } from "react";
 
 import { useSearchPosts } from "../api/search.js";
 import { PostCard } from "../components/PostCard.js";
 import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
+import { useSearchQueryForm } from "../hooks/useSearchQueryForm.js";
 import { SLACK_COLORS } from "../theme.js";
 
 /** 検索結果一覧。q が空のとき・ヒット 0 件のとき・読込中・エラーの各状態を表示する。 */
@@ -79,24 +79,10 @@ const SearchResults = ({ q }: { q: string }): ReactElement => {
 /** 投稿全文検索ページ（/search）。 */
 export const SearchScene = (): ReactElement => {
   const { q: currentQ = "" } = useSearch({ from: "/search" });
-  const navigate = useNavigate();
 
   useDocumentTitle(currentQ ? `「${currentQ}」の検索結果 - Hatchery` : "投稿を検索 - Hatchery");
 
-  const form = useForm({
-    defaultValues: { q: currentQ },
-    onSubmit: ({ value }) => {
-      const trimmed = value.q.trim();
-      void navigate({ to: "/search", search: trimmed ? { q: trimmed } : {} });
-    },
-  });
-
-  // TanStack Router does not remount on search-param-only transitions, so defaultValues
-  // captured at mount become stale after browser back/forward. Reset the form whenever
-  // the URL param changes.
-  useEffect(() => {
-    void form.reset({ q: currentQ });
-  }, [currentQ]);
+  const form = useSearchQueryForm();
 
   return (
     <Box sx={{ maxWidth: 720, mx: "auto", px: 2, py: 3 }}>
@@ -117,6 +103,7 @@ export const SearchScene = (): ReactElement => {
           {(field) => (
             <TextField
               fullWidth
+              type="search"
               placeholder="キーワードを入力..."
               value={field.state.value}
               onChange={(e) => field.handleChange(e.target.value)}

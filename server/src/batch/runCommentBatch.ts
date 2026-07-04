@@ -120,9 +120,13 @@ async function processCommunityComments({
     id: post.id,
     title: post.title,
     text: post.text,
+    authorId: post.author,
     commentCount: calcCommentCount(post.score),
     existingComments: [],
   }));
+
+  // ref -> 投稿者ワーカーID（自己返信除外・#1069）。
+  const targetPostAuthorByRef = new Map(targetPosts.map((p) => [p.ref, p.authorId]));
 
   const { prompt, postRefMap } = buildCommentBatchPrompt({
     community,
@@ -208,8 +212,26 @@ async function processCommunityComments({
     if (!targetPostId) continue;
     if (postOutput.comments.length === 0) continue;
 
+    // 投稿者自身のコメントを除外する（自己返信禁止・#1069）。元のインデックスは reply_to 解決のため保持する。
+    const postAuthorId = targetPostAuthorByRef.get(postOutput.ref);
+    const filteredEntries = postOutput.comments
+      // eslint-disable-next-line max-params
+      .map((comment, originalIndex) => ({ comment, originalIndex }))
+      .filter(({ comment }) => {
+        if (comment.author === postAuthorId) {
+          logBatchInfo("comment_batch.self_reply_excluded", {
+            communityId: community.id,
+            postId: targetPostId,
+          });
+          return false;
+        }
+        return true;
+      });
+
+    if (filteredEntries.length === 0) continue;
+
     // 1st pass: parentCommentId=null で全コメントを作成。
-    const commentInputs = postOutput.comments.map((comment) => {
+    const commentInputs = filteredEntries.map(({ comment }) => {
       const createdAt = dripTimestamps[dripIdx] ?? new Date(now.getTime() + dripIdx * 1000);
       dripIdx++;
       return {
@@ -226,19 +248,30 @@ async function processCommunityComments({
     const createdComments = await deps.commentRepo.createMany(community.id, commentInputs);
     savedComments.push(...createdComments);
 
+    // 元のインデックス -> 作成済みコメントの対応表（reply_to 解決用）。
+    const createdByOriginalIndex = new Map<number, CommentRecord>();
+    // eslint-disable-next-line max-params
+    filteredEntries.forEach(({ originalIndex }, newIdx) => {
+      const created = createdComments[newIdx];
+      if (created) createdByOriginalIndex.set(originalIndex, created);
+    });
+
     // 2nd pass: reply_to が設定されているコメントの parentCommentId を解決。
     if (deps.commentRepo.updateParentCommentId) {
-      for (let ci = 0; ci < postOutput.comments.length; ci++) {
-        const genComment = postOutput.comments[ci];
-        const createdComment = createdComments[ci];
-        if (!genComment || !createdComment) continue;
+      for (const { comment: genComment, originalIndex } of filteredEntries) {
+        const createdComment = createdByOriginalIndex.get(originalIndex);
+        if (!createdComment) continue;
 
         const replyTo = genComment.reply_to ?? null;
         if (replyTo === null) continue;
-        if (replyTo < 0 || replyTo >= postOutput.comments.length || replyTo === ci) continue;
+        if (replyTo < 0 || replyTo >= postOutput.comments.length || replyTo === originalIndex) continue;
 
-        const parentCreated = createdComments[replyTo];
-        if (!parentCreated) continue;
+        const parentGenComment = postOutput.comments[replyTo];
+        const parentCreated = createdByOriginalIndex.get(replyTo);
+        if (!parentGenComment || !parentCreated) continue;
+
+        // 親コメントと同一 author への reply_to はトップレベル化する（自己返信チェーン防止・#1069）。
+        if (parentGenComment.author === genComment.author) continue;
 
         await deps.commentRepo.updateParentCommentId(createdComment.id, parentCreated.id);
         const idx = savedComments.findIndex((c) => c.id === createdComment.id);
@@ -272,7 +305,7 @@ async function processCommunityComments({
 /**
  * comment 専用の定時バッチ本体（#673）。
  *
- * 1 日 4 回起動し、全コミュニティを Promise.allSettled で並列処理する（ADR-0033 蹏襲）。
+ * 1 日 4 回起動し、全コミュニティを Promise.allSettled で並列処理する（ADR-0033 踏襲）。
  * 直近3日の post を対象に vote 重み付きコメント数を生成し、3h 窓内に createdAt を分散させる。
  */
 export async function runCommentBatch(deps: RunCommentBatchDeps): Promise<RunCommentBatchResult> {
@@ -300,7 +333,7 @@ export async function runCommentBatch(deps: RunCommentBatchDeps): Promise<RunCom
     ? deps.botWorkerProvider()
     : Promise.resolve([]);
 
-  // 全コミュニティを並列処理する（ADR-0033 蹏襲）。
+  // 全コミュニティを並列処理する（ADR-0033 踏襲）。
   const results = await Promise.allSettled(
     communities.map((community) =>
       processCommunityComments({

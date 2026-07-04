@@ -298,4 +298,47 @@ describe("AppHeader", () => {
       expect(boxShadow === "" || boxShadow === "none").toBe(true);
     });
   });
+
+  // Issue #1055: ヘッダー上で検索文字を常に入力できるようにする
+  describe("ヘッダー検索欄（#1055）", () => {
+    it("検索アイコン付きの入力欄が常に表示される", async () => {
+      stubFetch(true);
+      renderApp("/");
+
+      expect(await screen.findByRole("textbox", { name: /投稿を検索/ })).toBeInTheDocument();
+    });
+
+    it("キーワードを入力して Enter を押すと検索結果ページへ遷移する", async () => {
+      stubFetch(true);
+      renderApp("/");
+
+      const input = await screen.findByRole("textbox", { name: /投稿を検索/ });
+      await userEvent.type(input, "テスト{Enter}");
+
+      expect(
+        await screen.findByText("「テスト」に一致する投稿が見つかりませんでした。"),
+      ).toBeInTheDocument();
+    });
+
+    it("何も入力せず Enter を押すと /search の案内テキストが表示される", async () => {
+      stubFetch(true);
+      renderApp("/");
+
+      const input = await screen.findByRole("textbox", { name: /投稿を検索/ });
+      await userEvent.click(input);
+      await userEvent.keyboard("{Enter}");
+
+      expect(
+        await screen.findByText("キーワードを入力して投稿を検索できます。"),
+      ).toBeInTheDocument();
+    });
+
+    it("/search?q=foo を開いた状態でヘッダー検索欄の初期値が foo になっている", async () => {
+      stubFetch(true);
+      renderApp("/search?q=foo");
+
+      const input = await screen.findByRole<HTMLInputElement>("textbox", { name: /投稿を検索/ });
+      expect(input.value).toBe("foo");
+    });
+  });
 });

@@ -33,7 +33,7 @@ interface RootSearch {
 
 /**
  * root の search param を検証する（#454）。`login=1` / `login=true` を真として
- * ログインモーダルを開く。未指定・偶値のときは `login` を持たない（モーダルは閉じる）。
+ * ログインモーダルを開く。未指定・偉値のときは `login` を持たない（モーダルは閉じる）。
  * 他の search param（例: /admin の tab）は各ルートの validateSearch が別途検証する。
  */
 function validateRootSearch(search: Record<string, unknown>): RootSearch {

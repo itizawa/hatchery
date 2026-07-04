@@ -33,7 +33,7 @@ interface RootSearch {
 
 /**
  * root の search param を検証する（#454）。`login=1` / `login=true` を真として
- * ログインモーダルを開く。未指定・偉値のときは `login` を持たない（モーダルは閉じる）。
+ * ログインモーダルを開く。未指定・偽値のときは `login` を持たない（モーダルは閉じる）。
  * 他の search param（例: /admin の tab）は各ルートの validateSearch が別途検証する。
  */
 function validateRootSearch(search: Record<string, unknown>): RootSearch {
@@ -66,6 +66,7 @@ const LazyPostThreadScene = lazyRouteComponent(
 const LazyLandingScene = lazyRouteComponent(() => import("./routes/LandingScene"), "LandingScene");
 const LazySettingsScene = lazyRouteComponent(() => import("./routes/SettingsScene"), "SettingsScene");
 const LazyAccountScene = lazyRouteComponent(() => import("./routes/AccountScene"), "AccountScene");
+const LazyAboutScene = lazyRouteComponent(() => import("./routes/AboutScene"), "AboutScene");
 const LazyTermsScene = lazyRouteComponent(() => import("./routes/TermsScene"), "TermsScene");
 const LazyPrivacyScene = lazyRouteComponent(() => import("./routes/PrivacyScene"), "PrivacyScene");
 const LazyWorkerRankingScene = lazyRouteComponent(
@@ -137,8 +138,8 @@ function isAuthLayout(pathname: string): boolean {
 }
 
 /**
- * ログインモーダル（#454）。root の search param `login` 駆動で開閉し、
- * Root / Auth どちらのレイアウト上でも閉覧コンテキストを保ったまま重ねて表示する。
+ * ログインモーダル（#454）。root の search param `login` 駆動で開閉し、Root / Auth どちらの
+ * レイアウト上でも閉覧コンテキストを保ったまま重ねて表示する。
  */
 function LoginModalMount(): ReactElement {
   const { isOpen, closeLogin } = useLoginModal();
@@ -305,6 +306,17 @@ const accountRoute = createRoute({
   },
 });
 
+/** Hatchery 紹介ページ（/about）。認証不要の公開ページ。サイドバー付きの通常シェルで描画する（#1056）。 */
+const aboutRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/about",
+  component: () => (
+    <Suspense fallback={null}>
+      <LazyAboutScene />
+    </Suspense>
+  ),
+});
+
 /** 利用規約ページ（/terms）。認証不要の公開ページ。サイドバー付きの通常シェルで描画する（#484）。 */
 const termsRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -412,6 +424,7 @@ const routeTree = rootRoute.addChildren([
   adminCommunityNewRoute,
   adminCommunityEditRoute,
   accountRoute,
+  aboutRoute,
   termsRoute,
   privacyRoute,
   rankingRoute,
@@ -424,7 +437,7 @@ export interface CreateAppRouterOptions {
 }
 
 /**
- * アプリのルータを生成する。history を差替え可能にしてテスト（memory history）から利用する。
+ * アプリのルータを生成する。history を差替可能にしてテスト（memory history）から利用する。
  */
 export const createAppRouter = (options: CreateAppRouterOptions = {}) =>
   createRouter({

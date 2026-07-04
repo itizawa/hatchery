@@ -13,19 +13,8 @@ import { isDeadBoringAvatarsWorkerImageUrl } from "@hatchery/common";
 import { PrismaClient } from "@prisma/client";
 import { pathToFileURL } from "node:url";
 
-/** Worker の id と imageUrl のみを持つ行（クリーンアップ対象判定に必要な最小情報）。 */
-export interface WorkerAvatarRow {
-  id: string;
-  imageUrl: string | null;
-}
-
-/** クリーンアップ処理が必要とする DB アクセスの狭いインターフェース（テスト時にモック注入可能にする）。 */
-export interface WorkerAvatarCleanupClient {
-  /** imageUrl が設定済みの Worker を id/imageUrl のみ取得する。 */
-  findWorkersWithImageUrl(): Promise<WorkerAvatarRow[]>;
-  /** 指定した id の Worker の imageUrl を null に更新し、更新件数を返す。 */
-  clearImageUrl(ids: string[]): Promise<number>;
-}
+import { createPrismaWorkerRepository } from "../persistence/prismaWorkerRepository.js";
+import type { WorkerRepository } from "../persistence/workerRepository.js";
 
 /** クリーンアップ結果。 */
 export interface CleanupResult {
@@ -35,41 +24,24 @@ export interface CleanupResult {
 
 /**
  * 死んだ boringavatars URL を持つ Worker を抽出し imageUrl を null に更新するコアロジック。
- * DB アクセスを client に委譲しているため DB 接続なしでテストできる。
+ * DB アクセスは既存の WorkerRepository（永続化層）に委譲するため、テストは
+ * createInMemoryWorkerRepository を注入して DB 接続なしで行える。
  */
 export async function runCleanupDeadWorkerAvatarUrls(
-  client: WorkerAvatarCleanupClient,
+  workerRepository: WorkerRepository,
 ): Promise<CleanupResult> {
-  const rows = await client.findWorkersWithImageUrl();
-  const targetIds = rows
-    .filter((row) => isDeadBoringAvatarsWorkerImageUrl(row.imageUrl))
-    .map((row) => row.id);
+  const workers = await workerRepository.listAllBotWorkers();
+  const targetIds = workers
+    .filter((worker) => isDeadBoringAvatarsWorkerImageUrl(worker.imageUrl))
+    .map((worker) => worker.id);
 
-  if (targetIds.length === 0) {
-    return { updatedCount: 0, updatedIds: [] };
+  const updatedIds: string[] = [];
+  for (const id of targetIds) {
+    const updated = await workerRepository.clearImageUrl(id);
+    if (updated) updatedIds.push(id);
   }
 
-  const updatedCount = await client.clearImageUrl(targetIds);
-  return { updatedCount, updatedIds: targetIds };
-}
-
-/** 実 Prisma を使う WorkerAvatarCleanupClient を作る（本番経路）。 */
-function createPrismaWorkerAvatarCleanupClient(prisma: PrismaClient): WorkerAvatarCleanupClient {
-  return {
-    async findWorkersWithImageUrl(): Promise<WorkerAvatarRow[]> {
-      return prisma.worker.findMany({
-        where: { imageUrl: { not: null } },
-        select: { id: true, imageUrl: true },
-      });
-    },
-    async clearImageUrl(ids: string[]): Promise<number> {
-      const result = await prisma.worker.updateMany({
-        where: { id: { in: ids } },
-        data: { imageUrl: null },
-      });
-      return result.count;
-    },
-  };
+  return { updatedCount: updatedIds.length, updatedIds };
 }
 
 /**
@@ -78,8 +50,8 @@ function createPrismaWorkerAvatarCleanupClient(prisma: PrismaClient): WorkerAvat
 async function main(): Promise<void> {
   const prisma = new PrismaClient();
   try {
-    const client = createPrismaWorkerAvatarCleanupClient(prisma);
-    const result = await runCleanupDeadWorkerAvatarUrls(client);
+    const workerRepository = createPrismaWorkerRepository(prisma);
+    const result = await runCleanupDeadWorkerAvatarUrls(workerRepository);
 
     if (result.updatedCount === 0) {
       console.log("クリーンアップ対象の死んだ boringavatars URL はありませんでした。");

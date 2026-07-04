@@ -33,7 +33,7 @@ interface RootSearch {
 
 /**
  * root の search param を検証する（#454）。`login=1` / `login=true` を真として
- * ログインモーダルを開く。未指定・偽値のときは `login` を持たない（モーダルは閉じる）。
+ * ログインモーダルを開く。未指定・偶値のときは `login` を持たない（モーダルは閉じる）。
  * 他の search param（例: /admin の tab）は各ルートの validateSearch が別途検証する。
  */
 function validateRootSearch(search: Record<string, unknown>): RootSearch {
@@ -138,8 +138,8 @@ function isAuthLayout(pathname: string): boolean {
 }
 
 /**
- * ログインモーダル（#454）。root の search param `login` 駆動で開閉し、Root / Auth どちらの
- * レイアウト上でも閉覧コンテキストを保ったまま重ねて表示する。
+ * ログインモーダル（#454）。root の search param `login` 駆動で開閉し、
+ * Root / Auth どちらのレイアウト上でも閉覧コンテキストを保ったまま重ねて表示する。
  */
 function LoginModalMount(): ReactElement {
   const { isOpen, closeLogin } = useLoginModal();
@@ -437,7 +437,7 @@ export interface CreateAppRouterOptions {
 }
 
 /**
- * アプリのルータを生成する。history を差替可能にしてテスト（memory history）から利用する。
+ * アプリのルータを生成する。history を差替え可能にしてテスト（memory history）から利用する。
  */
 export const createAppRouter = (options: CreateAppRouterOptions = {}) =>
   createRouter({

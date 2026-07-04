@@ -20,7 +20,7 @@ import { type ReactElement, useState } from "react";
 import { useAuth, useLogout } from "../api/auth.js";
 import { useLoginModal } from "../hooks/useLoginModal.js";
 import { useInstallPrompt } from "../hooks/useInstallPrompt.js";
-import { useSearchQueryForm } from "../hooks/useSearchQueryForm.js";
+import { SEARCH_QUERY_MAX_LENGTH, useSearchQueryForm } from "../hooks/useSearchQueryForm.js";
 import { QueryBoundary } from "./QueryBoundary.js";
 import { SLACK_COLORS } from "../theme.js";
 
@@ -155,7 +155,7 @@ const AppHeaderAuthSection = (): ReactElement => {
  * 現在の `q` を初期値として表示する。
  */
 const HeaderSearchField = (): ReactElement => {
-  const form = useSearchQueryForm();
+  const form = useSearchQueryForm({ preserveUnsyncedEdits: true });
 
   return (
     <Box
@@ -178,7 +178,7 @@ const HeaderSearchField = (): ReactElement => {
             onChange={(e) => field.handleChange(e.target.value)}
             onBlur={field.handleBlur}
             slotProps={{
-              htmlInput: { "aria-label": HEADER_SEARCH_LABEL, maxLength: 200 },
+              htmlInput: { "aria-label": HEADER_SEARCH_LABEL, maxLength: SEARCH_QUERY_MAX_LENGTH },
               input: {
                 startAdornment: (
                   <InputAdornment position="start">

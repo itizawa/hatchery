@@ -53,11 +53,12 @@ function renderApp(initialPath: string) {
   const router = createAppRouter({
     history: createMemoryHistory({ initialEntries: [initialPath] }),
   });
-  return render(
+  const utils = render(
     <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} />
     </QueryClientProvider>,
   );
+  return { ...utils, router };
 }
 
 describe("AppHeader", () => {
@@ -357,6 +358,36 @@ describe("AppHeader", () => {
 
       await screen.findByRole("heading", { name: /ホームフィード/ });
       expect(input.value).toBe("foobar");
+    });
+
+    // @tanstack/react-form の isDirty は一度編集すると reset() するまで true のまま残る
+    // 「一度きりのフラグ」であり、これをそのまま追従判定に使うと、入力を打ち消して既定値に
+    // 戻した後も「編集中」とみなされ続け、以後 q が変わっても二度と追従しなくなってしまう。
+    // ライブなフィールド値比較で判定していることを確認する。
+    it("入力を打ち消して既定値へ戻した後は、別ページ経由の q 変化に追従して更新される", async () => {
+      stubFetch(true);
+      const { router } = renderApp("/");
+
+      const input = await screen.findByRole<HTMLInputElement>("searchbox", { name: /投稿を検索/ });
+      await userEvent.type(input, "cats");
+      await userEvent.clear(input);
+      expect(input.value).toBe("");
+
+      await router.navigate({ to: "/search", search: { q: "cats" } });
+
+      await waitFor(() => {
+        expect(input.value).toBe("cats");
+      });
+    });
+
+    // `/search` 以外のルートは validateSearch を持たず未知の search param を素通りさせるため、
+    // 偶然 URL に `q` が含まれていてもヘッダー検索欄には無関係な文字列を出さないことを確認する。
+    it("/search 以外のページの URL に q が含まれていてもヘッダー検索欄には反映されない", async () => {
+      stubFetch(true);
+      renderApp("/ranking?q=leftover");
+
+      const input = await screen.findByRole<HTMLInputElement>("searchbox", { name: /投稿を検索/ });
+      expect(input.value).toBe("");
     });
   });
 });

@@ -52,3 +52,16 @@
 
 - pill 形状の `borderRadius` はデザインシステムの角丸上限（16px 未満）から逸脱する。Issue 添付画像との一致を優先した意図的な例外として扱う。
 - モバイル幅では検索欄がロゴ・右端スロットと同居するため `flex: 1, minWidth: 0` で縮小可能にし、極端な狭幅でも他要素を圧迫しないようにする。専用のモバイルレイアウトテストは追加しない（既存のヘッダー高さ固定テストの範囲でカバー）。
+
+## 8. セルフレビュー反映（`useSearchQueryForm` の同期ロジック修正）
+
+`/code-review` セルフレビューで、`SearchScene.tsx` の検索フォームを共通化した際に導入した `useSearchQueryForm.ts` の URL 追従ロジックに、実際に発生しうる 2 件の不具合が見つかったため修正した。
+
+1. **`isDirty` が「一度きりのフラグ」であることに起因する恒久的な同期停止**: `@tanstack/react-form` の `isDirty` は、一度でも編集すると `reset()` するまで `true` のまま残る（値を defaultValues と同じに戻しても `false` には戻らない）。これをそのまま「未送信の編集がある」の判定に使うと、ヘッダー検索欄で一度でも入力→削除（未送信のまま放棄）すると、以後どのページで `q` の値が変わっても二度と追従しなくなる。
+   - **修正**: `isDirty` に頼らず、直前に同期した値を `useRef` で保持し、現在のフィールド値と比較するライブな判定に変更した。
+2. **`SearchScene` 自身への同期ガードの誤爆**: ヘッダー用に追加した「未送信の編集中は URL 変化を無視する」ガードを `SearchScene` にもそのまま適用すると、`/search` ページ自身で未送信の編集中にブラウザの戻る/進む（`q` のみが変わる遷移。TanStack Router はコンポーネントを再マウントしない）をすると、表示中の検索結果は新しい `q` に切り替わるのに入力欄だけ古いテキストのまま残り、入力欄と結果が食い違う。
+   - **修正**: `useSearchQueryForm` に `preserveUnsyncedEdits`（既定 `false`）を追加し、`AppHeader` は `true`（編集を保持）、`SearchScene` は既定の `false`（常に `q` に追従してリセット。旧 `SearchScene` の挙動を維持）を渡す形に分離した。
+3. **`/search` 以外のページでの `q` 漏れ**: `useSearch({ strict: false })` は現在マッチしているルートの search をそのまま返すため、`validateSearch` を持たないルート（`/`, `/communities/$slug`, `/ranking` 等）では URL にたまたま含まれる `q` がそのまま漏れてくる可能性がある。
+   - **修正**: `useLocation()` の `pathname` が `/search` のときだけ `q` を読み、それ以外のページでは常に空文字列を使うようにした。
+
+いずれも `client/src/components/AppHeader.test.tsx`（回帰テスト2件追加）と新設 `client/src/routes/SearchScene.test.tsx` でカバーする。

@@ -10,7 +10,7 @@ import { type ReactElement } from "react";
 import { useSearchPosts } from "../api/search.js";
 import { PostCard } from "../components/PostCard.js";
 import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
-import { useSearchQueryForm } from "../hooks/useSearchQueryForm.js";
+import { SEARCH_QUERY_MAX_LENGTH, useSearchQueryForm } from "../hooks/useSearchQueryForm.js";
 import { SLACK_COLORS } from "../theme.js";
 
 /** 検索結果一覧。q が空のとき・ヒット 0 件のとき・読込中・エラーの各状態を表示する。 */
@@ -109,7 +109,7 @@ export const SearchScene = (): ReactElement => {
               onChange={(e) => field.handleChange(e.target.value)}
               onBlur={field.handleBlur}
               slotProps={{
-                htmlInput: { maxLength: 200 },
+                htmlInput: { maxLength: SEARCH_QUERY_MAX_LENGTH },
                 input: {
                   startAdornment: (
                     <InputAdornment position="start">

@@ -39,7 +39,7 @@ describe("WorkerSchema (A-1 / A-2)", () => {
     expect(WorkerSchema.safeParse({ id: "haru", displayName: "" }).success).toBe(false);
   });
 
-  // #331: ADR-0020 後処理。Worker は AI 投稿者のみとなり isBot 概念を撑廃した。
+  // #331: ADR-0020 後処理。Worker は AI 投稿者のみとなり isBot 概念を撤廃した。
   it("isBot フィールドを持たない（#331）", () => {
     const parsed = WorkerSchema.parse({ id: "haru", displayName: "haru" });
     expect(parsed).not.toHaveProperty("isBot");
@@ -224,29 +224,29 @@ describe("CreateWorkerSchema (#217)", () => {
   });
 
   it("role を省略しても parse 成功する（任意フィールド）", () => {
-    expect(CreateWorkerSchema.safeParse({ displayName: "ワーカーア" }).success).toBe(true);
+    expect(CreateWorkerSchema.safeParse({ displayName: "ワーカーA" }).success).toBe(true);
   });
 
   it("role を指定すると反映される", () => {
-    const result = CreateWorkerSchema.safeParse({ displayName: "ワーカーア", role: "エンジニア" });
+    const result = CreateWorkerSchema.safeParse({ displayName: "ワーカーA", role: "エンジニア" });
     expect(result.success).toBe(true);
     if (result.success) expect(result.data.role).toBe("エンジニア");
   });
 
   it("role が WORKER_ROLE_MAX_LENGTH + 1 文字なら invalid", () => {
-    expect(CreateWorkerSchema.safeParse({ displayName: "ワーカーア", role: "a".repeat(WORKER_ROLE_MAX_LENGTH + 1) }).success).toBe(false);
+    expect(CreateWorkerSchema.safeParse({ displayName: "ワーカーA", role: "a".repeat(WORKER_ROLE_MAX_LENGTH + 1) }).success).toBe(false);
   });
 
   it("personality を省略しても parse 成功する（任意フィールド）", () => {
-    expect(CreateWorkerSchema.safeParse({ displayName: "ワーカーア" }).success).toBe(true);
+    expect(CreateWorkerSchema.safeParse({ displayName: "ワーカーA" }).success).toBe(true);
   });
 
   it("personality が WORKER_PERSONALITY_MAX_LENGTH 文字ちょうどなら valid (#592)", () => {
-    expect(CreateWorkerSchema.safeParse({ displayName: "ワーカーア", personality: "a".repeat(WORKER_PERSONALITY_MAX_LENGTH) }).success).toBe(true);
+    expect(CreateWorkerSchema.safeParse({ displayName: "ワーカーA", personality: "a".repeat(WORKER_PERSONALITY_MAX_LENGTH) }).success).toBe(true);
   });
 
   it("personality が WORKER_PERSONALITY_MAX_LENGTH + 1 文字なら invalid (#592)", () => {
-    expect(CreateWorkerSchema.safeParse({ displayName: "ワーカーア", personality: "a".repeat(WORKER_PERSONALITY_MAX_LENGTH + 1) }).success).toBe(false);
+    expect(CreateWorkerSchema.safeParse({ displayName: "ワーカーA", personality: "a".repeat(WORKER_PERSONALITY_MAX_LENGTH + 1) }).success).toBe(false);
   });
 });
 
@@ -281,7 +281,7 @@ describe("resolveWorkerImageUrl (#1015)", () => {
     );
   });
 
-  it("imageUrl が null のとき null を返す（URL を捕造しない・#1015）", () => {
+  it("imageUrl が null のとき null を返す（URL を捏造しない・#1015）", () => {
     expect(resolveWorkerImageUrl({ imageUrl: null })).toBeNull();
   });
 
@@ -409,17 +409,17 @@ describe("UpdateWorkerSchema: verbosity フィールド (#625)", () => {
 
 describe("CreateWorkerSchema: verbosity フィールド (#625)", () => {
   it("verbosity を省略しても parse 成功する（任意）", () => {
-    expect(CreateWorkerSchema.safeParse({ displayName: "ワーカーア" }).success).toBe(true);
+    expect(CreateWorkerSchema.safeParse({ displayName: "ワーカーA" }).success).toBe(true);
   });
 
   it("verbosity に concise / standard / detailed を指定すると valid", () => {
-    expect(CreateWorkerSchema.safeParse({ displayName: "ワーカーア", verbosity: "concise" }).success).toBe(true);
-    expect(CreateWorkerSchema.safeParse({ displayName: "ワーカーア", verbosity: "standard" }).success).toBe(true);
-    expect(CreateWorkerSchema.safeParse({ displayName: "ワーカーア", verbosity: "detailed" }).success).toBe(true);
+    expect(CreateWorkerSchema.safeParse({ displayName: "ワーカーA", verbosity: "concise" }).success).toBe(true);
+    expect(CreateWorkerSchema.safeParse({ displayName: "ワーカーA", verbosity: "standard" }).success).toBe(true);
+    expect(CreateWorkerSchema.safeParse({ displayName: "ワーカーA", verbosity: "detailed" }).success).toBe(true);
   });
 
   it("verbosity に未知値を指定すると invalid", () => {
-    expect(CreateWorkerSchema.safeParse({ displayName: "ワーカーア", verbosity: "unknown" }).success).toBe(false);
+    expect(CreateWorkerSchema.safeParse({ displayName: "ワーカーA", verbosity: "unknown" }).success).toBe(false);
   });
 });
 

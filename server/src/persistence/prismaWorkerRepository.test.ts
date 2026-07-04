@@ -377,4 +377,37 @@ describe.skipIf(!DATABASE_URL)("createPrismaWorkerRepository (integration)", () 
       expect(updated?.imageUrl).toBe("https://example.com/a.png");
     });
   });
+
+  describe("clearImageUrl (#1057)", () => {
+    it("imageUrl が null になる", async () => {
+      const repo = createPrismaWorkerRepository(prisma);
+      await repo.create({ id: "w1", displayName: "A" });
+      await repo.updateImageUrl("w1", "https://source.boringavatars.com/beam/40/w1");
+
+      const updated = await repo.clearImageUrl("w1");
+
+      expect(updated?.imageUrl).toBeNull();
+      const found = await repo.findById("w1");
+      expect(found?.imageUrl).toBeNull();
+    });
+
+    it("存在しない id は null を返す", async () => {
+      const repo = createPrismaWorkerRepository(prisma);
+
+      const result = await repo.clearImageUrl("not-exists");
+
+      expect(result).toBeNull();
+    });
+
+    it("論理削除済みの worker にも反映できる（updateImageUrl と同じ現仕様）", async () => {
+      const repo = createPrismaWorkerRepository(prisma);
+      await repo.create({ id: "w1", displayName: "A" });
+      await repo.updateImageUrl("w1", "https://source.boringavatars.com/beam/40/w1");
+      await repo.softDelete("w1");
+
+      const updated = await repo.clearImageUrl("w1");
+
+      expect(updated?.imageUrl).toBeNull();
+    });
+  });
 });

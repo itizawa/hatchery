@@ -38,6 +38,7 @@ const targetPosts: TargetPostForComment[] = [
     id: "post-id-1",
     title: "テスト投稿1",
     text: "投稿本文1",
+    authorId: "worker-uuid-1",
     commentCount: 2,
     existingComments: [],
   },
@@ -46,6 +47,7 @@ const targetPosts: TargetPostForComment[] = [
     id: "post-id-2",
     title: "テスト投稿2",
     text: "投稿本文2",
+    authorId: "worker-uuid-2",
     commentCount: 3,
     existingComments: [{ author: "worker-uuid-1", text: "既存コメント" }],
   },
@@ -169,5 +171,12 @@ describe("buildCommentBatchPrompt", () => {
   it("注意事項に URL をコメント本文に含めない禁止指示が含まれる（#927）", () => {
     const { prompt } = buildCommentBatchPrompt({ community, workers, recentLog: [], targetPosts });
     expect(prompt).toMatch(/URL.*含めない|含めない.*URL/);
+  });
+
+  it("各投稿の投稿者IDと除外指示がプロンプトに含まれる（#1069）", () => {
+    const { prompt } = buildCommentBatchPrompt({ community, workers, recentLog: [], targetPosts });
+    expect(prompt).toContain("投稿者ID: worker-uuid-1");
+    expect(prompt).toContain("投稿者ID: worker-uuid-2");
+    expect(prompt).toMatch(/投稿者.*除外|除外.*投稿者/);
   });
 });

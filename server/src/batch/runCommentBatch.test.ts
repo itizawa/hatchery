@@ -25,6 +25,16 @@ const botWorker: WorkerRecord = {
   deletedAt: null,
 };
 
+/** post 作成者(botWorker)とは別のコメント担当ワーカー（#1069 の自己返信除外テスト用）。 */
+const commenterWorker: WorkerRecord = {
+  id: "worker-commenter-1",
+  displayName: "コメンター",
+  role: null,
+  personality: null,
+  imageUrl: null,
+  deletedAt: null,
+};
+
 const community1: CommunityRecord = {
   id: "community-1",
   slug: "technology",
@@ -67,9 +77,9 @@ function oldDate(daysAgo = 5): Date {
   return new Date(NOW.getTime() - daysAgo * 24 * 60 * 60 * 1000);
 }
 
-/** comment バッチ用の有効な生成出力 */
+/** comment バッチ用の有効な生成出力（デフォルト author は post 作成者(botWorker)とは別のワーカー・#1069） */
 // eslint-disable-next-line max-params
-function makeCommentOutput(ref = "ref-1", authorId = "worker-bot-1") {
+function makeCommentOutput(ref = "ref-1", authorId = "worker-commenter-1") {
   return JSON.stringify({
     topic: "テストトピック",
     posts: [
@@ -180,8 +190,11 @@ describe("runCommentBatch (#673)", () => {
         postRepo,
         commentRepo,
         workerCommunityRepo: createInMemoryWorkerCommunityRepository({
-          workers: [botWorker],
-          links: [{ workerId: botWorker.id, communityId: community1.id }],
+          workers: [botWorker, commenterWorker],
+          links: [
+            { workerId: botWorker.id, communityId: community1.id },
+            { workerId: commenterWorker.id, communityId: community1.id },
+          ],
         }),
         generate,
         anthropicApiKey: "test-key",
@@ -227,10 +240,12 @@ describe("runCommentBatch (#673)", () => {
         postRepo,
         commentRepo: createInMemoryCommentRepository(),
         workerCommunityRepo: createInMemoryWorkerCommunityRepository({
-          workers: [botWorker],
+          workers: [botWorker, commenterWorker],
           links: [
             { workerId: botWorker.id, communityId: community1.id },
+            { workerId: commenterWorker.id, communityId: community1.id },
             { workerId: botWorker.id, communityId: community2.id },
+            { workerId: commenterWorker.id, communityId: community2.id },
           ],
         }),
         generate,
@@ -314,8 +329,11 @@ describe("runCommentBatch (#673)", () => {
         postRepo,
         commentRepo,
         workerCommunityRepo: createInMemoryWorkerCommunityRepository({
-          workers: [botWorker],
-          links: [{ workerId: botWorker.id, communityId: community1.id }],
+          workers: [botWorker, commenterWorker],
+          links: [
+            { workerId: botWorker.id, communityId: community1.id },
+            { workerId: commenterWorker.id, communityId: community1.id },
+          ],
         }),
         generate,
         anthropicApiKey: "test-key",
@@ -433,10 +451,11 @@ describe("runCommentBatch (#673)", () => {
         postRepo,
         commentRepo: createInMemoryCommentRepository(),
         workerCommunityRepo: createInMemoryWorkerCommunityRepository({
-          workers: [botWorker],
+          workers: [botWorker, commenterWorker],
           links: [
             { workerId: botWorker.id, communityId: community1.id },
             { workerId: botWorker.id, communityId: community2.id },
+            { workerId: commenterWorker.id, communityId: community2.id },
           ],
         }),
         generate,
@@ -490,10 +509,11 @@ describe("runCommentBatch (#673)", () => {
         postRepo,
         commentRepo: createInMemoryCommentRepository(),
         workerCommunityRepo: createInMemoryWorkerCommunityRepository({
-          workers: [botWorker],
+          workers: [botWorker, commenterWorker],
           links: [
             { workerId: botWorker.id, communityId: community1.id },
             { workerId: botWorker.id, communityId: community2.id },
+            { workerId: commenterWorker.id, communityId: community2.id },
           ],
         }),
         batchRunLogRepository: batchRunLogRepo,
@@ -580,8 +600,11 @@ describe("runCommentBatch (#673)", () => {
         postRepo,
         commentRepo,
         workerCommunityRepo: createInMemoryWorkerCommunityRepository({
-          workers: [botWorker],
-          links: [{ workerId: botWorker.id, communityId: community1.id }],
+          workers: [botWorker, commenterWorker],
+          links: [
+            { workerId: botWorker.id, communityId: community1.id },
+            { workerId: commenterWorker.id, communityId: community1.id },
+          ],
         }),
         generate,
         anthropicApiKey: "test-key",
@@ -653,8 +676,11 @@ describe("runCommentBatch (#673)", () => {
         postRepo,
         commentRepo: createInMemoryCommentRepository(),
         workerCommunityRepo: createInMemoryWorkerCommunityRepository({
-          workers: [botWorker],
-          links: [{ workerId: botWorker.id, communityId: community1.id }],
+          workers: [botWorker, commenterWorker],
+          links: [
+            { workerId: botWorker.id, communityId: community1.id },
+            { workerId: commenterWorker.id, communityId: community1.id },
+          ],
         }),
         generate,
         anthropicApiKey: "test-key",
@@ -674,6 +700,238 @@ describe("runCommentBatch (#673)", () => {
 
     it("DEFAULT_COMMENT_DRIP_WINDOW_MS は 3 時間（10800000ms）である", () => {
       expect(DEFAULT_COMMENT_DRIP_WINDOW_MS).toBe(3 * 60 * 60 * 1000);
+    });
+  });
+
+  describe("自己返信の除外 (#1069)", () => {
+    it("投稿者自身を author とするコメントは保存されず、他の正常なコメントは保存される", async () => {
+      const postRepo = createInMemoryPostRepository();
+      const commentRepo = createInMemoryCommentRepository();
+      const [post] = await postRepo.createMany(community1.id, [
+        {
+          slotKey: "slot-self-reply",
+          seq: 0,
+          author: botWorker.id,
+          title: "投稿",
+          text: "本文",
+          createdAt: recentDate(),
+        },
+      ]);
+
+      const otherWorker: WorkerRecord = {
+        id: "worker-other",
+        displayName: "別ワーカー",
+        role: null,
+        personality: null,
+        imageUrl: null,
+        deletedAt: null,
+      };
+
+      const output = JSON.stringify({
+        topic: "テストトピック",
+        posts: [
+          {
+            ref: "ref-1",
+            comments: [
+              { author: botWorker.id, text: "投稿者本人のコメント（除外されるべき）", reply_to: null },
+              { author: otherWorker.id, text: "他ワーカーの正常なコメント", reply_to: null },
+            ],
+          },
+        ],
+      });
+      const generate = vi.fn().mockResolvedValue({ text: output });
+
+      const result = await runCommentBatch({
+        communityRepo: createInMemoryCommunityRepository([community1]),
+        postRepo,
+        commentRepo,
+        workerCommunityRepo: createInMemoryWorkerCommunityRepository({
+          workers: [botWorker, otherWorker],
+          links: [
+            { workerId: botWorker.id, communityId: community1.id },
+            { workerId: otherWorker.id, communityId: community1.id },
+          ],
+        }),
+        generate,
+        anthropicApiKey: "test-key",
+        now: NOW,
+        revivalProbability: 0,
+      });
+
+      expect(result.comments).toHaveLength(1);
+      expect(result.comments[0]?.author).toBe(otherWorker.id);
+      expect(result.comments[0]?.postId).toBe(post!.id);
+    });
+
+    it("親コメントと同一 author への reply_to はトップレベル（parentCommentId=null）として保存される", async () => {
+      const postRepo = createInMemoryPostRepository();
+      const commentRepo = createInMemoryCommentRepository();
+      await postRepo.createMany(community1.id, [
+        {
+          slotKey: "slot-self-chain",
+          seq: 0,
+          author: botWorker.id,
+          title: "投稿",
+          text: "本文",
+          createdAt: recentDate(),
+        },
+      ]);
+
+      const workerA: WorkerRecord = {
+        id: "worker-a",
+        displayName: "ワーカーA",
+        role: null,
+        personality: null,
+        imageUrl: null,
+        deletedAt: null,
+      };
+
+      // ワーカーA が自分自身の直前コメント(index 0)に reply_to している自己返信チェーン。
+      const output = JSON.stringify({
+        topic: "テストトピック",
+        posts: [
+          {
+            ref: "ref-1",
+            comments: [
+              { author: workerA.id, text: "最初のコメント", reply_to: null },
+              { author: workerA.id, text: "自分への返信（無効化されるべき）", reply_to: 0 },
+            ],
+          },
+        ],
+      });
+      const generate = vi.fn().mockResolvedValue({ text: output });
+
+      const result = await runCommentBatch({
+        communityRepo: createInMemoryCommunityRepository([community1]),
+        postRepo,
+        commentRepo,
+        workerCommunityRepo: createInMemoryWorkerCommunityRepository({
+          workers: [botWorker, workerA],
+          links: [
+            { workerId: botWorker.id, communityId: community1.id },
+            { workerId: workerA.id, communityId: community1.id },
+          ],
+        }),
+        generate,
+        anthropicApiKey: "test-key",
+        now: NOW,
+        revivalProbability: 0,
+      });
+
+      expect(result.comments).toHaveLength(2);
+      const secondComment = result.comments.find((c) => c.text === "自分への返信（無効化されるべき）");
+      expect(secondComment?.parentCommentId).toBeNull();
+    });
+
+    it("投稿者自身のコメントが除外されてインデックスがずれても、別ワーカー間の通常の reply_to は正しく解決される", async () => {
+      const postRepo = createInMemoryPostRepository();
+      const commentRepo = createInMemoryCommentRepository();
+      await postRepo.createMany(community1.id, [
+        {
+          slotKey: "slot-mixed-reply",
+          seq: 0,
+          author: botWorker.id,
+          title: "投稿",
+          text: "本文",
+          createdAt: recentDate(),
+        },
+      ]);
+
+      const workerX: WorkerRecord = {
+        id: "worker-x",
+        displayName: "ワーカーX",
+        role: null,
+        personality: null,
+        imageUrl: null,
+        deletedAt: null,
+      };
+      const workerY: WorkerRecord = {
+        id: "worker-y",
+        displayName: "ワーカーY",
+        role: null,
+        personality: null,
+        imageUrl: null,
+        deletedAt: null,
+      };
+
+      // index 0 は投稿者自身のコメント（除外される）。index 2 は index 1（workerX）への通常の reply_to。
+      // フィルタ後は index 0 が消えるため、originalIndex ベースの対応表が正しく機能しないと
+      // index 2 の reply_to が誤った相手に解決される、または解決に失敗する。
+      const output = JSON.stringify({
+        topic: "テストトピック",
+        posts: [
+          {
+            ref: "ref-1",
+            comments: [
+              { author: botWorker.id, text: "投稿者本人のコメント（除外される）", reply_to: null },
+              { author: workerX.id, text: "ワーカーXの最初のコメント", reply_to: null },
+              { author: workerY.id, text: "ワーカーYからの返信", reply_to: 1 },
+            ],
+          },
+        ],
+      });
+      const generate = vi.fn().mockResolvedValue({ text: output });
+
+      const result = await runCommentBatch({
+        communityRepo: createInMemoryCommunityRepository([community1]),
+        postRepo,
+        commentRepo,
+        workerCommunityRepo: createInMemoryWorkerCommunityRepository({
+          workers: [botWorker, workerX, workerY],
+          links: [
+            { workerId: botWorker.id, communityId: community1.id },
+            { workerId: workerX.id, communityId: community1.id },
+            { workerId: workerY.id, communityId: community1.id },
+          ],
+        }),
+        generate,
+        anthropicApiKey: "test-key",
+        now: NOW,
+        revivalProbability: 0,
+      });
+
+      expect(result.comments).toHaveLength(2);
+      const parentComment = result.comments.find((c) => c.text === "ワーカーXの最初のコメント");
+      const replyComment = result.comments.find((c) => c.text === "ワーカーYからの返信");
+      expect(parentComment?.parentCommentId).toBeNull();
+      expect(replyComment?.parentCommentId).toBe(parentComment?.id);
+    });
+
+    it("プロンプトに投稿者ワーカーIDと除外指示が含まれる", async () => {
+      const postRepo = createInMemoryPostRepository();
+      await postRepo.createMany(community1.id, [
+        {
+          slotKey: "slot-prompt-check",
+          seq: 0,
+          author: botWorker.id,
+          title: "投稿",
+          text: "本文",
+          createdAt: recentDate(),
+        },
+      ]);
+
+      let capturedPrompt = "";
+      const generate = vi.fn().mockImplementation(async (prompt: string) => {
+        capturedPrompt = prompt;
+        return { text: makeCommentOutput("ref-1") };
+      });
+
+      await runCommentBatch({
+        communityRepo: createInMemoryCommunityRepository([community1]),
+        postRepo,
+        commentRepo: createInMemoryCommentRepository(),
+        workerCommunityRepo: createInMemoryWorkerCommunityRepository({
+          workers: [botWorker],
+          links: [{ workerId: botWorker.id, communityId: community1.id }],
+        }),
+        generate,
+        anthropicApiKey: "test-key",
+        now: NOW,
+        revivalProbability: 0,
+      });
+
+      expect(capturedPrompt).toContain(botWorker.id);
+      expect(capturedPrompt).toContain("除外");
     });
   });
 
@@ -708,7 +966,7 @@ describe("runCommentBatch (#673)", () => {
       { slotKey: "s2", seq: 0, author: botWorker.id, title: "稼働中タイトル", text: "稼働中本文", createdAt: recentDate(2) },
     ]);
 
-    const generate = vi.fn().mockResolvedValue({ text: makeCommentOutput("ref-1", botWorker.id) });
+    const generate = vi.fn().mockResolvedValue({ text: makeCommentOutput("ref-1") });
     const commentRepo = createInMemoryCommentRepository();
 
     await runCommentBatch({
@@ -716,10 +974,11 @@ describe("runCommentBatch (#673)", () => {
       postRepo,
       commentRepo,
       workerCommunityRepo: createInMemoryWorkerCommunityRepository({
-        workers: [botWorker],
+        workers: [botWorker, commenterWorker],
         links: [
           { workerId: botWorker.id, communityId: pausedCommunity.id },
           { workerId: botWorker.id, communityId: activeCommunity.id },
+          { workerId: commenterWorker.id, communityId: activeCommunity.id },
         ],
       }),
       generate,

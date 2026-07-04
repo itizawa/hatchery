@@ -193,26 +193,17 @@ async function processCommunityComments({
     label: `comment_batch.${community.id}`,
   });
 
-  // コメントに drip タイムスタンプを割り当てて永続化する。
-  // eslint-disable-next-line max-params
-  const totalCommentCount = output.posts.reduce((sum, p) => sum + p.comments.length, 0);
-  const dripTimestamps = assignDripTimestamps({
-    slotAt: now,
-    windowMs: dripWindowMs,
-    count: totalCommentCount,
-    rng,
-  });
-
-  const savedComments: CommentRecord[] = [];
-  let dripIdx = 0;
-  let commentSeq = 0;
+  // 投稿者自身のコメントを post ごとに事前フィルタする（自己返信禁止・#1069）。
+  // drip タイムスタンプの総数をフィルタ後の件数で算出するため、永続化ループの前に行う。
+  // 元のインデックスは reply_to 解決のため保持する。
+  type GenComment = (typeof output.posts)[number]["comments"][number];
+  const filteredEntriesByRef = new Map<string, Array<{ comment: GenComment; originalIndex: number }>>();
+  let totalCommentCount = 0;
 
   for (const postOutput of output.posts) {
     const targetPostId = postRefMap.get(postOutput.ref);
     if (!targetPostId) continue;
-    if (postOutput.comments.length === 0) continue;
 
-    // 投稿者自身のコメントを除外する（自己返信禁止・#1069）。元のインデックスは reply_to 解決のため保持する。
     const postAuthorId = targetPostAuthorByRef.get(postOutput.ref);
     const filteredEntries = postOutput.comments
       // eslint-disable-next-line max-params
@@ -228,6 +219,27 @@ async function processCommunityComments({
         return true;
       });
 
+    filteredEntriesByRef.set(postOutput.ref, filteredEntries);
+    totalCommentCount += filteredEntries.length;
+  }
+
+  // コメントに drip タイムスタンプを割り当てて永続化する。
+  const dripTimestamps = assignDripTimestamps({
+    slotAt: now,
+    windowMs: dripWindowMs,
+    count: totalCommentCount,
+    rng,
+  });
+
+  const savedComments: CommentRecord[] = [];
+  let dripIdx = 0;
+  let commentSeq = 0;
+
+  for (const postOutput of output.posts) {
+    const targetPostId = postRefMap.get(postOutput.ref);
+    if (!targetPostId) continue;
+
+    const filteredEntries = filteredEntriesByRef.get(postOutput.ref) ?? [];
     if (filteredEntries.length === 0) continue;
 
     // 1st pass: parentCommentId=null で全コメントを作成。

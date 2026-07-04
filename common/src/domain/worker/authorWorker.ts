@@ -51,7 +51,7 @@ export function buildAuthorWorkerResolver(
     return {
       id: matched.id,
       display_name: matched.displayName,
-      image_url: resolveWorkerImageUrl({ id: matched.id, imageUrl: matched.imageUrl }),
+      image_url: resolveWorkerImageUrl({ imageUrl: matched.imageUrl }),
     };
   };
 }

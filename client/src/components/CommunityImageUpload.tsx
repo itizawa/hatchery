@@ -1,5 +1,5 @@
-import { type ReactElement } from "react";
-import { Avatar, Box, CircularProgress, Tooltip } from "./uiParts";
+import { useState, type ReactElement } from "react";
+import { Avatar, Box, CircularProgress, Tooltip, Typography } from "./uiParts";
 
 import { useUploadCommunityImage, type CommunityImageKind } from "../api/communities.js";
 import { useImageUpload, ACCEPTED_MIME } from "../hooks/useImageUpload.js";
@@ -35,11 +35,15 @@ export const CommunityImageUpload = ({
   currentImageUrl,
   onSuccess,
 }: CommunityImageUploadProps): ReactElement => {
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const upload = useUploadCommunityImage();
   const { inputRef, handleClick, handleFileChange, handleKeyDown } = useImageUpload({
     upload: (file) => upload.mutateAsync({ communityId, kind, file }),
     isPending: upload.isPending,
     onSuccess,
+    onError: (err) => {
+      setErrorMessage(err instanceof Error ? err.message : "アップロードに失敗しました");
+    },
   });
 
   const kindLabel = kind === "icon" ? "アイコン" : "カバー";
@@ -76,45 +80,51 @@ export const CommunityImageUpload = ({
     );
 
   return (
-    <Tooltip title={`クリックして${kindLabel}画像をアップロード`} placement="top">
-      <Box
-        sx={{
-          position: "relative",
-          display: kind === "icon" ? "inline-block" : "block",
-          width: kind === "cover" ? "100%" : undefined,
-          cursor: upload.isPending ? "not-allowed" : "pointer",
-        }}
-        onClick={upload.isPending ? undefined : handleClick}
-        role="button"
-        aria-label={`${name} の${kindLabel}画像をアップロード`}
-        tabIndex={0}
-        onKeyDown={handleKeyDown}
-      >
-        {preview}
-        {upload.isPending && (
-          <Box
-            sx={{
-              position: "absolute",
-              inset: 0,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <CircularProgress size={24} />
-          </Box>
-        )}
-        <input
-          ref={inputRef}
-          type="file"
-          accept={ACCEPTED_MIME}
-          style={{ display: "none" }}
-          onChange={(e) => {
-            void handleFileChange(e);
+    <>
+      <Tooltip title={`クリックして${kindLabel}画像をアップロード`} placement="top">
+        <Box
+          sx={{
+            position: "relative",
+            display: kind === "icon" ? "inline-block" : "block",
+            width: kind === "cover" ? "100%" : undefined,
+            cursor: upload.isPending ? "not-allowed" : "pointer",
           }}
-          aria-hidden="true"
-        />
-      </Box>
-    </Tooltip>
+          onClick={upload.isPending ? undefined : handleClick}
+          role="button"
+          aria-label={`${name} の${kindLabel}画像をアップロード`}
+          tabIndex={0}
+          onKeyDown={handleKeyDown}
+        >
+          {preview}
+          {upload.isPending && (
+            <Box
+              sx={{
+                position: "absolute",
+                inset: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <CircularProgress size={24} />
+            </Box>
+          )}
+          <input
+            ref={inputRef}
+            type="file"
+            accept={ACCEPTED_MIME}
+            style={{ display: "none" }}
+            onChange={(e) => {
+              setErrorMessage(null);
+              void handleFileChange(e);
+            }}
+            aria-hidden="true"
+          />
+        </Box>
+      </Tooltip>
+      {errorMessage !== null && (
+        <Typography variant="body2" color="error">{errorMessage}</Typography>
+      )}
+    </>
   );
 };

@@ -1,10 +1,10 @@
-import { Avatar, Box, Typography } from "./uiParts";
+import { Box, Typography } from "./uiParts";
 import type { ReactElement } from "react";
 import type React from "react";
 import { Link as RouterLink } from "@tanstack/react-router";
 
 import type { components } from "../api/openapi.gen.js";
-import { resolveWorkerImageUrl } from "@hatchery/common";
+import { WorkerAvatar } from "./WorkerAvatar.js";
 
 /** post / comment の発言者の表示用ワーカー情報（#479）。openapi.gen.ts の Post.author_worker と同型。 */
 export type AuthorWorker = NonNullable<components["schemas"]["Post"]["author_worker"]>;
@@ -43,13 +43,13 @@ export const AuthorByline = ({
 
   const inner = (
     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-      <Avatar
-        src={resolveWorkerImageUrl({ id: authorWorker.id, imageUrl: authorWorker.image_url })}
+      <WorkerAvatar
+        id={authorWorker.id}
+        imageUrl={authorWorker.image_url}
+        size={24}
         alt={authorWorker.display_name}
-        sx={{ width: 24, height: 24, fontSize: "0.7rem" }}
-      >
-        {authorWorker.display_name.charAt(0).toUpperCase()}
-      </Avatar>
+        displayName={authorWorker.display_name}
+      />
       <Typography variant="body2" sx={{ color: "text.secondary" }}>
         {authorWorker.display_name}
       </Typography>

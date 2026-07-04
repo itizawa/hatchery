@@ -7,6 +7,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createQueryClient } from "../queryClient.js";
 import { createAppRouter } from "../router.js";
 
+function makeLocalStorageMock() {
+  let store: Record<string, string> = {};
+  return {
+    getItem: (key: string) => store[key] ?? null,
+    // eslint-disable-next-line max-params
+    setItem: (key: string, value: string) => { store[key] = value; },
+    removeItem: (key: string) => { delete store[key]; },
+    clear: () => { store = {}; },
+    key: (index: number) => Object.keys(store)[index] ?? null,
+    get length() { return Object.keys(store).length; },
+  };
+}
+
 // eslint-disable-next-line max-params
 function jsonResponse(status: number, body?: unknown): Response {
   return new Response(body === undefined ? null : JSON.stringify(body), {
@@ -50,6 +63,10 @@ function renderApp(initialPath: string) {
 describe("AppHeader", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    // #932: vi.unstubAllGlobals() で localStorage が undefined になる場合があるため stub で確保する。
+    const lsMock = makeLocalStorageMock();
+    lsMock.setItem("hatchery_visited", "true");
+    vi.stubGlobal("localStorage", lsMock);
   });
 
   afterEach(() => {

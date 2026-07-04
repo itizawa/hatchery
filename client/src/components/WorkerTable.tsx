@@ -1,5 +1,4 @@
 import {
-  Avatar,
   Button,
   Dialog,
   DialogActions,
@@ -14,7 +13,8 @@ import {
   TableRow,
   Typography,
 } from "./uiParts";
-import { DEFAULT_WORKERS, formatWorkerDisplayName, resolveWorkerImageUrl, type Worker } from "@hatchery/common";
+import { DEFAULT_WORKERS, formatWorkerDisplayName, type Worker } from "@hatchery/common";
+import { WorkerAvatar } from "./WorkerAvatar.js";
 
 import { type ReactElement, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
@@ -106,13 +106,13 @@ export const WorkerTable = ({
               : workers.map((worker) => (
                   <TableRow key={worker.id}>
                     <TableCell>
-                      <Avatar
-                        src={resolveWorkerImageUrl({ id: worker.id, imageUrl: worker.imageUrl })}
+                      <WorkerAvatar
+                        id={worker.id}
+                        imageUrl={worker.imageUrl}
+                        size={AVATAR_SIZE}
                         alt={worker.displayName}
-                        sx={{ width: AVATAR_SIZE, height: AVATAR_SIZE }}
-                      >
-                        {worker.displayName[0]}
-                      </Avatar>
+                        displayName={worker.displayName}
+                      />
                     </TableCell>
                     <TableCell>{formatWorkerDisplayName(worker)}</TableCell>
                     <TableCell>{worker.role ?? "—"}</TableCell>

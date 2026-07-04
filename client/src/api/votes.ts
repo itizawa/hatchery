@@ -11,7 +11,7 @@ import type { VoteDirection } from "@hatchery/common";
 import { useAuth } from "./auth.js";
 import { openApiClient, unwrap } from "./client.js";
 import { postThreadQueryKey, type Post, type Comment } from "./posts.js";
-import { communityFeedQueryKey, homeFeedQueryKeyPrefix } from "./feed.js";
+import { communityFeedQueryKeyPrefix, homeFeedQueryKeyPrefix } from "./feed.js";
 
 export type { VoteDirection };
 
@@ -117,7 +117,7 @@ export function useVotePost(communitySlug?: string) {
       await Promise.all([
         queryClient.cancelQueries({ queryKey: threadKey }),
         queryClient.cancelQueries({ queryKey: homeFeedPrefix }),
-        ...(communitySlug ? [queryClient.cancelQueries({ queryKey: communityFeedQueryKey(communitySlug) })] : []),
+        ...(communitySlug ? [queryClient.cancelQueries({ queryKey: communityFeedQueryKeyPrefix(communitySlug) })] : []),
       ]);
 
       // スレッドキャッシュを楽観更新（#814 / #831）。
@@ -145,26 +145,24 @@ export function useVotePost(communitySlug?: string) {
         });
       }
 
-      // コミュニティフィードキャッシュを楽観更新（#872 / #881 infinite query 対応）。
-      const previousCommunityFeed = communitySlug
-        ? queryClient.getQueryData<InfiniteFeedData>(communityFeedQueryKey(communitySlug))
-        : undefined;
-      if (communitySlug && previousCommunityFeed) {
-        queryClient.setQueryData<InfiniteFeedData>(
-          communityFeedQueryKey(communitySlug),
-          {
-            ...previousCommunityFeed,
-            pages: previousCommunityFeed.pages.map((page) => ({
-              ...page,
-              posts: page.posts.map((p) =>
-                p.id === postId ? { ...p, ...calcOptimisticPostVote({ post: p, direction }) } : p,
-              ),
-            })),
-          },
-        );
+      // コミュニティフィードキャッシュを楽観更新（#872 / #881 / #886 全 sort 対応）。
+      const previousCommunityFeedEntries = communitySlug
+        ? queryClient.getQueriesData<InfiniteFeedData>({ queryKey: communityFeedQueryKeyPrefix(communitySlug) })
+        : [];
+      for (const [queryKey, data] of previousCommunityFeedEntries) {
+        if (!data) continue;
+        queryClient.setQueryData<InfiniteFeedData>(queryKey, {
+          ...data,
+          pages: data.pages.map((page) => ({
+            ...page,
+            posts: page.posts.map((p) =>
+              p.id === postId ? { ...p, ...calcOptimisticPostVote({ post: p, direction }) } : p,
+            ),
+          })),
+        });
       }
 
-      return { previousThread, previousHomeFeedEntries, previousCommunityFeed, postId };
+      return { previousThread, previousHomeFeedEntries, previousCommunityFeedEntries, postId };
     },
     // eslint-disable-next-line max-params
     onError: (_err, { postId }, context) => {
@@ -176,8 +174,11 @@ export function useVotePost(communitySlug?: string) {
           queryClient.setQueryData(queryKey, data);
         }
       }
-      if (communitySlug && context?.previousCommunityFeed !== undefined) {
-        queryClient.setQueryData(communityFeedQueryKey(communitySlug), context.previousCommunityFeed);
+      if (context?.previousCommunityFeedEntries) {
+        for (const [queryKey, data] of context.previousCommunityFeedEntries) {
+          if (!data) continue;
+          queryClient.setQueryData(queryKey, data);
+        }
       }
     },
     // eslint-disable-next-line max-params
@@ -209,31 +210,31 @@ export function useVotePost(communitySlug?: string) {
         });
       }
 
-      // コミュニティフィードキャッシュをサーバ確定値で更新する（#872 / #881 infinite query 対応）。
+      // コミュニティフィードキャッシュをサーバ確定値で更新する（#872 / #881 / #886 全 sort 対応）。
       if (communitySlug) {
-        const currentCommunityFeed = queryClient.getQueryData<InfiniteFeedData>(communityFeedQueryKey(communitySlug));
-        if (currentCommunityFeed) {
-          queryClient.setQueryData<InfiniteFeedData>(
-            communityFeedQueryKey(communitySlug),
-            {
-              ...currentCommunityFeed,
-              pages: currentCommunityFeed.pages.map((page) => ({
-                ...page,
-                posts: page.posts.map((p) =>
-                  p.id === postId
-                    ? { ...p, score: serverPost.score, my_vote: serverPost.my_vote ?? null }
-                    : p,
-                ),
-              })),
-            },
-          );
+        const communityFeedEntries = queryClient.getQueriesData<InfiniteFeedData>({
+          queryKey: communityFeedQueryKeyPrefix(communitySlug),
+        });
+        for (const [queryKey, data] of communityFeedEntries) {
+          if (!data) continue;
+          queryClient.setQueryData<InfiniteFeedData>(queryKey, {
+            ...data,
+            pages: data.pages.map((page) => ({
+              ...page,
+              posts: page.posts.map((p) =>
+                p.id === postId
+                  ? { ...p, score: serverPost.score, my_vote: serverPost.my_vote ?? null }
+                  : p,
+              ),
+            })),
+          });
         }
       }
     },
     onSettled: () => {
       // postThreadQueryKey・homeFeed は onSuccess で確定値を直接書き込むため invalidate しない（#853 / #872）。
       if (communitySlug) {
-        void queryClient.invalidateQueries({ queryKey: communityFeedQueryKey(communitySlug) });
+        void queryClient.invalidateQueries({ queryKey: communityFeedQueryKeyPrefix(communitySlug) });
       }
     },
   });

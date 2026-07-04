@@ -2,6 +2,7 @@ import { Box, Skeleton, Typography } from "../components/uiParts";
 import { useParams, Link as RouterLink } from "@tanstack/react-router";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeftRounded";
 import type { ReactElement } from "react";
+import type React from "react";
 import { useEffect, useMemo, useRef } from "react";
 import { buildCommentTree, type CommentTreeNode } from "@hatchery/common";
 
@@ -41,7 +42,7 @@ const SidebarColumn = ({ children }: { children: ReactElement }): ReactElement =
 
 /**
  * サイドバーローディング中のスケルトン（右カラム）。
- * #807: CommunitySidebarCard の loading prop を使い、実 UI と同一の外枠レイアウトで描画する。
+ * #807: CommunitySidebarCard の loading prop を使い、実 UI と同一の外枚レイアウトで描画する。
  * data-testid="community-sidebar-skeleton" は既存テストとの互換性のため wrapper div に付与する。
  */
 const SidebarSkeletonColumn = (): ReactElement => (
@@ -141,6 +142,7 @@ function renderCommentTree({
   pendingVoteCommentId,
   pendingVoteDirection,
   postId,
+  onWorkerClick,
 }: {
   nodes: CommentTreeNode[];
   commentMap: Map<string, Comment>;
@@ -150,6 +152,7 @@ function renderCommentTree({
   pendingVoteCommentId?: string;
   pendingVoteDirection?: VoteDirection | null;
   postId: string;
+  onWorkerClick?: (e: React.MouseEvent) => void;
 }): ReactElement[] {
   return nodes.flatMap((node) => {
     const comment = commentMap.get(node.id);
@@ -157,7 +160,7 @@ function renderCommentTree({
 
     const childElements =
       node.children.length > 0
-        ? renderCommentTree({ nodes: node.children, commentMap, onVote, commentRef, pendingVoteCommentId, pendingVoteDirection, postId })
+        ? renderCommentTree({ nodes: node.children, commentMap, onVote, commentRef, pendingVoteCommentId, pendingVoteDirection, postId, onWorkerClick })
         : null;
 
     const parentComment = comment.parent_comment_id
@@ -176,6 +179,7 @@ function renderCommentTree({
           postId={postId}
           currentVote={comment.my_vote ?? null}
           parentComment={parentComment}
+          onWorkerClick={comment.author_worker ? onWorkerClick : undefined}
           children={childElements && childElements.length > 0 ? <>{childElements}</> : null}
         />
       </div>,
@@ -266,6 +270,7 @@ export const PostThreadScene = (): ReactElement => {
             downVoteDisabled={isVotingPost && votingPostVars?.direction === "down"}
             postUrl={postUrl}
             currentVote={post.my_vote ?? null}
+            onWorkerClick={post.author_worker ? () => {} : undefined}
             onCommentClick={comments.length > 0 ? scrollToComments : undefined}
           />
 
@@ -283,6 +288,7 @@ export const PostThreadScene = (): ReactElement => {
                 pendingVoteCommentId: isVotingComment ? votingCommentVars?.commentId : undefined,
                 pendingVoteDirection: isVotingComment ? votingCommentVars?.direction : undefined,
                 postId: post.id,
+                onWorkerClick: () => {},
               })}
             </Box>
           )}

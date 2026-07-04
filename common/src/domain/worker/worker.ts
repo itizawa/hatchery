@@ -97,28 +97,18 @@ export const createDisplayNameResolver = (
   return (workerId: string): string => displayNameById.get(workerId) ?? workerId;
 };
 
-const BORING_AVATARS_BASE_URL = "https://source.boringavatars.com/beam/40";
-
-/** ワーカー ID をシードとした Boring Avatars beam スタイルのアバター URL を返す（#959）。 */
-export function generateWorkerAvatarUrl({ id }: { id: string }): string {
-  return `${BORING_AVATARS_BASE_URL}/${encodeURIComponent(id)}`;
-}
-
-/**
- * imageUrl が設定されていればそれを返し、未設定なら Boring Avatars 自動生成 URL を返す（#884）。
- * 画面表示で Avatar の src に渡す単一情報源として使う。
- */
-export function resolveWorkerImageUrl({ id, imageUrl }: { id: string; imageUrl?: string | null }): string {
-  return imageUrl ?? generateWorkerAvatarUrl({ id });
+/** imageUrl が設定されていればそれを返し、未設定なら null を返す（#1015）。 */
+export function resolveWorkerImageUrl({ imageUrl }: { imageUrl?: string | null }): string | null {
+  return imageUrl ?? null;
 }
 
 export const createAvatarUrlResolver = (
   workers: readonly Worker[] = DEFAULT_WORKERS,
-): ((workerId: string) => string | undefined) => {
+): ((workerId: string) => string | null | undefined) => {
   const workerById = new Map(workers.map((w) => [w.id, w]));
-  return (workerId: string): string | undefined => {
+  return (workerId: string): string | null | undefined => {
     const worker = workerById.get(workerId);
     if (!worker) return undefined;
-    return resolveWorkerImageUrl({ id: workerId, imageUrl: worker.imageUrl });
+    return resolveWorkerImageUrl({ imageUrl: worker.imageUrl });
   };
 };

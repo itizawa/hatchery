@@ -117,6 +117,23 @@ export interface PostRepository {
     options?: RevealFilterOptions,
   ): Promise<{ posts: PostRecord[]; nextCursor: string | null }>;
   /**
+   * community 別のカーソルページネーション（#886）。人気順（score 降順 → createdAt 降順 → id 降順）。
+   * cursor は base64(JSON{ score, createdAt: ISO文字列, id: string })。
+   * nextCursor が null の場合は末尾（追加ページなし）。
+   * options.now を渡すと `createdAt <= now` の reveal フィルタが有効になる。
+   */
+  listByCommunityPopularPaged({
+    communityId,
+    cursor,
+    limit,
+    options,
+  }: {
+    communityId: string;
+    cursor?: string;
+    limit?: number;
+    options?: RevealFilterOptions;
+  }): Promise<{ posts: PostRecord[]; nextCursor: string | null }>;
+  /**
    * community 内で直近 since 以降かつ score >= minScore の post を
    * score 降順で最大 limit 件返す（#558）。
    * 定時バッチの「人気トピック還元」プロンプト構築に使う。
@@ -140,6 +157,12 @@ export interface PostRepository {
    * limit 省略時は 20 件。now を渡すと `createdAt <= now` の reveal フィルタが有効になる。
    */
   listByAuthor(params: { authorId: string; limit?: number; now?: Date }): Promise<PostRecord[]>;
+  /**
+   * title または text に q を含む post を新着順（createdAt 降順）で返す（#751 全文検索）。
+   * limit 省略時は 50 件。options.now を渡すと `createdAt <= now` の reveal フィルタが有効になる。
+   * 大文字小文字を区別しない部分一致（ILIKE 相当）で検索する。
+   */
+  search(params: { q: string; limit?: number; options?: RevealFilterOptions }): Promise<PostRecord[]>;
 }
 
 function cloneRecord(r: PostRecord): PostRecord {
@@ -320,6 +343,55 @@ export function createInMemoryPostRepository(): PostRepository {
       const posts = hasMore ? fetched.slice(0, limit) : fetched;
       const last = posts.at(-1);
       const nextCursor = hasMore && last ? encodeCursor(last) : null;
+
+      return Promise.resolve({ posts: posts.map(cloneRecord), nextCursor });
+    },
+
+    listByCommunityPopularPaged({
+      communityId,
+      cursor,
+      limit = 20,
+      options,
+    }: {
+      communityId: string;
+      cursor?: string;
+      limit?: number;
+      options?: RevealFilterOptions;
+    }): Promise<{ posts: PostRecord[]; nextCursor: string | null }> {
+      let cursorPayload: PopularCursorPayload | null = null;
+      if (cursor !== undefined) {
+        cursorPayload = decodePopularCursor(cursor);
+        if (!cursorPayload) {
+          return Promise.reject(new Error("INVALID_CURSOR"));
+        }
+      }
+
+      const now = options?.now;
+      const sorted = [...records]
+        .filter((r) => r.communityId === communityId)
+        .filter((r) => now === undefined || r.createdAt.getTime() <= now.getTime())
+        .sort(comparePopular);
+
+      let filtered = sorted;
+      if (cursorPayload) {
+        const cursorScore = cursorPayload.score;
+        const cursorTime = new Date(cursorPayload.createdAt).getTime();
+        const cursorId = cursorPayload.id;
+        filtered = sorted.filter((r) => {
+          if (r.score < cursorScore) return true;
+          if (r.score > cursorScore) return false;
+          const rTime = r.createdAt.getTime();
+          if (rTime < cursorTime) return true;
+          if (rTime === cursorTime) return r.id < cursorId;
+          return false;
+        });
+      }
+
+      const fetched = filtered.slice(0, limit + 1);
+      const hasMore = fetched.length > limit;
+      const posts = hasMore ? fetched.slice(0, limit) : fetched;
+      const last = posts.at(-1);
+      const nextCursor = hasMore && last ? encodePopularCursor(last) : null;
 
       return Promise.resolve({ posts: posts.map(cloneRecord), nextCursor });
     },
@@ -516,6 +588,19 @@ export function createInMemoryPostRepository(): PostRepository {
     listByAuthor({ authorId, limit = 20, now }: { authorId: string; limit?: number; now?: Date }): Promise<PostRecord[]> {
       const result = records
         .filter((r) => r.author === authorId)
+        .filter((r) => now === undefined || r.createdAt.getTime() <= now.getTime())
+        // eslint-disable-next-line max-params
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+        .slice(0, limit)
+        .map(cloneRecord);
+      return Promise.resolve(result);
+    },
+
+    search({ q, limit = 50, options }: { q: string; limit?: number; options?: RevealFilterOptions }): Promise<PostRecord[]> {
+      const lower = q.toLowerCase();
+      const now = options?.now;
+      const result = records
+        .filter((r) => r.title.toLowerCase().includes(lower) || r.text.toLowerCase().includes(lower))
         .filter((r) => now === undefined || r.createdAt.getTime() <= now.getTime())
         // eslint-disable-next-line max-params
         .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())

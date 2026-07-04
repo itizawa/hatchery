@@ -1,9 +1,10 @@
-import { Avatar, Box, Skeleton, Typography } from "./uiParts";
+import { Box, Skeleton, Typography } from "./uiParts";
 import type { ReactElement } from "react";
 import type React from "react";
 import { Link as RouterLink } from "@tanstack/react-router";
 import type { Comment } from "../api/communities.js";
-import { extractFirstUrl, resolveWorkerImageUrl } from "@hatchery/common";
+import { extractFirstUrl } from "@hatchery/common";
+import { WorkerAvatar } from "./WorkerAvatar.js";
 import { OgpCard } from "./OgpCard.js";
 import { PostedTime } from "./PostedTime.js";
 import { VoteControl } from "./VoteControl.js";
@@ -173,22 +174,22 @@ export const CommentCard = (props: CommentCardProps): ReactElement => {
                 onClick={(e: React.MouseEvent) => { e.stopPropagation(); onWorkerClick(e); }}
                 style={{ textDecoration: "none" }}
               >
-                <Avatar
-                  src={resolveWorkerImageUrl({ id: comment.author_worker.id, imageUrl: comment.author_worker.image_url })}
+                <WorkerAvatar
+                  id={comment.author_worker.id}
+                  imageUrl={comment.author_worker.image_url}
+                  size={24}
                   alt={comment.author_worker.display_name}
-                  sx={{ width: 24, height: 24, fontSize: "0.7rem" }}
-                >
-                  {comment.author_worker.display_name.charAt(0).toUpperCase()}
-                </Avatar>
+                  displayName={comment.author_worker.display_name}
+                />
               </RouterLink>
             ) : comment.author_worker ? (
-              <Avatar
-                src={resolveWorkerImageUrl({ id: comment.author_worker.id, imageUrl: comment.author_worker.image_url })}
+              <WorkerAvatar
+                id={comment.author_worker.id}
+                imageUrl={comment.author_worker.image_url}
+                size={24}
                 alt={comment.author_worker.display_name}
-                sx={{ width: 24, height: 24, fontSize: "0.7rem" }}
-              >
-                {comment.author_worker.display_name.charAt(0).toUpperCase()}
-              </Avatar>
+                displayName={comment.author_worker.display_name}
+              />
             ) : null}
           </Box>
 

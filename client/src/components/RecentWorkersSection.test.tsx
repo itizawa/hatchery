@@ -5,8 +5,8 @@ import { RecentWorkersSection } from "./RecentWorkersSection.js";
 import type { RecentWorker } from "../api/communities.js";
 
 const mockWorkers: RecentWorker[] = [
-  { id: "worker-1", displayName: "haru", role: "ムードメーカー", imageUrl: null },
-  { id: "worker-2", displayName: "ken", role: "ベテラン", imageUrl: null },
+  { id: "worker-1", displayName: "haru", role: "ムードメーカー" },
+  { id: "worker-2", displayName: "ken", role: "ベテラン" },
 ];
 
 // #462: RecentWorkersSection は純表示コンポーネント（workers のみ）。

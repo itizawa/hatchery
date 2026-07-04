@@ -132,6 +132,59 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
       return { posts: posts.map(toRecord), nextCursor };
     },
 
+    async listByCommunityPopularPaged({
+      communityId,
+      cursor,
+      limit = 20,
+      options,
+    }: {
+      communityId: string;
+      cursor?: string;
+      limit?: number;
+      options?: RevealFilterOptions;
+    }): Promise<{ posts: PostRecord[]; nextCursor: string | null }> {
+      const now = options?.now;
+      let where: Prisma.PostWhereInput = {
+        communityId,
+        ...(now !== undefined ? { createdAt: { lte: now } } : {}),
+      };
+
+      if (cursor !== undefined) {
+        const payload = decodePopularCursor(cursor);
+        if (!payload) throw new Error("INVALID_CURSOR");
+        const cursorDate = new Date(payload.createdAt);
+        // keyset: score 降順 → createdAt 降順 → id 降順
+        where = {
+          ...where,
+          AND: [
+            {
+              OR: [
+                { score: { lt: payload.score } },
+                { score: { equals: payload.score }, createdAt: { lt: cursorDate } },
+                {
+                  score: { equals: payload.score },
+                  createdAt: { equals: cursorDate },
+                  id: { lt: payload.id },
+                },
+              ],
+            },
+          ],
+        };
+      }
+
+      const rows = await prisma.post.findMany({
+        where,
+        orderBy: [{ score: "desc" }, { createdAt: "desc" }, { id: "desc" }],
+        take: limit + 1,
+      });
+
+      const hasMore = rows.length > limit;
+      const posts = hasMore ? rows.slice(0, limit) : rows;
+      const nextCursor = hasMore ? encodePopularCursor(toRecord(posts[posts.length - 1]!)) : null;
+
+      return { posts: posts.map(toRecord), nextCursor };
+    },
+
     async findById(id: string): Promise<PostRecord | null> {
       const row = await prisma.post.findUnique({ where: { id } });
       return row ? toRecord(row) : null;
@@ -277,15 +330,14 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
       communityId: string,
       params: { since: Date; minScore: number; limit: number },
     ): Promise<PostRecord[]> {
-      const { since, minScore, limit } = params;
       const rows = await prisma.post.findMany({
         where: {
           communityId,
-          score: { gte: minScore },
-          createdAt: { gte: since },
+          score: { gte: params.minScore },
+          createdAt: { gte: params.since },
         },
-        orderBy: [{ score: "desc" }, { createdAt: "desc" }],
-        take: limit,
+        orderBy: [{ score: "desc" }, { createdAt: "desc" }, { id: "desc" }],
+        take: params.limit,
       });
       return rows.map(toRecord);
     },
@@ -297,7 +349,7 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
           communityId,
           createdAt: { gte: since },
         },
-        orderBy: { createdAt: "desc" },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
         take: limit,
       });
       return rows.map(toRecord);
@@ -311,7 +363,7 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
           createdAt: { lt: before },
           score: { gte: 0 },
         },
-        orderBy: [{ score: "desc" }, { createdAt: "desc" }],
+        orderBy: [{ score: "desc" }, { createdAt: "desc" }, { id: "desc" }],
         take: limit,
       });
       return rows.map(toRecord);
@@ -321,10 +373,25 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
       const rows = await prisma.post.findMany({
         where: {
           author: authorId,
-          // reveal フィルタ（#556 / #929）: now が渡された場合、createdAt > now の post を除外する。
           ...(now !== undefined ? { createdAt: { lte: now } } : {}),
         },
-        orderBy: { createdAt: "desc" },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        take: limit,
+      });
+      return rows.map(toRecord);
+    },
+
+    async search({ q, limit = 50, options }: { q: string; limit?: number; options?: RevealFilterOptions }): Promise<PostRecord[]> {
+      const now = options?.now;
+      const rows = await prisma.post.findMany({
+        where: {
+          OR: [
+            { title: { contains: q, mode: "insensitive" } },
+            { text: { contains: q, mode: "insensitive" } },
+          ],
+          ...(now !== undefined ? { createdAt: { lte: now } } : {}),
+        },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
         take: limit,
       });
       return rows.map(toRecord);

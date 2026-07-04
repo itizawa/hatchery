@@ -2119,6 +2119,20 @@
             "required": false,
             "name": "sessionId",
             "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "latest",
+                "popular"
+              ],
+              "default": "latest",
+              "description": "並び順（latest=新着順 / popular=投票数降順・デフォルト latest・#886）"
+            },
+            "required": false,
+            "name": "sort",
+            "in": "query"
           }
         ],
         "responses": {
@@ -3076,6 +3090,48 @@
           },
           "400": {
             "description": "クエリパラメータが不正（limit 超過・不正 cursor）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/posts/search": {
+      "get": {
+        "summary": "投稿を全文検索（title / text ILIKE 部分一致・最大 50 件・新着順・認証不要・#751）",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "required": true,
+            "name": "q",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ヒットした post の一覧（最大 50 件・新着順）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Post"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "q が未指定または 0 文字 / 201 文字以上",
             "content": {
               "application/json": {
                 "schema": {

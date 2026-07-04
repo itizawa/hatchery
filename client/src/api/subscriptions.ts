@@ -45,13 +45,12 @@ export async function unsubscribeCommunity(slug: string): Promise<void> {
  * GET /api/communities/{slug}/subscription — 購読状態を取得する（#421）。
  * 未認証の場合は { subscribed: false } が返る。
  */
-export async function fetchSubscriptionStatus(slug: string): Promise<{ subscribed: boolean }> {
-  const res = await fetch(`/api/communities/${encodeURIComponent(slug)}/subscription`, {
+export async function fetchSubscriptionStatus(slug: string) {
+  const result = await openApiClient.GET("/api/communities/{slug}/subscription", {
+    params: { path: { slug } },
     credentials: "include",
   });
-  if (!res.ok)
-    throw new Error(`GET /api/communities/${slug}/subscription failed: ${res.status}`);
-  return res.json() as Promise<{ subscribed: boolean }>;
+  return unwrap({ result, label: `GET /api/communities/${slug}/subscription` });
 }
 
 // ─── 未読数 API (#934) ────────────────────────────────────────────────────────────────────────

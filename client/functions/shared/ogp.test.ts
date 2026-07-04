@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 
-import { buildOgpMetaHtml, escapeHtmlAttr, isCrawler, resolveApiBase } from "./ogp";
+import { OGP_META_SELECTORS_TO_REMOVE, buildOgpMetaHtml, escapeHtmlAttr, isCrawler, resolveApiBase } from "./ogp";
 
 describe("isCrawler", () => {
   it("Twitterbot を含む UA は true", () => {
@@ -101,5 +101,24 @@ describe("buildOgpMetaHtml", () => {
     expect(html).toContain("&lt;");
     expect(html).toContain("&gt;");
     expect(html).not.toContain("<script>");
+  });
+});
+
+describe("OGP_META_SELECTORS_TO_REMOVE", () => {
+  it("buildOgpMetaHtml が生成する property/name と 1:1 対応する", () => {
+    const html = buildOgpMetaHtml({ title: "T", description: "D", url: "https://x.com" });
+
+    const generatedProps = [...html.matchAll(/property="([^"]+)"/g)].map((m) => m[1]);
+    const generatedNames = [...html.matchAll(/name="([^"]+)"/g)].map((m) => m[1]);
+
+    const selectorProps = OGP_META_SELECTORS_TO_REMOVE.filter((s) => s.includes("property=")).map(
+      (s) => s.match(/property="([^"]+)"/)?.[1] ?? "",
+    );
+    const selectorNames = OGP_META_SELECTORS_TO_REMOVE.filter((s) => s.includes("name=")).map(
+      (s) => s.match(/name="([^"]+)"/)?.[1] ?? "",
+    );
+
+    expect(selectorProps.sort()).toEqual(generatedProps.sort());
+    expect(selectorNames.sort()).toEqual(generatedNames.sort());
   });
 });

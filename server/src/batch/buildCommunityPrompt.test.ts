@@ -689,3 +689,19 @@ describe("buildCommunityPrompt: feedArticles の注入（#491 / ADR-0035）", ()
     expect(prompt).not.toContain("概要: null");
   });
 });
+
+describe("投稿タイトルへの URL 禁止指示（#1022）", () => {
+  const community = {
+    id: "c1", slug: "news", name: "ニュース", description: "ニュース系コミュニティ。",
+    generationInstruction: null, feedUrl: null, synopsis: null, lastSlotKey: null,
+    iconUrl: null, coverUrl: null, createdAt: new Date(),
+  };
+  const workers = [{ id: "w1", displayName: "alice" }];
+
+  it("注意事項に投稿タイトル（title フィールド）も URL 禁止対象であることが含まれる（#1022）", () => {
+    const { prompt } = buildCommunityPrompt({ community, workers, recentLog: [] });
+    const urlForbidLine = prompt.split("\n").find((l) => l.includes("URL") && l.includes("含めない"));
+    expect(urlForbidLine).toBeTruthy();
+    expect(urlForbidLine).toContain("title");
+  });
+});

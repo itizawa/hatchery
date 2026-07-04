@@ -1,8 +1,8 @@
-import { type ReactElement } from "react";
-import { Avatar, Box, CircularProgress, Tooltip } from "./uiParts";
+import { useState, type ReactElement } from "react";
+import { Box, CircularProgress, Tooltip, Typography } from "./uiParts";
 
-import { resolveWorkerImageUrl } from "@hatchery/common";
 import { useUploadWorkerImage } from "../api/workers.js";
+import { WorkerAvatar } from "./WorkerAvatar.js";
 import { useImageUpload, ACCEPTED_MIME } from "../hooks/useImageUpload.js";
 
 export interface WorkerImageUploadProps {
@@ -31,60 +31,67 @@ export const WorkerImageUpload = ({
   currentImageUrl,
   onSuccess,
 }: WorkerImageUploadProps): ReactElement => {
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const upload = useUploadWorkerImage();
   const { inputRef, handleClick, handleFileChange, handleKeyDown } = useImageUpload({
     upload: (file) => upload.mutateAsync({ workerId, file }),
     isPending: upload.isPending,
     onSuccess,
+    onError: (err) => {
+      setErrorMessage(err instanceof Error ? err.message : "アップロードに失敗しました");
+    },
   });
 
   return (
-    <Tooltip title="クリックして画像をアップロード" placement="top">
-      <Box
-        sx={{
-          position: "relative",
-          display: "inline-block",
-          cursor: upload.isPending ? "not-allowed" : "pointer",
-        }}
-        onClick={upload.isPending ? undefined : handleClick}
-        role="button"
-        aria-label={`${displayName} の画像をアップロード`}
-        tabIndex={0}
-        onKeyDown={handleKeyDown}
-      >
-        <Avatar
-          src={resolveWorkerImageUrl({ id: workerId, imageUrl: currentImageUrl })}
-          alt={displayName}
+    <>
+      <Tooltip title="クリックして画像をアップロード" placement="top">
+        <Box
           sx={{
-            width: AVATAR_SIZE,
-            height: AVATAR_SIZE,
-            opacity: upload.isPending ? 0.5 : 1,
+            position: "relative",
+            display: "inline-block",
+            cursor: upload.isPending ? "not-allowed" : "pointer",
           }}
+          onClick={upload.isPending ? undefined : handleClick}
+          role="button"
+          aria-label={`${displayName} の画像をアップロード`}
+          tabIndex={0}
+          onKeyDown={handleKeyDown}
         >
-          {displayName[0]}
-        </Avatar>
-        {upload.isPending && (
-          <Box
-            sx={{
-              position: "absolute",
-              inset: 0,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <CircularProgress size={24} />
+          <Box sx={{ opacity: upload.isPending ? 0.5 : 1 }}>
+            <WorkerAvatar
+              id={workerId}
+              imageUrl={currentImageUrl}
+              size={AVATAR_SIZE}
+              alt={displayName}
+              displayName={displayName}
+            />
           </Box>
-        )}
-        <input
-          ref={inputRef}
-          type="file"
-          accept={ACCEPTED_MIME}
-          style={{ display: "none" }}
-          onChange={(e) => { void handleFileChange(e); }}
-          aria-hidden="true"
-        />
-      </Box>
-    </Tooltip>
+          {upload.isPending && (
+            <Box
+              sx={{
+                position: "absolute",
+                inset: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <CircularProgress size={24} />
+            </Box>
+          )}
+          <input
+            ref={inputRef}
+            type="file"
+            accept={ACCEPTED_MIME}
+            style={{ display: "none" }}
+            onChange={(e) => { setErrorMessage(null); void handleFileChange(e); }}
+            aria-hidden="true"
+          />
+        </Box>
+      </Tooltip>
+      {errorMessage !== null && (
+        <Typography variant="body2" color="error">{errorMessage}</Typography>
+      )}
+    </>
   );
 };

@@ -4,7 +4,6 @@
  * 認証不要の公開ページ。
  */
 import {
-  Avatar,
   Box,
   Table,
   TableBody,
@@ -17,7 +16,7 @@ import {
 import EmojiEventsIcon from "@mui/icons-material/EmojiEventsRounded";
 import type { ReactElement } from "react";
 
-import { resolveWorkerImageUrl } from "@hatchery/common";
+import { WorkerAvatar } from "../components/WorkerAvatar.js";
 import { useWorkerRanking } from "../api/workers.js";
 import type { WorkerRankingItem } from "@hatchery/common";
 import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
@@ -36,13 +35,13 @@ const RankingRow = ({
     </TableCell>
     <TableCell>
       <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-        <Avatar
-          src={resolveWorkerImageUrl({ id: item.worker_id, imageUrl: item.image_url })}
+        <WorkerAvatar
+          id={item.worker_id}
+          imageUrl={item.image_url}
+          size={28}
           alt={item.display_name}
-          sx={{ width: 28, height: 28, fontSize: "0.75rem" }}
-        >
-          {item.display_name.charAt(0).toUpperCase()}
-        </Avatar>
+          displayName={item.display_name}
+        />
         <Typography variant="body2" sx={{ fontWeight: 600 }}>
           {item.display_name}
         </Typography>

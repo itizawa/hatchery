@@ -298,6 +298,80 @@ describe("GET /api/communities/:slug/feed", () => {
     const res = await request(app).get(`/api/communities/technology/feed?cursor=${invalid}`);
     expect(res.status).toBe(400);
   });
+
+  it("sort=popular で score 降順の投稿が返る（#886）", async () => {
+    const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
+    const postRepo = createInMemoryPostRepository();
+    const [p1, p2, p3] = await postRepo.createMany("community-1", [
+      { slotKey: "s", seq: 0, author: "w", title: "Low Score", text: "t" },
+      { slotKey: "s", seq: 1, author: "w", title: "High Score", text: "t" },
+      { slotKey: "s", seq: 2, author: "w", title: "Mid Score", text: "t" },
+    ]);
+    await postRepo.addScore(p1!.id, 1);
+    await postRepo.addScore(p2!.id, 10);
+    await postRepo.addScore(p3!.id, 5);
+    const deps = await createTestDeps({ communityRepository: communityRepo, postRepository: postRepo });
+    const app = createApp(deps);
+
+    const res = await request(app).get("/api/communities/technology/feed?sort=popular");
+    expect(res.status).toBe(200);
+    expect(res.body.posts.map((p: { title: string }) => p.title)).toEqual([
+      "High Score",
+      "Mid Score",
+      "Low Score",
+    ]);
+  });
+
+  it("sort=latest（明示）と sort 省略は同じ新着順で返る（#886）", async () => {
+    const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
+    const postRepo = createInMemoryPostRepository();
+    for (let i = 0; i < 3; i++) {
+      await postRepo.createMany("community-1", [
+        { slotKey: "s", seq: i, author: "w", title: `P${i}`, text: "t" },
+      ]);
+      await new Promise((r) => setTimeout(r, 2));
+    }
+    const deps = await createTestDeps({ communityRepository: communityRepo, postRepository: postRepo });
+    const app = createApp(deps);
+
+    const resLatest = await request(app).get("/api/communities/technology/feed?sort=latest");
+    const resDefault = await request(app).get("/api/communities/technology/feed");
+    expect(resLatest.status).toBe(200);
+    expect(resDefault.status).toBe(200);
+    const titles = resLatest.body.posts.map((p: { title: string }) => p.title);
+    expect(titles).toEqual(["P2", "P1", "P0"]);
+    expect(resDefault.body.posts.map((p: { title: string }) => p.title)).toEqual(titles);
+  });
+
+  it("sort=popular でページネーションできる（#886）", async () => {
+    const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
+    const postRepo = createInMemoryPostRepository();
+    const posts = await postRepo.createMany("community-1", [
+      { slotKey: "s", seq: 0, author: "w", title: "P0", text: "t" },
+      { slotKey: "s", seq: 1, author: "w", title: "P1", text: "t" },
+      { slotKey: "s", seq: 2, author: "w", title: "P2", text: "t" },
+    ]);
+    for (let i = 0; i < posts.length; i++) {
+      await postRepo.addScore(posts[i]!.id, (i + 1) * 10);
+    }
+    const deps = await createTestDeps({ communityRepository: communityRepo, postRepository: postRepo });
+    const app = createApp(deps);
+
+    const res1 = await request(app).get("/api/communities/technology/feed?sort=popular&limit=2");
+    expect(res1.status).toBe(200);
+    expect(res1.body.posts).toHaveLength(2);
+    expect(res1.body.nextCursor).not.toBeNull();
+
+    const res2 = await request(app).get(
+      `/api/communities/technology/feed?sort=popular&limit=2&cursor=${res1.body.nextCursor}`,
+    );
+    expect(res2.status).toBe(200);
+    expect(res2.body.posts).toHaveLength(1);
+    expect(res2.body.nextCursor).toBeNull();
+
+    const allTitles = [...res1.body.posts, ...res2.body.posts].map((p: { title: string }) => p.title);
+    expect(allTitles).toEqual(["P2", "P1", "P0"]);
+  });
 });
 
 describe("POST /api/communities/:slug/subscribe", () => {
@@ -665,7 +739,7 @@ describe("GET /api/communities/:slug/feed my_vote 付与（#831）", () => {
     expect(res.body.posts[0]).not.toHaveProperty("my_vote");
   });
 
-  it("sessionId 未指定のときは my_vote を含まない（後方互換）", async () => {
+  it("sessionId 未指定のときは my_vote を含まない（後方互换）", async () => {
     const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
     const postRepo = createInMemoryPostRepository();
     await postRepo.createMany("community-1", [

@@ -1,4 +1,4 @@
-import { CommentViewsRequestSchema, NotFoundError, PostViewRequestSchema, VoteRequestSchema } from "@hatchery/common";
+import { CommentViewsRequestSchema, NotFoundError, PostViewRequestSchema, SearchQuerySchema, VoteRequestSchema } from "@hatchery/common";
 import { Router } from "express";
 
 import { validateBody } from "../middleware/validateBody.js";
@@ -32,6 +32,22 @@ export function createPostsRouter(
   workerRepo: WorkerRepository,
 ): Router {
   const router = Router();
+
+  // 投稿全文検索（title / text ILIKE 部分一致・認証不要・#751）
+  // eslint-disable-next-line max-params
+  router.get("/posts/search", (req, res, next) => {
+    const parsed = SearchQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      res.status(400).json({ error: "ValidationError: q は 1〜200 文字で指定してください" });
+      return;
+    }
+    const { q } = parsed.data;
+    const now = new Date();
+    postRepo
+      .search({ q, limit: 50, options: { now } })
+      .then((posts) => res.status(200).json(posts.map(toPostResponse)))
+      .catch(next);
+  });
 
   // スレッド取得（post + comments・認証不要）
   // eslint-disable-next-line max-params

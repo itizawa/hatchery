@@ -1,21 +1,29 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
 import { WorkerImageUpload } from "./WorkerImageUpload.js";
 
 const mockMutateAsync = vi.hoisted(() => vi.fn());
+const mockIsPending = vi.hoisted(() => ({ value: false }));
 
 // uploadWorkerImage をモック
 vi.mock("../api/workers.js", () => ({
   useUploadWorkerImage: () => ({
     mutateAsync: mockMutateAsync,
-    isPending: false,
+    get isPending() {
+      return mockIsPending.value;
+    },
   }),
 }));
 
 describe("WorkerImageUpload（#204）", () => {
   beforeEach(() => {
     mockMutateAsync.mockResolvedValue({ id: "haru", imageUrl: "https://example.com/new.png" });
+    mockIsPending.value = false;
+  });
+
+  afterEach(() => {
+    mockIsPending.value = false;
   });
 
   it("currentImageUrl が null のとき boring-avatars で描画する (#1015)", () => {
@@ -87,5 +95,25 @@ describe("WorkerImageUpload（#204）", () => {
     await waitFor(() => {
       expect(screen.getByText("ネットワークエラー")).toBeInTheDocument();
     });
+  });
+
+  it("isPending=true のとき CircularProgress が表示される (#1027)", () => {
+    mockIsPending.value = true;
+    render(
+      <WorkerImageUpload workerId="haru" displayName="haru" currentImageUrl={null} />,
+    );
+    expect(screen.getByRole("progressbar")).toBeInTheDocument();
+  });
+
+  it("isPending=true のときクリックしてもファイル選択ダイアログが開かない (#1027)", () => {
+    mockIsPending.value = true;
+    const clickSpy = vi.spyOn(HTMLInputElement.prototype, "click").mockImplementation(() => undefined);
+    render(
+      <WorkerImageUpload workerId="haru" displayName="haru" currentImageUrl={null} />,
+    );
+    const button = screen.getByRole("button", { name: /haru の画像をアップロード/ });
+    fireEvent.click(button);
+    expect(clickSpy).not.toHaveBeenCalled();
+    clickSpy.mockRestore();
   });
 });

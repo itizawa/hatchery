@@ -50,11 +50,6 @@ type CommentCardProps =
        * RouterLink でラップしてプロフィールページへ遷移する。
        */
       onWorkerClick?: (e: React.MouseEvent) => void;
-      /**
-       * 返信元の親コメント（#931）。指定時は本文上部に引用プレビューを表示する。
-       * PostThreadScene の commentMap から parent_comment_id で引き当てて渡す。
-       */
-      parentComment?: Comment | null;
     };
 
 /**
@@ -94,7 +89,6 @@ export const CommentCard = (props: CommentCardProps): ReactElement => {
     hasChildren = false,
     postId,
     onWorkerClick,
-    parentComment = null,
   } = props;
 
   // コードポイント単位で文字列を切り詰める。サロゲートペア（絵文字等）の途中で切れるのを防ぐ。
@@ -102,11 +96,6 @@ export const CommentCard = (props: CommentCardProps): ReactElement => {
     const chars = [...text];
     return chars.length > limit ? chars.slice(0, limit).join("") + "…" : text;
   };
-
-  // 親コメントの引用プレビュー（#931）。text と id をまとめて返し non-null assertion を避ける。
-  const parentPreview = parentComment
-    ? { text: truncateCodePoints({ text: parentComment.text, limit: 40 }), id: parentComment.id }
-    : null;
 
   const clampedDepth = Math.min(depth, MAX_COMMENT_DEPTH);
   const indentLeft = clampedDepth * INDENT_PER_DEPTH;
@@ -220,37 +209,6 @@ export const CommentCard = (props: CommentCardProps): ReactElement => {
               )}
               <PostedTime createdAt={comment.created_at} />
             </Box>
-            {parentPreview && (
-              <Box
-                data-testid="comment-quote-preview"
-                sx={{
-                  bgcolor: "grey.100",
-                  borderLeft: "3px solid",
-                  borderColor: "grey.400",
-                  borderRadius: "0 4px 4px 0",
-                  pl: 1,
-                  py: 0.25,
-                  mb: 0.5,
-                }}
-              >
-                <Typography
-                  component="a"
-                  href={`#comment-${parentPreview.id}`}
-                  variant="caption"
-                  sx={{
-                    color: "text.secondary",
-                    textDecoration: "none",
-                    display: "block",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                    "&:hover": { textDecoration: "underline" },
-                  }}
-                >
-                  {parentPreview.text}
-                </Typography>
-              </Box>
-            )}
             <MarkdownContent content={comment.text} variant="body2" />
             {firstUrl && <OgpCard url={firstUrl} />}
             <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 0.5 }}>

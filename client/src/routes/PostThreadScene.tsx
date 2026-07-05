@@ -163,10 +163,6 @@ function renderCommentTree({
         ? renderCommentTree({ nodes: node.children, commentMap, onVote, commentRef, pendingVoteCommentId, pendingVoteDirection, postId, onWorkerClick })
         : null;
 
-    const parentComment = comment.parent_comment_id
-      ? (commentMap.get(comment.parent_comment_id) ?? null)
-      : null;
-
     return [
       <div key={comment.id} id={`comment-${comment.id}`} ref={commentRef(comment.id)}>
         <CommentCard
@@ -178,7 +174,6 @@ function renderCommentTree({
           hasChildren={node.children.length > 0}
           postId={postId}
           currentVote={comment.my_vote ?? null}
-          parentComment={parentComment}
           onWorkerClick={comment.author_worker ? onWorkerClick : undefined}
           children={childElements && childElements.length > 0 ? <>{childElements}</> : null}
         />

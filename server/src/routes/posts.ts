@@ -77,7 +77,7 @@ export function createPostsRouter(
         if (!post) {
           throw new NotFoundError("PostNotFound");
         }
-        // reveal フィルタ（#556）: createdAt <= now のコメントのみを公開する。
+        // reveal フィルタ（#556）: createdAt <= now のコメントのみ公開する。
         const now = new Date();
         return commentRepo.listByPost(postId, { now }).then(async (comments) => {
           // post と comments を 1 回のワーカー取得で付与する（重複クエリを避ける）。

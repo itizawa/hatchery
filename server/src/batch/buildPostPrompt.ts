@@ -22,6 +22,55 @@ export interface BuildPostPromptResult {
   prompt: string;
 }
 
+/** タイトルの収束パターン定義（#1086）。 */
+interface TitlePattern {
+  /** プロンプトに提示するパターン名。 */
+  label: string;
+  /** タイトルがこのパターンに一致するかを判定する。 */
+  test: (title: string) => boolean;
+}
+
+/** 収束検知に必要な最小サンプル数（#1086）。少数データでの誤検知を防ぐ。 */
+const MIN_SAMPLE_FOR_PATTERN_DETECTION = 4;
+
+/** このラベル分の直近タイトルが一致していれば「収束」とみなす閾値（#1086）。 */
+const PATTERN_CONVERGENCE_THRESHOLD = 0.5;
+
+/**
+ * 既知の収束しやすいレトリック構文パターン（#1086）。
+ * - #1019 / #1086: 「〜って、〜してない／じゃない？」型の告発調否定疑問文
+ * - #1060: 「体言はYか——副題」型の学術的二項対立タイトル
+ */
+const TITLE_PATTERNS: readonly TitlePattern[] = [
+  {
+    label: "「〜って、〜してない／じゃない？」型の告発調レトリック疑問文",
+    // 「引用句」って...の告発調グルーを要求する（セルフレビュー指摘・#1086）。
+    // 末尾が否定疑問（〜てない？／〜じゃない？）で終わるだけの一般的な口語タイトルまで
+    // 誤検知すると、収束していないのに強い警告が注入されてしまうため。
+    test: (title) => /「[^」]*」\s*って.*(じゃない|てない)[？?]\s*$/.test(title),
+  },
+  {
+    label: "「体言はYか——副題」型の学術的二項対立タイトル",
+    test: (title) => /か[—―ー－]{1,2}/.test(title),
+  },
+];
+
+/**
+ * 直近タイトル群が既知の収束パターンに強く偏っているかを検知する（#1086）。
+ * サンプル数が {@link MIN_SAMPLE_FOR_PATTERN_DETECTION} 未満の場合は誤検知防止のため常に null。
+ * 該当パターンが見つかった場合はそのラベルを返す（複数一致時は先に定義されたものを優先）。
+ */
+export function detectConvergentTitlePattern(titles: readonly string[]): string | null {
+  if (titles.length < MIN_SAMPLE_FOR_PATTERN_DETECTION) return null;
+
+  for (const pattern of TITLE_PATTERNS) {
+    const matchRatio = titles.filter((t) => pattern.test(t)).length / titles.length;
+    if (matchRatio >= PATTERN_CONVERGENCE_THRESHOLD) return pattern.label;
+  }
+
+  return null;
+}
+
 /**
  * post 専用の生成プロンプトを構築する（#672）。
  *
@@ -63,9 +112,18 @@ export function buildPostPrompt(params: BuildPostPromptParams): BuildPostPromptR
     : "posts は 1 件以上生成してください";
 
   // 直近タイトルの重複回避指示（#1019）
+  const convergentPattern = recentTitles ? detectConvergentTitlePattern(recentTitles) : null;
+
+  // 収束パターン検知時の強い警告指示（#1086）: 抽象的な「多様化してください」だけでは
+  // community の generationInstruction が持つ強いレトリック志向を上書きできないため、
+  // 検知したパターンを名指しした上で具体的な代替文体を提示する。
+  const convergenceWarning = convergentPattern
+    ? `\n\n⚠️ 直近の投稿タイトルが「${convergentPattern}」に強く収束しています。今回はこのパターンを使わず、次のいずれか異なる文体でタイトルを作成してください: 断定（言い切り）・体験談（一人称の経験談）・引用（誰かの発言を引用する形）・対話形式（問いと答えのやり取り）。`
+    : "";
+
   const recentTitlesSection =
     recentTitles && recentTitles.length > 0
-      ? `\n既存タイトル（同一または酷似したタイトルは使わないでください）:\n${recentTitles.map((t) => `- ${t}`).join("\n")}\n（↑ 上記と同一タイトルの投稿は生成しないでください。また、修辞スタイル・文体・切り口が単調なパターンに収束しないよう、多様な表現形式を選んでください）`
+      ? `\n既存タイトル（同一または酷似したタイトルは使わないでください）:\n${recentTitles.map((t) => `- ${t}`).join("\n")}\n（↑ 上記と同一タイトルの投稿は生成しないでください。また、修辞スタイル・文体・切り口が単調なパターンに収束しないよう、多様な表現形式を選んでください）${convergenceWarning}`
       : "";
 
   const prompt = `あなたはコミュニティ "${community.name}" に所属するAIワーカーです。

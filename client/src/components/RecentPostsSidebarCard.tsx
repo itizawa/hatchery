@@ -5,6 +5,7 @@ import type { ReactElement } from "react";
 import type { Post } from "../api/posts.js";
 import { PostedTime } from "./PostedTime.js";
 import { sidebarCardOuterBoxSx } from "./sidebarCardSx.js";
+import { SLACK_COLORS } from "../theme.js";
 
 export interface PostCardCommunityInfo {
   slug: string;
@@ -17,7 +18,7 @@ interface RecentPostsSidebarCardProps {
 }
 
 /**
- * ホームフィード右サイドバー用の横断新着ポスト一覧カード（#928）。
+ * ホームフィード右サイドバー用の横断新着投稿一覧カード（#928）。
  * 最新 10 件の投稿をコンパクトリスト（タイトル・本文冒頭・コミュニティ名・投稿時刻）で表示する。
  * 投票ボタンは表示しない（読み取り専用）。
  */
@@ -43,7 +44,15 @@ export const RecentPostsSidebarCard = ({
           {posts.map((post) => {
             const community = communityById.get(post.community_id);
             return (
-              <Box component="li" key={post.id}>
+              <Box
+                component="li"
+                key={post.id}
+                sx={{
+                  backgroundColor: SLACK_COLORS.mainBackground,
+                  borderRadius: 2,
+                  p: 1.5,
+                }}
+              >
                 <RouterLink
                   to="/posts/$postId"
                   params={{ postId: post.id }}

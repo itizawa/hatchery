@@ -16,10 +16,8 @@ export type Post = components["schemas"]["Post"];
  * sessionId を付与すると各 post に my_vote が付く（#1059）。
  */
 export async function fetchSearchPosts({ q, sessionId }: { q: string; sessionId?: string }): Promise<Post[]> {
-  const query: { q: string; sessionId?: string } = { q };
-  if (sessionId) query.sessionId = sessionId;
   const result = await openApiClient.GET("/api/posts/search", {
-    params: { query },
+    params: { query: sessionId ? { q, sessionId } : { q } },
     credentials: "include",
   });
   return unwrap({ result, label: "GET /api/posts/search" }) as Post[];

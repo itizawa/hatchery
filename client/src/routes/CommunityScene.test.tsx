@@ -189,21 +189,58 @@ describe("CommunityScene", () => {
     expect(screen.getByText("このコミュニティにはまだ投稿がありません。")).toBeInTheDocument();
   });
 
-  it("「新着」「人気」タブが表示される（#886）", async () => {
+  it("並べ替えボタンに現在の並び順（初期値「新着」）がラベル表示される（#1062）", async () => {
     renderScene();
     await screen.findByRole("heading", { level: 1 });
-    expect(screen.getByRole("tab", { name: "新着" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "人気" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "新着" })).toBeInTheDocument();
   });
 
-  it("デフォルトは「新着」タブが選択状態（#886）", async () => {
+  it("並べ替えボタンに aria-haspopup / aria-expanded / aria-controls が設定される（#1062）", async () => {
     renderScene();
     await screen.findByRole("heading", { level: 1 });
-    const latestTab = screen.getByRole("tab", { name: "新着" });
-    expect(latestTab).toHaveAttribute("aria-selected", "true");
+    const sortButton = screen.getByRole("button", { name: "新着" });
+    expect(sortButton).toHaveAttribute("aria-haspopup", "true");
+    expect(sortButton).toHaveAttribute("aria-expanded", "false");
+
+    await act(async () => {
+      await userEvent.click(sortButton);
+    });
+    expect(sortButton).toHaveAttribute("aria-expanded", "true");
+    expect(sortButton).toHaveAttribute("aria-controls");
   });
 
-  it("「人気」タブをクリックすると選択状態が切り替わる（#886）", async () => {
+  it("並べ替えボタンに「並べ替えオプションを開く」ツールチップが設定される（#1062）", async () => {
+    renderScene();
+    await screen.findByRole("heading", { level: 1 });
+    const sortButton = screen.getByRole("button", { name: "新着" });
+    await userEvent.hover(sortButton);
+    const tooltip = await screen.findByRole("tooltip", {}, { timeout: 5000 });
+    expect(tooltip).toHaveTextContent("並べ替えオプションを開く");
+  });
+
+  it("並べ替えボタンをクリックするとメニューが開き「新着」「人気」の2項目が表示される（#1062）", async () => {
+    renderScene();
+    await screen.findByRole("heading", { level: 1 });
+    const sortButton = screen.getByRole("button", { name: "新着" });
+    await act(async () => {
+      await userEvent.click(sortButton);
+    });
+    expect(screen.getByRole("menuitem", { name: "新着" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "人気" })).toBeInTheDocument();
+  });
+
+  it("メニューを開いた状態で現在選択中の項目（初期値「新着」）にチェックマークが表示される（#1062）", async () => {
+    renderScene();
+    await screen.findByRole("heading", { level: 1 });
+    const sortButton = screen.getByRole("button", { name: "新着" });
+    await act(async () => {
+      await userEvent.click(sortButton);
+    });
+    expect(screen.getByTestId("sort-menu-item-check-latest")).toBeInTheDocument();
+    expect(screen.queryByTestId("sort-menu-item-check-popular")).not.toBeInTheDocument();
+  });
+
+  it("メニューで「人気」を選択するとボタンラベルが「人気」に変わりフィードが再取得される（#1062）", async () => {
     server.use(
       http.get("/api/communities/:slug/feed", ({ request }) => {
         const url = new URL(request.url);
@@ -239,13 +276,17 @@ describe("CommunityScene", () => {
     );
 
     await screen.findByRole("heading", { level: 1 });
-    const popularTab = screen.getByRole("tab", { name: "人気" });
+    const sortButton = screen.getByRole("button", { name: "新着" });
     await act(async () => {
-      await userEvent.click(popularTab);
+      await userEvent.click(sortButton);
+    });
+    const popularMenuItem = screen.getByRole("menuitem", { name: "人気" });
+    await act(async () => {
+      await userEvent.click(popularMenuItem);
     });
     await waitFor(() => {
-      expect(screen.getByRole("tab", { name: "人気" })).toHaveAttribute("aria-selected", "true");
-      expect(screen.getByRole("tab", { name: "新着" })).toHaveAttribute("aria-selected", "false");
+      expect(screen.getByRole("button", { name: "人気" })).toBeInTheDocument();
+      expect(screen.queryByRole("menu")).not.toBeInTheDocument();
     });
   });
 

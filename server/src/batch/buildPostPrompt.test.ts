@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { CommunityRecord } from "../persistence/communityRepository.js";
-import { buildPostPrompt } from "./buildPostPrompt.js";
+import { buildPostPrompt, detectConvergentTitlePattern } from "./buildPostPrompt.js";
 import type { WorkerDef } from "./buildCommunityPrompt.js";
 
 const community: CommunityRecord = {
@@ -93,14 +93,14 @@ describe("タイトル重複回避・修辞多様化指示（#1019）", () => {
       community,
       workers,
       recentLog: [],
-      recentTitles: ["「努力は報われる」って呪いの言葉じゃない？"],
+      recentTitles: ["「努力は報われる」って呑いの言葉じゃない？"],
     });
     expect(prompt).toMatch(/同一.*タイトル.*使わない|タイトル.*重複.*避け|既存タイトル.*使わない/);
   });
 
   it("recentTitles に含まれる各タイトル文字列がプロンプトに明記される", () => {
-    const title1 = "「努力は報われる」って呪いの言葉じゃない？";
-    const title2 = "「やりがい」を報酬として使う組織、普通に搾取じゃない？";
+    const title1 = "「努力は報われる」って呑いの言葉じゃない？";
+    const title2 = "「やりがい」を報酬として使う組織、普通に搭取じゃない？";
     const { prompt } = buildPostPrompt({
       community,
       workers,
@@ -138,5 +138,86 @@ describe("タイトル重複回避・修辞多様化指示（#1019）", () => {
       recentTitles: ["「変化を恐れるな」って、変化のコストを誰が払うかを完全に無視してない？"],
     });
     expect(prompt).toMatch(/修辞|スタイル|パターン|文体|切り口/);
+  });
+});
+
+describe("detectConvergentTitlePattern（#1086）", () => {
+  it("「〜って、〜してない／じゃない？」型が過半数を占める場合、パターンラベルを返す", () => {
+    const titles = [
+      "「変化を恐れるな」って、変化のコストを誰が払うかを完全に無視してない？",
+      "「つながりが大事」って言葉、孤独を選んでる人間への攻撃になってない？",
+      "「好きなことで生きていける」って、選択肢がある人間の世界観を全員に押しつけてない？",
+      "「努力は報われる」って呑いの言葉じゃない？",
+    ];
+    expect(detectConvergentTitlePattern(titles)).not.toBeNull();
+  });
+
+  it("「体言はYか——副題」型が過半数を占める場合、パターンラベルを返す", () => {
+    const titles = [
+      "「嚇をつく権利」はあるか——誠実義務・自己保護・他者保護のトリレンマ",
+      "「正しい目的のための暴力」は正当化されるか——抵抗権・革命倫理・手段と目的の非対称性",
+      "「手続きは正しかった」は免罪符になるか——手続き的正義と実質的正義の緊張",
+      "「一貫性」はビジネスの正義か——属人的判断と規則適用のスピードトレードオフ",
+    ];
+    expect(detectConvergentTitlePattern(titles)).not.toBeNull();
+  });
+
+  it("タイトルが多様でどのパターンにも過半数収束していない場合 null を返す", () => {
+    const titles = [
+      "新人研修で配られた資料が5年前のまま更新されていない件",
+      "リモートワークで雑談が消えると気づいたこと",
+      "「頑張れ」しか言わない上司との一年間",
+      "定例会議の半分は要らないと思う理由",
+    ];
+    expect(detectConvergentTitlePattern(titles)).toBeNull();
+  });
+
+  it("サンプル数が閾値未満（4件未満）の場合、全件一致でも null を返す", () => {
+    const titles = [
+      "「変化を恐れるな」って、変化のコストを誰が払うかを完全に無視してない？",
+      "「つながりが大事」って言葉、孤独を選んでる人間への攻撃になってない？",
+      "「努力は報われる」って呑いの言葉じゃない？",
+    ];
+    expect(detectConvergentTitlePattern(titles)).toBeNull();
+  });
+});
+
+describe("収束パターン検知時の強い警告指示（#1086）", () => {
+  const convergentTitles = [
+    "「変化を恐れるな」って、変化のコストを誰が払うかを完全に無視してない？",
+    "「つながりが大事」って言葉、孤独を選んでる人間への攻撃になってない？",
+    "「好きなことで生きていける」って、選択肢がある人間の世界観を全員に押しつけてない？",
+    "「努力は報われる」って呑いの言葉じゃない？",
+  ];
+
+  const diverseTitles = [
+    "新人研修で配られた資料が5年前のまま更新されていない件",
+    "リモートワークで雑談が消えると気づいたこと",
+    "「頑張れ」しか言わない上司との一年間",
+    "定例会議の半分は要らないと思う理由",
+  ];
+
+  it("収束パターンが検知された場合、代替文体（断定・体験談・引用・対話形式）を求める警告がプロンプトに含まれる", () => {
+    const { prompt } = buildPostPrompt({
+      community,
+      workers,
+      recentLog: [],
+      recentTitles: convergentTitles,
+    });
+    expect(prompt).toMatch(/断定/);
+    expect(prompt).toMatch(/体験談/);
+    expect(prompt).toMatch(/引用/);
+    expect(prompt).toMatch(/対話形式/);
+  });
+
+  it("収束パターンが検知されない場合、代替文体を求める警告はプロンプトに含まれない", () => {
+    const { prompt } = buildPostPrompt({
+      community,
+      workers,
+      recentLog: [],
+      recentTitles: diverseTitles,
+    });
+    expect(prompt).not.toMatch(/断定/);
+    expect(prompt).not.toMatch(/体験談/);
   });
 });

@@ -33,7 +33,7 @@ interface TitlePattern {
 /** 収束検知に必要な最小サンプル数（#1086）。少数データでの誤検知を防ぐ。 */
 const MIN_SAMPLE_FOR_PATTERN_DETECTION = 4;
 
-/** この割合分の直近タイトルが一致していれば「収束」とみなす閾値（#1086）。 */
+/** このラベル分の直近タイトルが一致していれば「収束」とみなす閾値（#1086）。 */
 const PATTERN_CONVERGENCE_THRESHOLD = 0.5;
 
 /**
@@ -105,7 +105,7 @@ export function buildPostPrompt(params: BuildPostPromptParams): BuildPostPromptR
   const exampleWorkerId = workers[0]?.id ?? "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx";
 
   const postCountInstruction = countHints
-    ? `post を ${countHints.postCount} 件生成してください（目安であり厉密な制約ではありません）`
+    ? `post を ${countHints.postCount} 件生成してください（目安であり厳密な制約ではありません）`
     : "posts は 1 件以上生成してください";
 
   // 直近タイトルの重複回避指示（#1019）
@@ -120,7 +120,7 @@ export function buildPostPrompt(params: BuildPostPromptParams): BuildPostPromptR
 
   const recentTitlesSection =
     recentTitles && recentTitles.length > 0
-      ? `\n既存タイトル（同一または酵似したタイトルは使わないでください）:\n${recentTitles.map((t) => `- ${t}`).join("\n")}\n（↑ 上記と同一タイトルの投稿は生成しないでください。また、修辞スタイル・文体・切り口が単調なパターンに収束しないよう、多様な表現形式を選んでください）${convergenceWarning}`
+      ? `\n既存タイトル（同一または酷似したタイトルは使わないでください）:\n${recentTitles.map((t) => `- ${t}`).join("\n")}\n（↑ 上記と同一タイトルの投稿は生成しないでください。また、修辞スタイル・文体・切り口が単調なパターンに収束しないよう、多様な表現形式を選んでください）${convergenceWarning}`
       : "";
 
   const prompt = `あなたはコミュニティ "${community.name}" に所属するAIワーカーです。
@@ -162,7 +162,7 @@ ${recentLogSection}${recentTitlesSection}
 
 自己監査（出力前に必ず確認）:
 - 互いを「さん付け」で呼んでいないか（トーン規約どおりフランクな呼び方になっているか）。
-- 馴れ合い（中身のない同意・複め合い）に終始せず、率直な意見が含まれているか。
+- 馴れ合い（中身のない同意・褒め合い）に終始せず、率直な意見が含まれているか。
 - comments フィールドが [] になっているか。`;
 
   return { prompt };

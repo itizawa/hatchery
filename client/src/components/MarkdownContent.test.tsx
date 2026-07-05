@@ -100,7 +100,7 @@ const x = 1;
 
     it("見出し（# text）を見出し要素でレンダリングする", () => {
       const { container } = render(<MarkdownContent content="# 見出し1" />);
-      // h1〜 h6 いずれかの見出し要素が存在する
+      // h1〜h6 いずれかの見出し要素が存在する
       const heading = container.querySelector("h1, h2, h3, h4, h5, h6");
       expect(heading).not.toBeNull();
       expect(heading?.textContent).toContain("見出し1");

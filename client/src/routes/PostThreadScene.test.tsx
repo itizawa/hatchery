@@ -476,3 +476,31 @@ describe("PostThreadScene コメントアンカー＆自動スクロール (#861
     window.location.hash = originalHash;
   });
 });
+
+// #1077: ローディング中の左カラムが column flex 親（RootLayout の main）内で shrink-to-fit に
+// なり右カラムより大幅に狭く潰れる幅バグの回帰テスト。jsdom は実レイアウト計算（layout/reflow）を
+// 行わないため getBoundingClientRect は実測に使えない（本リポジトリの PostCard.test.tsx /
+// AppHeader.test.tsx / uiParts/Menu.test.tsx と同じ制約）。
+// 注意: CSS Flexbox 仕様（8.2 Aligning with auto margins）では、cross軸の auto margin（mx:"auto"）
+// が存在する flex item は align-items/align-self の stretch 効果を受けない（auto margin が優先される）。
+// そのため alignSelf:"stretch" を追加するだけでは効果がなく、width:auto のままだと shrink-to-fit の
+// ままになる（実 Chromium で実測済み）。width:"100%" を明示して初めて cross size が確定し、
+// maxWidth 適用後の残り幅を mx:"auto" が正しく中央寄せできるようになる。
+// このため実際に DOM へ適用された computed style（width）を検証することで、この是正が両コンポーネント
+// に揃って適用されていることを保証する。
+describe("PostThreadScene / PostThreadSkeleton 外枠の幅一致 (#1077)", () => {
+  it("PostThreadScene の外枠が column flex 親内でも shrink-to-fit にならず width:100% になっている", async () => {
+    render(<BoundedScene />, { wrapper: createWrapper({ communities: mockCommunities }) });
+    await screen.findByText("今日も元気に始めましょう");
+
+    const scene = screen.getByTestId("post-thread-scene");
+    expect(getComputedStyle(scene).width).toBe("100%");
+  });
+
+  it("PostThreadSkeleton の外枠が column flex 親内でも shrink-to-fit にならず width:100% になっている", () => {
+    render(<PostThreadSkeleton />);
+
+    const skeleton = screen.getByTestId("post-thread-skeleton");
+    expect(getComputedStyle(skeleton).width).toBe("100%");
+  });
+});

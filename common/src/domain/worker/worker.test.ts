@@ -8,6 +8,7 @@ import {
   WORKER_ROLE_MAX_LENGTH,
   createDisplayNameResolver,
   createAvatarUrlResolver,
+  isDeadBoringAvatarsWorkerImageUrl,
   resolveWorkerImageUrl,
   CreateWorkerSchema,
   DEFAULT_WORKERS,
@@ -290,6 +291,32 @@ describe("resolveWorkerImageUrl (#1015)", () => {
 
   it("imageUrl を省略したとき null を返す（#1015）", () => {
     expect(resolveWorkerImageUrl({})).toBeNull();
+  });
+});
+
+describe("isDeadBoringAvatarsWorkerImageUrl (#1057)", () => {
+  it("source.boringavatars.com の URL は true を返す", () => {
+    expect(
+      isDeadBoringAvatarsWorkerImageUrl("https://source.boringavatars.com/beam/40/da560697-6d82"),
+    ).toBe(true);
+  });
+
+  it("admin がアップロードした正規の GCS URL は false を返す", () => {
+    expect(isDeadBoringAvatarsWorkerImageUrl("https://storage.googleapis.com/bucket/worker.png")).toBe(
+      false,
+    );
+  });
+
+  it("null は false を返す", () => {
+    expect(isDeadBoringAvatarsWorkerImageUrl(null)).toBe(false);
+  });
+
+  it("undefined は false を返す", () => {
+    expect(isDeadBoringAvatarsWorkerImageUrl(undefined)).toBe(false);
+  });
+
+  it("空文字は false を返す", () => {
+    expect(isDeadBoringAvatarsWorkerImageUrl("")).toBe(false);
   });
 });
 

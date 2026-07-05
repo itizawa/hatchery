@@ -14,6 +14,7 @@ import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettingsRounde
 import DescriptionIcon from "@mui/icons-material/DescriptionRounded";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEventsRounded";
 import HomeIcon from "@mui/icons-material/HomeRounded";
+import InfoIcon from "@mui/icons-material/InfoRounded";
 import PrivacyTipIcon from "@mui/icons-material/PrivacyTipRounded";
 import TrendingUpIcon from "@mui/icons-material/TrendingUpRounded";
 import { Link as RouterLink, Outlet, useLocation } from "@tanstack/react-router";
@@ -133,9 +134,17 @@ const SidebarContent = (): ReactElement => {
           </List>
         </>
       )}
-      {/* リーガルリンク（#484）。全ユーザー（未ログイン含む）がいつでも参照できるよう常時表示する。 */}
+      {/* リーガルリンク（#484）＋紹介ページ（#1056）。全ユーザー（未ログイン含む）がいつでも参照できるよう常時表示する。 */}
       <Divider sx={{ my: 1 }} />
       <List dense>
+        <ListItem disablePadding>
+          <ListItemButton component={RouterLink} to="/about" sx={{ color: SLACK_COLORS.sidebarText }}>
+            <ListItemIcon sx={SIDEBAR_ICON_SX}>
+              <InfoIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText primary="Hatcheryとは？" />
+          </ListItemButton>
+        </ListItem>
         <ListItem disablePadding>
           <ListItemButton component={RouterLink} to="/terms" sx={{ color: SLACK_COLORS.sidebarText }}>
             <ListItemIcon sx={SIDEBAR_ICON_SX}>

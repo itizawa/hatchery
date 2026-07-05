@@ -302,6 +302,34 @@ describe("createInMemoryWorkerRepository", () => {
     });
   });
 
+  describe("clearImageUrl (#1057)", () => {
+    it("imageUrl が null になる", async () => {
+      const repo = createInMemoryWorkerRepository([
+        makeWorker({ imageUrl: "https://source.boringavatars.com/beam/40/worker-1" }),
+      ]);
+      const updated = await repo.clearImageUrl("worker-1");
+      expect(updated?.imageUrl).toBeNull();
+      const found = await repo.findById("worker-1");
+      expect(found?.imageUrl).toBeNull();
+    });
+
+    it("存在しない id は null を返す", async () => {
+      const repo = createInMemoryWorkerRepository([]);
+      expect(await repo.clearImageUrl("not-exists")).toBeNull();
+    });
+
+    it("論理削除済みの worker にも反映される（updateImageUrl と同じ現仕様）", async () => {
+      const repo = createInMemoryWorkerRepository([
+        makeWorker({
+          imageUrl: "https://source.boringavatars.com/beam/40/worker-1",
+          deletedAt: new Date("2026-01-01"),
+        }),
+      ]);
+      const updated = await repo.clearImageUrl("worker-1");
+      expect(updated?.imageUrl).toBeNull();
+    });
+  });
+
   describe("防御的コピー", () => {
     it("返却されたレコードを書き換えても内部状態に影響しない", async () => {
       const repo = createInMemoryWorkerRepository([makeWorker()]);

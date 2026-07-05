@@ -479,12 +479,22 @@ test(
     // 投稿タイトルが表示されていることを確認
     await expect(page.getByRole("heading", { name: LONG_TEXT_POST.title })).toBeVisible();
 
-    // truncateText が true のとき MarkdownContent の paragraphSx に overflow: hidden が適用される。
-    // PostCard の本文（長い本文テキストを含む p 要素）に絞り込み、その要素の overflow スタイルを確認する。
+    // truncateText が true のとき MarkdownContent の clampToLines により、ReactMarkdown の
+    // 出力全体を包む外側コンテナ（Box）に overflow: hidden が適用される（p 個別ではない・#1105）。
+    // PostCard の本文（長い本文テキストを含む p 要素）を起点に祖先を辿り、クランプ用コンテナを特定する。
     // allElements の全走査は MUI コンテナ等にも overflow:hidden があるため偽陽性になるリスクがある（#742）。
     const bodyParagraph = page.locator("p").filter({ hasText: "これは非常に長い投稿の本文です" }).first();
     await expect(bodyParagraph).toBeAttached();
-    const overflow = await bodyParagraph.evaluate((el) => window.getComputedStyle(el).overflow);
+    const overflow = await bodyParagraph.evaluate((el) => {
+      let current: Element | null = el.parentElement;
+      while (current) {
+        if (window.getComputedStyle(current).display === "-webkit-box") {
+          return window.getComputedStyle(current).overflow;
+        }
+        current = current.parentElement;
+      }
+      return null;
+    });
     expect(overflow).toBe("hidden");
   },
 );

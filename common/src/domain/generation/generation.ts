@@ -128,6 +128,12 @@ export const validateGenerationOutput = ({
             `許可された workerId: [${[...known].join(", ")}]`,
         );
       }
+
+      if (comment.author === post.author) {
+        throw new Error(
+          `生成出力の検証エラー: comment の author "${comment.author}" は post の author と同一です（自己返信は許可されません・#1069）。`,
+        );
+      }
     }
   }
 

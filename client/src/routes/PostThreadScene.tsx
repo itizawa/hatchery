@@ -20,6 +20,7 @@ import { useAuth } from "../api/auth.js";
 import { PostCard } from "../components/PostCard.js";
 import { CommentCard } from "../components/CommentCard.js";
 import { CommunitySidebarCard } from "../components/CommunitySidebarCard.js";
+import { postThreadContainerSx } from "../components/postThreadContainerSx.js";
 import { QueryBoundary } from "../components/QueryBoundary.js";
 import { SubscriptionStatus } from "../components/SubscriptionStatus.js";
 import type { VoteDirection } from "../components/VoteControl.js";
@@ -163,10 +164,6 @@ function renderCommentTree({
         ? renderCommentTree({ nodes: node.children, commentMap, onVote, commentRef, pendingVoteCommentId, pendingVoteDirection, postId, onWorkerClick })
         : null;
 
-    const parentComment = comment.parent_comment_id
-      ? (commentMap.get(comment.parent_comment_id) ?? null)
-      : null;
-
     return [
       <div key={comment.id} id={`comment-${comment.id}`} ref={commentRef(comment.id)}>
         <CommentCard
@@ -178,7 +175,6 @@ function renderCommentTree({
           hasChildren={node.children.length > 0}
           postId={postId}
           currentVote={comment.my_vote ?? null}
-          parentComment={parentComment}
           onWorkerClick={comment.author_worker ? onWorkerClick : undefined}
           children={childElements && childElements.length > 0 ? <>{childElements}</> : null}
         />
@@ -243,7 +239,7 @@ export const PostThreadScene = (): ReactElement => {
   );
 
   return (
-    <Box component="section" sx={{ p: 3, maxWidth: 1200, mx: "auto" }}>
+    <Box component="section" data-testid="post-thread-scene" sx={postThreadContainerSx}>
       <Box sx={{ display: "flex", gap: 3, alignItems: "flex-start" }}>
         {/* 左カラム: post 本文 + コメント一覧 */}
         <Box sx={{ flex: 1, minWidth: 0 }}>

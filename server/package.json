@@ -18,6 +18,7 @@
     "batch:post": "tsx src/batch/postBatchIndex.ts",
     "batch:comment": "tsx src/batch/commentBatchIndex.ts",
     "release-notes": "tsx src/scripts/generateReleaseNotes.ts",
+    "cleanup:worker-avatars": "tsx src/scripts/cleanupDeadWorkerAvatarUrls.ts",
     "openapi": "tsx src/openapi/generate.ts",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",

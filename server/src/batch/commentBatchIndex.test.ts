@@ -39,7 +39,7 @@ const validCommentOutput = JSON.stringify({
     {
       ref: "ref-1",
       comments: [
-        { author: "haru", text: "面白いですね。", reply_to: null },
+        { author: "ken", text: "面白いですね。", reply_to: null },
       ],
     },
   ],

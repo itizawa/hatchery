@@ -208,16 +208,7 @@ export const PostCard = (props: PostCardProps): ReactElement => {
       <MarkdownContent
         content={post.text}
         variant="body2"
-        paragraphSx={
-          truncateText
-            ? {
-                display: "-webkit-box",
-                WebkitLineClamp: 3,
-                WebkitBoxOrient: "vertical",
-                overflow: "hidden",
-              }
-            : undefined
-        }
+        clampToLines={truncateText ? 3 : undefined}
       />
       {firstUrl && <OgpCard url={firstUrl} />}
       <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 1 }}>

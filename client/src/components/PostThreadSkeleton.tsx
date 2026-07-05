@@ -3,6 +3,7 @@ import type { ReactElement } from "react";
 import { PostCard } from "./PostCard.js";
 import { CommunitySidebarCard } from "./CommunitySidebarCard.js";
 import { CommentCard } from "./CommentCard.js";
+import { postThreadContainerSx } from "./postThreadContainerSx.js";
 
 /**
  * 投稿スレッド（/posts/$postId）のローディングスケルトン（#409 / #462 / #692 / #807 / #857）。
@@ -13,14 +14,11 @@ import { CommentCard } from "./CommentCard.js";
  *       レイアウトの単一情報源を実 UI コンポーネントに統一する。
  * #857: CommentCard の loading prop を使い、手書き CommentCardSkeleton を廃止。
  * #955: 右カラムに position:sticky / top:24 を追加し、PostThreadScene.SidebarColumn と sx を一致させる。
+ * #1077: 外枠 sx を postThreadContainerSx に共通化（詳細は同ファイルのコメント参照）。
  */
 
 export const PostThreadSkeleton = (): ReactElement => (
-  <Box
-    component="section"
-    data-testid="post-thread-skeleton"
-    sx={{ p: 3, maxWidth: 1200, mx: "auto" }}
-  >
+  <Box component="section" data-testid="post-thread-skeleton" sx={postThreadContainerSx}>
     <Box sx={{ display: "flex", gap: 3, alignItems: "flex-start" }}>
       {/* 左カラム: コミュニティパンくず + PostCard + コメントセクション */}
       <Box sx={{ flex: 1, minWidth: 0 }} data-testid="post-thread-skeleton-left">

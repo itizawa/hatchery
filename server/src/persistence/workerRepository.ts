@@ -46,6 +46,8 @@ export interface WorkerRepository {
   findDeletedById(id: string): Promise<WorkerRecord | null>;
   /** ワーカーの画像 URL を更新する（#204）。存在しない id は null を返す。 */
   updateImageUrl(id: string, imageUrl: string): Promise<WorkerRecord | null>;
+  /** ワーカーの画像 URL を null にクリアする（#1057・死んだ外部URLのクリーンアップ用）。存在しない id は null を返す。 */
+  clearImageUrl(id: string): Promise<WorkerRecord | null>;
   /** 新しい Worker を作成して返す（#217）。 */
   create(input: CreateWorkerInput): Promise<WorkerRecord>;
   /** Worker をページネーションで取得する（#545）。includeDeleted=true で論理削除済も含む。 */
@@ -140,6 +142,13 @@ export function createInMemoryWorkerRepository(
       const worker = workers.find((w) => w.id === id);
       if (!worker) return Promise.resolve(null);
       worker.imageUrl = imageUrl;
+      return Promise.resolve({ ...worker });
+    },
+
+    clearImageUrl(id: string): Promise<WorkerRecord | null> {
+      const worker = workers.find((w) => w.id === id);
+      if (!worker) return Promise.resolve(null);
+      worker.imageUrl = null;
       return Promise.resolve({ ...worker });
     },
 

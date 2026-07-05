@@ -6,10 +6,12 @@ import {
   Box,
   ButtonBase,
   IconButton,
+  InputAdornment,
   Link,
   Menu,
   MenuItem,
   Skeleton,
+  TextField,
 } from "./uiParts";
 
 import { Link as RouterLink, useNavigate } from "@tanstack/react-router";
@@ -18,10 +20,12 @@ import { type ReactElement, useState } from "react";
 import { useAuth, useLogout } from "../api/auth.js";
 import { useLoginModal } from "../hooks/useLoginModal.js";
 import { useInstallPrompt } from "../hooks/useInstallPrompt.js";
+import { SEARCH_QUERY_MAX_LENGTH, useSearchQueryForm } from "../hooks/useSearchQueryForm.js";
 import { QueryBoundary } from "./QueryBoundary.js";
 import { SLACK_COLORS } from "../theme.js";
 
 const ACCOUNT_ICON_SIZE = 32;
+const HEADER_SEARCH_LABEL = "投稿を検索";
 /**
  * ヘッダー右端スロットの固定高さ（px）。
  * ログイン時のアバターボタン（Avatar 32px + ButtonBase の p: 0.5 = 上下 4px ずつ）が最も背が高く 40px。
@@ -145,6 +149,58 @@ const AppHeaderAuthSection = (): ReactElement => {
   );
 };
 
+/**
+ * ヘッダー常設の検索入力欄（#1055）。どのページからでもキーワードを入力して
+ * Enter（フォーム送信）すると `/search` へ遷移する。`/search` を開いている間は
+ * 現在の `q` を初期値として表示する。
+ */
+const HeaderSearchField = (): ReactElement => {
+  const form = useSearchQueryForm({ preserveUnsyncedEdits: true });
+
+  return (
+    <Box
+      component="form"
+      noValidate
+      onSubmit={(e) => {
+        e.preventDefault();
+        void form.handleSubmit();
+      }}
+      sx={{ flex: 1, minWidth: 0, maxWidth: 480, mx: 2 }}
+    >
+      <form.Field name="q">
+        {(field) => (
+          <TextField
+            fullWidth
+            size="small"
+            type="search"
+            placeholder={`${HEADER_SEARCH_LABEL}...`}
+            value={field.state.value}
+            onChange={(e) => field.handleChange(e.target.value)}
+            onBlur={field.handleBlur}
+            slotProps={{
+              htmlInput: { "aria-label": HEADER_SEARCH_LABEL, maxLength: SEARCH_QUERY_MAX_LENGTH },
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon fontSize="small" sx={{ color: "text.secondary" }} />
+                  </InputAdornment>
+                ),
+              },
+            }}
+            sx={{
+              bgcolor: SLACK_COLORS.mainBackground,
+              "& .MuiOutlinedInput-root": {
+                borderRadius: 999,
+                "& fieldset": { border: "none" },
+              },
+            }}
+          />
+        )}
+      </form.Field>
+    </Box>
+  );
+};
+
 export const AppHeader = ({ onMenuOpen }: AppHeaderProps): ReactElement => {
   const { isInstallable, isInstalled, isIOS, promptInstall, openIosInstructions } = useInstallPrompt();
   const showInstallButton = isInstallable && !isInstalled;
@@ -196,14 +252,7 @@ export const AppHeader = ({ onMenuOpen }: AppHeaderProps): ReactElement => {
         Hatchery
       </Link>
 
-      <IconButton
-        component={RouterLink}
-        to="/search"
-        aria-label="投稿を検索"
-        sx={{ ml: 1, color: SLACK_COLORS.sidebarText }}
-      >
-        <SearchIcon />
-      </IconButton>
+      <HeaderSearchField />
 
       {showInstallButton && (
         <IconButton

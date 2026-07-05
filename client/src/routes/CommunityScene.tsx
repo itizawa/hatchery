@@ -47,7 +47,7 @@ const SORT_LABELS: Record<CommunityFeedSort, string> = {
   popular: "人気",
 };
 
-const SORT_OPTIONS: CommunityFeedSort[] = ["latest", "popular"];
+const SORT_OPTIONS = Object.keys(SORT_LABELS) as CommunityFeedSort[];
 
 /**
  * コミュニティフィードの並べ替えボタン+メニュー（#1062）。
@@ -97,7 +97,13 @@ const SortMenuButton = ({
       </Tooltip>
       <Menu id={COMMUNITY_SORT_MENU_ID} anchorEl={anchorEl} open={open} onClose={handleClose}>
         {SORT_OPTIONS.map((value) => (
-          <MenuItem key={value} selected={value === sort} onClick={() => handleSelect(value)}>
+          <MenuItem
+            key={value}
+            role="menuitemradio"
+            aria-checked={value === sort}
+            selected={value === sort}
+            onClick={() => handleSelect(value)}
+          >
             <ListItemIcon sx={{ minWidth: 28 }}>
               {value === sort && (
                 <CheckRounded

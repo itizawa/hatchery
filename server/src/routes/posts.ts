@@ -42,11 +42,25 @@ export function createPostsRouter(
       return;
     }
     const { q } = parsed.data;
+    // sessionId は任意クエリパラメータ。UUID 検証付きで取得し、不正・未指定は null（#1059）。
+    const sessionId = extractSessionId(req);
     const now = new Date();
     postRepo
       .search({ q, limit: 50, options: { now } })
       .then((posts) => attachAuthorWorker(posts, workerRepo))
-      .then((enriched) => res.status(200).json(enriched.map(toPostResponse)))
+      .then(async (enriched) => {
+        // sessionId があれば投票状態を一括取得して付与する（#1059・#831 と同じパターン）。
+        if (sessionId) {
+          const voteMap = await voteRepo.findVotesBySessionAndTargets({
+            sessionId,
+            targetType: "post",
+            targetIds: enriched.map((p) => p.id),
+          });
+          res.status(200).json(enriched.map((p) => toPostResponse({ ...p, myVote: voteMap.get(p.id) ?? null })));
+        } else {
+          res.status(200).json(enriched.map(toPostResponse));
+        }
+      })
       .catch(next);
   });
 
@@ -63,7 +77,7 @@ export function createPostsRouter(
         if (!post) {
           throw new NotFoundError("PostNotFound");
         }
-        // reveal フィルタ（#556）: createdAt <= now のコメントのみ公開する。
+        // reveal フィルタ（#556）: createdAt <= now のコメントのみを公開する。
         const now = new Date();
         return commentRepo.listByPost(postId, { now }).then(async (comments) => {
           // post と comments を 1 回のワーカー取得で付与する（重複クエリを避ける）。

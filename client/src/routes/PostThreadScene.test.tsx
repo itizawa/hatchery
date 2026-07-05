@@ -476,3 +476,39 @@ describe("PostThreadScene コメントアンカー＆自動スクロール (#861
     window.location.hash = originalHash;
   });
 });
+
+// #1077: ローディング中の左カラムが column flex 親（RootLayout の main）内で shrink-to-fit に
+// なり右カラムより大幅に狭く潰れる幅バグの回帰テスト。jsdom は実レイアウト計算（layout/reflow）を
+// 行わないため getBoundingClientRect は実測に使えない（本リポジトリの PostCard.test.tsx /
+// AppHeader.test.tsx / uiParts/Menu.test.tsx と同じ制約）。実際に DOM へ適用された computed style
+// （alignSelf）を検証することで、column flex 内の margin:auto が align-items:stretch を無効化する
+// 問題への是正（alignSelf:"stretch" 明示）が両コンポーネントに揃って適用されていることを保証する。
+describe("PostThreadScene / PostThreadSkeleton 外枠の幅一致 (#1077)", () => {
+  it("PostThreadScene の外枠が column flex 親内でも shrink-to-fit にならず alignSelf:stretch になっている", async () => {
+    render(<BoundedScene />, { wrapper: createWrapper({ communities: mockCommunities }) });
+    await screen.findByText("今日も元気に始めましょう");
+
+    const scene = screen.getByTestId("post-thread-scene");
+    expect(getComputedStyle(scene).alignSelf).toBe("stretch");
+  });
+
+  it("PostThreadSkeleton の外枠が column flex 親内でも shrink-to-fit にならず alignSelf:stretch になっている", () => {
+    render(<PostThreadSkeleton />);
+
+    const skeleton = screen.getByTestId("post-thread-skeleton");
+    expect(getComputedStyle(skeleton).alignSelf).toBe("stretch");
+  });
+
+  it("PostThreadScene と PostThreadSkeleton の外枠 alignSelf が一致し、双方とも親コンテナ残り幅いっぱいに広がる", async () => {
+    const { unmount } = render(<PostThreadSkeleton />);
+    const skeletonAlignSelf = getComputedStyle(screen.getByTestId("post-thread-skeleton")).alignSelf;
+    unmount();
+
+    render(<BoundedScene />, { wrapper: createWrapper({ communities: mockCommunities }) });
+    await screen.findByText("今日も元気に始めましょう");
+    const sceneAlignSelf = getComputedStyle(screen.getByTestId("post-thread-scene")).alignSelf;
+
+    expect(sceneAlignSelf).toBe(skeletonAlignSelf);
+    expect(sceneAlignSelf).toBe("stretch");
+  });
+});

@@ -238,7 +238,11 @@ export const PostThreadScene = (): ReactElement => {
   );
 
   return (
-    <Box component="section" sx={{ p: 3, maxWidth: 1200, mx: "auto" }}>
+    <Box
+      component="section"
+      data-testid="post-thread-scene"
+      sx={{ p: 3, maxWidth: 1200, mx: "auto", alignSelf: "stretch" }}
+    >
       <Box sx={{ display: "flex", gap: 3, alignItems: "flex-start" }}>
         {/* 左カラム: post 本文 + コメント一覧 */}
         <Box sx={{ flex: 1, minWidth: 0 }}>

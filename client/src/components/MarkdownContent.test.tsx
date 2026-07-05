@@ -6,7 +6,7 @@
  * - XSS 防止: <script> タグ・javascript: スキーム・onerror 等がスクリプト実行可能な DOM に変換されない（受け入れ条件 4）
  * - 画像インライン埋め込みを許可しない（受け入れ条件 2）
  * - 外部リンクは外部リンク確認フローを経由して開く（#661 受け入れ条件 2）
- * - プレーンテキストも破綶なく表示できる（受け入れ条件 3・後方互換）
+ * - プレーンテキストも問題なく表示できる（受け入れ条件 3・後方互換）
  */
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";

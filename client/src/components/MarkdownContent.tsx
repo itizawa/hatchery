@@ -29,10 +29,14 @@ interface MarkdownContentProps {
   /** テキスト要素のベース variant（MUI Typography 準拠）。デフォルト body1 */
   variant?: MarkdownVariant;
   /**
-   * 段落（p）要素に追加する MUI sx スタイル。
-   * PostCard の truncateText（line-clamp）等、外部からスタイルを注入する用途で使う。
+   * 指定時、レンダリング結果全体をこの行数で CSS line-clamp 省略表示する
+   * （PostCard の truncateText 用・#1105）。
+   * `-webkit-line-clamp` は単一のブロック要素内でしか行数を数えられないため、
+   * 見出し・リスト・コードブロック等が混在していても正しく省略できるよう
+   * `p` 個別ではなく ReactMarkdown の出力全体を包む外側コンテナに適用する。
+   * 未指定時は外側コンテナを追加せず全文表示する（詳細画面用）。
    */
-  paragraphSx?: Record<string, unknown>;
+  clampToLines?: number;
 }
 
 /**
@@ -43,17 +47,16 @@ interface MarkdownContentProps {
 export const MarkdownContent = ({
   content,
   variant = "body1",
-  paragraphSx,
+  clampToLines,
 }: MarkdownContentProps): ReactElement => {
   const { openExternalLink } = useExternalLink();
 
-  // components オブジェクトは variant / paragraphSx が変わったときだけ再生成する
+  // components オブジェクトは variant が変わったときだけ再生成する
   const components: Components = useMemo(() => {
-    const pSx = paragraphSx ? { mb: 0.5, mt: 0, ...paragraphSx } : { mb: 0.5, mt: 0 };
     return ({
     // 段落: Typography で描画（variant は呼び出し元から渡す）
     p: ({ children }: { children?: ReactNode }) => (
-      <Typography variant={variant} component="p" sx={pSx}>
+      <Typography variant={variant} component="p" sx={{ mb: 0.5, mt: 0 }}>
         {children}
       </Typography>
     ),
@@ -297,9 +300,9 @@ export const MarkdownContent = ({
       return <span>[{label}]</span>;
     },
   });
-  }, [variant, paragraphSx, openExternalLink]);
+  }, [variant, openExternalLink]);
 
-  return (
+  const markdown = (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
       rehypePlugins={[[rehypeSanitize, sanitizeSchema]]}
@@ -307,5 +310,24 @@ export const MarkdownContent = ({
     >
       {content}
     </ReactMarkdown>
+  );
+
+  if (clampToLines === undefined) {
+    return markdown;
+  }
+
+  // 見出し・リスト・コードブロック等が混在していても出力全体を 1 つのブロックとして
+  // クランプするため、ReactMarkdown の出力全体を外側コンテナで包む（#1105）。
+  return (
+    <Box
+      sx={{
+        display: "-webkit-box",
+        WebkitLineClamp: clampToLines,
+        WebkitBoxOrient: "vertical",
+        overflow: "hidden",
+      }}
+    >
+      {markdown}
+    </Box>
   );
 };

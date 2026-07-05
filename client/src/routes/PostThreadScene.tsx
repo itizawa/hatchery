@@ -20,6 +20,7 @@ import { useAuth } from "../api/auth.js";
 import { PostCard } from "../components/PostCard.js";
 import { CommentCard } from "../components/CommentCard.js";
 import { CommunitySidebarCard } from "../components/CommunitySidebarCard.js";
+import { postThreadContainerSx } from "../components/postThreadContainerSx.js";
 import { QueryBoundary } from "../components/QueryBoundary.js";
 import { SubscriptionStatus } from "../components/SubscriptionStatus.js";
 import type { VoteDirection } from "../components/VoteControl.js";
@@ -238,11 +239,7 @@ export const PostThreadScene = (): ReactElement => {
   );
 
   return (
-    <Box
-      component="section"
-      data-testid="post-thread-scene"
-      sx={{ p: 3, maxWidth: 1200, mx: "auto", width: "100%" }}
-    >
+    <Box component="section" data-testid="post-thread-scene" sx={postThreadContainerSx}>
       <Box sx={{ display: "flex", gap: 3, alignItems: "flex-start" }}>
         {/* 左カラム: post 本文 + コメント一覧 */}
         <Box sx={{ flex: 1, minWidth: 0 }}>

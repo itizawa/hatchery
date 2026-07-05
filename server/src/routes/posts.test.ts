@@ -625,3 +625,51 @@ describe("GET /api/posts/search author_worker 付与（#1058）", () => {
     expect(res.body[0].author_worker).toBeUndefined();
   });
 });
+
+describe("GET /api/posts/search my_vote 付与（#1059）", () => {
+  it("sessionId を付与すると投票済み post に my_vote が付く", async () => {
+    const postRepo = createInMemoryPostRepository();
+    const voteRepo = createInMemoryVoteRepository();
+    const [post] = await postRepo.createMany("community-1", [
+      { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "ライドシェアの話3", text: "本文" },
+    ]);
+    await voteRepo.vote({
+      sessionId: "00000000-0000-0000-0000-000000000099",
+      userId: null,
+      targetType: "post",
+      targetId: post.id,
+      direction: "up",
+    });
+
+    const deps = await createTestDeps({ postRepository: postRepo, voteRepository: voteRepo });
+    const app = createApp(deps);
+
+    const res = await request(app)
+      .get("/api/posts/search")
+      .query({ q: "ライドシェア", sessionId: "00000000-0000-0000-0000-000000000099" });
+    expect(res.status).toBe(200);
+    expect(res.body[0].my_vote).toBe("up");
+  });
+
+  it("sessionId 未指定のときは my_vote を含まない（後方互換）", async () => {
+    const postRepo = createInMemoryPostRepository();
+    const voteRepo = createInMemoryVoteRepository();
+    const [post] = await postRepo.createMany("community-1", [
+      { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "ライドシェアの話4", text: "本文" },
+    ]);
+    await voteRepo.vote({
+      sessionId: "00000000-0000-0000-0000-000000000099",
+      userId: null,
+      targetType: "post",
+      targetId: post.id,
+      direction: "up",
+    });
+
+    const deps = await createTestDeps({ postRepository: postRepo, voteRepository: voteRepo });
+    const app = createApp(deps);
+
+    const res = await request(app).get("/api/posts/search").query({ q: "ライドシェア" });
+    expect(res.status).toBe(200);
+    expect(res.body[0]).not.toHaveProperty("my_vote");
+  });
+});

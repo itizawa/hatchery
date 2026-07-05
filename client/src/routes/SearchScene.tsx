@@ -66,7 +66,7 @@ const SearchResults = ({ q }: { q: string }): ReactElement => {
           <PostCard
             post={post}
             onVote={() => navigate({ to: "/posts/$postId", params: { postId: post.id } })}
-            currentVote={null}
+            currentVote={post.my_vote ?? null}
             truncateText
             voteStopPropagation
           />

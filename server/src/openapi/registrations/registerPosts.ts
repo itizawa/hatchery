@@ -24,7 +24,13 @@ export function registerPosts(registry: OpenAPIRegistry, ctx: RegistryContext): 
     path: "/api/posts/search",
     summary: "投稿を全文検索（title / text ILIKE 部分一致・最大 50 件・新着順・認証不要・#751）",
     request: {
-      query: SearchQuerySchema.openapi({ description: "検索クエリ（1〜200 文字）" }),
+      query: SearchQuerySchema.extend({
+        sessionId: z
+          .string()
+          .uuid()
+          .optional()
+          .openapi({ description: "セッション ID（付与すると各 post に my_vote を付与・#1059）" }),
+      }).openapi({ description: "検索クエリ（1〜200 文字）" }),
     },
     responses: {
       200: {

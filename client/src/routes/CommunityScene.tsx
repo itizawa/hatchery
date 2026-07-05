@@ -1,4 +1,16 @@
-import { Box, Button, Stack, Tab, Tabs, Typography } from "../components/uiParts";
+import ArrowDropDownRounded from "@mui/icons-material/ArrowDropDownRounded";
+import CheckRounded from "@mui/icons-material/CheckRounded";
+import {
+  Box,
+  Button,
+  ButtonBase,
+  ListItemIcon,
+  Menu,
+  MenuItem,
+  Stack,
+  Tooltip,
+  Typography,
+} from "../components/uiParts";
 import { Link as RouterLink, useNavigate, useParams } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type ReactElement } from "react";
 import type { CommunityFeedSort } from "@hatchery/common";
@@ -24,7 +36,84 @@ import { SubscribeButton } from "../components/SubscribeButton.js";
 import { SubscriptionStatus } from "../components/SubscriptionStatus.js";
 import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
 import { useLoginModal } from "../hooks/useLoginModal.js";
+import { SLACK_COLORS } from "../theme.js";
 import type { Community } from "../api/communities.js";
+
+const COMMUNITY_SORT_MENU_ID = "community-sort-menu";
+
+/** コミュニティフィードの並び順ラベル（#1062）。 */
+const SORT_LABELS: Record<CommunityFeedSort, string> = {
+  latest: "新着",
+  popular: "人気",
+};
+
+const SORT_OPTIONS: CommunityFeedSort[] = ["latest", "popular"];
+
+/**
+ * コミュニティフィードの並べ替えボタン+メニュー（#1062）。
+ * 従来の `Tabs`/`Tab` を、選択中の並び順をラベル表示するボタン + `Menu`/`MenuItem` に置き換える。
+ * 開閉パターンは `AppHeader.tsx` の `AppHeaderAuthSection`（ButtonBase + aria-haspopup/aria-expanded/aria-controls）を踏襲。
+ */
+const SortMenuButton = ({
+  sort,
+  onChange,
+}: {
+  sort: CommunityFeedSort;
+  onChange: (next: CommunityFeedSort) => void;
+}): ReactElement => {
+  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
+  const open = Boolean(anchorEl);
+
+  const handleOpen = (e: React.MouseEvent<HTMLElement>) => setAnchorEl(e.currentTarget);
+  const handleClose = () => setAnchorEl(null);
+  const handleSelect = (value: CommunityFeedSort) => {
+    onChange(value);
+    handleClose();
+  };
+
+  return (
+    <>
+      <Tooltip title="並べ替えオプションを開く">
+        <ButtonBase
+          onClick={handleOpen}
+          aria-label={SORT_LABELS[sort]}
+          aria-haspopup="true"
+          aria-expanded={open}
+          aria-controls={open ? COMMUNITY_SORT_MENU_ID : undefined}
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            borderRadius: 1,
+            px: 1,
+            py: 0.5,
+            fontSize: 14,
+            fontWeight: 600,
+            "&:hover": { bgcolor: "action.hover" },
+          }}
+        >
+          {SORT_LABELS[sort]}
+          <ArrowDropDownRounded fontSize="small" />
+        </ButtonBase>
+      </Tooltip>
+      <Menu id={COMMUNITY_SORT_MENU_ID} anchorEl={anchorEl} open={open} onClose={handleClose}>
+        {SORT_OPTIONS.map((value) => (
+          <MenuItem key={value} selected={value === sort} onClick={() => handleSelect(value)}>
+            <ListItemIcon sx={{ minWidth: 28 }}>
+              {value === sort && (
+                <CheckRounded
+                  fontSize="small"
+                  data-testid={`sort-menu-item-check-${value}`}
+                  sx={{ color: SLACK_COLORS.blue }}
+                />
+              )}
+            </ListItemIcon>
+            {SORT_LABELS[value]}
+          </MenuItem>
+        ))}
+      </Menu>
+    </>
+  );
+};
 
 /**
  * 最近投稿したワーカーパネル（#207）。
@@ -69,8 +158,6 @@ const CommunityContent = ({
   communitySlug: string;
 }): ReactElement => {
   const [sort, setSort] = useState<CommunityFeedSort>("latest");
-  // eslint-disable-next-line max-params
-  const handleSortChange = (_e: unknown, v: CommunityFeedSort) => setSort(v);
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteCommunityFeed({ slug: communitySlug, sort });
   const { data: authUser } = useAuth();
   const { openLogin } = useLoginModal();
@@ -138,15 +225,10 @@ const CommunityContent = ({
             }
           />
 
-          {/* 新着 / 人気 ソートタブ（#886） */}
-          <Tabs
-            value={sort}
-            onChange={handleSortChange}
-            sx={{ mb: 1, borderBottom: "1px solid", borderColor: "divider" }}
-          >
-            <Tab label="新着" value="latest" />
-            <Tab label="人気" value="popular" />
-          </Tabs>
+          {/* 新着 / 人気 ソートボタン+メニュー（#886 / #1062） */}
+          <Box sx={{ mb: 1, pb: 1, borderBottom: "1px solid", borderColor: "divider" }}>
+            <SortMenuButton sort={sort} onChange={setSort} />
+          </Box>
 
           <Box sx={{ display: "flex", gap: 3, alignItems: "flex-start" }}>
             {/* 左カラム: Post 一覧（#881: useInfiniteCommunityFeed でカーソルページネーション + sentinel） */}

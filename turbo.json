@@ -13,10 +13,6 @@
       "dependsOn": ["@hatchery/server#openapi"],
       "outputs": ["src/api/openapi.gen.ts"]
     },
-    "gen-field-specs": {
-      "dependsOn": ["@hatchery/common#build"],
-      "outputs": ["src/generated/**"]
-    },
     "@hatchery/client#build": {
       "dependsOn": ["^build", "gen-types"],
       "outputs": ["dist/**"]
@@ -36,14 +32,6 @@
     "test": {
       "dependsOn": ["^build"],
       "outputs": ["coverage/**"]
-    },
-    "storybook:build": {
-      "dependsOn": ["^build"],
-      "outputs": ["storybook-static/**"]
-    },
-    "@hatchery/docs#storybook:build": {
-      "dependsOn": ["@hatchery/common#build", "@hatchery/docs#gen-field-specs"],
-      "outputs": ["storybook-static/**"]
     },
     "lint": {},
     "dev": {

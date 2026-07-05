@@ -10,7 +10,6 @@ build/
 out/
 *.tsbuildinfo
 .turbo/
-storybook-static/
 
 # Generated
 **/generated/

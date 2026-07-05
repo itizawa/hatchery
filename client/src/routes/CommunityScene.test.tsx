@@ -225,8 +225,8 @@ describe("CommunityScene", () => {
     await act(async () => {
       await userEvent.click(sortButton);
     });
-    expect(screen.getByRole("menuitem", { name: "新着" })).toBeInTheDocument();
-    expect(screen.getByRole("menuitem", { name: "人気" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitemradio", { name: "新着" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitemradio", { name: "人気" })).toBeInTheDocument();
   });
 
   it("メニューを開いた状態で現在選択中の項目（初期値「新着」）にチェックマークが表示される（#1062）", async () => {
@@ -238,6 +238,17 @@ describe("CommunityScene", () => {
     });
     expect(screen.getByTestId("sort-menu-item-check-latest")).toBeInTheDocument();
     expect(screen.queryByTestId("sort-menu-item-check-popular")).not.toBeInTheDocument();
+  });
+
+  it("メニュー項目の選択状態が aria-checked でスクリーンリーダーにも伝わる（#1062）", async () => {
+    renderScene();
+    await screen.findByRole("heading", { level: 1 });
+    const sortButton = screen.getByRole("button", { name: "新着" });
+    await act(async () => {
+      await userEvent.click(sortButton);
+    });
+    expect(screen.getByRole("menuitemradio", { name: "新着" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("menuitemradio", { name: "人気" })).toHaveAttribute("aria-checked", "false");
   });
 
   it("メニューで「人気」を選択するとボタンラベルが「人気」に変わりフィードが再取得される（#1062）", async () => {
@@ -280,7 +291,7 @@ describe("CommunityScene", () => {
     await act(async () => {
       await userEvent.click(sortButton);
     });
-    const popularMenuItem = screen.getByRole("menuitem", { name: "人気" });
+    const popularMenuItem = screen.getByRole("menuitemradio", { name: "人気" });
     await act(async () => {
       await userEvent.click(popularMenuItem);
     });

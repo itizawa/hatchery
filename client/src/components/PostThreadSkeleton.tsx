@@ -10,7 +10,7 @@ import { CommentCard } from "./CommentCard.js";
  * `data-testid="post-thread-skeleton"` でテストから検出できる。
  * #692: PostThreadScene の実 UI レイアウトと一致させ、ローディング中の CLS を最小化する。
  * #807: PostCard / CommunitySidebarCard の loading prop を使い、Skeleton 専用の手書きレイアウトを廃止。
- *       レイアウトの単一情報源を実 UI コンポーネントに統一。
+ *       レイアウトの単一情報源を実 UI コンポーネントに統一する。
  * #857: CommentCard の loading prop を使い、手書き CommentCardSkeleton を廃止。
  * #955: 右カラムに position:sticky / top:24 を追加し、PostThreadScene.SidebarColumn と sx を一致させる。
  * #1077: 外枠に alignSelf:"stretch" を追加。RootLayout の column flex（main）直下では mx:"auto" が

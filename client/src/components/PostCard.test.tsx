@@ -201,7 +201,7 @@ describe("PostCard", () => {
       expect(avatar).not.toHaveAttribute("src");
     });
 
-    it("author_worker が無いときは生の author 文字列を表示する（フォールバック・破綶しない）", () => {
+    it("author_worker が無いときは生の author 文字列を表示する（フォールバック・問題なし）", () => {
       render(<PostCard post={mockPost} onVote={vi.fn()} />);
       expect(screen.getByText("worker-haru")).toBeInTheDocument();
       expect(screen.queryByRole("img")).not.toBeInTheDocument();
@@ -388,12 +388,12 @@ describe("PostCard", () => {
   });
 
   describe("variant（フラットリスト表示・#834）", () => {
-    it("variant=\"list\" 時、外柚の data-variant 属性が \"list\" になる", () => {
+    it("variant=\"list\" 時、外枠の data-variant 属性が \"list\" になる", () => {
       const { container } = render(<PostCard post={mockPost} onVote={vi.fn()} variant="list" />);
       expect(container.firstChild).toHaveAttribute("data-variant", "list");
     });
 
-    it("variant 未指定（デフォルト card）時、外柚の data-variant 属性が \"card\" になる", () => {
+    it("variant 未指定（デフォルト card）時、外枠の data-variant 属性が \"card\" になる", () => {
       const { container } = render(<PostCard post={mockPost} onVote={vi.fn()} />);
       expect(container.firstChild).toHaveAttribute("data-variant", "card");
     });
@@ -480,9 +480,9 @@ describe("PostCard", () => {
       expect(screen.queryByRole("button", { name: /down vote/i })).not.toBeInTheDocument();
     });
 
-    it("loading=true のとき実 UI と同一の外柚 Box が描画され、その中に複数の Skeleton が含まれる", () => {
+    it("loading=true のとき実 UI と同一の外枠 Box が描画され、その中に複数の Skeleton が含まれる", () => {
       const { container } = render(<PostCard loading />);
-      // 外柚 Box の中に Skeleton が複数含まれることを確認（タイトル・ byline・本文 3 行・アクションバー）
+      // 外枠 Box の中に Skeleton が複数含まれることを確認（タイトル・ byline・本文 3 行・アクションバー）
       const skeletons = container.querySelectorAll(".MuiSkeleton-root");
       expect(skeletons.length).toBeGreaterThanOrEqual(5);
     });

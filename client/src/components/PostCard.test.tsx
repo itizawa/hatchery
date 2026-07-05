@@ -219,42 +219,53 @@ describe("PostCard", () => {
       text: "# 見出し\n\n本文の段落です。\n\n- リスト項目1\n- リスト項目2\n- リスト項目3",
     };
 
+    // MUI の sx はインライン style 属性ではなく emotion クラスとして適用されるため、
+    // `[style*=...]` セレクタでは検出できない。祖先を辿り computed style で判定する。
+    const findClampedAncestor = (el: Element | null): HTMLElement | null => {
+      let current = el?.parentElement ?? null;
+      while (current) {
+        if (getComputedStyle(current).display === "-webkit-box") return current;
+        current = current.parentElement;
+      }
+      return null;
+    };
+
     it("truncateText 有効時は本文全体を包む外側コンテナに line-clamp スタイルが適用される", () => {
       render(<PostCard post={longPost} onVote={vi.fn()} truncateText />);
       const textEl = screen.getByText(/1段落目はとても長い本文です/);
       // p 個別ではなく、祖先の外側コンテナがクランプされている
-      expect(textEl.closest("p")).not.toHaveStyle({ display: "-webkit-box" });
-      const clampedAncestor = textEl.closest('[style*="-webkit-box"]');
+      expect(getComputedStyle(textEl.closest("p") as Element).display).not.toBe("-webkit-box");
+      const clampedAncestor = findClampedAncestor(textEl);
       expect(clampedAncestor).not.toBeNull();
-      expect(clampedAncestor).toHaveStyle({
-        display: "-webkit-box",
-        WebkitLineClamp: "3",
-        overflow: "hidden",
-      });
+      const clampedStyle = getComputedStyle(clampedAncestor as Element);
+      expect(clampedStyle.overflow).toBe("hidden");
+      expect(clampedStyle.getPropertyValue("-webkit-line-clamp")).toBe("3");
     });
 
     it("見出し・段落・リストが混在するMarkdown本文でも、truncateText 有効時は外側コンテナ単位でクランプされる（#1105）", () => {
       const { container } = render(
         <PostCard post={multiBlockPost} onVote={vi.fn()} truncateText />,
       );
-      expect(container.querySelector("h1")).not.toBeNull();
-      expect(container.querySelector("ul")).not.toBeNull();
       const heading = container.querySelector("h1");
+      const list = container.querySelector("ul");
+      expect(heading).not.toBeNull();
+      expect(list).not.toBeNull();
       // 見出し自体には line-clamp が付与されない（外側コンテナにのみ適用される）
-      expect(heading).not.toHaveStyle({ display: "-webkit-box" });
-      const clampedAncestor = heading?.closest('[style*="-webkit-box"]');
+      expect(getComputedStyle(heading as Element).display).not.toBe("-webkit-box");
+      const clampedAncestor = findClampedAncestor(heading);
       expect(clampedAncestor).not.toBeNull();
-      expect(clampedAncestor).toHaveStyle({
-        display: "-webkit-box",
-        WebkitLineClamp: "3",
-        overflow: "hidden",
-      });
+      // 見出し・リスト両方が同じ外側コンテナに包まれている
+      expect(clampedAncestor?.contains(heading)).toBe(true);
+      expect(clampedAncestor?.contains(list)).toBe(true);
+      const clampedStyle = getComputedStyle(clampedAncestor as Element);
+      expect(clampedStyle.overflow).toBe("hidden");
+      expect(clampedStyle.getPropertyValue("-webkit-line-clamp")).toBe("3");
     });
 
     it("truncateText 無効（デフォルト）時は line-clamp スタイルを適用せず全文表示する", () => {
       render(<PostCard post={longPost} onVote={vi.fn()} />);
       const textEl = screen.getByText(/1段落目はとても長い本文です/);
-      expect(textEl.closest('[style*="-webkit-box"]')).toBeNull();
+      expect(findClampedAncestor(textEl)).toBeNull();
     });
   });
 

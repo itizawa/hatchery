@@ -230,13 +230,12 @@ const x = 1;
       expect(list).not.toHaveStyle({ display: "-webkit-box" });
 
       // 見出しとリスト双方を包む外側コンテナに line-clamp が適用される
-      const wrapper = container.firstElementChild;
-      expect(wrapper).toHaveStyle({
-        display: "-webkit-box",
-        WebkitLineClamp: "3",
-        WebkitBoxOrient: "vertical",
-        overflow: "hidden",
-      });
+      // (WebkitLineClamp は jest-dom の toHaveStyle がベンダープレフィックスプロパティを
+      //  正しく比較できないため、getComputedStyle から直接検証する)
+      const wrapper = container.firstElementChild as HTMLElement;
+      expect(wrapper).toHaveStyle({ display: "-webkit-box", overflow: "hidden" });
+      const wrapperStyle = getComputedStyle(wrapper);
+      expect(wrapperStyle.getPropertyValue("-webkit-line-clamp")).toBe("3");
       expect(wrapper?.contains(heading)).toBe(true);
       expect(wrapper?.contains(list)).toBe(true);
     });

@@ -4,6 +4,7 @@ import type React from "react";
 
 import { RecentPostsSidebarCard } from "./RecentPostsSidebarCard.js";
 import type { Post } from "../api/posts.js";
+import { SLACK_COLORS } from "../theme.js";
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@tanstack/react-router")>();
@@ -106,5 +107,21 @@ describe("RecentPostsSidebarCard", () => {
     const posts = [makePost({ text: "本文の冒頭テキストです。" })];
     render(<RecentPostsSidebarCard posts={posts} communityById={mockCommunityById} />);
     expect(screen.getByText("本文の冒頭テキストです。")).toBeInTheDocument();
+  });
+
+  it("各投稿アイテムに薄いグレー背景色が設定される", () => {
+    const posts = [makePost({ title: "スタイル確認用投稿" })];
+    render(<RecentPostsSidebarCard posts={posts} communityById={mockCommunityById} />);
+    const item = screen.getByText("スタイル確認用投稿").closest("li");
+    expect(item).toHaveStyle({ backgroundColor: SLACK_COLORS.mainBackground });
+  });
+
+  it("各投稿アイテムの角丸が16px未満で設定される", () => {
+    const posts = [makePost({ title: "角丸確認用投稿" })];
+    render(<RecentPostsSidebarCard posts={posts} communityById={mockCommunityById} />);
+    const item = screen.getByText("角丸確認用投稿").closest("li");
+    const borderRadius = parseFloat(getComputedStyle(item as Element).borderRadius);
+    expect(borderRadius).toBeGreaterThan(0);
+    expect(borderRadius).toBeLessThan(16);
   });
 });

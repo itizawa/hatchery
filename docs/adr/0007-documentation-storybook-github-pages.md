@@ -1,6 +1,6 @@
 # ADR-0007: ドキュメント基盤（Storybook MDX + GitHub Pages）
 
-- ステータス: Accepted
+- ステータス: Superseded by ADR-0037
 - 日付: 2026-05-30
 - 関連 Issue: #1
 
@@ -37,3 +37,7 @@ Issue #1 で「設計書は `docs` に記載し、Storybook を MDX で表示、
 - 良い影響: 設計書・ADR・UI カタログが 1 つの Pages サイトで閲覧でき、PR と同期して更新される。Dark Factory の設計ゲートで参照しやすい。
 - トレードオフ: `docs` の Storybook が `client` のコンポーネントを参照するため、両者のビルド依存が生じる（Turborepo で順序管理）。MDX ラッパーの薄い追加コスト。
 - フォローアップ: Storybook 初期化・MDX 取り込みの仕組み・Pages デプロイ用 GitHub Actions ワークフローは別 Issue（セットアップ）で実装する。Pages の公開設定（リポジトリ Settings）も必要。
+
+## 追記（2026-07-05・ADR-0037 による撤去）
+
+メンテナンスされておらず（`#166`・`#63`・`#107`・`#198` 等 Storybook 起因の不具合が繰り返し発生）、運用コストに見合う価値を生めなかったため、本 ADR の決定（Storybook + MDX + GitHub Pages）は ADR-0037 により撤去された。詳細は ADR-0037 を参照。

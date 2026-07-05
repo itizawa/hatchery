@@ -19,7 +19,7 @@ const ws = (name) => path.join(ROOT, name, "tsconfig.json");
  */
 export default tseslint.config(
   {
-    ignores: ["**/dist/**", "**/node_modules/**", "**/.turbo/**", "**/coverage/**", "**/storybook-static/**", "**/*.timestamp-*.mjs"],
+    ignores: ["**/dist/**", "**/node_modules/**", "**/.turbo/**", "**/coverage/**", "**/*.timestamp-*.mjs"],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,

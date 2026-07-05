@@ -68,7 +68,7 @@ monorepo の 4 ワークスペース。**依存方向は client → common / ser
 - **`common/`** (ADR-0005) — 実行環境非依存の純粋 TypeScript。ドメインモデル・型・ドメインロジック（登場メンバー選定、あらすじ要約等の純粋関数）・**Zod スキーマ**を置く。React/MUI/DOM や Express/Prisma/Node 固有 API は置かない。ドメインロジックはここで TDD する（UI/DB 不要で高速にテスト可能）。
 - **`server/`** (ADR-0004) — Node.js 22 / Express 5 / Prisma / PostgreSQL。層分離（ルーティング / ユースケース / ドメイン[common] / 永続化[Prisma]）。リクエスト検証は common の Zod スキーマで行う。**定時バッチ（シーン生成）は Express とは別エントリポイント**のスクリプットとして実装しスケジューラから起動。
 - **`client/`** (ADR-0003) — Vite + React 19 SPA（SSR なし）/ MUI v9 + Emotion（Slack 風テーマ）/ TanStack Router / TanStack Query。**サーバ状態は TanStack Query に集約**し、グローバル状態管理ライブラリは当面入れない。
-- **`docs/`** (ADR-0007) — Storybook 8（Vite ビルダー）。client の `*.stories.tsx` と設計 MDX を集約し GitHub Pages へ静的デプロイ。ADR は `docs/adr/*.md` を正本とし、MDX は薄いラッパーで取り込む。
+- **`docs/`** (ADR-0007 は ADR-0037 により Superseded) — Storybook は撤去済み。ADR は `docs/adr/*.md`、画面設計書は `docs/design/*.md` を正本として管理する（閲覧手段の再構築は別 Issue のスコープ）。
 
 ### client ↔ server の型共有（ADR-0006）
 

@@ -13,15 +13,18 @@ import { CommentCard } from "./CommentCard.js";
  *       レイアウトの単一情報源を実 UI コンポーネントに統一する。
  * #857: CommentCard の loading prop を使い、手書き CommentCardSkeleton を廃止。
  * #955: 右カラムに position:sticky / top:24 を追加し、PostThreadScene.SidebarColumn と sx を一致させる。
- * #1077: 外枠に alignSelf:"stretch" を追加。RootLayout の column flex（main）直下では mx:"auto" が
- *         cross軸の align-items:stretch を無効化し shrink-to-fit サイズになるため、左カラムが潰れていた。
+ * #1077: 外枠に width:"100%" を追加。RootLayout の column flex（main）直下では、cross軸（幅）の
+ *         auto margin（mx:"auto"）が align-items:stretch より優先される（CSS Flexbox 仕様 8.2）ため、
+ *         width が auto のままだと stretch が効かず shrink-to-fit サイズになり左カラムが潰れていた。
+ *         width:"100%" で明示的な cross size を与えることで、maxWidth 適用後の残り幅を mx:"auto" が
+ *         正しく中央寄せできるようになる。
  */
 
 export const PostThreadSkeleton = (): ReactElement => (
   <Box
     component="section"
     data-testid="post-thread-skeleton"
-    sx={{ p: 3, maxWidth: 1200, mx: "auto", alignSelf: "stretch" }}
+    sx={{ p: 3, maxWidth: 1200, mx: "auto", width: "100%" }}
   >
     <Box sx={{ display: "flex", gap: 3, alignItems: "flex-start" }}>
       {/* 左カラム: コミュニティパンくず + PostCard + コメントセクション */}

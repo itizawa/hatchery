@@ -6,7 +6,7 @@
  * - XSS 防止: <script> タグ・javascript: スキーム・onerror 等がスクリプト実行可能な DOM に変換されない（受け入れ条件 4）
  * - 画像インライン埋め込みを許可しない（受け入れ条件 2）
  * - 外部リンクは外部リンク確認フローを経由して開く（#661 受け入れ条件 2）
- * - プレーンテキストも破綻なく表示できる（受け入れ条件 3・後方互換）
+ * - プレーンテキストも破綶なく表示できる（受け入れ条件 3・後方互換）
  */
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -100,7 +100,7 @@ const x = 1;
 
     it("見出し（# text）を見出し要素でレンダリングする", () => {
       const { container } = render(<MarkdownContent content="# 見出し1" />);
-      // h1〜h6 いずれかの見出し要素が存在する
+      // h1〜 h6 いずれかの見出し要素が存在する
       const heading = container.querySelector("h1, h2, h3, h4, h5, h6");
       expect(heading).not.toBeNull();
       expect(heading?.textContent).toContain("見出し1");
@@ -212,6 +212,39 @@ const x = 1;
       const { container } = render(<MarkdownContent content="デフォルト本文" />);
       expect(container).toBeInTheDocument();
       expect(screen.getByText("デフォルト本文")).toBeInTheDocument();
+    });
+  });
+
+  describe("clampToLines prop（一覧画面の複数行省略・#1105）", () => {
+    it("clampToLines 指定時、見出し+リストなど複数ブロック要素を含んでいても出力全体を包む外側コンテナに line-clamp スタイルが適用される", () => {
+      const { container } = render(
+        <MarkdownContent content={"# 見出し\n\n- item1\n- item2"} clampToLines={3} />,
+      );
+      const heading = container.querySelector("h1");
+      const list = container.querySelector("ul");
+      expect(heading).not.toBeNull();
+      expect(list).not.toBeNull();
+
+      // 見出し・リストそれぞれ個別には line-clamp が付与されない
+      expect(heading).not.toHaveStyle({ display: "-webkit-box" });
+      expect(list).not.toHaveStyle({ display: "-webkit-box" });
+
+      // 見出しとリスト双方を包む外側コンテナに line-clamp が適用される
+      const wrapper = container.firstElementChild;
+      expect(wrapper).toHaveStyle({
+        display: "-webkit-box",
+        WebkitLineClamp: "3",
+        WebkitBoxOrient: "vertical",
+        overflow: "hidden",
+      });
+      expect(wrapper?.contains(heading)).toBe(true);
+      expect(wrapper?.contains(list)).toBe(true);
+    });
+
+    it("clampToLines 未指定時は外側コンテナが追加されず、既存の全文表示（詳細画面）と同じ DOM のまま描画される", () => {
+      const { container } = render(<MarkdownContent content={"# 見出し\n\n本文段落"} />);
+      const wrapper = container.firstElementChild;
+      expect(wrapper).not.toHaveStyle({ display: "-webkit-box" });
     });
   });
 });

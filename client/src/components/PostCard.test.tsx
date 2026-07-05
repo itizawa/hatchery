@@ -201,23 +201,50 @@ describe("PostCard", () => {
       expect(avatar).not.toHaveAttribute("src");
     });
 
-    it("author_worker が無いときは生の author 文字列を表示する（フォールバック・破綻しない）", () => {
+    it("author_worker が無いときは生の author 文字列を表示する（フォールバック・破綶しない）", () => {
       render(<PostCard post={mockPost} onVote={vi.fn()} />);
       expect(screen.getByText("worker-haru")).toBeInTheDocument();
       expect(screen.queryByRole("img")).not.toBeInTheDocument();
     });
   });
 
-  describe("truncateText（フィード一覧での本文省略・#501）", () => {
+  describe("truncateText（フィード一覧での本文省略・#501 / #1105）", () => {
     const longPost = {
       ...mockPost,
       text: "1段落目はとても長い本文です。\n\n2段落目も続きます。\n\n3段落目もあります。\n\n4段落目まで続く長文。",
     };
+    // 見出し・リストなど複数のブロック要素を含む本文（#1105: p 個別クランプでは効かないケース）
+    const multiBlockPost = {
+      ...mockPost,
+      text: "# 見出し\n\n本文の段落です。\n\n- リスト項目1\n- リスト項目2\n- リスト項目3",
+    };
 
-    it("truncateText 有効時は本文に line-clamp スタイルが適用される", () => {
+    it("truncateText 有効時は本文全体を包む外側コンテナに line-clamp スタイルが適用される", () => {
       render(<PostCard post={longPost} onVote={vi.fn()} truncateText />);
       const textEl = screen.getByText(/1段落目はとても長い本文です/);
-      expect(textEl).toHaveStyle({
+      // p 個別ではなく、祖先の外側コンテナがクランプされている
+      expect(textEl.closest("p")).not.toHaveStyle({ display: "-webkit-box" });
+      const clampedAncestor = textEl.closest('[style*="-webkit-box"]');
+      expect(clampedAncestor).not.toBeNull();
+      expect(clampedAncestor).toHaveStyle({
+        display: "-webkit-box",
+        WebkitLineClamp: "3",
+        overflow: "hidden",
+      });
+    });
+
+    it("見出し・段落・リストが混在するMarkdown本文でも、truncateText 有効時は外側コンテナ単位でクランプされる（#1105）", () => {
+      const { container } = render(
+        <PostCard post={multiBlockPost} onVote={vi.fn()} truncateText />,
+      );
+      expect(container.querySelector("h1")).not.toBeNull();
+      expect(container.querySelector("ul")).not.toBeNull();
+      const heading = container.querySelector("h1");
+      // 見出し自体には line-clamp が付与されない（外側コンテナにのみ適用される）
+      expect(heading).not.toHaveStyle({ display: "-webkit-box" });
+      const clampedAncestor = heading?.closest('[style*="-webkit-box"]');
+      expect(clampedAncestor).not.toBeNull();
+      expect(clampedAncestor).toHaveStyle({
         display: "-webkit-box",
         WebkitLineClamp: "3",
         overflow: "hidden",
@@ -227,7 +254,7 @@ describe("PostCard", () => {
     it("truncateText 無効（デフォルト）時は line-clamp スタイルを適用せず全文表示する", () => {
       render(<PostCard post={longPost} onVote={vi.fn()} />);
       const textEl = screen.getByText(/1段落目はとても長い本文です/);
-      expect(textEl).not.toHaveStyle({ display: "-webkit-box" });
+      expect(textEl.closest('[style*="-webkit-box"]')).toBeNull();
     });
   });
 
@@ -350,12 +377,12 @@ describe("PostCard", () => {
   });
 
   describe("variant（フラットリスト表示・#834）", () => {
-    it("variant=\"list\" 時、外枚の data-variant 属性が \"list\" になる", () => {
+    it("variant=\"list\" 時、外柚の data-variant 属性が \"list\" になる", () => {
       const { container } = render(<PostCard post={mockPost} onVote={vi.fn()} variant="list" />);
       expect(container.firstChild).toHaveAttribute("data-variant", "list");
     });
 
-    it("variant 未指定（デフォルト card）時、外枚の data-variant 属性が \"card\" になる", () => {
+    it("variant 未指定（デフォルト card）時、外柚の data-variant 属性が \"card\" になる", () => {
       const { container } = render(<PostCard post={mockPost} onVote={vi.fn()} />);
       expect(container.firstChild).toHaveAttribute("data-variant", "card");
     });
@@ -442,9 +469,9 @@ describe("PostCard", () => {
       expect(screen.queryByRole("button", { name: /down vote/i })).not.toBeInTheDocument();
     });
 
-    it("loading=true のとき実 UI と同一の外枚 Box が描画され、その中に複数の Skeleton が含まれる", () => {
+    it("loading=true のとき実 UI と同一の外柚 Box が描画され、その中に複数の Skeleton が含まれる", () => {
       const { container } = render(<PostCard loading />);
-      // 外枚 Box の中に Skeleton が複数含まれることを確認（タイトル・ byline・本文 3 行・アクションバー）
+      // 外柚 Box の中に Skeleton が複数含まれることを確認（タイトル・ byline・本文 3 行・アクションバー）
       const skeletons = container.querySelectorAll(".MuiSkeleton-root");
       expect(skeletons.length).toBeGreaterThanOrEqual(5);
     });

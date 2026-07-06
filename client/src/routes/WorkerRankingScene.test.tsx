@@ -5,13 +5,24 @@
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import type React from "react";
 
 import { TRENDING_ITEMS_QUERY_KEY } from "../api/ranking.js";
 import { WORKER_RANKING_QUERY_KEY } from "../api/workers.js";
 import { QueryBoundary } from "../components/QueryBoundary.js";
 import { WorkerRankingScene } from "./WorkerRankingScene.js";
 import type { TrendingItem, WorkerRankingItem } from "@hatchery/common";
+
+// #1065: 右サイドバーの TrendingSidebarCard が RouterLink を使うため、
+// RouterProvider 無しでレンダリングできるよう Link をモックする（RecentPostsSidebarCard.test.tsx と同様）。
+vi.mock("@tanstack/react-router", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@tanstack/react-router")>();
+  return {
+    ...actual,
+    Link: ({ children, to }: { children: React.ReactNode; to: string }) => <a href={to}>{children}</a>,
+  };
+});
 
 const mockWorkers: WorkerRankingItem[] = [
   { worker_id: "worker-1", display_name: "Alice", view_count: 100, vote_net_score: 5, image_url: null },
@@ -31,10 +42,10 @@ const mockTrendingItems: TrendingItem[] = [
   },
 ];
 
-function renderWithData(
-  workers: WorkerRankingItem[] = mockWorkers,
-  trendingItems: TrendingItem[] = mockTrendingItems,
-) {
+function renderWithData({
+  workers = mockWorkers,
+  trendingItems = mockTrendingItems,
+}: { workers?: WorkerRankingItem[]; trendingItems?: TrendingItem[] } = {}) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   });
@@ -56,30 +67,30 @@ const bigWorkers: WorkerRankingItem[] = [
 
 describe("WorkerRankingScene (#784) — 順位番号・閲覧数・スコア色分け", () => {
   it("順位番号（1, 2, …）が表示される", async () => {
-    renderWithData(bigWorkers);
+    renderWithData({ workers: bigWorkers });
     expect(await screen.findByText("1")).toBeInTheDocument();
     expect(screen.getByText("2")).toBeInTheDocument();
   });
 
   it("閲覧数が toLocaleString 形式（カンマ区切り）で表示される", async () => {
-    renderWithData(bigWorkers);
+    renderWithData({ workers: bigWorkers });
     expect(await screen.findByText("12,345")).toBeInTheDocument();
   });
 
   it("vote_net_score >= 0 のとき score-positive testid セルに + プレフィックス付きで表示される", async () => {
-    renderWithData(bigWorkers);
+    renderWithData({ workers: bigWorkers });
     const cell = await screen.findByTestId("score-positive");
     expect(cell).toHaveTextContent("+10");
   });
 
   it("vote_net_score < 0 のとき score-negative testid セルに符号付きで表示される", async () => {
-    renderWithData(bigWorkers);
+    renderWithData({ workers: bigWorkers });
     const cell = await screen.findByTestId("score-negative");
     expect(cell).toHaveTextContent("-7");
   });
 
   it("データが空のとき data-testid ranking-empty が表示される", async () => {
-    renderWithData([]);
+    renderWithData({ workers: [] });
     expect(await screen.findByTestId("ranking-empty")).toBeInTheDocument();
   });
 });
@@ -124,7 +135,7 @@ describe("WorkerRankingScene (#774)", () => {
   });
 
   it("データが空のとき「まだランキングデータがありません。」が表示される", async () => {
-    renderWithData([]);
+    renderWithData({ workers: [] });
     expect(
       await screen.findByText("まだランキングデータがありません。"),
     ).toBeInTheDocument();
@@ -139,13 +150,13 @@ describe("WorkerRankingScene (#956) — アバター表示", () => {
   });
 
   it("image_url が null のとき Avatar が存在し alt に表示名が設定される（自動生成 URL がフォールバックとして使われる）", async () => {
-    renderWithData([{ worker_id: "w-1", display_name: "Alice", view_count: 10, vote_net_score: 1, image_url: null }]);
+    renderWithData({ workers: [{ worker_id: "w-1", display_name: "Alice", view_count: 10, vote_net_score: 1, image_url: null }] });
     await screen.findByText("Alice");
     expect(screen.getByRole("img", { name: "Alice" })).toBeInTheDocument();
   });
 
   it("データが空のとき Avatar は表示されない", async () => {
-    renderWithData([]);
+    renderWithData({ workers: [] });
     await screen.findByTestId("ranking-empty");
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
   });
@@ -164,12 +175,12 @@ describe("WorkerRankingScene（#1065）— 2カラムレイアウト・右サイ
   });
 
   it("トレンドアイテムが 0 件のとき data-testid=trending-sidebar-empty が表示される", async () => {
-    renderWithData(mockWorkers, []);
+    renderWithData({ workers: mockWorkers, trendingItems: [] });
     expect(await screen.findByTestId("trending-sidebar-empty")).toBeInTheDocument();
   });
 
   it("ワーカーランキングが空でもトレンドサイドバーは独立して表示される", async () => {
-    renderWithData([], mockTrendingItems);
+    renderWithData({ workers: [], trendingItems: mockTrendingItems });
     await screen.findByTestId("ranking-empty");
     expect(screen.getByText("直近7日で人気の投稿本文")).toBeInTheDocument();
   });

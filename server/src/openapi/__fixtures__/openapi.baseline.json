@@ -418,7 +418,7 @@
           "last_post_at",
           "subscriber_count"
         ],
-        "description": "コミュニティ（サブレディト相当）。ADR-0019"
+        "description": "コミュニティ（サブレディット相当）。ADR-0019"
       },
       "AdminCommunity": {
         "type": "object",

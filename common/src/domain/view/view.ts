@@ -50,7 +50,13 @@ export type WorkerRankingItem = z.infer<typeof WorkerRankingItemSchema>;
 /** TrendingItem の id / post_id / community_id の最大文字数（UUID 相当。余裕を持たせ 256 文字上限）（#1065）。 */
 export const TRENDING_ITEM_ID_MAX_LENGTH = 256;
 
-/** TrendingItem の excerpt の最大文字数（コードポイント単位で60文字+"…"を格納できる余裕を持たせた上限）（#1065）。 */
+/**
+ * TrendingItem の excerpt の最大文字数（#1065）。
+ * 実際の切り詰め上限は `server/src/persistence/trendingItemBuilder.ts` の
+ * `TRENDING_EXCERPT_LIMIT`（60 コードポイント + "…"）で決まる。ここではサロゲート
+ * ペアを考慮した余裕を持たせた上限とし、意図的に高めに設定している。
+ * `TRENDING_EXCERPT_LIMIT` を変更する場合はこの上限も超過しないか確認すること。
+ */
 export const TRENDING_ITEM_EXCERPT_MAX_LENGTH = 200;
 
 /** TrendingItem（post / comment）共通フィールド（#1065）。 */

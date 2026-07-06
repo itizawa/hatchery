@@ -3,14 +3,11 @@ import { describe, expect, it } from "vitest";
 
 import { createApp } from "../app.js";
 import { createInMemoryCommentRepository } from "../persistence/commentRepository.js";
-import type { CommentRepository } from "../persistence/commentRepository.js";
 import { createInMemoryCommunityRepository } from "../persistence/communityRepository.js";
-import type { CommunityRecord, CommunityRepository } from "../persistence/communityRepository.js";
+import type { CommunityRecord } from "../persistence/communityRepository.js";
 import { createInMemoryPostRepository } from "../persistence/postRepository.js";
-import type { PostRepository } from "../persistence/postRepository.js";
 import { createTestDeps } from "../testing/createTestDeps.js";
-import { createInMemoryVoteRepository } from "../persistence/voteRepository.js";
-import type { ResolveTrendingTargetMeta, VoteRepository } from "../persistence/voteRepository.js";
+import type { VoteRepository } from "../persistence/voteRepository.js";
 
 const COMMUNITY: CommunityRecord = {
   id: "community-1",
@@ -27,46 +24,10 @@ const COMMUNITY: CommunityRecord = {
 };
 
 /**
- * postRepository / commentRepository / communityRepository を橋渡しする
- * ResolveTrendingTargetMeta を組み立てる（#1065・in-memory トレンド集計テスト用）。
+ * post 1 件・comment 1 件を用意し、voteRepository を紐付けて buildApp する。
+ * createTestDeps に postRepository/commentRepository/communityRepository を渡すと
+ * trendingItemsSince 用の resolveTrendingTargetMeta が自動で組み立てられる（#1065）。
  */
-function buildResolveTrendingTargetMeta({
-  postRepository,
-  commentRepository,
-  communityRepository,
-}: {
-  postRepository: PostRepository;
-  commentRepository: CommentRepository;
-  communityRepository: CommunityRepository;
-}): ResolveTrendingTargetMeta {
-  // eslint-disable-next-line max-params
-  return async (targetType, targetId) => {
-    if (targetType === "post") {
-      const post = await postRepository.findById(targetId);
-      if (!post) return null;
-      const community = await communityRepository.findById(post.communityId);
-      return {
-        postId: post.id,
-        communityId: post.communityId,
-        communitySlug: community?.slug ?? "",
-        text: post.text,
-        createdAt: post.createdAt,
-      };
-    }
-    const comment = await commentRepository.findById(targetId);
-    if (!comment) return null;
-    const community = await communityRepository.findById(comment.communityId);
-    return {
-      postId: comment.postId,
-      communityId: comment.communityId,
-      communitySlug: community?.slug ?? "",
-      text: comment.text,
-      createdAt: comment.createdAt,
-    };
-  };
-}
-
-/** post 1 件・comment 1 件を用意し、voteRepository を紐付けて buildApp する。 */
 async function buildAppWithTrendingFixtures(): Promise<{
   app: ReturnType<typeof createApp>;
   voteRepository: VoteRepository;
@@ -84,13 +45,9 @@ async function buildAppWithTrendingFixtures(): Promise<{
     { postId: post!.id, slotKey: "2026-06-10T09:00", seq: 0, author: "w2", text: "comment の本文冒頭です" },
   ]);
 
-  const voteRepository = createInMemoryVoteRepository({
-    resolveTrendingTargetMeta: buildResolveTrendingTargetMeta({ postRepository, commentRepository, communityRepository }),
-  });
-
-  const deps = createTestDeps({ postRepository, commentRepository, communityRepository, voteRepository });
+  const deps = createTestDeps({ postRepository, commentRepository, communityRepository });
   const app = createApp(deps);
-  return { app, voteRepository, postId: post!.id, commentId: comment!.id };
+  return { app, voteRepository: deps.voteRepository, postId: post!.id, commentId: comment!.id };
 }
 
 describe("GET /api/ranking/trending（トレンド Post/Comment・#1065）", () => {
@@ -152,12 +109,10 @@ describe("GET /api/ranking/trending（トレンド Post/Comment・#1065）", () 
       { slotKey: "2026-06-10T09:00", seq: 0, author: "w1", title: "t1", text: "post1" },
       { slotKey: "2026-06-10T09:00", seq: 1, author: "w1", title: "t2", text: "post2" },
     ]);
-    const voteRepository = createInMemoryVoteRepository({
-      resolveTrendingTargetMeta: buildResolveTrendingTargetMeta({ postRepository, commentRepository, communityRepository }),
-    });
-    await voteRepository.vote({ sessionId: "s1", userId: null, targetType: "post", targetId: posts[0]!.id, direction: "up" });
-    await voteRepository.vote({ sessionId: "s1", userId: null, targetType: "post", targetId: posts[1]!.id, direction: "up" });
-    const app = createApp(createTestDeps({ postRepository, commentRepository, communityRepository, voteRepository }));
+    const deps = createTestDeps({ postRepository, commentRepository, communityRepository });
+    await deps.voteRepository.vote({ sessionId: "s1", userId: null, targetType: "post", targetId: posts[0]!.id, direction: "up" });
+    await deps.voteRepository.vote({ sessionId: "s1", userId: null, targetType: "post", targetId: posts[1]!.id, direction: "up" });
+    const app = createApp(deps);
 
     const res = await request(app).get("/api/ranking/trending?limit=1");
 

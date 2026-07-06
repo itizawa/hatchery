@@ -3,8 +3,7 @@ import { Link as RouterLink } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 
 import type { TrendingItem } from "@hatchery/common";
-import { sidebarCardOuterBoxSx } from "./sidebarCardSx.js";
-import { SLACK_COLORS } from "../theme.js";
+import { sidebarCardOuterBoxSx, sidebarListItemSx, sidebarListItemTitleSx } from "./sidebarCardSx.js";
 
 interface TrendingSidebarCardProps {
   items: TrendingItem[];
@@ -33,34 +32,14 @@ export const TrendingSidebarCard = ({ items }: TrendingSidebarCardProps): ReactE
           sx={{ listStyle: "none", p: 0, m: 0, display: "flex", flexDirection: "column", gap: 1.5 }}
         >
           {items.map((item) => (
-            <Box
-              component="li"
-              key={`${item.type}-${item.id}`}
-              sx={{
-                backgroundColor: SLACK_COLORS.mainBackground,
-                borderRadius: 2,
-                p: 1.5,
-              }}
-            >
+            <Box component="li" key={`${item.type}-${item.id}`} sx={sidebarListItemSx}>
               <RouterLink
                 to="/posts/$postId"
                 params={{ postId: item.post_id }}
                 hash={item.type === "comment" ? `comment-${item.id}` : undefined}
                 style={{ textDecoration: "none", color: "inherit" }}
               >
-                <Typography
-                  variant="body2"
-                  sx={{
-                    fontWeight: "medium",
-                    lineHeight: 1.4,
-                    overflow: "hidden",
-                    display: "-webkit-box",
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: "vertical",
-                    "&:hover": { color: "primary.main" },
-                    transition: "color 150ms ease-out",
-                  }}
-                >
+                <Typography variant="body2" sx={sidebarListItemTitleSx}>
                   {item.excerpt}
                 </Typography>
               </RouterLink>

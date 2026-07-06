@@ -58,7 +58,7 @@ const MOCK_TRENDING_ITEMS = [
   },
 ];
 
-// ─── モックヘルパー ───────────────────────────────────────────────────
+// AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA_PLACEHOLDER_MOCKHELPER
 
 async function mockUnauthenticated(page: Page): Promise<void> {
   await page.route("**/api/auth/me", (route) =>
@@ -123,7 +123,7 @@ async function mockTrendingApi({
   );
 }
 
-// ─── テスト ────────────────────────────────────────────────────────
+// BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB_PLACEHOLDER_TEST
 
 test("UC-RANK-01: サイドバーの「ランキング」リンクを押して /ranking へ遷移できる", async ({
   page,
@@ -258,7 +258,7 @@ test(
     // 右サイドバーの空状態メッセージが表示されること
     await expect(page.getByText("まだ評価の高い投稿がありません。")).toBeVisible();
 
-    // 左カラムのランキングテーブルは独立して表示されること
+    // 左カラムのランキングテーブルは独立して表示されない
     await expect(page.getByRole("table", { name: "ワーカーランキング" })).toBeVisible();
   },
 );

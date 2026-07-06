@@ -8,7 +8,7 @@ import { test, expect } from "../support/test.js";
  * page.route() で API をモックし、バックエンドなしでブラウザ側の振る舞いを検証する。
  */
 
-// ---- MOCK_DATA_SEPARATOR_LINE ----
+// ─── モックデータ ─────────────────────────────────────────────────────
 
 const MOCK_RANKING_WORKERS = [
   {
@@ -58,7 +58,7 @@ const MOCK_TRENDING_ITEMS = [
   },
 ];
 
-// ---- MOCK_HELPER_SEPARATOR_LINE ----
+// ─── モックヘルパー ─────────────────────────────────────────────────────
 
 async function mockUnauthenticated(page: Page): Promise<void> {
   await page.route("**/api/auth/me", (route) =>
@@ -123,7 +123,7 @@ async function mockTrendingApi({
   );
 }
 
-// ---- TEST_SEPARATOR_LINE ----
+// ─── テスト ─────────────────────────────────────────────────────────────────
 
 test("UC-RANK-01: サイドバーの「ランキング」リンクを押して /ranking へ遷移できる", async ({
   page,

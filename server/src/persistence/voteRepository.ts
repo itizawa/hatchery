@@ -248,7 +248,7 @@ export function createInMemoryVoteRepository(
       const aggregates = new Map<string, Aggregate>();
       for (const r of records) {
         if (r.createdAt.getTime() < since.getTime()) continue;
-        const key = `${r.targetType} ${r.targetId}`;
+        const key = `${r.targetType} ${r.targetId}`;
         const delta = r.direction === "up" ? 1 : -1;
         const existing = aggregates.get(key);
         if (existing) {

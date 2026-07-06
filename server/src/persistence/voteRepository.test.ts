@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createInMemoryVoteRepository } from "./voteRepository.js";
+import type { ResolveTrendingTargetMeta, TrendingTargetMeta } from "./voteRepository.js";
 
 describe("createInMemoryVoteRepository", () => {
   describe("findVote", () => {
@@ -283,6 +284,150 @@ describe("createInMemoryVoteRepository", () => {
         applyScore: async (delta) => delta,
       });
       expect(currentDirection).toBe("up");
+    });
+  });
+
+  describe("trendingItemsSince（#1065）", () => {
+    const SINCE = new Date("2026-06-01T00:00:00.000Z");
+
+    const posts = new Map<string, TrendingTargetMeta>([
+      [
+        "p1",
+        {
+          postId: "p1",
+          communityId: "c1",
+          communitySlug: "technology",
+          text: "post p1 の本文冒頭です",
+          createdAt: new Date("2026-06-10T09:00:00.000Z"),
+        },
+      ],
+      [
+        "p2",
+        {
+          postId: "p2",
+          communityId: "c1",
+          communitySlug: "technology",
+          text: "post p2 の本文冒頭です",
+          createdAt: new Date("2026-06-11T09:00:00.000Z"),
+        },
+      ],
+    ]);
+
+    const comments = new Map<string, TrendingTargetMeta>([
+      [
+        "cm1",
+        {
+          postId: "p1",
+          communityId: "c1",
+          communitySlug: "technology",
+          text: "comment cm1 の本文冒頭です",
+          createdAt: new Date("2026-06-10T10:00:00.000Z"),
+        },
+      ],
+    ]);
+
+    // eslint-disable-next-line max-params
+    const resolveTrendingTargetMeta: ResolveTrendingTargetMeta = async (targetType, targetId) => {
+      const store = targetType === "post" ? posts : comments;
+      return store.get(targetId) ?? null;
+    };
+
+    it("vote が 0 件のとき空配列を返す", async () => {
+      const repo = createInMemoryVoteRepository({ resolveTrendingTargetMeta });
+      const result = await repo.trendingItemsSince({ since: SINCE, limit: 10 });
+      expect(result).toEqual([]);
+    });
+
+    it("post への up vote を net_score に集計し type: post のアイテムを返す", async () => {
+      const repo = createInMemoryVoteRepository({ resolveTrendingTargetMeta });
+      await repo.vote({ sessionId: "s1", userId: null, targetType: "post", targetId: "p1", direction: "up" });
+      await repo.vote({ sessionId: "s2", userId: null, targetType: "post", targetId: "p1", direction: "up" });
+
+      const result = await repo.trendingItemsSince({ since: SINCE, limit: 10 });
+
+      expect(result).toEqual([
+        {
+          type: "post",
+          id: "p1",
+          post_id: "p1",
+          excerpt: "post p1 の本文冒頭です",
+          community_id: "c1",
+          community_slug: "technology",
+          net_score: 2,
+          created_at: "2026-06-10T09:00:00.000Z",
+        },
+      ]);
+    });
+
+    it("comment への vote は post_id に親 post の id を設定し type: comment を返す", async () => {
+      const repo = createInMemoryVoteRepository({ resolveTrendingTargetMeta });
+      await repo.vote({ sessionId: "s1", userId: null, targetType: "comment", targetId: "cm1", direction: "up" });
+
+      const result = await repo.trendingItemsSince({ since: SINCE, limit: 10 });
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toMatchObject({ type: "comment", id: "cm1", post_id: "p1", net_score: 1 });
+    });
+
+    it("down vote が優勢だと net_score が負数になる", async () => {
+      const repo = createInMemoryVoteRepository({ resolveTrendingTargetMeta });
+      await repo.vote({ sessionId: "s1", userId: null, targetType: "post", targetId: "p1", direction: "down" });
+      await repo.vote({ sessionId: "s2", userId: null, targetType: "post", targetId: "p1", direction: "down" });
+      await repo.vote({ sessionId: "s3", userId: null, targetType: "post", targetId: "p1", direction: "up" });
+
+      const result = await repo.trendingItemsSince({ since: SINCE, limit: 10 });
+
+      expect(result[0]?.net_score).toBe(-1);
+    });
+
+    it("net_score 降順でソートされる", async () => {
+      const repo = createInMemoryVoteRepository({ resolveTrendingTargetMeta });
+      await repo.vote({ sessionId: "s1", userId: null, targetType: "post", targetId: "p1", direction: "up" });
+      await repo.vote({ sessionId: "s1", userId: null, targetType: "post", targetId: "p2", direction: "up" });
+      await repo.vote({ sessionId: "s2", userId: null, targetType: "post", targetId: "p2", direction: "up" });
+      await repo.vote({ sessionId: "s3", userId: null, targetType: "post", targetId: "p2", direction: "up" });
+
+      const result = await repo.trendingItemsSince({ since: SINCE, limit: 10 });
+
+      expect(result.map((item) => item.id)).toEqual(["p2", "p1"]);
+    });
+
+    it("limit で件数を制限する", async () => {
+      const repo = createInMemoryVoteRepository({ resolveTrendingTargetMeta });
+      await repo.vote({ sessionId: "s1", userId: null, targetType: "post", targetId: "p1", direction: "up" });
+      await repo.vote({ sessionId: "s1", userId: null, targetType: "post", targetId: "p2", direction: "up" });
+
+      const result = await repo.trendingItemsSince({ since: SINCE, limit: 1 });
+
+      expect(result).toHaveLength(1);
+    });
+
+    it("since より前の vote は集計から除外する", async () => {
+      const repo = createInMemoryVoteRepository({ resolveTrendingTargetMeta });
+      await repo.vote({ sessionId: "s1", userId: null, targetType: "post", targetId: "p1", direction: "up" });
+
+      const future = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      const result = await repo.trendingItemsSince({ since: future, limit: 10 });
+
+      expect(result).toEqual([]);
+    });
+
+    it("resolveTrendingTargetMeta が null を返す（対象が削除済み等）場合はスキップする", async () => {
+      const repo = createInMemoryVoteRepository({ resolveTrendingTargetMeta });
+      await repo.vote({ sessionId: "s1", userId: null, targetType: "post", targetId: "unknown-post", direction: "up" });
+
+      const result = await repo.trendingItemsSince({ since: SINCE, limit: 10 });
+
+      expect(result).toEqual([]);
+    });
+
+    it("resolveTrendingTargetMeta 未注入のときは常に空配列を返す", async () => {
+      const repo = createInMemoryVoteRepository();
+      await repo.vote({ sessionId: "s1", userId: null, targetType: "post", targetId: "p1", direction: "up" });
+
+      const result = await repo.trendingItemsSince({ since: SINCE, limit: 10 });
+
+      expect(result).toEqual([]);
     });
   });
 });

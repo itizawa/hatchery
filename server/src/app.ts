@@ -43,6 +43,7 @@ import { createPostsRouter } from "./routes/posts.js";
 import { createSitemapRouter } from "./routes/sitemap.js";
 import { createSubscriptionsRouter } from "./routes/subscriptions.js";
 import { createPushSubscriptionsRouter } from "./routes/pushSubscriptions.js";
+import { createRankingRouter } from "./routes/ranking.js";
 
 /** DDoS/過負荷対策（#34）の設定。未指定の項目は安全な既定値を使う。 */
 export interface SecurityOptions {
@@ -260,6 +261,7 @@ export function createApp(deps: AppDeps): Express {
     ),
   );
   app.use("/api/feed", publicCache, createFeedRouter({ postRepo, workerRepo: deps.workerRepository, commentRepo, voteRepo }));
+  app.use("/api/ranking", publicCache, createRankingRouter({ voteRepository: voteRepo }));
   app.use(
     "/api/subscriptions",
     noStoreCache,

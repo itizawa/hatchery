@@ -1263,6 +1263,117 @@
           }
         },
         "description": "OGP メタデータ（#515）"
+      },
+      "TrendingItem": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "post_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "excerpt": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "community_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "community_slug": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 50
+              },
+              "net_score": {
+                "type": "integer"
+              },
+              "created_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "post"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "post_id",
+              "excerpt",
+              "community_id",
+              "community_slug",
+              "net_score",
+              "created_at",
+              "type"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "post_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "excerpt": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "community_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "community_slug": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 50
+              },
+              "net_score": {
+                "type": "integer"
+              },
+              "created_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "comment"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "post_id",
+              "excerpt",
+              "community_id",
+              "community_slug",
+              "net_score",
+              "created_at",
+              "type"
+            ]
+          }
+        ],
+        "description": "直近 7 日間で評価（vote）を多く獲得した Post / Comment（#1065）"
       }
     },
     "parameters": {}
@@ -3631,6 +3742,57 @@
                   "required": [
                     "error"
                   ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ranking/trending": {
+      "get": {
+        "summary": "直近 7 日間で評価（vote）を多く獲得した Post / Comment を取得（認証不要・#1065）",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20,
+              "description": "取得件数（1〜20、既定 10）"
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "トレンド Post/Comment 一覧（net_score 降順）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/TrendingItem"
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "バリデーションエラー（limit 範囲外）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }

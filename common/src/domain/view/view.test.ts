@@ -1,11 +1,15 @@
 import { describe, expect, it } from "vitest";
 
+import { COMMUNITY_SLUG_MAX_LENGTH } from "../community/community.js";
 import { WORKER_IMAGE_URL_MAX_LENGTH } from "../worker/worker.js";
 import {
   CommentViewsRequestSchema,
   COMMENT_IDS_MAX_COUNT,
   PostViewRequestSchema,
   SESSION_ID_MAX_LENGTH,
+  TrendingItemSchema,
+  TRENDING_ITEM_EXCERPT_MAX_LENGTH,
+  TRENDING_ITEM_ID_MAX_LENGTH,
   WorkerRankingItemSchema,
 } from "./view.js";
 
@@ -113,5 +117,85 @@ describe("WorkerRankingItemSchema", () => {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { image_url: _imageUrl, ...withoutImageUrl } = valid;
     expect(WorkerRankingItemSchema.safeParse(withoutImageUrl).success).toBe(false);
+  });
+});
+
+describe("TrendingItemSchema（#1065）", () => {
+  const validPost = {
+    type: "post" as const,
+    id: "post-1",
+    post_id: "post-1",
+    excerpt: "本文冒頭のプレビュー",
+    community_id: "community-1",
+    community_slug: "technology",
+    net_score: 12,
+    created_at: "2026-07-01T09:00:00.000Z",
+  };
+
+  const validComment = {
+    type: "comment" as const,
+    id: "comment-1",
+    post_id: "post-1",
+    excerpt: "コメント本文冒頭のプレビュー",
+    community_id: "community-1",
+    community_slug: "technology",
+    net_score: -3,
+    created_at: "2026-07-02T09:00:00.000Z",
+  };
+
+  it("有効な post アイテムをパースできる", () => {
+    expect(TrendingItemSchema.safeParse(validPost).success).toBe(true);
+  });
+
+  it("有効な comment アイテムをパースできる（post_id が自身の id と異なる）", () => {
+    expect(TrendingItemSchema.safeParse(validComment).success).toBe(true);
+  });
+
+  it("net_score は負数でも accept する（down vote 優勢であり得る）", () => {
+    expect(TrendingItemSchema.safeParse({ ...validPost, net_score: -1 }).success).toBe(true);
+  });
+
+  it("type が post/comment 以外だと reject する", () => {
+    expect(TrendingItemSchema.safeParse({ ...validPost, type: "worker" }).success).toBe(false);
+  });
+
+  it("type フィールドが欠落すると reject する", () => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { type: _type, ...withoutType } = validPost;
+    expect(TrendingItemSchema.safeParse(withoutType).success).toBe(false);
+  });
+
+  it("created_at が ISO8601 datetime でない文字列だと reject する", () => {
+    expect(TrendingItemSchema.safeParse({ ...validPost, created_at: "2026/07/01" }).success).toBe(false);
+  });
+
+  it(`excerpt が ${TRENDING_ITEM_EXCERPT_MAX_LENGTH} 文字ちょうどなら accept する`, () => {
+    const exact = "あ".repeat(TRENDING_ITEM_EXCERPT_MAX_LENGTH);
+    expect(TrendingItemSchema.safeParse({ ...validPost, excerpt: exact }).success).toBe(true);
+  });
+
+  it(`excerpt が ${TRENDING_ITEM_EXCERPT_MAX_LENGTH} 文字を超えると reject する`, () => {
+    const long = "あ".repeat(TRENDING_ITEM_EXCERPT_MAX_LENGTH + 1);
+    expect(TrendingItemSchema.safeParse({ ...validPost, excerpt: long }).success).toBe(false);
+  });
+
+  it(`community_slug が ${COMMUNITY_SLUG_MAX_LENGTH} 文字を超えると reject する`, () => {
+    const longSlug = "a".repeat(COMMUNITY_SLUG_MAX_LENGTH + 1);
+    expect(TrendingItemSchema.safeParse({ ...validPost, community_slug: longSlug }).success).toBe(false);
+  });
+
+  it(`id が ${TRENDING_ITEM_ID_MAX_LENGTH} 文字を超えると reject する`, () => {
+    const longId = "a".repeat(TRENDING_ITEM_ID_MAX_LENGTH + 1);
+    expect(TrendingItemSchema.safeParse({ ...validPost, id: longId }).success).toBe(false);
+  });
+
+  it(`post_id が ${TRENDING_ITEM_ID_MAX_LENGTH} 文字を超えると reject する`, () => {
+    const longPostId = "a".repeat(TRENDING_ITEM_ID_MAX_LENGTH + 1);
+    expect(TrendingItemSchema.safeParse({ ...validPost, post_id: longPostId }).success).toBe(false);
+  });
+
+  it(`id が ${TRENDING_ITEM_ID_MAX_LENGTH} 文字を超えると community も含め reject する（comment 側でも検証）`, () => {
+    const longId = "a".repeat(TRENDING_ITEM_ID_MAX_LENGTH + 1);
+    expect(TrendingItemSchema.safeParse({ ...validComment, community_id: longId }).success).toBe(false);
   });
 });

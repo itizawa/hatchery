@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { COMMUNITY_SLUG_MAX_LENGTH } from "../community/community.js";
 import { WORKER_DISPLAY_NAME_MAX_LENGTH, WORKER_IMAGE_URL_MAX_LENGTH } from "../worker/worker.js";
 
 /** sessionId の最大文字数（UUID v4/v7 は 36 文字。余裕を持たせ 256 文字上限）。 */
@@ -45,3 +46,37 @@ export const WorkerRankingItemSchema = z.object({
   image_url: z.string().url().max(WORKER_IMAGE_URL_MAX_LENGTH).nullable(),
 });
 export type WorkerRankingItem = z.infer<typeof WorkerRankingItemSchema>;
+
+/** TrendingItem の id / post_id / community_id の最大文字数（UUID 相当。余裕を持たせ 256 文字上限）（#1065）。 */
+export const TRENDING_ITEM_ID_MAX_LENGTH = 256;
+
+/**
+ * TrendingItem の excerpt の最大文字数（#1065）。
+ * 実際の切り詰め上限は `server/src/persistence/trendingItemBuilder.ts` の
+ * `TRENDING_EXCERPT_LIMIT`（60 コードポイント + "…"）で決まる。ここではサロゲート
+ * ペアを考慮した余裕を持たせた上限とし、意図的に高めに設定している。
+ * `TRENDING_EXCERPT_LIMIT` を変更する場合はこの上限も超過しないか確認すること。
+ */
+export const TRENDING_ITEM_EXCERPT_MAX_LENGTH = 200;
+
+/** TrendingItem（post / comment）共通フィールド（#1065）。 */
+const TrendingItemBaseSchema = z.object({
+  id: z.string().min(1).max(TRENDING_ITEM_ID_MAX_LENGTH),
+  /** 親 post の id。post 自身の場合は自身の id と同じ値。 */
+  post_id: z.string().min(1).max(TRENDING_ITEM_ID_MAX_LENGTH),
+  excerpt: z.string().min(1).max(TRENDING_ITEM_EXCERPT_MAX_LENGTH),
+  community_id: z.string().min(1).max(TRENDING_ITEM_ID_MAX_LENGTH),
+  community_slug: z.string().min(1).max(COMMUNITY_SLUG_MAX_LENGTH),
+  net_score: z.number().int(),
+  created_at: z.string().datetime(),
+});
+
+/**
+ * GET /api/ranking/trending の 1 アイテム（#1065）。
+ * 直近 7 日間で評価（vote）を多く獲得した Post / Comment を表す discriminated union。
+ */
+export const TrendingItemSchema = z.discriminatedUnion("type", [
+  TrendingItemBaseSchema.extend({ type: z.literal("post") }),
+  TrendingItemBaseSchema.extend({ type: z.literal("comment") }),
+]);
+export type TrendingItem = z.infer<typeof TrendingItemSchema>;

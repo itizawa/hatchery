@@ -4,8 +4,7 @@ import type { ReactElement } from "react";
 
 import type { Post } from "../api/posts.js";
 import { PostedTime } from "./PostedTime.js";
-import { sidebarCardOuterBoxSx } from "./sidebarCardSx.js";
-import { SLACK_COLORS } from "../theme.js";
+import { sidebarCardOuterBoxSx, sidebarListItemSx, sidebarListItemTitleSx } from "./sidebarCardSx.js";
 
 export interface PostCardCommunityInfo {
   slug: string;
@@ -44,33 +43,13 @@ export const RecentPostsSidebarCard = ({
           {posts.map((post) => {
             const community = communityById.get(post.community_id);
             return (
-              <Box
-                component="li"
-                key={post.id}
-                sx={{
-                  backgroundColor: SLACK_COLORS.mainBackground,
-                  borderRadius: 2,
-                  p: 1.5,
-                }}
-              >
+              <Box component="li" key={post.id} sx={sidebarListItemSx}>
                 <RouterLink
                   to="/posts/$postId"
                   params={{ postId: post.id }}
                   style={{ textDecoration: "none", color: "inherit" }}
                 >
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      fontWeight: "medium",
-                      lineHeight: 1.4,
-                      overflow: "hidden",
-                      display: "-webkit-box",
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: "vertical",
-                      "&:hover": { color: "primary.main" },
-                      transition: "color 150ms ease-out",
-                    }}
-                  >
+                  <Typography variant="body2" sx={sidebarListItemTitleSx}>
                     {post.title}
                   </Typography>
                 </RouterLink>

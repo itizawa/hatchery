@@ -15,6 +15,7 @@ import { registerHealth } from "./registrations/registerHealth.js";
 import { registerOgp } from "./registrations/registerOgp.js";
 import { registerPosts } from "./registrations/registerPosts.js";
 import { registerPushSubscriptions } from "./registrations/registerPushSubscriptions.js";
+import { registerRanking } from "./registrations/registerRanking.js";
 import { registerSubscriptions } from "./registrations/registerSubscriptions.js";
 import { registerWorkers } from "./registrations/registerWorkers.js";
 import type { RegistryContext } from "./registrations/shared.js";
@@ -71,6 +72,8 @@ function buildRegistry(): OpenAPIRegistry {
   registerSubscriptions(registry, ctx);
   registerPushSubscriptions({ registry, ctx });
   registerOgp(registry);
+  // #1065: 末尾に追加（既存セクションの登録順序は変えない）。
+  registerRanking(registry, ctx);
 
   return registry;
 }

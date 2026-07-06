@@ -5,7 +5,7 @@ import { test, expect } from "../support/test.js";
  * ranking e2e テスト（#665 / #1065）。
  *
  * e2e/ranking/usecases.md の UC-RANK-01〜05 に対応する実テスト。
- * page.route() で API をモックし、バックエンドなしでブラウザ側の振る舆いを検証する。
+ * page.route() で API をモックし、バックエンドなしでブラウザ側の振る舞いを検証する。
  */
 
 // ─── モックデータ ───────────────────────────────────────────────────

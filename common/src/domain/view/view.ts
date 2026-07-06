@@ -36,7 +36,7 @@ export type CommentViewsRequest = z.infer<typeof CommentViewsRequestSchema>;
 
 /**
  * GET /api/workers/ranking の 1 アイテム（#665 / ADR-0032）。
- * vote net score と閲覧数を**併記**する（単一合成スコアに畚まない）。
+ * vote net score と閲覧数を**併記**する（単一合成スコアに畴まない）。
  */
 export const WorkerRankingItemSchema = z.object({
   worker_id: z.string().min(1).max(WORKER_ID_MAX_LENGTH),

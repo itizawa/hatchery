@@ -323,7 +323,7 @@ export function createPrismaVoteRepository(prisma: PrismaClient): VoteRepository
           WHERE v."commentId" IS NOT NULL AND v."createdAt" >= ${since}
           GROUP BY c."id", c."postId", c."text", c."communityId", cm."slug", c."createdAt"
         ) AS resolved
-        ORDER BY "netScore" DESC
+        ORDER BY "netScore" DESC, "createdAt" DESC, "id" DESC
         LIMIT ${limit}
       `);
 

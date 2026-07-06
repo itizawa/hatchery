@@ -1,5 +1,8 @@
 import type { TrendingItem, VoteDirection } from "@hatchery/common";
 
+import type { CommentRepository } from "./commentRepository.js";
+import type { CommunityRepository } from "./communityRepository.js";
+import type { PostRepository } from "./postRepository.js";
 import { buildTrendingExcerpt } from "./trendingItemBuilder.js";
 
 export type { VoteDirection };
@@ -113,6 +116,48 @@ export type ResolveTrendingTargetMeta = (
   targetType: VoteTargetType,
   targetId: string,
 ) => Promise<TrendingTargetMeta | null>;
+
+/**
+ * postRepository / commentRepository / communityRepository を橋渡しする
+ * ResolveTrendingTargetMeta を組み立てる（#1065）。
+ * in-memory VoteRepository で trendingItemsSince を実際に使う全ての呼び出し元
+ * （`createTestDeps` / ルートテスト等）がこれを共有し、解決ロジックを重複させない。
+ */
+export function buildResolveTrendingTargetMeta({
+  postRepository,
+  commentRepository,
+  communityRepository,
+}: {
+  postRepository: PostRepository;
+  commentRepository: CommentRepository;
+  communityRepository: CommunityRepository;
+}): ResolveTrendingTargetMeta {
+  // eslint-disable-next-line max-params
+  return async (targetType, targetId) => {
+    if (targetType === "post") {
+      const post = await postRepository.findById(targetId);
+      if (!post) return null;
+      const community = await communityRepository.findById(post.communityId);
+      return {
+        postId: post.id,
+        communityId: post.communityId,
+        communitySlug: community?.slug ?? "",
+        text: post.text,
+        createdAt: post.createdAt,
+      };
+    }
+    const comment = await commentRepository.findById(targetId);
+    if (!comment) return null;
+    const community = await communityRepository.findById(comment.communityId);
+    return {
+      postId: comment.postId,
+      communityId: comment.communityId,
+      communitySlug: community?.slug ?? "",
+      text: comment.text,
+      createdAt: comment.createdAt,
+    };
+  };
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // In-Memory 実装
@@ -258,24 +303,33 @@ export function createInMemoryVoteRepository(
         }
       }
 
-      const items: TrendingItem[] = [];
-      for (const { targetType, targetId, netScore } of aggregates.values()) {
-        const meta = await resolveTrendingTargetMeta(targetType, targetId);
-        if (!meta) continue;
-        items.push({
-          type: targetType,
-          id: targetId,
-          post_id: targetType === "post" ? targetId : meta.postId,
-          excerpt: buildTrendingExcerpt(meta.text),
-          community_id: meta.communityId,
-          community_slug: meta.communitySlug,
-          net_score: netScore,
-          created_at: meta.createdAt.toISOString(),
-        });
-      }
+      const resolved = await Promise.all(
+        Array.from(aggregates.values()).map(async ({ targetType, targetId, netScore }) => {
+          const meta = await resolveTrendingTargetMeta(targetType, targetId);
+          if (!meta) return null;
+          const item: TrendingItem = {
+            type: targetType,
+            id: targetId,
+            post_id: targetType === "post" ? targetId : meta.postId,
+            excerpt: buildTrendingExcerpt(meta.text),
+            community_id: meta.communityId,
+            community_slug: meta.communitySlug,
+            net_score: netScore,
+            created_at: meta.createdAt.toISOString(),
+          };
+          return item;
+        }),
+      );
+      const items = resolved.filter((item): item is TrendingItem => item !== null);
 
-      // eslint-disable-next-line max-params
-      items.sort((a, b) => b.net_score - a.net_score);
+      // net_score 降順。タイ時は created_at 降順・id 降順で決定的にする（Prisma 実装の ORDER BY と揃える・#1065）。
+      items.sort(
+        // eslint-disable-next-line max-params
+        (a, b) =>
+          b.net_score - a.net_score ||
+          b.created_at.localeCompare(a.created_at) ||
+          b.id.localeCompare(a.id),
+      );
       return items.slice(0, limit);
     },
   };

@@ -2,9 +2,9 @@ import type { Page } from "@playwright/test";
 import { test, expect } from "../support/test.js";
 
 /**
- * ranking e2e テスト（#665）。
+ * ranking e2e テスト（#665 / #1065）。
  *
- * e2e/ranking/usecases.md の UC-RANK-01〜03 に対応する実テスト。
+ * e2e/ranking/usecases.md の UC-RANK-01〜05 に対応する実テスト。
  * page.route() で API をモックし、バックエンドなしでブラウザ側の振る舞いを検証する。
  */
 
@@ -31,6 +31,30 @@ const MOCK_RANKING_WORKERS = [
     view_count: 30,
     vote_net_score: 0,
     image_url: null,
+  },
+];
+
+/** 右サイドバー用のトレンド Post/Comment モックデータ（#1065）。 */
+const MOCK_TRENDING_ITEMS = [
+  {
+    type: "post",
+    id: "post-1",
+    post_id: "post-1",
+    excerpt: "直近7日で人気の投稿本文の冒頭です",
+    community_id: "community-1",
+    community_slug: "ai-dev",
+    net_score: 12,
+    created_at: "2026-06-30T09:00:00.000Z",
+  },
+  {
+    type: "comment",
+    id: "comment-1",
+    post_id: "post-2",
+    excerpt: "直近7日で人気のコメント本文の冒頭です",
+    community_id: "community-1",
+    community_slug: "ai-dev",
+    net_score: 6,
+    created_at: "2026-06-30T10:00:00.000Z",
   },
 ];
 
@@ -82,6 +106,23 @@ async function mockRankingApi({
   );
 }
 
+/** 右サイドバー用トレンド Post/Comment API のモック（#1065）。既定は非空データ。 */
+async function mockTrendingApi({
+  page,
+  items = MOCK_TRENDING_ITEMS,
+}: {
+  page: Page;
+  items?: unknown[];
+}): Promise<void> {
+  await page.route("**/api/ranking/trending*", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ items }),
+    }),
+  );
+}
+
 // ─── テスト ─────────────────────────────────────────────────────────────────
 
 test("UC-RANK-01: サイドバーの「ランキング」リンクを押して /ranking へ遷移できる", async ({
@@ -91,6 +132,7 @@ test("UC-RANK-01: サイドバーの「ランキング」リンクを押して /
   await mockCommunitiesApi(page);
   await mockFeedApi(page);
   await mockRankingApi({ page });
+  await mockTrendingApi({ page });
 
   await page.goto("/");
 
@@ -110,6 +152,7 @@ test(
     await mockUnauthenticated(page);
     await mockCommunitiesApi(page);
     await mockRankingApi({ page });
+    await mockTrendingApi({ page });
 
     await page.goto("/ranking");
 
@@ -165,6 +208,7 @@ test(
     await mockUnauthenticated(page);
     await mockCommunitiesApi(page);
     await mockRankingApi({ page, workers: [] });
+    await mockTrendingApi({ page });
 
     await page.goto("/ranking");
 
@@ -173,5 +217,48 @@ test(
 
     // テーブルが DOM に存在しないこと
     await expect(page.getByRole("table")).not.toBeAttached();
+  },
+);
+
+test(
+  "UC-RANK-04: 2カラムレイアウトで左カラムのランキングテーブルと右カラムのトレンドサイドバーが表示される",
+  async ({ page }) => {
+    await mockUnauthenticated(page);
+    await mockCommunitiesApi(page);
+    await mockRankingApi({ page });
+    await mockTrendingApi({ page });
+
+    await page.goto("/ranking");
+
+    // 左カラム: ランキングテーブルが表示されること
+    await expect(page.getByRole("heading", { name: "ワーカーランキング" })).toBeVisible();
+    await expect(page.getByRole("table", { name: "ワーカーランキング" })).toBeVisible();
+
+    // 右カラム: トレンドサイドバーの見出しとアイテムが表示されること
+    await expect(page.getByText("直近7日の高評価")).toBeVisible();
+    await expect(page.getByText("直近7日で人気の投稿本文の冒頭です")).toBeVisible();
+    await expect(page.getByText("直近7日で人気のコメント本文の冒頭です")).toBeVisible();
+
+    // Post アイテムをクリックすると該当 Post 詳細ページへ遷移すること
+    await page.getByText("直近7日で人気の投稿本文の冒頭です").click();
+    await expect(page).toHaveURL(/\/posts\/post-1/);
+  },
+);
+
+test(
+  "UC-RANK-05: 直近7日間で評価を獲得した Post/Comment がない場合に右サイドバーの空状態が表示される",
+  async ({ page }) => {
+    await mockUnauthenticated(page);
+    await mockCommunitiesApi(page);
+    await mockRankingApi({ page });
+    await mockTrendingApi({ page, items: [] });
+
+    await page.goto("/ranking");
+
+    // 右サイドバーの空状態メッセージが表示されること
+    await expect(page.getByText("まだ評価の高い投稿がありません。")).toBeVisible();
+
+    // 左カラムのランキングテーブルは独立して表示されること
+    await expect(page.getByRole("table", { name: "ワーカーランキング" })).toBeVisible();
   },
 );

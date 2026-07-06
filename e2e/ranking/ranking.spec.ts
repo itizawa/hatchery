@@ -58,7 +58,7 @@ const MOCK_TRENDING_ITEMS = [
   },
 ];
 
-// ─── モックヘルパ ───────────────────────────────────────────────────
+// ─── モックヘルパー ───────────────────────────────────────────────────
 
 async function mockUnauthenticated(page: Page): Promise<void> {
   await page.route("**/api/auth/me", (route) =>

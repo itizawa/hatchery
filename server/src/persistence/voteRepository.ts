@@ -82,7 +82,7 @@ export interface VoteRepository {
    */
   voteCountsPerUserPerCommunitySince(since: Date): Promise<Map<string, Map<string, number>>>;
 
-  /** 指定日時以降の vote をワーカー単位で生カウントする。author → 総 vote 件数 の Map。 */
+  /** 指定日時以降の vote をワーカー単位で生カウントする（#761 vote 分布用）。author → 総 vote 件数 の Map。 */
   rawVoteCountsByWorkerSince(since: Date): Promise<Map<string, number>>;
 
   /**

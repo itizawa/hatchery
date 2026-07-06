@@ -8,7 +8,7 @@ import { test, expect } from "../support/test.js";
  * page.route() で API をモックし、バックエンドなしでブラウザ側の振る舞いを検証する。
  */
 
-// ─── モックデータ ───────────────────────────────────────────────────
+// ---- MOCK_DATA_SEPARATOR_LINE ----
 
 const MOCK_RANKING_WORKERS = [
   {
@@ -58,7 +58,7 @@ const MOCK_TRENDING_ITEMS = [
   },
 ];
 
-// AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA_PLACEHOLDER_MOCKHELPER
+// ---- MOCK_HELPER_SEPARATOR_LINE ----
 
 async function mockUnauthenticated(page: Page): Promise<void> {
   await page.route("**/api/auth/me", (route) =>
@@ -123,7 +123,7 @@ async function mockTrendingApi({
   );
 }
 
-// BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB_PLACEHOLDER_TEST
+// ---- TEST_SEPARATOR_LINE ----
 
 test("UC-RANK-01: サイドバーの「ランキング」リンクを押して /ranking へ遷移できる", async ({
   page,
@@ -258,7 +258,7 @@ test(
     // 右サイドバーの空状態メッセージが表示されること
     await expect(page.getByText("まだ評価の高い投稿がありません。")).toBeVisible();
 
-    // 左カラムのランキングテーブルは独立して表示されない
+    // 左カラムのランキングテーブルは独立して表示されること
     await expect(page.getByRole("table", { name: "ワーカーランキング" })).toBeVisible();
   },
 );

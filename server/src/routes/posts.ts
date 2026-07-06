@@ -42,11 +42,21 @@ export function createPostsRouter(
       return;
     }
     const { q } = parsed.data;
+    // sessionId は任意クエリパラメータ。UUID 検証付きで取得し、不正・未指定は null（#1059）。
+    const sessionId = extractSessionId(req);
     const now = new Date();
     postRepo
       .search({ q, limit: 50, options: { now } })
-      .then((posts) => attachAuthorWorker(posts, workerRepo))
-      .then((enriched) => res.status(200).json(enriched.map(toPostResponse)))
+      .then(async (posts) => {
+        // author_worker 付与と投票状態取得は互いに依存しないため並行実行する（#1059）。
+        const [enriched, voteMap] = await Promise.all([
+          attachAuthorWorker(posts, workerRepo),
+          sessionId
+            ? voteRepo.findVotesBySessionAndTargets({ sessionId, targetType: "post", targetIds: posts.map((p) => p.id) })
+            : Promise.resolve(new Map()),
+        ]);
+        res.status(200).json(enriched.map((p) => toPostResponse({ ...p, myVote: voteMap.get(p.id) ?? null })));
+      })
       .catch(next);
   });
 

@@ -66,4 +66,22 @@ describe("fetchSearchPosts (GET /api/posts/search)", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(500)));
     await expect(fetchSearchPosts({ q: "エラー" })).rejects.toThrow();
   });
+
+  it("sessionId を渡すとクエリに含まれる（#1059）", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, []));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await fetchSearchPosts({ q: "テスト", sessionId: "00000000-0000-0000-0000-000000000099" });
+    const request = fetchMock.mock.calls[0][0] as Request;
+    expect(request.url).toContain("sessionId=00000000-0000-0000-0000-000000000099");
+  });
+
+  it("sessionId を渡さないとクエリに含まれない（#1059）", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, []));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await fetchSearchPosts({ q: "テスト" });
+    const request = fetchMock.mock.calls[0][0] as Request;
+    expect(request.url).not.toContain("sessionId");
+  });
 });

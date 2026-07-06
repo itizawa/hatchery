@@ -3114,6 +3114,16 @@
             "required": true,
             "name": "q",
             "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "セッション ID（付与すると各 post に my_vote を付与・#1059）"
+            },
+            "required": false,
+            "name": "sessionId",
+            "in": "query"
           }
         ],
         "responses": {

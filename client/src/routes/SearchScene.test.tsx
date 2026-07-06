@@ -28,7 +28,7 @@ function jsonResponse(status: number, body?: unknown): Response {
   });
 }
 
-function stubFetch() {
+function stubFetch(searchResults: unknown[] = []) {
   vi.stubGlobal(
     "fetch",
     vi.fn().mockImplementation((input: RequestInfo | URL) => {
@@ -37,7 +37,7 @@ function stubFetch() {
         return Promise.resolve(jsonResponse(401));
       }
       if (url.includes("/api/posts/search")) {
-        return Promise.resolve(jsonResponse(200, []));
+        return Promise.resolve(jsonResponse(200, searchResults));
       }
       return Promise.resolve(jsonResponse(200, []));
     }),
@@ -88,5 +88,27 @@ describe("SearchScene", () => {
     await waitFor(() => {
       expect(input.value).toBe("cats");
     });
+  });
+
+  it("my_vote: 'up' の投稿は検索結果一覧で up vote 済み表示になる（#1059）", async () => {
+    stubFetch([
+      {
+        id: "post-1",
+        community_id: "community-1",
+        slot_key: "2024-01-01",
+        seq: 1,
+        author: "worker-1",
+        title: "投票済みの投稿",
+        text: "本文",
+        score: 1,
+        created_at: "2024-01-01T00:00:00Z",
+        comment_count: 0,
+        my_vote: "up",
+      },
+    ]);
+    renderApp("/search?q=dogs");
+
+    const upVoteButton = await screen.findByRole("button", { name: "up vote" });
+    expect(upVoteButton).toHaveAttribute("aria-pressed", "true");
   });
 });

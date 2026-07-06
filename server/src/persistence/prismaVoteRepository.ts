@@ -1,5 +1,7 @@
+import type { TrendingItem } from "@hatchery/common";
 import { Prisma, type PrismaClient } from "@prisma/client";
 
+import { buildTrendingExcerpt } from "./trendingItemBuilder.js";
 import type {
   VoteDirection,
   VoteRecord,
@@ -270,6 +272,71 @@ export function createPrismaVoteRepository(prisma: PrismaClient): VoteRepository
         result.set(row.workerId, Number(row.cnt));
       }
       return result;
+    },
+
+    async trendingItemsSince({ since, limit }: { since: Date; limit: number }): Promise<TrendingItem[]> {
+      // vote を Post / Comment 経由で本文・community に解決し、net_score（up:+1 / down:-1）降順で
+      // 上位 limit 件を返す（#1065）。excerpt はマルチバイト文字のコードポイント単位切り詰めを
+      // SQL 側で信頼できないため、TypeScript 側（buildTrendingExcerpt）で構築する。
+      const rows = await prisma.$queryRaw<
+        {
+          itemType: "post" | "comment";
+          id: string;
+          postId: string;
+          text: string;
+          communityId: string;
+          communitySlug: string;
+          createdAt: Date;
+          netScore: bigint;
+        }[]
+      >(Prisma.sql`
+        SELECT * FROM (
+          SELECT
+            'post' AS "itemType",
+            p."id" AS "id",
+            p."id" AS "postId",
+            p."text" AS "text",
+            p."communityId" AS "communityId",
+            cm."slug" AS "communitySlug",
+            p."createdAt" AS "createdAt",
+            SUM(CASE WHEN v."direction" = 'up' THEN 1 ELSE -1 END) AS "netScore"
+          FROM "Vote" v
+          JOIN "Post" p ON p."id" = v."postId"
+          JOIN "Community" cm ON cm."id" = p."communityId"
+          WHERE v."postId" IS NOT NULL AND v."createdAt" >= ${since}
+          GROUP BY p."id", p."text", p."communityId", cm."slug", p."createdAt"
+
+          UNION ALL
+
+          SELECT
+            'comment' AS "itemType",
+            c."id" AS "id",
+            c."postId" AS "postId",
+            c."text" AS "text",
+            c."communityId" AS "communityId",
+            cm."slug" AS "communitySlug",
+            c."createdAt" AS "createdAt",
+            SUM(CASE WHEN v."direction" = 'up' THEN 1 ELSE -1 END) AS "netScore"
+          FROM "Vote" v
+          JOIN "Comment" c ON c."id" = v."commentId"
+          JOIN "Community" cm ON cm."id" = c."communityId"
+          WHERE v."commentId" IS NOT NULL AND v."createdAt" >= ${since}
+          GROUP BY c."id", c."postId", c."text", c."communityId", cm."slug", c."createdAt"
+        ) AS resolved
+        ORDER BY "netScore" DESC
+        LIMIT ${limit}
+      `);
+
+      return rows.map((row) => ({
+        type: row.itemType,
+        id: row.id,
+        post_id: row.postId,
+        excerpt: buildTrendingExcerpt(row.text),
+        community_id: row.communityId,
+        community_slug: row.communitySlug,
+        net_score: Number(row.netScore),
+        created_at: row.createdAt.toISOString(),
+      }));
     },
   };
 }

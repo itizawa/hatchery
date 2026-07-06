@@ -108,6 +108,7 @@ export interface TrendingTargetMeta {
  * in-memory trendingItemsSince で targetId → 対象メタデータを解決する関数。
  * 対象が見つからない（削除済み等）場合は null を返す（呼び出し元でスキップする）。
  */
+// eslint-disable-next-line max-params
 export type ResolveTrendingTargetMeta = (
   targetType: VoteTargetType,
   targetId: string,

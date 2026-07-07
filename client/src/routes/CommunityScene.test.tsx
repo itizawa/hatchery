@@ -495,7 +495,7 @@ describe("CommunityScene — mark-viewed（#934）", () => {
       pages: [{ posts: [], nextCursor: null }],
       pageParams: [undefined],
     });
-    qc.setQueryData(communitySubscriptionQueryKey("ai-dev"), { subscribed: true });
+    qc.setQueryData(communitySubscriptionQueryKey("ai-dev"), { subscribed: true, notify_enabled: true });
     qc.setQueryData(AUTH_ME_QUERY_KEY, mockUser);
     qc.setQueryData(communityWorkersQueryKey("ai-dev"), {
       pages: [{ items: mockCommunityWorkers, nextCursor: null }],

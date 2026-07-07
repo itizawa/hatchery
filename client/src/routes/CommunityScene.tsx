@@ -12,7 +12,6 @@ import {
   Typography,
 } from "../components/uiParts";
 import { Link as RouterLink, useNavigate, useParams } from "@tanstack/react-router";
-import { useSuspenseQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type ReactElement } from "react";
 import type { CommunityFeedSort } from "@hatchery/common";
 
@@ -26,9 +25,8 @@ import {
 } from "../api/communities.js";
 import { useAuth } from "../api/auth.js";
 import {
-  communitySubscriptionQueryKey,
-  fetchSubscriptionStatus,
   useMarkCommunityViewed,
+  useSubscriptionStatus,
   useUnreadCountsForNewLabel,
   useUpdateNotifyEnabled,
 } from "../api/subscriptions.js";
@@ -191,10 +189,7 @@ const MarkViewedEffect = ({ slug }: { slug: string }): null => {
  * communitySubscriptionQueryKey を SubscriptionStatus と共有するため、追加のリクエストは発生しない。
  */
 const NotifySubscriptionToggle = ({ slug }: { slug: string }): ReactElement => {
-  const { data } = useSuspenseQuery({
-    queryKey: communitySubscriptionQueryKey(slug),
-    queryFn: () => fetchSubscriptionStatus(slug),
-  });
+  const { data } = useSubscriptionStatus(slug);
   const { mutate: updateNotifyEnabled, isPending } = useUpdateNotifyEnabled(slug);
 
   return (

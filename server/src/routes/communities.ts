@@ -9,6 +9,7 @@ import { Router } from "express";
 import { buildPrivateCacheControl } from "../config/security.js";
 import { getAuthUser } from "../middleware/getAuthUser.js";
 import { requireAuth } from "../middleware/requireAuth.js";
+import { validateBody } from "../middleware/validateBody.js";
 import { toCommunityResponse } from "./communityResponse.js";
 import type { CommentRepository } from "../persistence/commentRepository.js";
 import type { CommunityRepository } from "../persistence/communityRepository.js";
@@ -164,33 +165,34 @@ export function createCommunitiesRouter(
   });
 
   // community 単位の通知 ON/OFF 更新（認証必須・購読済みのみ・#1088）
-  // eslint-disable-next-line max-params
-  router.patch("/:slug/subscription", requireAuth, (req, res, next) => {
-    const parsed = UpdateSubscriptionNotifyEnabledBodySchema.safeParse(req.body);
-    if (!parsed.success) {
-      res.status(400).json({ error: "ValidationError", issues: parsed.error.issues });
-      return;
-    }
-    const { slug } = req.params as { slug: string };
-    const userId = getAuthUser(req).id;
+  router.patch(
+    "/:slug/subscription",
+    requireAuth,
+    validateBody(UpdateSubscriptionNotifyEnabledBodySchema),
+    // eslint-disable-next-line max-params
+    (req, res, next) => {
+      const { slug } = req.params as { slug: string };
+      const { notify_enabled: notifyEnabled } = req.body as { notify_enabled: boolean };
+      const userId = getAuthUser(req).id;
 
-    communityRepo
-      .findBySlug(slug)
-      .then((community) => {
-        if (!community) {
-          throw new NotFoundError("CommunityNotFound");
-        }
-        return subscriptionRepo.hasSubscription(userId, community.id).then((subscribed) => {
-          if (!subscribed) {
-            return res.status(403).json({ error: "NotSubscribed" });
+      communityRepo
+        .findBySlug(slug)
+        .then((community) => {
+          if (!community) {
+            throw new NotFoundError("CommunityNotFound");
           }
-          return subscriptionRepo
-            .updateNotifyEnabled({ userId, communityId: community.id, notifyEnabled: parsed.data.notify_enabled })
-            .then(() => res.status(204).end());
-        });
-      })
-      .catch(next);
-  });
+          return subscriptionRepo.find({ userId, communityId: community.id }).then((record) => {
+            if (!record) {
+              return res.status(403).json({ error: "NotSubscribed" });
+            }
+            return subscriptionRepo
+              .updateNotifyEnabled({ userId, communityId: community.id, notifyEnabled })
+              .then(() => res.status(204).end());
+          });
+        })
+        .catch(next);
+    },
+  );
 
   // community 購読（認証必須・ADR-0020）
   // eslint-disable-next-line max-params

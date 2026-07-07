@@ -258,6 +258,7 @@ export function createApp(deps: AppDeps): Express {
       deps.workerRepository,
       commentRepo,
       voteRepo,
+      deps.workerCommunityRepository,
     ),
   );
   app.use("/api/feed", publicCache, createFeedRouter({ postRepo, workerRepo: deps.workerRepository, commentRepo, voteRepo }));

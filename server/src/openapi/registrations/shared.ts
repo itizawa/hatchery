@@ -1,8 +1,8 @@
 import { extendZodWithOpenApi, type OpenAPIRegistry } from "@asteasolutions/zod-to-openapi";
 import { z } from "zod";
 
-// このモジュールの top-level で `.openapi(...)` を呼ぶ param 定義が評価される前に、
-// zod の `.openapi` 拡張を有効化しておく（import 順序に依存しないよう冪等に呼ぶ・#535）。
+// このモジュールの top-level で `.openapi(...)` を呼ぶ param 定義が評価される前に、zod の
+// `.openapi` 拡張を有効化しておく（import 順序に依存しないよう冪等に呼ぶ・#535）。
 extendZodWithOpenApi(z);
 
 /**
@@ -19,7 +19,7 @@ export interface RegistryContext {
   errorJson: { content: { "application/json": { schema: ReturnType<OpenAPIRegistry["register"]> } } };
   /** 認証済みユーザー component。auth で参照する。 */
   AuthUserComponent: ReturnType<OpenAPIRegistry["register"]>;
-  /** Worker component。workers / communities（recent-workers）で参照する。 */
+  /** Worker component。workers / communities（workers 一覧）で参照する。 */
   WorkerComponent: ReturnType<OpenAPIRegistry["register"]>;
   /**
    * Community component。communities セクションで register され、その後 workers で参照する（#690）。

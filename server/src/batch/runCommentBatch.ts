@@ -78,8 +78,10 @@ async function processCommunityComments({
   revivalProbability: number;
   botWorkersPromise: Promise<readonly WorkerRecord[]>;
 }): Promise<CommentRecord[]> {
-  // community 別の登場ワーカーを解決する。
-  const communityWorkers = await deps.workerCommunityRepo.listWorkersByCommunity(community.id);
+  // community 別の登場ワーカーを解決する（limit 省略で全件取得・#1078）。
+  const { items: communityWorkers } = await deps.workerCommunityRepo.listWorkersByCommunity({
+    communityId: community.id,
+  });
   const botWorkers = communityWorkers.length > 0 ? [] : await botWorkersPromise;
   const resolvedWorkers = selectCommunityWorkers({ communityWorkers, allBotWorkers: botWorkers });
   if (resolvedWorkers.length === 0) {

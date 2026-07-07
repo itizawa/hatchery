@@ -10,6 +10,7 @@
 import {
   useMutation,
   useQueryClient,
+  useSuspenseInfiniteQuery,
   useSuspenseQuery,
 } from "@tanstack/react-query";
 import { AdminCommunitySchema } from "@hatchery/common";
@@ -60,8 +61,8 @@ export type CommunityImageKind = "icon" | "cover";
 // ─── 公開 API 向け型定義（openapi.gen.ts より）────────────────────────────────────────────────
 export type Community = components["schemas"]["Community"];
 
-/** 最近投稿したワーカーの型（#207 / #1028）。`GET /api/communities/{slug}/recent-workers` の戻り値。 */
-export type RecentWorker = components["schemas"]["Worker"];
+/** コミュニティ所属ワーカーの型（#207 / #1028 / #1078）。`GET /api/communities/{slug}/workers` の items 要素。 */
+export type CommunityWorker = components["schemas"]["Worker"];
 
 // ─── 管理者 API 向け型 re-export（@hatchery/common より）──────────────────
 export type { AdminCommunity, CreateCommunityInput, UpdateCommunityInput };
@@ -72,8 +73,8 @@ export const ADMIN_COMMUNITIES_QUERY_KEY = ["admin", "communities"] as const;
 /** 後方互換のエイリアス（CommunitiesTab.tsx など既存コードが参照）。 */
 export const COMMUNITIES_QUERY_KEY = ADMIN_COMMUNITIES_QUERY_KEY;
 
-export const communityRecentWorkersQueryKey = (slug: string) =>
-  ["communities", slug, "recent-workers"] as const;
+export const communityWorkersQueryKey = (slug: string) =>
+  ["communities", slug, "workers"] as const;
 
 // ─── 管理者向け API 関数（/api/admin/communities）────────────────────────────────────────────────────
 
@@ -218,23 +219,41 @@ export async function fetchPublicCommunities(): Promise<Community[]> {
   return unwrap({ result, label: "GET /api/communities" });
 }
 
-/** GET /api/communities/{slug}/recent-workers — community の最近投稿したワーカー一覧を取得（#207 / #1028）。 */
-export async function fetchRecentWorkers(slug: string): Promise<RecentWorker[]> {
-  const result = await openApiClient.GET("/api/communities/{slug}/recent-workers", {
-    params: { path: { slug } },
+/**
+ * GET /api/communities/{slug}/workers — community 所属の全ワーカーを 1 ページ分取得する（#1078 カーソルページネーション）。
+ */
+export async function fetchCommunityWorkersPage({
+  slug,
+  cursor,
+  limit = 20,
+}: {
+  slug: string;
+  cursor?: string;
+  limit?: number;
+}): Promise<{ items: CommunityWorker[]; nextCursor: string | null }> {
+  const query: { cursor?: string; limit: number } = { limit };
+  if (cursor) query.cursor = cursor;
+  const result = await openApiClient.GET("/api/communities/{slug}/workers", {
+    params: { path: { slug }, query },
     credentials: "include",
   });
-  return unwrap({ result, label: `GET /api/communities/${slug}/recent-workers` });
+  return unwrap({ result, label: `GET /api/communities/${slug}/workers` }) as {
+    items: CommunityWorker[];
+    nextCursor: string | null;
+  };
 }
 
 /**
- * community の最近投稿したワーカー一覧を TanStack Query（Suspense）で取得するフック（#207 / #462）。
+ * community 所属の全ワーカーを TanStack Query（Suspense）の無限スクロールで取得するフック（#1078 / #462）。
  * data は non-undefined。ローディング/エラーは QueryBoundary に委譲する。
  */
-export function useRecentWorkers(slug: string) {
-  return useSuspenseQuery({
-    queryKey: communityRecentWorkersQueryKey(slug),
-    queryFn: () => fetchRecentWorkers(slug),
+export function useCommunityWorkers(slug: string) {
+  return useSuspenseInfiniteQuery({
+    queryKey: communityWorkersQueryKey(slug),
+    queryFn: ({ pageParam }) =>
+      fetchCommunityWorkersPage({ slug, cursor: pageParam as string | undefined }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     staleTime: 60_000,
   });
 }

@@ -14,7 +14,7 @@ import {
   createCommunity,
   updateCommunity,
   uploadCommunityImage,
-  fetchRecentWorkers,
+  fetchCommunityWorkersPage,
 } from "./communities.js";
 
 /** JSON ボディを持つ Response を組み立てる小ヘルパ。 */
@@ -179,23 +179,38 @@ describe("updateCommunity (PATCH /api/admin/communities/:id)", () => {
   });
 });
 
-describe("fetchRecentWorkers (GET /api/communities/:slug/recent-workers)", () => {
+describe("fetchCommunityWorkersPage (GET /api/communities/:slug/workers・#1078)", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
 
-  it("200 のとき最近のワーカー一覧を返す", async () => {
+  it("200 のときワーカー一覧ページ（items / nextCursor）を返す", async () => {
     const workers = [{ id: "worker-1", displayName: "ハル", role: "エンジニア" }];
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, workers));
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse(200, { items: workers, nextCursor: null }),
+    );
     vi.stubGlobal("fetch", fetchMock);
 
-    const result = await fetchRecentWorkers("ai-dev");
+    const result = await fetchCommunityWorkersPage({ slug: "ai-dev" });
 
-    expect(result).toHaveLength(1);
-    expect(result[0].id).toBe("worker-1");
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].id).toBe("worker-1");
+    expect(result.nextCursor).toBeNull();
     const request = fetchMock.mock.calls[0][0] as Request;
-    expect(request.url).toContain("/api/communities/ai-dev/recent-workers");
+    expect(request.url).toContain("/api/communities/ai-dev/workers");
     expect(request.credentials).toBe("include");
+  });
+
+  it("cursor を渡すとクエリに含めてリクエストする", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse(200, { items: [], nextCursor: null }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await fetchCommunityWorkersPage({ slug: "ai-dev", cursor: "cursor-1" });
+
+    const request = fetchMock.mock.calls[0][0] as Request;
+    expect(request.url).toContain("cursor=cursor-1");
   });
 
   it("エラー応答では例外を投げる", async () => {
@@ -203,7 +218,7 @@ describe("fetchRecentWorkers (GET /api/communities/:slug/recent-workers)", () =>
       "fetch",
       vi.fn().mockResolvedValue(jsonResponse(404, { error: "Not Found" })),
     );
-    await expect(fetchRecentWorkers("missing")).rejects.toThrow();
+    await expect(fetchCommunityWorkersPage({ slug: "missing" })).rejects.toThrow();
   });
 });
 

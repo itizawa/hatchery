@@ -93,5 +93,32 @@ export function createPrismaWorkerCommunityRepository(
         }),
       ]);
     },
+
+    async listWorkerSummariesByCommunity(
+      communityId: string,
+    ): Promise<{ id: string; displayName: string }[]> {
+      const rows = await prisma.workerCommunity.findMany({
+        where: { communityId, worker: { deletedAt: null } },
+        include: { worker: { select: { id: true, displayName: true } } },
+        orderBy: { workerId: "asc" },
+      });
+      return rows.map((row) => ({ id: row.worker.id, displayName: row.worker.displayName }));
+    },
+
+    // eslint-disable-next-line max-params
+    async setCommunityWorkers(
+      communityId: string,
+      workerIds: readonly string[],
+    ): Promise<void> {
+      const uniqueIds = [...new Set(workerIds)];
+      // 既存リンク削除 → 新規一括作成をトランザクションで原子的に行う（部分適用を避ける）。
+      await prisma.$transaction([
+        prisma.workerCommunity.deleteMany({ where: { communityId } }),
+        prisma.workerCommunity.createMany({
+          data: uniqueIds.map((workerId) => ({ workerId, communityId })),
+          skipDuplicates: true,
+        }),
+      ]);
+    },
   };
 }

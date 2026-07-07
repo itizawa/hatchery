@@ -226,3 +226,91 @@ describe("WorkerCommunityRepository 編集系（#490）", () => {
     expect(await repo.listCommunityIdsByWorker("ken")).toEqual(["c1"]);
   });
 });
+
+describe("WorkerCommunityRepository コミュニティ起点編集系（#1079）", () => {
+  it("listWorkerSummariesByCommunity は community に紐づく有効なワーカーの id/displayName を id 昇順で返す", async () => {
+    const repo = createInMemoryWorkerCommunityRepository({
+      workers: [haru, ken],
+      links: [
+        { workerId: "ken", communityId: "c1" },
+        { workerId: "haru", communityId: "c1" },
+      ],
+    });
+
+    const result = await repo.listWorkerSummariesByCommunity("c1");
+
+    expect(result).toEqual([
+      { id: "haru", displayName: "haru" },
+      { id: "ken", displayName: "ken" },
+    ]);
+  });
+
+  it("listWorkerSummariesByCommunity は紐づきが無い community で空配列を返す", async () => {
+    const repo = createInMemoryWorkerCommunityRepository({
+      workers: [haru],
+      links: [{ workerId: "haru", communityId: "c1" }],
+    });
+
+    expect(await repo.listWorkerSummariesByCommunity("other")).toEqual([]);
+  });
+
+  it("listWorkerSummariesByCommunity は論理削除済みワーカーを除外する", async () => {
+    const repo = createInMemoryWorkerCommunityRepository({
+      workers: [haru, deleted],
+      links: [
+        { workerId: "haru", communityId: "c1" },
+        { workerId: "old", communityId: "c1" },
+      ],
+    });
+
+    expect(await repo.listWorkerSummariesByCommunity("c1")).toEqual([
+      { id: "haru", displayName: "haru" },
+    ]);
+  });
+
+  it("setCommunityWorkers はコミュニティの所属ワーカーを全置換する", async () => {
+    const repo = createInMemoryWorkerCommunityRepository({
+      workers: [haru, ken],
+      links: [{ workerId: "haru", communityId: "c1" }],
+    });
+
+    await repo.setCommunityWorkers("c1", ["ken"]);
+
+    expect((await repo.listWorkerSummariesByCommunity("c1")).map((w) => w.id)).toEqual(["ken"]);
+  });
+
+  it("setCommunityWorkers に空配列を渡すと全解除される", async () => {
+    const repo = createInMemoryWorkerCommunityRepository({
+      workers: [haru],
+      links: [{ workerId: "haru", communityId: "c1" }],
+    });
+
+    await repo.setCommunityWorkers("c1", []);
+
+    expect(await repo.listWorkerSummariesByCommunity("c1")).toEqual([]);
+  });
+
+  it("setCommunityWorkers は重複 id を一意化する", async () => {
+    const repo = createInMemoryWorkerCommunityRepository({ workers: [haru, ken], links: [] });
+
+    await repo.setCommunityWorkers("c1", ["haru", "haru", "ken"]);
+
+    expect(
+      (await repo.listWorkerSummariesByCommunity("c1")).map((w) => w.id),
+    ).toEqual(["haru", "ken"]);
+  });
+
+  it("setCommunityWorkers は他コミュニティの紐づきに影響しない", async () => {
+    const repo = createInMemoryWorkerCommunityRepository({
+      workers: [haru, ken],
+      links: [
+        { workerId: "haru", communityId: "c1" },
+        { workerId: "haru", communityId: "c2" },
+      ],
+    });
+
+    await repo.setCommunityWorkers("c1", ["ken"]);
+
+    expect(await repo.listCommunityIdsByWorker("haru")).toEqual(["c2"]);
+  });
+});

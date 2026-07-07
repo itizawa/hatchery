@@ -750,12 +750,16 @@
           },
           "created_at": {
             "type": "string"
+          },
+          "notify_enabled": {
+            "type": "boolean"
           }
         },
         "required": [
           "user_id",
           "community_id",
-          "created_at"
+          "created_at",
+          "notify_enabled"
         ],
         "description": "コミュニティへの購読。ADR-0019 / ADR-0020"
       },
@@ -932,10 +936,14 @@
         "properties": {
           "subscribed": {
             "type": "boolean"
+          },
+          "notify_enabled": {
+            "type": "boolean"
           }
         },
         "required": [
-          "subscribed"
+          "subscribed",
+          "notify_enabled"
         ],
         "description": "コミュニティへの購読状態（#421）"
       },
@@ -1238,6 +1246,18 @@
           "unread_counts"
         ],
         "description": "購読コミュニティ別未読数レスポンス（#933）"
+      },
+      "UpdateSubscriptionNotifyEnabledBody": {
+        "type": "object",
+        "properties": {
+          "notify_enabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "notify_enabled"
+        ],
+        "description": "コミュニティ単位の通知 ON/OFF 更新リクエストボディ（#1088）"
       },
       "SubscribePushBody": {
         "type": "object",
@@ -2569,6 +2589,81 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SubscriptionStatus"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "コミュニティが存在しない",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "コミュニティ単位の Web Push 通知 ON/OFF を更新する（認証必須・購読済みのみ・#1088）",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "communities"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "slug",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSubscriptionNotifyEnabledBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "通知設定を更新した"
+          },
+          "400": {
+            "description": "バリデーションエラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未認証",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "未購読",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }

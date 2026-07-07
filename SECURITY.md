@@ -11,7 +11,7 @@
 1. このリポジトリの GitHub ページ上部の **Security** タブを開く
 2. **"Report a vulnerability"** ボタンから報告フォームに入力して送信する
 
-Private vulnerability reporting が利用できない場合は、リポジトリオーナーへ GitHub 上のプロフィール経由で個別に連絡してください。
+現時点では GitHub Private vulnerability reporting のみを正式な報告経路とします。
 
 ## 対応方針
 

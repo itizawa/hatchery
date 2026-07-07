@@ -255,6 +255,7 @@ export function useCommunityWorkers(slug: string) {
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     staleTime: 60_000,
+    retry: false,
   });
 }
 

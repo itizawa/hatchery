@@ -65,7 +65,7 @@ export function createPrismaWorkerCommunityRepository(
       const sliced = hasMore ? rows.slice(0, limit) : rows;
       const items = sliced.map((row) => toRecord(row.worker));
       const lastWorker = sliced.at(-1)?.worker;
-      const nextCursor = hasMore && lastWorker ? encodeWorkerCursor(toRecord(lastWorker)) : null;
+      const nextCursor = hasMore && lastWorker ? encodeWorkerCursor(lastWorker) : null;
 
       return { items, nextCursor };
     },

@@ -7,8 +7,10 @@ import {
   type CommunityRecord,
 } from "../persistence/communityRepository.js";
 import { createInMemoryPostRepository } from "../persistence/postRepository.js";
+import { createInMemorySubscriptionRepository } from "../persistence/subscriptionRepository.js";
 import { createInMemoryWorkerCommunityRepository } from "../persistence/workerCommunityRepository.js";
 import type { WorkerRecord } from "../persistence/workerRepository.js";
+import type { PushNotificationService } from "../services/pushNotificationService.js";
 
 import { runPostBatchCli, type PostBatchCliDeps } from "./postBatchIndex.js";
 
@@ -114,5 +116,55 @@ describe("postBatchIndex (#672)", () => {
     const cliDeps = buildCliDeps([community1], generate);
     expect(generate).not.toHaveBeenCalled();
     expect(cliDeps.disconnect).not.toHaveBeenCalled();
+  });
+
+  describe("push 通知の community 単位 notifyEnabled 絞り込み（#1088）", () => {
+    it("新着投稿があった community の notifyEnabled ユーザーにのみ送る", async () => {
+      const generate = vi.fn().mockResolvedValue({ text: validPostOutput });
+      const cliDeps = buildCliDeps([community1], generate);
+
+      const subscriptionRepo = createInMemorySubscriptionRepository();
+      await subscriptionRepo.add("user-1", "community-1");
+      await subscriptionRepo.add("user-2", "community-1");
+      await subscriptionRepo.updateNotifyEnabled({
+        userId: "user-2",
+        communityId: "community-1",
+        notifyEnabled: false,
+      });
+
+      const sendToUsers = vi.fn().mockResolvedValue(undefined);
+      const pushNotificationService: PushNotificationService = { sendToUsers };
+
+      await runPostBatchCli({ ...cliDeps, subscriptionRepo, pushNotificationService });
+
+      expect(sendToUsers).toHaveBeenCalledTimes(1);
+      const [, userIds] = sendToUsers.mock.calls[0] as [unknown, string[]];
+      expect(userIds).toEqual(["user-1"]);
+    });
+
+    it("notify 対象ユーザーがいない場合は sendToUsers を呼ばない", async () => {
+      const generate = vi.fn().mockResolvedValue({ text: validPostOutput });
+      const cliDeps = buildCliDeps([community1], generate);
+
+      const subscriptionRepo = createInMemorySubscriptionRepository();
+      const sendToUsers = vi.fn().mockResolvedValue(undefined);
+      const pushNotificationService: PushNotificationService = { sendToUsers };
+
+      await runPostBatchCli({ ...cliDeps, subscriptionRepo, pushNotificationService });
+
+      expect(sendToUsers).not.toHaveBeenCalled();
+    });
+
+    it("subscriptionRepo が未設定の場合は push 通知をスキップする", async () => {
+      const generate = vi.fn().mockResolvedValue({ text: validPostOutput });
+      const cliDeps = buildCliDeps([community1], generate);
+
+      const sendToUsers = vi.fn().mockResolvedValue(undefined);
+      const pushNotificationService: PushNotificationService = { sendToUsers };
+
+      await runPostBatchCli({ ...cliDeps, pushNotificationService });
+
+      expect(sendToUsers).not.toHaveBeenCalled();
+    });
   });
 });

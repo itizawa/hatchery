@@ -33,22 +33,45 @@ const subs: PushSubscriptionRecord[] = [
   { id: "s2", userId: "u2", endpoint: "https://fcm.example.com/2", p256dh: "key2", auth: "auth2", createdAt: new Date() },
 ];
 
+// eslint-disable-next-line max-params
+function buildRepo(listByUserIdsResult: typeof subs) {
+  return {
+    listAll: vi.fn(),
+    listByUserIds: vi.fn().mockResolvedValue(listByUserIdsResult),
+    delete: vi.fn(),
+    deleteByEndpointAndUserId: vi.fn(),
+    upsert: vi.fn(),
+    deleteByUserId: vi.fn(),
+  };
+}
+
 describe("createPushNotificationService", () => {
-  it("sendToAllSubscribers が全購読者に通知を送る", async () => {
+  it("sendToUsers が指定 userId の購読者のみに通知を送る（#1088）", async () => {
     mockSendNotification.mockResolvedValue({ statusCode: 201 });
-    const repo = { listAll: vi.fn().mockResolvedValue(subs), delete: vi.fn(), deleteByEndpointAndUserId: vi.fn(), upsert: vi.fn(), deleteByUserId: vi.fn() };
+    const repo = buildRepo(subs);
     const service = createPushNotificationService({ config: vapidConfig, pushSubscriptionRepo: repo });
 
-    await service.sendToAllSubscribers({ title: "Test", body: "テスト通知", url: "/" });
+    await service.sendToUsers({ title: "Test", body: "テスト通知", url: "/" }, ["u1", "u2"]);
 
+    expect(repo.listByUserIds).toHaveBeenCalledWith(["u1", "u2"]);
     expect(mockSendNotification).toHaveBeenCalledTimes(2);
   });
 
-  it("購読者が 0 人のときは sendNotification を呼ばない", async () => {
-    const repo = { listAll: vi.fn().mockResolvedValue([]), delete: vi.fn(), deleteByEndpointAndUserId: vi.fn(), upsert: vi.fn(), deleteByUserId: vi.fn() };
+  it("userIds が空配列のときは listByUserIds も sendNotification も呼ばない（#1088）", async () => {
+    const repo = buildRepo([]);
     const service = createPushNotificationService({ config: vapidConfig, pushSubscriptionRepo: repo });
 
-    await service.sendToAllSubscribers({ title: "Test", body: "テスト通知", url: "/" });
+    await service.sendToUsers({ title: "Test", body: "テスト通知", url: "/" }, []);
+
+    expect(repo.listByUserIds).not.toHaveBeenCalled();
+    expect(mockSendNotification).not.toHaveBeenCalled();
+  });
+
+  it("購読者が 0 人のときは sendNotification を呼ばない", async () => {
+    const repo = buildRepo([]);
+    const service = createPushNotificationService({ config: vapidConfig, pushSubscriptionRepo: repo });
+
+    await service.sendToUsers({ title: "Test", body: "テスト通知", url: "/" }, ["u1"]);
 
     expect(mockSendNotification).not.toHaveBeenCalled();
   });
@@ -57,21 +80,21 @@ describe("createPushNotificationService", () => {
     mockSendNotification
       .mockResolvedValueOnce({ statusCode: 201 })
       .mockRejectedValueOnce(new Error("送信失敗"));
-    const repo = { listAll: vi.fn().mockResolvedValue(subs), delete: vi.fn(), deleteByEndpointAndUserId: vi.fn(), upsert: vi.fn(), deleteByUserId: vi.fn() };
+    const repo = buildRepo(subs);
     const service = createPushNotificationService({ config: vapidConfig, pushSubscriptionRepo: repo });
 
     await expect(
-      service.sendToAllSubscribers({ title: "Test", body: "テスト通知", url: "/" }),
+      service.sendToUsers({ title: "Test", body: "テスト通知", url: "/" }, ["u1", "u2"]),
     ).resolves.not.toThrow();
   });
 
   it("410 レスポンスの購読はリポジトリから削除する", async () => {
     const error = Object.assign(new Error("Gone"), { statusCode: 410 });
     mockSendNotification.mockRejectedValue(error);
-    const repo = { listAll: vi.fn().mockResolvedValue([subs[0]!]), delete: vi.fn(), deleteByEndpointAndUserId: vi.fn(), upsert: vi.fn(), deleteByUserId: vi.fn() };
+    const repo = buildRepo([subs[0]!]);
     const service = createPushNotificationService({ config: vapidConfig, pushSubscriptionRepo: repo });
 
-    await service.sendToAllSubscribers({ title: "Test", body: "テスト通知", url: "/" });
+    await service.sendToUsers({ title: "Test", body: "テスト通知", url: "/" }, ["u1"]);
 
     expect(repo.delete).toHaveBeenCalledWith(subs[0]!.endpoint);
   });
@@ -79,11 +102,11 @@ describe("createPushNotificationService", () => {
   it("401 レスポンスは購読を削除せず全体をスローしない（VAPID 認証エラー）", async () => {
     const error = Object.assign(new Error("Unauthorized"), { statusCode: 401 });
     mockSendNotification.mockRejectedValue(error);
-    const repo = { listAll: vi.fn().mockResolvedValue([subs[0]!]), delete: vi.fn(), deleteByEndpointAndUserId: vi.fn(), upsert: vi.fn(), deleteByUserId: vi.fn() };
+    const repo = buildRepo([subs[0]!]);
     const service = createPushNotificationService({ config: vapidConfig, pushSubscriptionRepo: repo });
 
     await expect(
-      service.sendToAllSubscribers({ title: "Test", body: "テスト通知", url: "/" }),
+      service.sendToUsers({ title: "Test", body: "テスト通知", url: "/" }, ["u1"]),
     ).resolves.not.toThrow();
 
     expect(repo.delete).not.toHaveBeenCalled();

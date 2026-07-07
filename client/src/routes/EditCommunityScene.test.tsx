@@ -3,7 +3,7 @@
  * コミュニティ編集ページ（/admin/communities/:communityId/edit）のフォーム表示と送信動作を検証する。
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type React from "react";
@@ -213,5 +213,41 @@ describe("EditCommunityScene（#889）", () => {
     await userEvent.click(screen.getByRole("button", { name: "保存" }));
     await waitFor(() => expect(updateMutateAsync).toHaveBeenCalled());
     expect(setWorkersMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it("所属ワーカー取得後にバックグラウンド再取得が発生しても編集中の選択が上書きされない（#1079）", () => {
+    stubAll({
+      communityWorkers: [{ id: "w1", displayName: "haru" }],
+      botWorkers: [
+        { id: "w1", displayName: "haru" },
+        { id: "w2", displayName: "ken" },
+      ],
+    });
+    const { rerender } = renderWithClient(<EditCommunityScene />);
+
+    // ユーザーが「ken」を追加選択する（保存前の未確定な編集状態）。
+    const combobox = screen.getByRole("combobox", { name: /所属ワーカー/ });
+    fireEvent.mouseDown(combobox);
+    const listbox = screen.getByRole("listbox");
+    fireEvent.click(within(listbox).getByRole("option", { name: /ken/ }));
+    fireEvent.keyDown(listbox, { key: "Escape" });
+
+    // ウィンドウフォーカス復帰等でクエリがバックグラウンド再取得され、
+    // サーバ側の古い値（新しい配列参照）で data が更新されたことをシミュレートする。
+    vi.mocked(useCommunityWorkerAssignments).mockReturnValue({
+      data: [{ id: "w1", displayName: "haru" }],
+      isLoading: false,
+      isSuccess: true,
+      isError: false,
+    } as ReturnType<typeof useCommunityWorkerAssignments>);
+    rerender(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <EditCommunityScene />
+      </QueryClientProvider>,
+    );
+
+    // 再取得後も、ユーザーが追加選択した「ken」が選択状態のまま残る（上書きされない）。
+    const comboboxAfter = screen.getByRole("combobox", { name: /所属ワーカー/ });
+    expect(within(comboboxAfter).getByText("ken")).toBeInTheDocument();
   });
 });

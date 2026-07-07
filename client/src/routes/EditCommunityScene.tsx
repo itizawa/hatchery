@@ -1,6 +1,6 @@
 import { useForm } from "@tanstack/react-form";
 import { Link, useParams } from "@tanstack/react-router";
-import { type ReactElement, useEffect } from "react";
+import { type ReactElement, useEffect, useRef } from "react";
 
 import type { AdminCommunity, UpdateCommunityInput } from "@hatchery/common";
 import { useCommunities, useUpdateCommunity } from "../api/communities.js";
@@ -128,9 +128,12 @@ function CommunityWorkersEditSection({ communityId }: { communityId: string }): 
   });
 
   // useCommunityWorkerAssignments は通常の useQuery（Suspense 外）のため初回は undefined。
-  // 所属ワーカーが解決したらフォームフィールドを同期する。
+  // 所属ワーカーが解決したら一度だけフォームフィールドを同期する。以降のバックグラウンド再取得
+  // （ウィンドウフォーカス復帰・保存成功後の invalidateQueries 等）で編集中の選択を上書きしない。
+  const hasHydratedRef = useRef(false);
   useEffect(() => {
-    if (workersQuery.data !== undefined) {
+    if (workersQuery.data !== undefined && !hasHydratedRef.current) {
+      hasHydratedRef.current = true;
       void form.setFieldValue(
         "workerIds",
         workersQuery.data.map((w) => w.id),

@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { WORKER_DISPLAY_NAME_MAX_LENGTH } from "./worker.js";
+
 /**
  * ワーカーの参加コミュニティ編集（#490）用 Zod スキーマ。
  * admin が `WorkerCommunity`（worker ↔ community 参加テーブル・#489）の紐づきを
@@ -9,7 +11,7 @@ import { z } from "zod";
 /** 1 ワーカーが参加できる community 数の上限（#490）。表示・DB 負荷を考慮した安全上限。 */
 export const WORKER_COMMUNITIES_MAX = 100;
 
-/** communityId 文字列の最大長（#91 に倦い `.max()` を付与）。uuid7（36 文字）を十分に収める。 */
+/** communityId 文字列の最大長（#91 に倣い `.max()` を付与）。uuid7（36 文字）を十分に収める。 */
 export const WORKER_COMMUNITY_ID_MAX_LENGTH = 64;
 
 /**
@@ -58,8 +60,8 @@ export type SetCommunityWorkersInput = z.infer<typeof SetCommunityWorkersSchema>
  * 管理画面の一覧表示に必要な displayName を含める）。
  */
 export const CommunityWorkerSummarySchema = z.object({
-  id: z.string(),
-  displayName: z.string(),
+  id: z.string().min(1).max(WORKER_COMMUNITY_ID_MAX_LENGTH),
+  displayName: z.string().min(1).max(WORKER_DISPLAY_NAME_MAX_LENGTH),
 });
 
 export type CommunityWorkerSummary = z.infer<typeof CommunityWorkerSummarySchema>;

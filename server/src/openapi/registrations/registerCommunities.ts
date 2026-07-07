@@ -36,7 +36,7 @@ export function registerCommunities(registry: OpenAPIRegistry, ctx: RegistryCont
 
   const CommunityComponent = registry.register(
     "Community",
-    CommunitySchema.openapi({ description: "コミュニティ（サブレディト相当）。ADR-0019" }),
+    CommunitySchema.openapi({ description: "コミュニティ（サブレディット相当）。ADR-0019" }),
   );
 
   const AdminCommunityComponent = registry.register(

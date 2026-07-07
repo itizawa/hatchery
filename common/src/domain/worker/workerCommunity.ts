@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { WORKER_DISPLAY_NAME_MAX_LENGTH } from "./worker.js";
+
 /**
  * ワーカーの参加コミュニティ編集（#490）用 Zod スキーマ。
  * admin が `WorkerCommunity`（worker ↔ community 参加テーブル・#489）の紐づきを
@@ -33,3 +35,45 @@ export type WorkerCommunityIds = z.infer<typeof WorkerCommunityIdsSchema>;
 export const SetWorkerCommunitiesSchema = WorkerCommunityIdsSchema;
 
 export type SetWorkerCommunitiesInput = z.infer<typeof SetWorkerCommunitiesSchema>;
+
+/**
+ * コミュニティ起点でのワーカー所属編集（#1079）用スキーマ。
+ * #490（ワーカー起点）の逆方向。`EditCommunityScene` から、そのコミュニティに
+ * 所属させる worker id 集合を置き換える PUT リクエストボディに使う。
+ */
+
+/** 1 コミュニティに所属できる worker 数の上限（#1079）。表示・DB 負荷を考慮した安全上限。 */
+export const COMMUNITY_WORKERS_MAX = 200;
+
+/** コミュニティに所属させる worker id 集合を置き換える（set）リクエストボディ（#1079）。 */
+export const SetCommunityWorkersSchema = z.object({
+  workerIds: z
+    .array(z.string().min(1).max(WORKER_COMMUNITY_ID_MAX_LENGTH))
+    .max(COMMUNITY_WORKERS_MAX),
+});
+
+export type SetCommunityWorkersInput = z.infer<typeof SetCommunityWorkersSchema>;
+
+/**
+ * コミュニティ所属ワーカーの表示用サマリ（#1079）。
+ * GET/PUT の `workers` レスポンス要素として使う（id のみのワーカー起点版とは異なり、
+ * 管理画面の一覧表示に必要な displayName を含める）。
+ */
+export const CommunityWorkerSummarySchema = z.object({
+  id: z.string().min(1).max(WORKER_COMMUNITY_ID_MAX_LENGTH),
+  displayName: z.string().min(1).max(WORKER_DISPLAY_NAME_MAX_LENGTH),
+});
+
+export type CommunityWorkerSummary = z.infer<typeof CommunityWorkerSummarySchema>;
+
+/**
+ * GET/PUT `/api/admin/communities/:id/workers` の共通レスポンス形（#1079）。
+ * `domain/community/communityWorkers.ts` の `CommunityWorkersResponseSchema`（#1078・
+ * カーソルページネーション付き公開ロスター）とは別物のため、コミュニティ起点の所属編集を表す
+ * `CommunityWorkerAssignmentsSchema` と命名して衝突を避ける。
+ */
+export const CommunityWorkerAssignmentsSchema = z.object({
+  workers: z.array(CommunityWorkerSummarySchema),
+});
+
+export type CommunityWorkerAssignments = z.infer<typeof CommunityWorkerAssignmentsSchema>;

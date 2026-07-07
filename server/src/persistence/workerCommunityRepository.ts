@@ -45,6 +45,20 @@ export interface WorkerCommunityRepository {
    * 既存の紐づきを削除し communityIds で再構築する。重複 id は一意化する。冪等。
    */
   setWorkerCommunities(workerId: string, communityIds: readonly string[]): Promise<void>;
+
+  /**
+   * 指定コミュニティに所属する有効な（論理削除されていない）ワーカーの id/displayName を
+   * id 昇順で返す（#1079・コミュニティ起点の管理画面編集 UI 用）。紐づきが無い場合は空配列。
+   */
+  listWorkerSummariesByCommunity(
+    communityId: string,
+  ): Promise<{ id: string; displayName: string }[]>;
+
+  /**
+   * 指定コミュニティの所属ワーカーを workerIds で全置換する（#1079・set セマンティクス）。
+   * 既存の紐づきを削除し workerIds で再構築する。重複 id は一意化する。冪等。
+   */
+  setCommunityWorkers(communityId: string, workerIds: readonly string[]): Promise<void>;
 }
 
 /** InMemory 実装の初期データ（テスト用注入）。 */
@@ -153,6 +167,35 @@ export function createInMemoryWorkerCommunityRepository(
         }
       }
       for (const communityId of new Set(communityIds)) {
+        links.push({ workerId, communityId });
+      }
+      return Promise.resolve();
+    },
+
+    listWorkerSummariesByCommunity(
+      communityId: string,
+    ): Promise<{ id: string; displayName: string }[]> {
+      const result = links
+        .filter((l) => l.communityId === communityId)
+        .map((l) => workersById.get(l.workerId))
+        .filter((w): w is WorkerRecord => w != null && w.deletedAt === null)
+        .sort(compareById)
+        .map((w) => ({ id: w.id, displayName: w.displayName }));
+      return Promise.resolve(result);
+    },
+
+    // eslint-disable-next-line max-params
+    setCommunityWorkers(
+      communityId: string,
+      workerIds: readonly string[],
+    ): Promise<void> {
+      // 既存リンクを全削除（対象 community のみ）してから一意化した id で再構築する。
+      for (let i = links.length - 1; i >= 0; i--) {
+        if (links[i]!.communityId === communityId) {
+          links.splice(i, 1);
+        }
+      }
+      for (const workerId of new Set(workerIds)) {
         links.push({ workerId, communityId });
       }
       return Promise.resolve();

@@ -5,11 +5,13 @@ import {
   CommunityFeedSortSchema,
   CommentSchema,
   CommunitySchema,
+  CommunityWorkerAssignmentsSchema,
   CreateCommentRequestSchema,
   CreateCommunitySchema,
   CreatePostRequestSchema,
   FEED_CURSOR_MAX_LENGTH,
   PostSchema,
+  SetCommunityWorkersSchema,
   SubscriptionSchema,
   SubscriptionStatusSchema,
   UpdateCommunitySchema,
@@ -209,6 +211,58 @@ export function registerCommunities(registry: OpenAPIRegistry, ctx: RegistryCont
         },
       },
       400: { description: "ファイル不正（MIME / サイズ超過 / 未添付）", ...errorJson },
+      401: { description: "未認証", ...errorJson },
+      403: { description: "admin 権限なし", ...errorJson },
+      404: { description: "コミュニティが存在しない", ...errorJson },
+    },
+  });
+
+  // admin: コミュニティ所属ワーカー編集（#1079）。認証必須・admin のみ。
+  // `adminWorkerCommunities.ts`（#490・ワーカー起点）の逆方向。
+  const CommunityWorkerAssignmentsComponent = registry.register(
+    "CommunityWorkerAssignments",
+    CommunityWorkerAssignmentsSchema.openapi({
+      description: "コミュニティ所属ワーカー一覧（id・displayName・#1079）",
+    }),
+  );
+
+  const SetCommunityWorkersComponent = registry.register(
+    "SetCommunityWorkers",
+    SetCommunityWorkersSchema.openapi({
+      description: "コミュニティの所属ワーカーを置き換えるリクエストボディ（#1079）",
+    }),
+  );
+
+  registry.registerPath({
+    method: "get",
+    path: "/api/admin/communities/{id}/workers",
+    summary: "コミュニティの所属ワーカー一覧を取得（認証必須・admin のみ・#1079）",
+    request: { params: z.object({ id: communityIdParam }) },
+    responses: {
+      200: {
+        description: "所属ワーカー一覧（id・displayName）",
+        content: { "application/json": { schema: CommunityWorkerAssignmentsComponent } },
+      },
+      401: { description: "未認証", ...errorJson },
+      403: { description: "admin 権限なし", ...errorJson },
+      404: { description: "コミュニティが存在しない", ...errorJson },
+    },
+  });
+
+  registry.registerPath({
+    method: "put",
+    path: "/api/admin/communities/{id}/workers",
+    summary: "コミュニティの所属ワーカーを置き換える（認証必須・admin のみ・#1079）",
+    request: {
+      params: z.object({ id: communityIdParam }),
+      body: { content: { "application/json": { schema: SetCommunityWorkersComponent } } },
+    },
+    responses: {
+      200: {
+        description: "置換後の所属ワーカー一覧",
+        content: { "application/json": { schema: CommunityWorkerAssignmentsComponent } },
+      },
+      400: { description: "バリデーションエラー / 存在しない workerId", ...errorJson },
       401: { description: "未認証", ...errorJson },
       403: { description: "admin 権限なし", ...errorJson },
       404: { description: "コミュニティが存在しない", ...errorJson },

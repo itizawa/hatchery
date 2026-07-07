@@ -878,6 +878,55 @@
         },
         "description": "コミュニティ更新リクエストボディ（#310 / #337）"
       },
+      "CommunityWorkerAssignments": {
+        "type": "object",
+        "properties": {
+          "workers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "displayName": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 50
+                }
+              },
+              "required": [
+                "id",
+                "displayName"
+              ]
+            }
+          }
+        },
+        "required": [
+          "workers"
+        ],
+        "description": "コミュニティ所属ワーカー一覧（id・displayName・#1079）"
+      },
+      "SetCommunityWorkers": {
+        "type": "object",
+        "properties": {
+          "workerIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "maxItems": 200
+          }
+        },
+        "required": [
+          "workerIds"
+        ],
+        "description": "コミュニティの所属ワーカーを置き換えるリクエストボディ（#1079）"
+      },
       "SubscriptionStatus": {
         "type": "object",
         "properties": {
@@ -1994,6 +2043,137 @@
           },
           "400": {
             "description": "ファイル不正（MIME / サイズ超過 / 未添付）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未認証",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "admin 権限なし",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "コミュニティが存在しない",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/communities/{id}/workers": {
+      "get": {
+        "summary": "コミュニティの所属ワーカー一覧を取得（認証必須・admin のみ・#1079）",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "所属ワーカー一覧（id・displayName）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommunityWorkerAssignments"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未認証",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "admin 権限なし",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "コミュニティが存在しない",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "コミュニティの所属ワーカーを置き換える（認証必須・admin のみ・#1079）",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetCommunityWorkers"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "置換後の所属ワーカー一覧",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommunityWorkerAssignments"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "バリデーションエラー / 存在しない workerId",
             "content": {
               "application/json": {
                 "schema": {

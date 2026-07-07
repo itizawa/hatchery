@@ -160,4 +160,30 @@ describe.skipIf(!DATABASE_URL)("createPrismaPushSubscriptionRepository (integrat
       expect(all).toEqual([]);
     });
   });
+
+  describe("listByUserIds（#1088）", () => {
+    it("指定 userId の購読のみを返す", async () => {
+      await setupFixtures();
+      const repo = createPrismaPushSubscriptionRepository(prisma);
+
+      await repo.upsert({ userId, endpoint: "https://push.example.com/by-user-1", p256dh: "k1", auth: "a1" });
+      await repo.upsert({ userId: userId2, endpoint: "https://push.example.com/by-user-2", p256dh: "k2", auth: "a2" });
+
+      const result = await repo.listByUserIds([userId]);
+
+      expect(result).toHaveLength(1);
+      expect(result[0]?.userId).toBe(userId);
+    });
+
+    it("userIds が空配列の場合は空配列を返す", async () => {
+      await setupFixtures();
+      const repo = createPrismaPushSubscriptionRepository(prisma);
+
+      await repo.upsert({ userId, endpoint: "https://push.example.com/by-user-empty", p256dh: "k1", auth: "a1" });
+
+      const result = await repo.listByUserIds([]);
+
+      expect(result).toEqual([]);
+    });
+  });
 });

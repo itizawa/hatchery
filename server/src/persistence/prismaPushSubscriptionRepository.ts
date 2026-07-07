@@ -45,5 +45,10 @@ export function createPrismaPushSubscriptionRepository(prisma: PrismaClient): Pu
     async listAll(): Promise<PushSubscriptionRecord[]> {
       return prisma.pushSubscription.findMany();
     },
+
+    async listByUserIds(userIds: string[]): Promise<PushSubscriptionRecord[]> {
+      if (userIds.length === 0) return [];
+      return prisma.pushSubscription.findMany({ where: { userId: { in: userIds } } });
+    },
   };
 }

@@ -39,5 +39,8 @@ export function createInMemoryPushSubscriptionRepository(): PushSubscriptionRepo
     async listAll() {
       return [...store.values()];
     },
+    async listByUserIds(userIds: string[]) {
+      return [...store.values()].filter((r) => userIds.includes(r.userId));
+    },
   };
 }

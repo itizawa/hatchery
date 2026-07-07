@@ -8,6 +8,8 @@ export interface SubscriptionRecord {
   communityId: string;
   createdAt: Date;
   lastViewedAt: Date | null;
+  /** コミュニティ単位の Web Push 通知 ON/OFF（#1088）。デフォルト true。 */
+  notifyEnabled: boolean;
 }
 
 export interface SubscriptionWithUnreadCount {
@@ -43,6 +45,23 @@ export interface SubscriptionRepository {
 
   /** 購読コミュニティ別の未読数を返す（#933）。 */
   listWithUnreadCounts(userId: string): Promise<SubscriptionWithUnreadCount[]>;
+
+  /** 購読レコードを取得する。未購読の場合は null（#1088）。 */
+  find({ userId, communityId }: { userId: string; communityId: string }): Promise<SubscriptionRecord | null>;
+
+  /** notifyEnabled を更新する。未購読の場合は no-op（#1088）。 */
+  updateNotifyEnabled({
+    userId,
+    communityId,
+    notifyEnabled,
+  }: {
+    userId: string;
+    communityId: string;
+    notifyEnabled: boolean;
+  }): Promise<void>;
+
+  /** 指定 community 群のうち notifyEnabled=true の購読者 userId を重複なく返す（#1088）。 */
+  listNotifiableUserIds(communityIds: string[]): Promise<string[]>;
 }
 
 /** DB 非依存のインメモリ実装。ユースケース/ルートのテストで注入する。 */
@@ -54,7 +73,7 @@ export function createInMemorySubscriptionRepository(): SubscriptionRepository {
     add(userId: string, communityId: string): Promise<void> {
       const exists = records.find((r) => r.userId === userId && r.communityId === communityId);
       if (!exists) {
-        records.push({ userId, communityId, createdAt: new Date(), lastViewedAt: null });
+        records.push({ userId, communityId, createdAt: new Date(), lastViewedAt: null, notifyEnabled: true });
       }
       return Promise.resolve();
     },
@@ -112,6 +131,36 @@ export function createInMemorySubscriptionRepository(): SubscriptionRepository {
         lastViewedAt: r.lastViewedAt,
       }));
       return Promise.resolve(result);
+    },
+
+    find({ userId, communityId }: { userId: string; communityId: string }): Promise<SubscriptionRecord | null> {
+      const record = records.find((r) => r.userId === userId && r.communityId === communityId);
+      return Promise.resolve(record ?? null);
+    },
+
+    updateNotifyEnabled({
+      userId,
+      communityId,
+      notifyEnabled,
+    }: {
+      userId: string;
+      communityId: string;
+      notifyEnabled: boolean;
+    }): Promise<void> {
+      const record = records.find((r) => r.userId === userId && r.communityId === communityId);
+      if (record) {
+        record.notifyEnabled = notifyEnabled;
+      }
+      return Promise.resolve();
+    },
+
+    listNotifiableUserIds(communityIds: string[]): Promise<string[]> {
+      const ids = new Set(
+        records
+          .filter((r) => communityIds.includes(r.communityId) && r.notifyEnabled)
+          .map((r) => r.userId),
+      );
+      return Promise.resolve([...ids]);
     },
   };
 }

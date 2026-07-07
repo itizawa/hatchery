@@ -697,3 +697,5 @@ test.todo("UC-COMM-24: モバイル幅でもコミュニティ概要（descripti
 test.todo("UC-COMM-26: 購読コミュニティの新着投稿に「New」ラベルが表示される（#935）");
 
 test.todo("UC-COMM-30: コミュニティ詳細のワーカー一覧がスクロールで無限に追加読み込まれる（#1078）");
+
+test.todo("UC-COMM-31: コミュニティ単位で Web Push 通知の ON/OFF を切り替えられる（#1088）");

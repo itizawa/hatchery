@@ -213,6 +213,8 @@ model Subscription {
   createdAt     DateTime  @default(now())
   /// 最後にコミュニティを訪問した時刻（#933）。null=未訪問。
   lastViewedAt  DateTime?
+  /// コミュニティ単位の Web Push 通知 ON/OFF（#1088）。デフォルト true（既存動作を維持）。
+  notifyEnabled Boolean   @default(true)
 
   @@id([userId, communityId])
   @@index([userId])

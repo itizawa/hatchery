@@ -43,7 +43,7 @@ export async function unsubscribeCommunity(slug: string): Promise<void> {
 
 /**
  * GET /api/communities/{slug}/subscription — 購読状態を取得する（#421）。
- * 未認証の場合は { subscribed: false } が返る。
+ * 未認証・未購読の場合は { subscribed: false, notify_enabled: true } が返る（notify_enabled は #1088）。
  */
 export async function fetchSubscriptionStatus(slug: string) {
   const result = await openApiClient.GET("/api/communities/{slug}/subscription", {
@@ -51,6 +51,19 @@ export async function fetchSubscriptionStatus(slug: string) {
     credentials: "include",
   });
   return unwrap({ result, label: `GET /api/communities/${slug}/subscription` });
+}
+
+/**
+ * 購読状態（subscribed / notify_enabled）の Suspense クエリ（#421 / #1088）。
+ * `SubscriptionStatus` と `NotifySubscriptionToggle` の両方がこのフックを通じて同じ
+ * queryKey・staleTime のクエリを共有し、片方が既に取得済みならもう片方は再フェッチしない。
+ */
+export function useSubscriptionStatus(slug: string) {
+  return useSuspenseQuery({
+    queryKey: communitySubscriptionQueryKey(slug),
+    queryFn: () => fetchSubscriptionStatus(slug),
+    staleTime: 30_000,
+  });
 }
 
 // ─── 未読数 API (#934) ────────────────────────────────────────────────────────────────────────
@@ -110,6 +123,33 @@ export function useMarkCommunityViewed(slug: string) {
     mutationFn: () => markCommunityViewed(slug),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: unreadCountsQueryKey() });
+    },
+  });
+}
+
+/** PATCH /api/communities/{slug}/subscription — community 単位の通知 ON/OFF を更新する（#1088）。 */
+export async function updateSubscriptionNotifyEnabled({
+  slug,
+  notifyEnabled,
+}: {
+  slug: string;
+  notifyEnabled: boolean;
+}): Promise<void> {
+  const result = await openApiClient.PATCH("/api/communities/{slug}/subscription", {
+    params: { path: { slug } },
+    body: { notify_enabled: notifyEnabled },
+    credentials: "include",
+  });
+  ensureOk({ result, label: `PATCH /api/communities/${slug}/subscription` });
+}
+
+/** 通知 ON/OFF 更新ミューテーションフック。成功後に購読状態クエリを invalidate する（#1088）。 */
+export function useUpdateNotifyEnabled(slug: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (notifyEnabled: boolean) => updateSubscriptionNotifyEnabled({ slug, notifyEnabled }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: communitySubscriptionQueryKey(slug) });
     },
   });
 }

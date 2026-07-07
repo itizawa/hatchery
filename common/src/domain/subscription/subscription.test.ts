@@ -1,12 +1,19 @@
 import { describe, expect, it } from "vitest";
 
-import { SubscriptionSchema, UnreadCountItemSchema, UnreadCountsResponseSchema } from "./subscription.js";
+import {
+  SubscriptionSchema,
+  SubscriptionStatusSchema,
+  UnreadCountItemSchema,
+  UnreadCountsResponseSchema,
+  UpdateSubscriptionNotifyEnabledBodySchema,
+} from "./subscription.js";
 
 describe("SubscriptionSchema", () => {
   const validSubscription = {
     user_id: "user-1",
     community_id: "comm-1",
     created_at: new Date("2026-06-10T09:00:00.000Z"),
+    notify_enabled: true,
   };
 
   it("有効なサブスクリプションをパースできる", () => {
@@ -29,6 +36,16 @@ describe("SubscriptionSchema", () => {
     expect(result.created_at).toBeInstanceOf(Date);
   });
 
+  it("notify_enabled を持つ（#1088）", () => {
+    const result = SubscriptionSchema.parse(validSubscription);
+    expect(result.notify_enabled).toBe(true);
+  });
+
+  it("notify_enabled: false をパースできる（#1088）", () => {
+    const result = SubscriptionSchema.parse({ ...validSubscription, notify_enabled: false });
+    expect(result.notify_enabled).toBe(false);
+  });
+
   it("user_id が空文字を reject する", () => {
     const data = { ...validSubscription, user_id: "" };
     expect(SubscriptionSchema.safeParse(data).success).toBe(false);
@@ -37,6 +54,42 @@ describe("SubscriptionSchema", () => {
   it("community_id が空文字を reject する", () => {
     const data = { ...validSubscription, community_id: "" };
     expect(SubscriptionSchema.safeParse(data).success).toBe(false);
+  });
+
+  it("notify_enabled が欠落している場合 reject する（#1088）", () => {
+    const data: Record<string, unknown> = { ...validSubscription };
+    delete data.notify_enabled;
+    expect(SubscriptionSchema.safeParse(data).success).toBe(false);
+  });
+});
+
+describe("SubscriptionStatusSchema（#1088: notify_enabled 追加）", () => {
+  it("subscribed と notify_enabled をパースできる", () => {
+    const result = SubscriptionStatusSchema.safeParse({ subscribed: true, notify_enabled: false });
+    expect(result.success).toBe(true);
+  });
+
+  it("notify_enabled が欠落している場合 reject する", () => {
+    const result = SubscriptionStatusSchema.safeParse({ subscribed: true });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("UpdateSubscriptionNotifyEnabledBodySchema（#1088）", () => {
+  it("notify_enabled: true をパースできる", () => {
+    expect(UpdateSubscriptionNotifyEnabledBodySchema.safeParse({ notify_enabled: true }).success).toBe(true);
+  });
+
+  it("notify_enabled: false をパースできる", () => {
+    expect(UpdateSubscriptionNotifyEnabledBodySchema.safeParse({ notify_enabled: false }).success).toBe(true);
+  });
+
+  it("notify_enabled が真偽値でない場合 reject する", () => {
+    expect(UpdateSubscriptionNotifyEnabledBodySchema.safeParse({ notify_enabled: "true" }).success).toBe(false);
+  });
+
+  it("notify_enabled が欠落している場合 reject する", () => {
+    expect(UpdateSubscriptionNotifyEnabledBodySchema.safeParse({}).success).toBe(false);
   });
 });
 

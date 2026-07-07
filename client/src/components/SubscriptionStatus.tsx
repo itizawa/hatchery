@@ -1,7 +1,6 @@
 import type { ReactElement, ReactNode } from "react";
-import { useSuspenseQuery } from "@tanstack/react-query";
 
-import { communitySubscriptionQueryKey, fetchSubscriptionStatus } from "../api/communities.js";
+import { useSubscriptionStatus } from "../api/subscriptions.js";
 
 export interface SubscriptionStatusProps {
   /** 購読状態を取得するコミュニティの slug。空文字のときは取得せず subscribed=false を返す。 */
@@ -21,11 +20,7 @@ function SubscriptionStatusQuery({
   communitySlug,
   children,
 }: SubscriptionStatusProps): ReactElement {
-  const { data } = useSuspenseQuery({
-    queryKey: communitySubscriptionQueryKey(communitySlug),
-    queryFn: () => fetchSubscriptionStatus(communitySlug),
-    staleTime: 30_000,
-  });
+  const { data } = useSubscriptionStatus(communitySlug);
 
   return <>{children(data.subscribed)}</>;
 }

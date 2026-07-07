@@ -20,8 +20,10 @@ export const handlers = [
     HttpResponse.json({ items: mockWorkers, nextCursor: null }),
   ),
 
-  // GET /api/communities/:slug/subscription — 購読状態（#421 / #461: SubscriptionStatus が useSuspenseQuery で取得）。
-  http.get("/api/communities/:slug/subscription", () => HttpResponse.json({ subscribed: false })),
+  // GET /api/communities/:slug/subscription — 購読状態（#421 / #461: SubscriptionStatus が useSuspenseQuery で取得・notify_enabled は #1088）。
+  http.get("/api/communities/:slug/subscription", () =>
+    HttpResponse.json({ subscribed: false, notify_enabled: true }),
+  ),
 
   http.post("/api/communities/:slug/subscribe", () =>
     HttpResponse.json({ userId: "user-1", communityId: "community-1" }, { status: 201 }),

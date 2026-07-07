@@ -1,6 +1,6 @@
 import { Prisma, type PrismaClient } from "@prisma/client";
 
-import type { SubscriptionRepository, SubscriptionWithUnreadCount } from "./subscriptionRepository.js";
+import type { SubscriptionRecord, SubscriptionRepository, SubscriptionWithUnreadCount } from "./subscriptionRepository.js";
 
 /** SubscriptionRepository の Prisma / PostgreSQL 実装（ADR-0019 / #305）。 */
 export function createPrismaSubscriptionRepository(prisma: PrismaClient): SubscriptionRepository {
@@ -109,6 +109,45 @@ export function createPrismaSubscriptionRepository(prisma: PrismaClient): Subscr
       );
 
       return result;
+    },
+
+    async find({ userId, communityId }: { userId: string; communityId: string }): Promise<SubscriptionRecord | null> {
+      const row = await prisma.subscription.findUnique({
+        where: { userId_communityId: { userId, communityId } },
+      });
+      return row;
+    },
+
+    async updateNotifyEnabled({
+      userId,
+      communityId,
+      notifyEnabled,
+    }: {
+      userId: string;
+      communityId: string;
+      notifyEnabled: boolean;
+    }): Promise<void> {
+      try {
+        await prisma.subscription.update({
+          where: { userId_communityId: { userId, communityId } },
+          data: { notifyEnabled },
+        });
+      } catch (err) {
+        if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025") {
+          return;
+        }
+        throw err;
+      }
+    },
+
+    async listNotifiableUserIds(communityIds: string[]): Promise<string[]> {
+      if (communityIds.length === 0) return [];
+      const rows = await prisma.subscription.findMany({
+        where: { communityId: { in: communityIds }, notifyEnabled: true },
+        select: { userId: true },
+        distinct: ["userId"],
+      });
+      return rows.map((r) => r.userId);
     },
   };
 }

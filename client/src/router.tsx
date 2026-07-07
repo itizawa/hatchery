@@ -32,13 +32,20 @@ interface RootSearch {
 }
 
 /**
+ * `?flag=1` / `?flag=true` 形式の真偽値 search param を判定する共通ヘルパー。
+ * `login`（root）・`welcome`（/account）・`workerSaved`（/admin、#1080）で共有する。
+ */
+function parseTruthySearchFlag(raw: unknown): boolean {
+  return raw === true || raw === 1 || raw === "1" || raw === "true";
+}
+
+/**
  * root の search param を検証する（#454）。`login=1` / `login=true` を真として
  * ログインモーダルを開く。未指定・偉値のときは `login` を持たない（モーダルは閉じる）。
  * 他の search param（例: /admin の tab）は各ルートの validateSearch が別途検証する。
  */
 function validateRootSearch(search: Record<string, unknown>): RootSearch {
-  const raw = search.login;
-  const login = raw === true || raw === 1 || raw === "1" || raw === "true";
+  const login = parseTruthySearchFlag(search.login);
   // #800: login=1（数値）を正規形とし、URL が /?login=true にならないようにする。
   // TanStack Router は validateSearch の戻り値を再シリアライズするため、ここで 1 を返すことで
   // 常に /?login=1 が URL に現れる（e2e 期待値との整合）。
@@ -283,8 +290,7 @@ const adminRoute = createRoute({
         ? (tab as SettingsTabValue)
         : "users";
     // #1080: ワーカー編集の保存成功後の一時フラグ。一覧画面が検知したら即座に URL から除去する。
-    const raw = search.workerSaved;
-    const workerSaved = raw === true || raw === 1 || raw === "1" || raw === "true";
+    const workerSaved = parseTruthySearchFlag(search.workerSaved);
     return workerSaved ? { tab: validTab, workerSaved: 1 } : { tab: validTab };
   },
 });
@@ -303,8 +309,7 @@ const accountRoute = createRoute({
   ),
   beforeLoad: requireAuth,
   validateSearch: (search: Record<string, unknown>): { welcome?: boolean } => {
-    const raw = search.welcome;
-    const welcome = raw === true || raw === 1 || raw === "1" || raw === "true";
+    const welcome = parseTruthySearchFlag(search.welcome);
     return welcome ? { welcome: true } : {};
   },
 });

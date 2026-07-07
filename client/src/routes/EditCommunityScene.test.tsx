@@ -3,7 +3,7 @@
  * コミュニティ編集ページ（/admin/communities/:communityId/edit）のフォーム表示と送信動作を検証する。
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type React from "react";
@@ -28,6 +28,15 @@ vi.mock("../api/communities.js", () => ({
   useUpdateCommunity: vi.fn(),
 }));
 
+vi.mock("../api/communityWorkers.js", () => ({
+  useCommunityWorkerAssignments: vi.fn(),
+  useSetCommunityWorkerAssignments: vi.fn(),
+}));
+
+vi.mock("../api/workers.js", () => ({
+  useBotWorkers: vi.fn(),
+}));
+
 vi.mock("../components/CommunityImageUpload.js", () => ({
   CommunityImageUpload: ({ name, kind }: { name: string; kind: string }) => (
     <div data-testid={`community-image-upload-${kind}`}>CommunityImageUpload: {name}</div>
@@ -35,6 +44,8 @@ vi.mock("../components/CommunityImageUpload.js", () => ({
 }));
 
 import { useCommunities, useUpdateCommunity } from "../api/communities.js";
+import { useCommunityWorkerAssignments, useSetCommunityWorkerAssignments } from "../api/communityWorkers.js";
+import { useBotWorkers } from "../api/workers.js";
 import { EditCommunityScene } from "./EditCommunityScene.js";
 
 const mockCommunity: AdminCommunity = {
@@ -59,6 +70,9 @@ function renderWithClient(ui: React.ReactElement) {
 function stubAll(opts?: {
   communities?: AdminCommunity[];
   updateMutateAsync?: ReturnType<typeof vi.fn>;
+  communityWorkers?: { id: string; displayName: string }[];
+  setWorkersMutateAsync?: ReturnType<typeof vi.fn>;
+  botWorkers?: { id: string; displayName: string }[];
 }) {
   vi.mocked(useCommunities).mockReturnValue({
     data: opts?.communities ?? [mockCommunity],
@@ -71,6 +85,25 @@ function stubAll(opts?: {
     error: null,
     reset: vi.fn(),
   } as unknown as ReturnType<typeof useUpdateCommunity>);
+
+  vi.mocked(useCommunityWorkerAssignments).mockReturnValue({
+    data: opts?.communityWorkers ?? [],
+    isLoading: false,
+    isSuccess: true,
+    isError: false,
+  } as ReturnType<typeof useCommunityWorkerAssignments>);
+
+  vi.mocked(useSetCommunityWorkerAssignments).mockReturnValue({
+    mutateAsync: opts?.setWorkersMutateAsync ?? vi.fn().mockResolvedValue([]),
+    isPending: false,
+    isError: false,
+    error: null,
+    reset: vi.fn(),
+  } as unknown as ReturnType<typeof useSetCommunityWorkerAssignments>);
+
+  vi.mocked(useBotWorkers).mockReturnValue({
+    data: opts?.botWorkers ?? [{ id: "w1", displayName: "haru" }],
+  } as ReturnType<typeof useBotWorkers>);
 }
 
 describe("EditCommunityScene（#889）", () => {
@@ -122,7 +155,7 @@ describe("EditCommunityScene（#889）", () => {
     const updateMutateAsync = vi.fn().mockResolvedValue(mockCommunity);
     stubAll({ updateMutateAsync });
     renderWithClient(<EditCommunityScene />);
-    await userEvent.click(screen.getByRole("button", { name: /保存/ }));
+    await userEvent.click(screen.getByRole("button", { name: "保存" }));
     await waitFor(() => expect(updateMutateAsync).toHaveBeenCalled());
   });
 
@@ -142,5 +175,43 @@ describe("EditCommunityScene（#889）", () => {
     stubAll({ communities: [] });
     renderWithClient(<EditCommunityScene />);
     expect(screen.getByRole("link", { name: /コミュニティ一覧へ戻る/ })).toBeInTheDocument();
+  });
+
+  it("所属ワーカーの選択 UI が表示される（#1079）", () => {
+    stubAll();
+    renderWithClient(<EditCommunityScene />);
+    expect(screen.getByLabelText(/所属ワーカー/)).toBeInTheDocument();
+  });
+
+  it("現在の所属ワーカーが選択 UI に反映される（#1079）", () => {
+    stubAll({
+      communityWorkers: [{ id: "w1", displayName: "haru" }],
+      botWorkers: [
+        { id: "w1", displayName: "haru" },
+        { id: "w2", displayName: "ken" },
+      ],
+    });
+    renderWithClient(<EditCommunityScene />);
+    const combobox = screen.getByRole("combobox", { name: /所属ワーカー/ });
+    expect(within(combobox).getByText("haru")).toBeInTheDocument();
+    expect(within(combobox).queryByText("ken")).not.toBeInTheDocument();
+  });
+
+  it("所属ワーカーの保存ボタンを押すと所属ワーカー更新 API が呼ばれる（#1079）", async () => {
+    const setWorkersMutateAsync = vi.fn().mockResolvedValue([]);
+    stubAll({ setWorkersMutateAsync });
+    renderWithClient(<EditCommunityScene />);
+    await userEvent.click(screen.getByRole("button", { name: /所属ワーカーを保存/ }));
+    await waitFor(() => expect(setWorkersMutateAsync).toHaveBeenCalled());
+  });
+
+  it("コミュニティ本体の保存ボタンを押しても所属ワーカー更新 API は呼ばれない（独立した保存単位・#1079）", async () => {
+    const updateMutateAsync = vi.fn().mockResolvedValue(mockCommunity);
+    const setWorkersMutateAsync = vi.fn().mockResolvedValue([]);
+    stubAll({ updateMutateAsync, setWorkersMutateAsync });
+    renderWithClient(<EditCommunityScene />);
+    await userEvent.click(screen.getByRole("button", { name: "保存" }));
+    await waitFor(() => expect(updateMutateAsync).toHaveBeenCalled());
+    expect(setWorkersMutateAsync).not.toHaveBeenCalled();
   });
 });

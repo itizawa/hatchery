@@ -5,7 +5,7 @@ import {
   WORKER_ROLE_MAX_LENGTH,
 } from "@hatchery/common";
 import { useForm } from "@tanstack/react-form";
-import { Link, useParams } from "@tanstack/react-router";
+import { Link, useNavigate, useParams } from "@tanstack/react-router";
 import { type ReactElement, useEffect } from "react";
 
 import { useUpdateWorker, useWorkerDetail } from "../api/workers.js";
@@ -47,6 +47,7 @@ function EditWorkerForm({ workerId }: { workerId: string }): ReactElement {
   const updateMutation = useUpdateWorker();
   const setCommunitiesMutation = useSetWorkerCommunities();
   const workerCommunitiesQuery = useWorkerCommunities(workerId);
+  const navigate = useNavigate();
 
   const isInitializing = workerCommunitiesQuery.isLoading;
   const canEditCommunities = workerCommunitiesQuery.isSuccess;
@@ -84,6 +85,9 @@ function EditWorkerForm({ workerId }: { workerId: string }): ReactElement {
             communityIds: value.communityIds,
           });
         }
+        // #1080: 保存成功後、一覧画面（ワーカー管理タブ）へ自動遷移する。
+        // 保存成功のSnackbarは遷移先（AdminWorkerTable）で workerSaved フラグを検知して表示する。
+        await navigate({ to: "/admin", search: { tab: "users", workerSaved: 1 } });
       } catch {
         // エラー表示は mutation の状態に委ねる
       }

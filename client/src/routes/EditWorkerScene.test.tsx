@@ -5,7 +5,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type React from "react";
 
 import type { Worker } from "@hatchery/common";
@@ -103,6 +103,10 @@ function stubAll(opts?: {
 }
 
 describe("EditWorkerScene（#888）", () => {
+  beforeEach(() => {
+    mockNavigate.mockClear();
+  });
+
   it("ページタイトル「ワーカーを編集」が表示される", () => {
     stubAll();
     renderWithClient(<EditWorkerScene />);
@@ -165,5 +169,38 @@ describe("EditWorkerScene（#888）", () => {
     renderWithClient(<EditWorkerScene />);
     const input = screen.getByRole("textbox", { name: "表示名" });
     expect(input).toHaveAttribute("maxlength");
+  });
+
+  it("保存に成功すると一覧画面（/admin?tab=users&workerSaved=1）へ遷移する（#1080）", async () => {
+    const updateMutateAsync = vi.fn().mockResolvedValue(undefined);
+    const setMutateAsync = vi.fn().mockResolvedValue({ communityIds: [] });
+    stubAll({ updateMutateAsync, setMutateAsync });
+    renderWithClient(<EditWorkerScene />);
+    await userEvent.click(screen.getByRole("button", { name: /保存/ }));
+    await waitFor(() =>
+      expect(mockNavigate).toHaveBeenCalledWith({
+        to: "/admin",
+        search: { tab: "users", workerSaved: 1 },
+      }),
+    );
+  });
+
+  it("保存（update）に失敗した場合は画面遷移しない（#1080）", async () => {
+    const updateMutateAsync = vi.fn().mockRejectedValue(new Error("update failed"));
+    stubAll({ updateMutateAsync });
+    renderWithClient(<EditWorkerScene />);
+    await userEvent.click(screen.getByRole("button", { name: /保存/ }));
+    await waitFor(() => expect(updateMutateAsync).toHaveBeenCalled());
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it("参加コミュニティの保存に失敗した場合は画面遷移しない（#1080）", async () => {
+    const updateMutateAsync = vi.fn().mockResolvedValue(undefined);
+    const setMutateAsync = vi.fn().mockRejectedValue(new Error("set communities failed"));
+    stubAll({ updateMutateAsync, setMutateAsync });
+    renderWithClient(<EditWorkerScene />);
+    await userEvent.click(screen.getByRole("button", { name: /保存/ }));
+    await waitFor(() => expect(setMutateAsync).toHaveBeenCalled());
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 });

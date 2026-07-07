@@ -274,15 +274,18 @@ const adminRoute = createRoute({
     </Suspense>
   ),
   beforeLoad: requireAdminRoute,
-  validateSearch: (search: Record<string, unknown>): { tab: SettingsTabValue } => {
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { tab: SettingsTabValue; workerSaved?: 1 } => {
     const tab = search.tab;
-    if (
-      typeof tab === "string" &&
-      (SETTINGS_TAB_VALUES as readonly string[]).includes(tab)
-    ) {
-      return { tab: tab as SettingsTabValue };
-    }
-    return { tab: "users" };
+    const validTab: SettingsTabValue =
+      typeof tab === "string" && (SETTINGS_TAB_VALUES as readonly string[]).includes(tab)
+        ? (tab as SettingsTabValue)
+        : "users";
+    // #1080: ワーカー編集の保存成功後の一時フラグ。一覧画面が検知したら即座に URL から除去する。
+    const raw = search.workerSaved;
+    const workerSaved = raw === true || raw === 1 || raw === "1" || raw === "true";
+    return workerSaved ? { tab: validTab, workerSaved: 1 } : { tab: validTab };
   },
 });
 

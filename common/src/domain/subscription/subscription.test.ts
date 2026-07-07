@@ -57,7 +57,8 @@ describe("SubscriptionSchema", () => {
   });
 
   it("notify_enabled が欠落している場合 reject する（#1088）", () => {
-    const { notify_enabled: _omit, ...data } = validSubscription;
+    const data: Record<string, unknown> = { ...validSubscription };
+    delete data.notify_enabled;
     expect(SubscriptionSchema.safeParse(data).success).toBe(false);
   });
 });

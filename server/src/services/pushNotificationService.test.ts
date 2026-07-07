@@ -33,7 +33,6 @@ const subs: PushSubscriptionRecord[] = [
   { id: "s2", userId: "u2", endpoint: "https://fcm.example.com/2", p256dh: "key2", auth: "auth2", createdAt: new Date() },
 ];
 
-// eslint-disable-next-line max-params
 function buildRepo(listByUserIdsResult: typeof subs) {
   return {
     listAll: vi.fn(),
@@ -51,7 +50,7 @@ describe("createPushNotificationService", () => {
     const repo = buildRepo(subs);
     const service = createPushNotificationService({ config: vapidConfig, pushSubscriptionRepo: repo });
 
-    await service.sendToUsers({ title: "Test", body: "テスト通知", url: "/" }, ["u1", "u2"]);
+    await service.sendToUsers({ payload: { title: "Test", body: "テスト通知", url: "/" }, userIds: ["u1", "u2"] });
 
     expect(repo.listByUserIds).toHaveBeenCalledWith(["u1", "u2"]);
     expect(mockSendNotification).toHaveBeenCalledTimes(2);
@@ -61,7 +60,7 @@ describe("createPushNotificationService", () => {
     const repo = buildRepo([]);
     const service = createPushNotificationService({ config: vapidConfig, pushSubscriptionRepo: repo });
 
-    await service.sendToUsers({ title: "Test", body: "テスト通知", url: "/" }, []);
+    await service.sendToUsers({ payload: { title: "Test", body: "テスト通知", url: "/" }, userIds: [] });
 
     expect(repo.listByUserIds).not.toHaveBeenCalled();
     expect(mockSendNotification).not.toHaveBeenCalled();
@@ -71,7 +70,7 @@ describe("createPushNotificationService", () => {
     const repo = buildRepo([]);
     const service = createPushNotificationService({ config: vapidConfig, pushSubscriptionRepo: repo });
 
-    await service.sendToUsers({ title: "Test", body: "テスト通知", url: "/" }, ["u1"]);
+    await service.sendToUsers({ payload: { title: "Test", body: "テスト通知", url: "/" }, userIds: ["u1"] });
 
     expect(mockSendNotification).not.toHaveBeenCalled();
   });
@@ -84,7 +83,7 @@ describe("createPushNotificationService", () => {
     const service = createPushNotificationService({ config: vapidConfig, pushSubscriptionRepo: repo });
 
     await expect(
-      service.sendToUsers({ title: "Test", body: "テスト通知", url: "/" }, ["u1", "u2"]),
+      service.sendToUsers({ payload: { title: "Test", body: "テスト通知", url: "/" }, userIds: ["u1", "u2"] }),
     ).resolves.not.toThrow();
   });
 
@@ -94,7 +93,7 @@ describe("createPushNotificationService", () => {
     const repo = buildRepo([subs[0]!]);
     const service = createPushNotificationService({ config: vapidConfig, pushSubscriptionRepo: repo });
 
-    await service.sendToUsers({ title: "Test", body: "テスト通知", url: "/" }, ["u1"]);
+    await service.sendToUsers({ payload: { title: "Test", body: "テスト通知", url: "/" }, userIds: ["u1"] });
 
     expect(repo.delete).toHaveBeenCalledWith(subs[0]!.endpoint);
   });
@@ -106,7 +105,7 @@ describe("createPushNotificationService", () => {
     const service = createPushNotificationService({ config: vapidConfig, pushSubscriptionRepo: repo });
 
     await expect(
-      service.sendToUsers({ title: "Test", body: "テスト通知", url: "/" }, ["u1"]),
+      service.sendToUsers({ payload: { title: "Test", body: "テスト通知", url: "/" }, userIds: ["u1"] }),
     ).resolves.not.toThrow();
 
     expect(repo.delete).not.toHaveBeenCalled();

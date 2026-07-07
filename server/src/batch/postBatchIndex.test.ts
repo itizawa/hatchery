@@ -138,7 +138,7 @@ describe("postBatchIndex (#672)", () => {
       await runPostBatchCli({ ...cliDeps, subscriptionRepo, pushNotificationService });
 
       expect(sendToUsers).toHaveBeenCalledTimes(1);
-      const [, userIds] = sendToUsers.mock.calls[0] as [unknown, string[]];
+      const [{ userIds }] = sendToUsers.mock.calls[0] as [{ userIds: string[] }];
       expect(userIds).toEqual(["user-1"]);
     });
 

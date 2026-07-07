@@ -12,7 +12,7 @@ export interface PushNotificationConfig {
 
 export interface PushNotificationService {
   /** 指定 userId 群の端末にのみ通知を送る（#1088: community 単位の notifyEnabled 絞り込み）。 */
-  sendToUsers(payload: PushPayload, userIds: string[]): Promise<void>;
+  sendToUsers({ payload, userIds }: { payload: PushPayload; userIds: string[] }): Promise<void>;
 }
 
 /** web-push VAPID 送信サービス。失敗は握りつぶして全体を継続する（fire-and-forget）。 */
@@ -26,7 +26,7 @@ export function createPushNotificationService({
   webpush.setVapidDetails(config.subject, config.publicKey, config.privateKey);
 
   return {
-    async sendToUsers(payload: PushPayload, userIds: string[]): Promise<void> {
+    async sendToUsers({ payload, userIds }: { payload: PushPayload; userIds: string[] }): Promise<void> {
       if (userIds.length === 0) return;
       const subs = await pushSubscriptionRepo.listByUserIds(userIds);
       if (subs.length === 0) return;

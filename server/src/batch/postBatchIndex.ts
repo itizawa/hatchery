@@ -45,10 +45,10 @@ export async function runPostBatchCli(cliDeps: PostBatchCliDeps): Promise<RunPos
         .listNotifiableUserIds(communityIds)
         .then((userIds) => {
           if (userIds.length === 0) return;
-          return pushNotificationService.sendToUsers(
-            { title: "新着投稿", body: "コミュニティに新しい投稿があります", url: "/" },
+          return pushNotificationService.sendToUsers({
+            payload: { title: "新着投稿", body: "コミュニティに新しい投稿があります", url: "/" },
             userIds,
-          );
+          });
         })
         .catch((err: unknown) => logBatchError("push_notification.batch_send_failed", err));
     }

@@ -446,16 +446,16 @@ describe("DELETE /api/communities/:slug/subscribe", () => {
 });
 
 describe("GET /api/communities/:slug/subscription", () => {
-  it("未認証ユーザーは subscribed: false が返る", async () => {
+  it("未認証ユーザーは subscribed: false, notify_enabled: true が返る（#1088）", async () => {
     const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
     const deps = await createTestDeps({ communityRepository: communityRepo });
     const app = createApp(deps);
     const res = await request(app).get("/api/communities/technology/subscription");
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ subscribed: false });
+    expect(res.body).toEqual({ subscribed: false, notify_enabled: true });
   });
 
-  it("認証済みで未購読の場合は subscribed: false が返る", async () => {
+  it("認証済みで未購読の場合は subscribed: false, notify_enabled: true が返る（#1088）", async () => {
     const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
     const deps = await createTestDeps({ communityRepository: communityRepo });
     const app = createApp(deps);
@@ -467,10 +467,10 @@ describe("GET /api/communities/:slug/subscription", () => {
       .get("/api/communities/technology/subscription")
       .set("Cookie", cookie);
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ subscribed: false });
+    expect(res.body).toEqual({ subscribed: false, notify_enabled: true });
   });
 
-  it("購読後は subscribed: true が返る", async () => {
+  it("購読後は subscribed: true, notify_enabled: true（デフォルト）が返る（#1088）", async () => {
     const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
     const subscriptionRepo = createInMemorySubscriptionRepository();
     const deps = await createTestDeps({
@@ -490,7 +490,32 @@ describe("GET /api/communities/:slug/subscription", () => {
       .get("/api/communities/technology/subscription")
       .set("Cookie", cookie);
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ subscribed: true });
+    expect(res.body).toEqual({ subscribed: true, notify_enabled: true });
+  });
+
+  it("notifyEnabled を false にした後は notify_enabled: false が返る（#1088）", async () => {
+    const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
+    const subscriptionRepo = createInMemorySubscriptionRepository();
+    const deps = await createTestDeps({
+      communityRepository: communityRepo,
+      subscriptionRepository: subscriptionRepo,
+    });
+    const app = createApp(deps);
+
+    const loginRes = await request(app).post("/api/auth/dev-login");
+    const cookie = loginRes.headers["set-cookie"] as string[];
+
+    await request(app).post("/api/communities/technology/subscribe").set("Cookie", cookie);
+    await request(app)
+      .patch("/api/communities/technology/subscription")
+      .set("Cookie", cookie)
+      .send({ notify_enabled: false });
+
+    const res = await request(app)
+      .get("/api/communities/technology/subscription")
+      .set("Cookie", cookie);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ subscribed: true, notify_enabled: false });
   });
 
   it("存在しない slug は 404 を返す", async () => {
@@ -498,6 +523,88 @@ describe("GET /api/communities/:slug/subscription", () => {
     const app = createApp(deps);
     const res = await request(app).get("/api/communities/not-exists/subscription");
     expect(res.status).toBe(404);
+  });
+});
+
+describe("PATCH /api/communities/:slug/subscription（#1088）", () => {
+  it("購読済みユーザーは notify_enabled を更新でき 204 が返る", async () => {
+    const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
+    const subscriptionRepo = createInMemorySubscriptionRepository();
+    const deps = await createTestDeps({
+      communityRepository: communityRepo,
+      subscriptionRepository: subscriptionRepo,
+    });
+    const app = createApp(deps);
+
+    const loginRes = await request(app).post("/api/auth/dev-login");
+    const cookie = loginRes.headers["set-cookie"] as string[];
+    await request(app).post("/api/communities/technology/subscribe").set("Cookie", cookie);
+
+    const res = await request(app)
+      .patch("/api/communities/technology/subscription")
+      .set("Cookie", cookie)
+      .send({ notify_enabled: false });
+    expect(res.status).toBe(204);
+  });
+
+  it("未購読ユーザーは 403 が返る", async () => {
+    const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
+    const deps = await createTestDeps({ communityRepository: communityRepo });
+    const app = createApp(deps);
+
+    const loginRes = await request(app).post("/api/auth/dev-login");
+    const cookie = loginRes.headers["set-cookie"] as string[];
+
+    const res = await request(app)
+      .patch("/api/communities/technology/subscription")
+      .set("Cookie", cookie)
+      .send({ notify_enabled: false });
+    expect(res.status).toBe(403);
+  });
+
+  it("未認証は 401 が返る", async () => {
+    const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
+    const deps = await createTestDeps({ communityRepository: communityRepo });
+    const app = createApp(deps);
+
+    const res = await request(app)
+      .patch("/api/communities/technology/subscription")
+      .send({ notify_enabled: false });
+    expect(res.status).toBe(401);
+  });
+
+  it("存在しないコミュニティは 404 が返る", async () => {
+    const deps = await createTestDeps();
+    const app = createApp(deps);
+
+    const loginRes = await request(app).post("/api/auth/dev-login");
+    const cookie = loginRes.headers["set-cookie"] as string[];
+
+    const res = await request(app)
+      .patch("/api/communities/not-exists/subscription")
+      .set("Cookie", cookie)
+      .send({ notify_enabled: false });
+    expect(res.status).toBe(404);
+  });
+
+  it("notify_enabled が真偽値でないボディは 400 が返る", async () => {
+    const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
+    const subscriptionRepo = createInMemorySubscriptionRepository();
+    const deps = await createTestDeps({
+      communityRepository: communityRepo,
+      subscriptionRepository: subscriptionRepo,
+    });
+    const app = createApp(deps);
+
+    const loginRes = await request(app).post("/api/auth/dev-login");
+    const cookie = loginRes.headers["set-cookie"] as string[];
+    await request(app).post("/api/communities/technology/subscribe").set("Cookie", cookie);
+
+    const res = await request(app)
+      .patch("/api/communities/technology/subscription")
+      .set("Cookie", cookie)
+      .send({ notify_enabled: "yes" });
+    expect(res.status).toBe(400);
   });
 });
 

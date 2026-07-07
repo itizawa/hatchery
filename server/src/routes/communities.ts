@@ -1,4 +1,9 @@
-import { CommunityFeedQuerySchema, CommunityWorkersQuerySchema, NotFoundError } from "@hatchery/common";
+import {
+  CommunityFeedQuerySchema,
+  CommunityWorkersQuerySchema,
+  NotFoundError,
+  UpdateSubscriptionNotifyEnabledBodySchema,
+} from "@hatchery/common";
 import { Router } from "express";
 
 import { buildPrivateCacheControl } from "../config/security.js";
@@ -147,11 +152,42 @@ export function createCommunitiesRouter(
           throw new NotFoundError("CommunityNotFound");
         }
         if (!req.user) {
-          return res.status(200).json({ subscribed: false });
+          return res.status(200).json({ subscribed: false, notify_enabled: true });
         }
         return subscriptionRepo
-          .hasSubscription(req.user.id, community.id)
-          .then((subscribed) => res.status(200).json({ subscribed }));
+          .find({ userId: req.user.id, communityId: community.id })
+          .then((record) =>
+            res.status(200).json({ subscribed: record !== null, notify_enabled: record?.notifyEnabled ?? true }),
+          );
+      })
+      .catch(next);
+  });
+
+  // community 単位の通知 ON/OFF 更新（認証必須・購読済みのみ・#1088）
+  // eslint-disable-next-line max-params
+  router.patch("/:slug/subscription", requireAuth, (req, res, next) => {
+    const parsed = UpdateSubscriptionNotifyEnabledBodySchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "ValidationError", issues: parsed.error.issues });
+      return;
+    }
+    const { slug } = req.params as { slug: string };
+    const userId = getAuthUser(req).id;
+
+    communityRepo
+      .findBySlug(slug)
+      .then((community) => {
+        if (!community) {
+          throw new NotFoundError("CommunityNotFound");
+        }
+        return subscriptionRepo.hasSubscription(userId, community.id).then((subscribed) => {
+          if (!subscribed) {
+            return res.status(403).json({ error: "NotSubscribed" });
+          }
+          return subscriptionRepo
+            .updateNotifyEnabled({ userId, communityId: community.id, notifyEnabled: parsed.data.notify_enabled })
+            .then(() => res.status(204).end());
+        });
       })
       .catch(next);
   });

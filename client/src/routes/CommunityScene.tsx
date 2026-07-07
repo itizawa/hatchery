@@ -12,6 +12,7 @@ import {
   Typography,
 } from "../components/uiParts";
 import { Link as RouterLink, useNavigate, useParams } from "@tanstack/react-router";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type ReactElement } from "react";
 import type { CommunityFeedSort } from "@hatchery/common";
 
@@ -24,10 +25,17 @@ import {
   useCommunityWorkers,
 } from "../api/communities.js";
 import { useAuth } from "../api/auth.js";
-import { useMarkCommunityViewed, useUnreadCountsForNewLabel } from "../api/subscriptions.js";
+import {
+  communitySubscriptionQueryKey,
+  fetchSubscriptionStatus,
+  useMarkCommunityViewed,
+  useUnreadCountsForNewLabel,
+  useUpdateNotifyEnabled,
+} from "../api/subscriptions.js";
 import { CommunityHeader } from "../components/CommunityHeader.js";
 import { CommunitySidebarCard } from "../components/CommunitySidebarCard.js";
 import { CommunityWorkersSection } from "../components/CommunityWorkersSection.js";
+import { NotifyToggle } from "../components/NotifyToggle.js";
 import { PostCard } from "../components/PostCard.js";
 import { QueryBoundary } from "../components/QueryBoundary.js";
 import { ShareButton } from "../components/ShareButton.js";
@@ -178,6 +186,27 @@ const MarkViewedEffect = ({ slug }: { slug: string }): null => {
 };
 
 /**
+ * community 単位の通知 ON/OFF トグル（#1088）。
+ * SubscriptionStatus render-prop 内で subscribed === true のときのみレンダーされる。
+ * communitySubscriptionQueryKey を SubscriptionStatus と共有するため、追加のリクエストは発生しない。
+ */
+const NotifySubscriptionToggle = ({ slug }: { slug: string }): ReactElement => {
+  const { data } = useSuspenseQuery({
+    queryKey: communitySubscriptionQueryKey(slug),
+    queryFn: () => fetchSubscriptionStatus(slug),
+  });
+  const { mutate: updateNotifyEnabled, isPending } = useUpdateNotifyEnabled(slug);
+
+  return (
+    <NotifyToggle
+      notifyEnabled={data.notify_enabled}
+      onToggle={() => updateNotifyEnabled(!data.notify_enabled)}
+      disabled={isPending}
+    />
+  );
+};
+
+/**
  * コミュニティが実在する場合のみレンダーされる内側コンポーネント。
  * useInfiniteCommunityFeed でカーソルページネーション + IntersectionObserver（#881）。
  * 存在しない slug の場合は CommunityScene が早期リターンしてこのコンポーネントはレンダーされない。
@@ -242,6 +271,7 @@ const CommunityContent = ({
             actions={
               <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
                 <ShareButton shareUrl={shareUrl} shareTitle={shareTitle} />
+                {authUser && subscribed && <NotifySubscriptionToggle slug={communitySlug} />}
                 {authUser ? (
                   <SubscribeButton
                     subscribed={subscribed}

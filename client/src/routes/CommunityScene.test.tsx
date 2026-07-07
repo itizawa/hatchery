@@ -547,6 +547,85 @@ describe("CommunityScene — mark-viewed（#934）", () => {
   });
 });
 
+describe("CommunityScene — community 単位の通知 ON/OFF トグル（#1088）", () => {
+  const mockUser = {
+    id: "user-1",
+    name: "テスト",
+    email: "test@test.com",
+    role: "user" as const,
+    imageUrl: null,
+    isPremium: false,
+  };
+
+  function renderSubscribedScene({ notifyEnabled = true }: { notifyEnabled?: boolean } = {}) {
+    const qc = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    });
+    qc.setQueryData(["communities"], [mockCommunity]);
+    qc.setQueryData(communityFeedQueryKey({ slug: "ai-dev" }), {
+      pages: [{ posts: [], nextCursor: null }],
+      pageParams: [undefined],
+    });
+    qc.setQueryData(communitySubscriptionQueryKey("ai-dev"), {
+      subscribed: true,
+      notify_enabled: notifyEnabled,
+    });
+    qc.setQueryData(AUTH_ME_QUERY_KEY, mockUser);
+    qc.setQueryData(communityWorkersQueryKey("ai-dev"), {
+      pages: [{ items: mockCommunityWorkers, nextCursor: null }],
+      pageParams: [undefined],
+    });
+    qc.setQueryData(unreadCountsQueryKey(), { unread_counts: [] });
+    server.use(http.patch("/api/communities/:slug/mark-viewed", () => new HttpResponse(null, { status: 200 })));
+
+    return { qc, ...render(
+      <QueryClientProvider client={qc}>
+        <QueryBoundary fallback={<></>}>
+          <CommunityScene />
+        </QueryBoundary>
+      </QueryClientProvider>,
+    ) };
+  }
+
+  it("購読中は notify_enabled: true のとき「通知をオフにする」トグルが表示される", async () => {
+    renderSubscribedScene({ notifyEnabled: true });
+    await screen.findByRole("heading", { level: 1 });
+    expect(screen.getByRole("button", { name: "通知をオフにする" })).toBeInTheDocument();
+  });
+
+  it("購読中は notify_enabled: false のとき「通知をオンにする」トグルが表示される", async () => {
+    renderSubscribedScene({ notifyEnabled: false });
+    await screen.findByRole("heading", { level: 1 });
+    expect(screen.getByRole("button", { name: "通知をオンにする" })).toBeInTheDocument();
+  });
+
+  it("未購読の場合はトグルが表示されない", async () => {
+    renderScene();
+    await screen.findByRole("heading", { level: 1 });
+    expect(screen.queryByRole("button", { name: "通知をオフにする" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "通知をオンにする" })).not.toBeInTheDocument();
+  });
+
+  it("トグルをクリックすると PATCH で notify_enabled が反転して送られる", async () => {
+    const patchSpy = vi.fn();
+    server.use(
+      http.patch("/api/communities/:slug/subscription", async ({ request }) => {
+        patchSpy(await request.json());
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    renderSubscribedScene({ notifyEnabled: true });
+    await screen.findByRole("heading", { level: 1 });
+
+    await userEvent.click(screen.getByRole("button", { name: "通知をオフにする" }));
+
+    await waitFor(() => {
+      expect(patchSpy).toHaveBeenCalledWith({ notify_enabled: false });
+    });
+  });
+});
+
 describe("CommunityScene — 著者名がワーカープロフィールへのリンクになる (#1017)", () => {
   it("author_worker を持つ投稿の著者名がリンクとして描画される", async () => {
     const postWithWorker = {

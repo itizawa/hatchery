@@ -30,6 +30,7 @@ import { createApiDocsRouter, isApiDocsEnabled } from "./routes/apiDocs.js";
 import { createAdminWorkerImageRouter } from "./routes/adminWorkerImage.js";
 import { createAdminCommunityImageRouter } from "./routes/adminCommunityImage.js";
 import { createAdminWorkerCommunitiesRouter } from "./routes/adminWorkerCommunities.js";
+import { createAdminCommunityWorkersRouter } from "./routes/adminCommunityWorkers.js";
 import { createBatchLogsRouter } from "./routes/batch-logs.js";
 import { createTokenUsageRouter } from "./routes/token-usage.js";
 import { createAuthRouter } from "./routes/auth.js";
@@ -188,7 +189,7 @@ export function createApp(deps: AppDeps): Express {
       deps.userRepository,
       deps.googleAuth,
       process.env.NODE_ENV ?? "development",
-      // #78: OAuth 後の戻り先はフロント（公開ページ）のオリジン。sitemap と同じ publicBaseUrl を使う。
+      // #78: OAuth 後の戻り先はフロントエンド（公開ページ）のオリジン。sitemap と同じ publicBaseUrl を使う。
       deps.publicBaseUrl ?? DEFAULT_PUBLIC_BASE_URL,
     ),
   );
@@ -246,6 +247,15 @@ export function createApp(deps: AppDeps): Express {
       deps.workerRepository,
       deps.workerCommunityRepository,
       communityRepo,
+    ),
+  );
+  app.use(
+    "/api/admin",
+    noStoreCache,
+    createAdminCommunityWorkersRouter(
+      communityRepo,
+      deps.workerCommunityRepository,
+      deps.workerRepository,
     ),
   );
   app.use(

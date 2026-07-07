@@ -114,6 +114,33 @@ export function useMarkCommunityViewed(slug: string) {
   });
 }
 
+/** PATCH /api/communities/{slug}/subscription — community 単位の通知 ON/OFF を更新する（#1088）。 */
+export async function updateSubscriptionNotifyEnabled({
+  slug,
+  notifyEnabled,
+}: {
+  slug: string;
+  notifyEnabled: boolean;
+}): Promise<void> {
+  const result = await openApiClient.PATCH("/api/communities/{slug}/subscription", {
+    params: { path: { slug } },
+    body: { notify_enabled: notifyEnabled },
+    credentials: "include",
+  });
+  ensureOk({ result, label: `PATCH /api/communities/${slug}/subscription` });
+}
+
+/** 通知 ON/OFF 更新ミューテーションフック。成功後に購読状態クエリを invalidate する（#1088）。 */
+export function useUpdateNotifyEnabled(slug: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (notifyEnabled: boolean) => updateSubscriptionNotifyEnabled({ slug, notifyEnabled }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: communitySubscriptionQueryKey(slug) });
+    },
+  });
+}
+
 // ─── 購読 / 購読解除 ─────────────────────────────────────────────────────────────────────────
 
 /** コミュニティ購読ミューテーションフック。成功後に購読状態クエリを invalidate する（#421）。 */

@@ -2,7 +2,7 @@ import type {
   AuthUser,
   BatchRunLog,
 } from "@hatchery/common";
-import type { Community, Post, RecentWorker } from "../../api/communities.js";
+import type { Community, CommunityWorker, Post } from "../../api/communities.js";
 
 export const mockAdminUser: AuthUser = {
   id: "admin-user",
@@ -74,7 +74,7 @@ export const mockPosts: Post[] = [
   },
 ];
 
-export const mockWorkers: RecentWorker[] = [
+export const mockWorkers: CommunityWorker[] = [
   { id: "worker-haru", displayName: "haru", role: "ムードメーカー" },
   { id: "worker-ken", displayName: "ken", role: "ベテラン" },
 ];

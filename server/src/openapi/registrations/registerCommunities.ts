@@ -318,16 +318,43 @@ export function registerCommunities(registry: OpenAPIRegistry, ctx: RegistryCont
     },
   });
 
-  // community の最近投稿したワーカー一覧（認証不要・#207）
+  // community 所属の全ワーカー一覧（認証不要・カーソルページネーション・#1078）
   registry.registerPath({
     method: "get",
-    path: "/api/communities/{slug}/recent-workers",
-    summary: "community の最近投稿したワーカー一覧を取得（認証不要・distinct・最大 10 件）",
-    request: { params: z.object({ slug: communitySlugParam }) },
+    path: "/api/communities/{slug}/workers",
+    summary: "community 所属の全ワーカー一覧を取得（認証不要・id 昇順・カーソルページネーション）",
+    request: {
+      params: z.object({ slug: communitySlugParam }),
+      query: z.object({
+        cursor: z
+          .string()
+          .max(FEED_CURSOR_MAX_LENGTH)
+          .optional()
+          .openapi({ description: "カーソル（直前ページ末尾ワーカー id の base64 エンコード）" }),
+        limit: z
+          .number()
+          .int()
+          .min(1)
+          .max(100)
+          .default(20)
+          .openapi({ description: "1 ページあたりの取得件数（デフォルト 20・最大 100）" }),
+      }),
+    },
     responses: {
       200: {
-        description: "最近投稿したワーカー一覧（新着投稿順・distinct）",
-        content: { "application/json": { schema: z.array(WorkerComponent) } },
+        description: "community 所属ワーカー一覧（id 昇順・カーソルページネーション）",
+        content: {
+          "application/json": {
+            schema: z.object({
+              items: z.array(WorkerComponent),
+              nextCursor: z
+                .string()
+                .max(FEED_CURSOR_MAX_LENGTH)
+                .nullable()
+                .openapi({ description: "次ページ取得用カーソル。null の場合は末尾" }),
+            }),
+          },
+        },
       },
       404: { description: "コミュニティが存在しない", ...errorJson },
     },

@@ -1,20 +1,30 @@
 import { Box, Typography } from "./uiParts/index.js";
-import type { ReactElement } from "react";
+import type { ReactElement, RefObject } from "react";
 
 import { WorkerAvatar } from "./WorkerAvatar.js";
 
-import type { RecentWorker } from "../api/communities.js";
+import type { CommunityWorker } from "../api/communities.js";
 
-interface RecentWorkersSectionProps {
-  workers: RecentWorker[];
+interface CommunityWorkersSectionProps {
+  workers: CommunityWorker[];
+  /** 無限スクロールの sentinel 要素へ渡す ref（#1078）。IntersectionObserver の監視対象になる。 */
+  sentinelRef?: RefObject<HTMLDivElement | null>;
+  /** 次ページ取得中かどうか（#1078）。true の間は sentinel の位置に「読み込み中...」を表示する。 */
+  isFetchingNextPage?: boolean;
 }
 
 /**
- * community に最近投稿したワーカー一覧を表示するセクション（#207）。
+ * community 所属の全ワーカー一覧を表示するセクション（#207 / #1078: 全ワーカー + 無限スクロール対応）。
  * サイドバーに埋め込むことを想定した純表示（presentational）コンポーネント。
+ * スクロール検知（IntersectionObserver）自体は呼び出し側（CommunityWorkersPanel）が担い、
+ * このコンポーネントは sentinelRef を渡すだけの受け皿になる。
  * #462: ローディング/エラーは呼び出し側の QueryBoundary に委譲するため、isLoading/isError props は持たない。
  */
-export const RecentWorkersSection = ({ workers }: RecentWorkersSectionProps): ReactElement => {
+export const CommunityWorkersSection = ({
+  workers,
+  sentinelRef,
+  isFetchingNextPage,
+}: CommunityWorkersSectionProps): ReactElement => {
   if (workers.length === 0) {
     return (
       <Typography variant="body2" color="text.secondary">
@@ -46,6 +56,13 @@ export const RecentWorkersSection = ({ workers }: RecentWorkersSectionProps): Re
           </Box>
         </Box>
       ))}
+      <Box component="li" ref={sentinelRef} sx={{ py: 0.5 }}>
+        {isFetchingNextPage && (
+          <Typography variant="caption" color="text.secondary" sx={{ textAlign: "center", display: "block" }}>
+            読み込み中...
+          </Typography>
+        )}
+      </Box>
     </Box>
   );
 };

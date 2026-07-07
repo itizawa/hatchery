@@ -16,7 +16,9 @@ export const handlers = [
 
   http.get("/api/communities/:slug/feed", () => HttpResponse.json(mockPosts)),
 
-  http.get("/api/communities/:slug/recent-workers", () => HttpResponse.json(mockWorkers)),
+  http.get("/api/communities/:slug/workers", () =>
+    HttpResponse.json({ items: mockWorkers, nextCursor: null }),
+  ),
 
   // GET /api/communities/:slug/subscription — 購読状態（#421 / #461: SubscriptionStatus が useSuspenseQuery で取得）。
   http.get("/api/communities/:slug/subscription", () => HttpResponse.json({ subscribed: false })),

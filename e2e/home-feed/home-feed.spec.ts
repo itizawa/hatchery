@@ -325,12 +325,12 @@ test(
   "UC-HOME-12: ホームの各投稿に所属コミュニティ名（c/slug）が表示される（#503）",
   async ({ page }) => {
     await setupCommonMocks(page);
-    // コミュニティの recent-workers モック（サイドバー用）
-    await page.route(`**/api/communities/${MOCK_COMMUNITY.slug}/recent-workers`, (route) =>
+    // コミュニティ所属ワーカー一覧モック（サイドバー用・#1078）
+    await page.route(`**/api/communities/${MOCK_COMMUNITY.slug}/workers`, (route) =>
       route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify([]),
+        body: JSON.stringify({ items: [], nextCursor: null }),
       }),
     );
 

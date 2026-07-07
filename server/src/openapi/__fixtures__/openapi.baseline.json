@@ -2290,9 +2290,9 @@
         }
       }
     },
-    "/api/communities/{slug}/recent-workers": {
+    "/api/communities/{slug}/workers": {
       "get": {
-        "summary": "community の最近投稿したワーカー一覧を取得（認証不要・distinct・最大 10 件）",
+        "summary": "community 所属の全ワーカー一覧を取得（認証不要・id 昇順・カーソルページネーション）",
         "parameters": [
           {
             "schema": {
@@ -2301,18 +2301,57 @@
             "required": true,
             "name": "slug",
             "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 512,
+              "description": "カーソル（直前ページ末尾ワーカー id の base64 エンコード）"
+            },
+            "required": false,
+            "name": "cursor",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "description": "1 ページあたりの取得件数（デフォルト 20・最大 100）"
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
           }
         ],
         "responses": {
           "200": {
-            "description": "最近投稿したワーカー一覧（新着投稿順・distinct）",
+            "description": "community 所属ワーカー一覧（id 昇順・カーソルページネーション）",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Worker"
-                  }
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Worker"
+                      }
+                    },
+                    "nextCursor": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "maxLength": 512,
+                      "description": "次ページ取得用カーソル。null の場合は末尾"
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "nextCursor"
+                  ]
                 }
               }
             }

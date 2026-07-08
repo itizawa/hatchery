@@ -154,6 +154,8 @@ describe("CommunityBrowseScene", () => {
     await screen.findByText("AI 開発者の集い");
     expect(screen.getByText("5件の投稿")).toHaveStyle({ whiteSpace: "nowrap" });
     expect(screen.getByText(/最終投稿:/)).toHaveStyle({ whiteSpace: "nowrap" });
-    expect(screen.getByText(/購読者/)).toHaveStyle({ whiteSpace: "nowrap" });
+    for (const el of screen.getAllByText(/購読者/)) {
+      expect(el).toHaveStyle({ whiteSpace: "nowrap" });
+    }
   });
 });

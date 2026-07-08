@@ -375,3 +375,85 @@ describe("runPostBatch (#672)", () => {
     expect(generate).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("外部フィード（feedUrl）の post バッチへの注入（#1104 / ADR-0035）", () => {
+  beforeEach(() => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("(a) feedUrl 未設定のコミュニティでは fetchFeed を呼ばない", async () => {
+    const generate = vi.fn().mockResolvedValue({ text: validPostOutput });
+    const fetchFeed = vi.fn().mockResolvedValue([]);
+
+    await runPostBatch({
+      communityRepo: createInMemoryCommunityRepository([community1]),
+      postRepo: createInMemoryPostRepository(),
+      workerCommunityRepo: createInMemoryWorkerCommunityRepository({ workers: [], links: [] }),
+      botWorkerProvider: () => Promise.resolve(botWorkers),
+      generate,
+      fetchFeed,
+      anthropicApiKey: "test-key",
+      rng: () => 0,
+    });
+
+    expect(fetchFeed).not.toHaveBeenCalled();
+  });
+
+  it("(b) feedUrl 設定時に fetchFeed を呼び、取得記事がプロンプトに注入される", async () => {
+    const communityWithFeed: CommunityRecord = {
+      ...community1,
+      feedUrl: "https://zenn.dev/feed",
+    };
+    const generate = vi.fn().mockResolvedValue({ text: validPostOutput });
+    const fetchFeed = vi.fn().mockResolvedValue([
+      { title: "TypeScript 5.0 の新機能", url: "https://zenn.dev/a", summary: "概要", author: "yamada" },
+    ]);
+
+    await runPostBatch({
+      communityRepo: createInMemoryCommunityRepository([communityWithFeed]),
+      postRepo: createInMemoryPostRepository(),
+      workerCommunityRepo: createInMemoryWorkerCommunityRepository({ workers: [], links: [] }),
+      botWorkerProvider: () => Promise.resolve(botWorkers),
+      generate,
+      fetchFeed,
+      anthropicApiKey: "test-key",
+      rng: () => 0,
+    });
+
+    expect(fetchFeed).toHaveBeenCalledWith({ feedUrl: "https://zenn.dev/feed" });
+    const promptArg = generate.mock.calls[0]?.[0] as string;
+    expect(promptArg).toContain("TypeScript 5.0 の新機能");
+  });
+
+  it("(c) フィード取得失敗（空配列）時は通常生成にフォールバックしバッチが中断しない", async () => {
+    const communityWithFeed: CommunityRecord = {
+      ...community1,
+      feedUrl: "https://zenn.dev/feed",
+    };
+    const generate = vi.fn().mockResolvedValue({ text: validPostOutput });
+    const fetchFeed = vi.fn().mockResolvedValue([]);
+    const postRepo = createInMemoryPostRepository();
+
+    const result = await runPostBatch({
+      communityRepo: createInMemoryCommunityRepository([communityWithFeed]),
+      postRepo,
+      workerCommunityRepo: createInMemoryWorkerCommunityRepository({ workers: [], links: [] }),
+      botWorkerProvider: () => Promise.resolve(botWorkers),
+      generate,
+      fetchFeed,
+      anthropicApiKey: "test-key",
+      rng: () => 0,
+    });
+
+    expect(fetchFeed).toHaveBeenCalledWith({ feedUrl: "https://zenn.dev/feed" });
+    expect(result.posts.length).toBeGreaterThan(0);
+    const promptArg = generate.mock.calls[0]?.[0] as string;
+    expect(promptArg).not.toContain("最新フィード記事");
+  });
+});

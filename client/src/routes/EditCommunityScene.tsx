@@ -29,6 +29,7 @@ function EditCommunityForm({ community }: { community: AdminCommunity }): ReactE
       name: community.name,
       description: community.description,
       generationInstruction: community.generationInstruction ?? "",
+      feedUrl: community.feedUrl ?? null,
       generationPaused: community.generationPaused ?? false,
     } as UpdateCommunityInput,
     onSubmit: async ({ value }) => {

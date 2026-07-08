@@ -407,8 +407,8 @@ describe("AppHeader", () => {
       stubFetch(true);
       renderApp("/");
 
-      const centerSlot = screen.getByTestId("header-center-slot");
       const input = await screen.findByRole("searchbox", { name: /投稿を検索/ });
+      const centerSlot = screen.getByTestId("header-center-slot");
       expect(centerSlot).toContainElement(input);
     });
 

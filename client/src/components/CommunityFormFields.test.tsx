@@ -4,12 +4,13 @@
  * name / description / generationInstruction フィールドの描画を検証する。
  */
 import { useForm } from "@tanstack/react-form";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { describe, expect, it } from "vitest";
 
 import {
   COMMUNITY_DESCRIPTION_MAX_LENGTH,
+  COMMUNITY_FEED_URL_MAX_LENGTH,
   COMMUNITY_GENERATION_INSTRUCTION_MAX_LENGTH,
   COMMUNITY_NAME_MAX_LENGTH,
 } from "@hatchery/common";
@@ -22,6 +23,7 @@ function TestWrapper(): ReactElement {
       name: "テスト名",
       description: "テスト概要",
       generationInstruction: "",
+      feedUrl: null as string | null,
     },
     onSubmit: async () => {},
   });
@@ -57,5 +59,49 @@ describe("CommunityFormFields（#595）", () => {
       "maxlength",
       String(COMMUNITY_GENERATION_INSTRUCTION_MAX_LENGTH),
     );
+  });
+});
+
+describe("CommunityFormFields: feedUrl（#1104 / ADR-0035）", () => {
+  it("feedUrl 入力欄を描画する", () => {
+    render(<TestWrapper />);
+    expect(screen.getByRole("textbox", { name: /外部フィード/ })).toBeInTheDocument();
+  });
+
+  it("feedUrl は任意項目（required 属性を持たない）", () => {
+    render(<TestWrapper />);
+    expect(screen.getByRole("textbox", { name: /外部フィード/ })).not.toBeRequired();
+  });
+
+  it("feedUrl 入力に Zod .max() と整合する maxLength が設定されている（#91）", () => {
+    render(<TestWrapper />);
+    expect(screen.getByRole("textbox", { name: /外部フィード/ })).toHaveAttribute(
+      "maxlength",
+      String(COMMUNITY_FEED_URL_MAX_LENGTH),
+    );
+  });
+
+  it("不正な URL 形式を入力するとエラーメッセージを表示する", () => {
+    render(<TestWrapper />);
+    const input = screen.getByRole("textbox", { name: /外部フィード/ });
+    fireEvent.change(input, { target: { value: "not-a-url" } });
+    fireEvent.blur(input);
+    expect(screen.getByText(/有効な URL/)).toBeInTheDocument();
+  });
+
+  it("有効な URL を入力してもエラーメッセージを表示しない", () => {
+    render(<TestWrapper />);
+    const input = screen.getByRole("textbox", { name: /外部フィード/ });
+    fireEvent.change(input, { target: { value: "https://zenn.dev/feed" } });
+    fireEvent.blur(input);
+    expect(screen.queryByText(/有効な URL/)).not.toBeInTheDocument();
+  });
+
+  it("空文字を入力してもエラーメッセージを表示しない（任意項目）", () => {
+    render(<TestWrapper />);
+    const input = screen.getByRole("textbox", { name: /外部フィード/ });
+    fireEvent.change(input, { target: { value: "" } });
+    fireEvent.blur(input);
+    expect(screen.queryByText(/有効な URL/)).not.toBeInTheDocument();
   });
 });

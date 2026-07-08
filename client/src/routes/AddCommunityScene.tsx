@@ -28,6 +28,7 @@ export function AddCommunityScene(): ReactElement {
       name: "",
       description: "",
       generationInstruction: "",
+      feedUrl: null,
     } as CreateCommunityInput,
     onSubmit: async ({ value }) => {
       setSlugConflictError(null);

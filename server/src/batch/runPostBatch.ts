@@ -21,6 +21,7 @@ import {
 } from "./aiMessageGenerator.js";
 import type { WorkerDef } from "./buildCommunityPrompt.js";
 import { buildPostPrompt } from "./buildPostPrompt.js";
+import { fetchExternalFeed, type FeedArticle } from "./fetchExternalFeed.js";
 import { fetchRecentContext } from "./fetchRecentContext.js";
 import { pickInRange } from "./generateCountHints.js";
 import { extractErrorMessage, logBatchError, logBatchInfo } from "./logger.js";
@@ -47,6 +48,9 @@ export interface RunPostBatchResult {
   posts: PostRecord[];
 }
 
+/** 外部フィード取得関数の型（#491 / #1104 / ADR-0035）。テストでモック注入するため deps 経由で渡す。 */
+export type FetchFeed = (params: { feedUrl: string }) => Promise<readonly FeedArticle[]>;
+
 /** post バッチの依存インターフェース（テスト用注入対応）。 */
 export interface RunPostBatchDeps {
   communityRepo: CommunityRepository;
@@ -63,6 +67,11 @@ export interface RunPostBatchDeps {
   worldStateRepository?: WorldStateRepository;
   appearingWorkerCount?: number;
   generate?: ConversationGenerator;
+  /**
+   * 外部フィード取得関数（#491 / #1104 / ADR-0035）。省略時は {@link fetchExternalFeed}。
+   * community.feedUrl が設定されている場合にのみ呼び出す。
+   */
+  fetchFeed?: FetchFeed;
   recentLimit?: number;
   slotKey?: string;
   anthropicApiKey?: string;
@@ -84,6 +93,7 @@ async function processCommunitePosts({
   deps,
   apiKey,
   generate,
+  fetchFeed,
   recentLimit,
   slotKey,
   rng,
@@ -97,6 +107,7 @@ async function processCommunitePosts({
   deps: RunPostBatchDeps;
   apiKey: string;
   generate: ConversationGenerator;
+  fetchFeed: FetchFeed;
   recentLimit: number;
   slotKey: string;
   rng: () => number;
@@ -142,26 +153,34 @@ async function processCommunitePosts({
   }));
   const workerIds = workers.map((w) => w.id);
 
-  // 直近 post/comment をコンテキストとして取得する（重複テーマ・タイトル抑制のため #1019）。
-  const { recentLog, recentPostsForReply } = await fetchRecentContext({
-    postRepo: deps.postRepo,
-    commentRepo: deps.commentRepo ?? {
-      listByCommunity: async () => [],
-      createMany: async () => [],
-      listByPost: async () => [],
-      findById: async () => null,
-      countByPostIds: async () => new Map(),
-      addScore: async () => null,
-      listByWorker: async () => ({ comments: [], nextCursor: null }),
-    },
-    community,
-    recentLimit,
-    maxPostsForReply: recentLimit,
-    now,
-    popularPostsWindowDays: 7,
-    popularPostsMinScore: 1,
-    popularPostsLimit: 0,
-  });
+  // 直近 post/comment のコンテキスト取得（#1019）と外部フィード記事取得（#491 / #1104 / ADR-0035）は
+  // 互いに独立した I/O のため Promise.all で並行実行する。fetchFeed（既定 fetchExternalFeed）は
+  // タイムアウト・HTTPエラー・パース失敗を内部で全て catch し空配列を返す契約のため、
+  // ここでの追加 try/catch は不要（通常生成にフォールバックする）。feedUrl 未設定なら呼び出さない。
+  const [{ recentLog, recentPostsForReply }, feedArticles] = await Promise.all([
+    fetchRecentContext({
+      postRepo: deps.postRepo,
+      commentRepo: deps.commentRepo ?? {
+        listByCommunity: async () => [],
+        createMany: async () => [],
+        listByPost: async () => [],
+        findById: async () => null,
+        countByPostIds: async () => new Map(),
+        addScore: async () => null,
+        listByWorker: async () => ({ comments: [], nextCursor: null }),
+      },
+      community,
+      recentLimit,
+      maxPostsForReply: recentLimit,
+      now,
+      popularPostsWindowDays: 7,
+      popularPostsMinScore: 1,
+      popularPostsLimit: 0,
+    }),
+    community.feedUrl
+      ? fetchFeed({ feedUrl: community.feedUrl })
+      : Promise.resolve<readonly FeedArticle[]>([]),
+  ]);
 
   // post 件数を rng で決定する（#672 AC2）。
   const postCount = pickInRange(postRange.min, postRange.max, rng);
@@ -173,6 +192,7 @@ async function processCommunitePosts({
     recentLog,
     countHints: { postCount },
     recentTitles: recentPostsForReply.map((p) => p.title),
+    feedArticles,
   });
 
   // AI 生成 → JSON パース → スキーマ検証 → author 検証（最大 2 回リトライ、#626）。
@@ -288,6 +308,7 @@ export async function runPostBatch(deps: RunPostBatchDeps): Promise<RunPostBatch
   }
 
   const generate = deps.generate ?? generateConversationWithClaude;
+  const fetchFeed = deps.fetchFeed ?? fetchExternalFeed;
   const recentLimit = deps.recentLimit ?? DEFAULT_RECENT_LIMIT;
   const slotKey = deps.slotKey ?? generateSlotKey();
   const rng = deps.rng ?? Math.random;
@@ -319,6 +340,7 @@ export async function runPostBatch(deps: RunPostBatchDeps): Promise<RunPostBatch
         deps,
         apiKey,
         generate,
+        fetchFeed,
         recentLimit,
         slotKey,
         rng,

@@ -8,6 +8,27 @@ export interface FeedArticle {
   author: string | null;
 }
 
+/**
+ * 外部フィード記事セクションをプロンプト用テキストとして構築する（#491 / #1104 / ADR-0035）。
+ * `buildCommunityPrompt` / `buildPostPrompt` で共有する。
+ * URL はプロンプトに含めない（#927: AIが本文にURLをコピーする問題を防ぐ）。
+ * feedArticles が空・未指定の場合は空文字を返す（セクション省略）。
+ */
+export function buildFeedArticlesSection(
+  feedArticles: readonly FeedArticle[] | undefined,
+): string {
+  if (!feedArticles || feedArticles.length === 0) return "";
+  return `最新フィード記事（${feedArticles.length}件）:\n${feedArticles
+    .map((a) => {
+      const authorPart = a.author ? `（by ${a.author}）` : "";
+      const summaryPart = a.summary
+        ? `\n  概要: ${a.summary.replace(/https?:\/\/\S+/g, "").trim()}`
+        : "";
+      return `- 「${a.title}」${authorPart}${summaryPart}`;
+    })
+    .join("\n")}\n（↑ これらの記事を題材に会話を生成してください）\n\n`;
+}
+
 /** デフォルトの最大取得件数。 */
 const DEFAULT_MAX_ARTICLES = 6;
 

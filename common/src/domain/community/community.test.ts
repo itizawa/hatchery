@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   AdminCommunitySchema,
   COMMUNITY_DESCRIPTION_MAX_LENGTH,
+  COMMUNITY_FEED_URL_MAX_LENGTH,
   COMMUNITY_GENERATION_INSTRUCTION_MAX_LENGTH,
   COMMUNITY_NAME_MAX_LENGTH,
   COMMUNITY_SLUG_MAX_LENGTH,
@@ -204,6 +205,31 @@ describe("CreateCommunitySchema（#310）", () => {
     expect(
       CreateCommunitySchema.safeParse({ ...valid, generationInstruction: longInstr }).success,
     ).toBe(false);
+  });
+
+  it("feedUrl を省略できる（optional・#1104）", () => {
+    expect(CreateCommunitySchema.safeParse(valid).success).toBe(true);
+  });
+
+  it("feedUrl に null を指定できる（#1104）", () => {
+    expect(CreateCommunitySchema.safeParse({ ...valid, feedUrl: null }).success).toBe(true);
+  });
+
+  it("feedUrl に有効な URL を指定できる（#1104）", () => {
+    expect(
+      CreateCommunitySchema.safeParse({ ...valid, feedUrl: "https://zenn.dev/feed" }).success,
+    ).toBe(true);
+  });
+
+  it("feedUrl が不正な URL 形式の場合は拒否する（#1104）", () => {
+    expect(CreateCommunitySchema.safeParse({ ...valid, feedUrl: "not-a-url" }).success).toBe(
+      false,
+    );
+  });
+
+  it(`feedUrl が ${COMMUNITY_FEED_URL_MAX_LENGTH} 文字を超えると拒否する（#91 / #1104）`, () => {
+    const longUrl = `https://example.com/${"a".repeat(COMMUNITY_FEED_URL_MAX_LENGTH)}`;
+    expect(CreateCommunitySchema.safeParse({ ...valid, feedUrl: longUrl }).success).toBe(false);
   });
 });
 

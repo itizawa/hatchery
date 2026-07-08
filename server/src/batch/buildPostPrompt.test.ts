@@ -192,6 +192,58 @@ describe("detectConvergentTitlePattern（#1086）", () => {
   });
 });
 
+describe("buildPostPrompt: feedArticles の注入（#1104 / ADR-0035）", () => {
+  it("feedArticles が指定された場合にプロンプトに注入される", () => {
+    const { prompt } = buildPostPrompt({
+      community,
+      workers,
+      recentLog: [],
+      feedArticles: [
+        {
+          title: "TypeScript 5.0 の新機能",
+          url: "https://zenn.dev/articles/ts50",
+          summary: "TS5.0 の概要。",
+          author: "yamada",
+        },
+      ],
+    });
+    expect(prompt).toContain("TypeScript 5.0 の新機能");
+    expect(prompt).not.toContain("https://zenn.dev/articles/ts50"); // URL は含めない（#927）
+    expect(prompt).toContain("TS5.0 の概要。");
+    expect(prompt).toContain("yamada");
+  });
+
+  it("feedArticles の URL・summary 内の URL はプロンプトに含まれない（#927）", () => {
+    const { prompt } = buildPostPrompt({
+      community,
+      workers,
+      recentLog: [],
+      feedArticles: [
+        {
+          title: "ある記事",
+          url: "https://b.hatena.ne.jp/hotentry/general",
+          summary: "詳細は https://example.com/article を参照してください。面白い内容です。",
+          author: null,
+        },
+      ],
+    });
+    expect(prompt).not.toContain("https://b.hatena.ne.jp/hotentry/general");
+    expect(prompt).not.toContain("https://example.com/article");
+    expect(prompt).toContain("ある記事");
+    expect(prompt).toContain("面白い内容です");
+  });
+
+  it("feedArticles が省略された場合はプロンプトに変化なし（フィード関連テキストなし）", () => {
+    const { prompt } = buildPostPrompt({ community, workers, recentLog: [] });
+    expect(prompt).not.toContain("最新フィード記事");
+  });
+
+  it("feedArticles が空配列の場合はプロンプトに変化なし（フィード関連テキストなし）", () => {
+    const { prompt } = buildPostPrompt({ community, workers, recentLog: [], feedArticles: [] });
+    expect(prompt).not.toContain("最新フィード記事");
+  });
+});
+
 describe("収束パターン検知時の強い警告指示（#1086）", () => {
   const convergentTitles = [
     "「変化を恐れるな」って、変化のコストを誰が払うかを完全に無視してない？",

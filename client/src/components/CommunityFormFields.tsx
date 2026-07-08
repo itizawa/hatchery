@@ -17,11 +17,13 @@ import {
 
 import {
   COMMUNITY_DESCRIPTION_MAX_LENGTH,
+  COMMUNITY_FEED_URL_MAX_LENGTH,
   COMMUNITY_GENERATION_INSTRUCTION_MAX_LENGTH,
   COMMUNITY_NAME_MAX_LENGTH,
 } from "@hatchery/common";
 
 import { TextField } from "./uiParts/index.js";
+import { validateUrl } from "../utils/validateUrl.js";
 
 /**
  * CommunityFormFields が使用するフォームデータの最小インターフェース（#736）。
@@ -33,6 +35,7 @@ interface CommunityFormData {
   name?: string | undefined;
   description?: string | undefined;
   generationInstruction?: string | null | undefined;
+  feedUrl?: string | null | undefined;
 }
 
 interface CommunityFormFieldsProps<
@@ -170,6 +173,34 @@ export function CommunityFormFields<
             onBlur={field.handleBlur}
             slotProps={{ htmlInput: { maxLength: COMMUNITY_GENERATION_INSTRUCTION_MAX_LENGTH } }}
             helperText={`最大 ${COMMUNITY_GENERATION_INSTRUCTION_MAX_LENGTH} 文字（省略時は概要を使用）`}
+          />
+        )}
+      </form.Field>
+      <form.Field
+        name="feedUrl"
+        validators={{
+          onChange: ({ value }) => validateUrl((value as string) ?? ""),
+        }}
+      >
+        {(field) => (
+          <TextField
+            label="外部フィード URL（管理者のみ・非公開）RSS/Atom を post 定時バッチに注入"
+            size="small"
+            value={field.state.value ?? ""}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              field.handleChange(
+                (e.target.value === "" ? null : e.target.value) as unknown as Updater<
+                  DeepValue<TData, "feedUrl">
+                >,
+              )
+            }
+            onBlur={field.handleBlur}
+            slotProps={{ htmlInput: { maxLength: COMMUNITY_FEED_URL_MAX_LENGTH } }}
+            error={field.state.meta.errors.length > 0}
+            helperText={String(
+              field.state.meta.errors[0] ??
+                `最大 ${COMMUNITY_FEED_URL_MAX_LENGTH} 文字（任意・RSS/Atom フィード URL）`,
+            )}
           />
         )}
       </form.Field>

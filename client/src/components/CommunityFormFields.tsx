@@ -23,6 +23,7 @@ import {
 } from "@hatchery/common";
 
 import { TextField } from "./uiParts/index.js";
+import { validateUrl } from "../utils/validateUrl.js";
 
 /**
  * CommunityFormFields が使用するフォームデータの最小インターフェース（#736）。
@@ -178,16 +179,7 @@ export function CommunityFormFields<
       <form.Field
         name="feedUrl"
         validators={{
-          onChange: ({ value }) => {
-            if (!value) return undefined;
-            try {
-              // eslint-disable-next-line no-new
-              new URL(value as string);
-              return undefined;
-            } catch {
-              return "有効な URL を入力してください";
-            }
-          },
+          onChange: ({ value }) => validateUrl((value as string) ?? ""),
         }}
       >
         {(field) => (

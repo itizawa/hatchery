@@ -9,16 +9,7 @@ import { type ReactElement, useEffect, useState } from "react";
 import { AVATAR_URL_MAX_LENGTH, DISPLAY_NAME_MAX_LENGTH } from "@hatchery/common";
 import * as authApi from "../api/auth.js";
 import { getApiErrorMessage } from "../api/errors.js";
-
-function validateUrl(value: string): string | undefined {
-  if (!value) return undefined;
-  try {
-    new URL(value);
-    return undefined;
-  } catch {
-    return "有効な URL を入力してください";
-  }
-}
+import { validateUrl } from "../utils/validateUrl.js";
 
 export const AccountScene = (): ReactElement => {
   // #461: useAuth は useSuspenseQuery 化済み。/account は requireAuth ガード経由で到達するため

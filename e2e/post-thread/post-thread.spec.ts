@@ -7,6 +7,7 @@ import { createComment } from "../helpers/createComment";
 import { login } from "../helpers/login";
 import { createUser } from "../helpers/createUser";
 import { logout } from "../helpers/logout";
+import { devLogin } from "../helpers/devLogin";
 
 const MOCK_WORKER_1 = {
   display_name: "ケン",
@@ -305,8 +306,36 @@ test(
   },
 );
 
-test.todo(
+test(
   "UC-POST-09: スレッドページに所属コミュニティの詳細サイドバーと購読ボタンが表示される（#499）",
+  async ({ page }) => {
+    const worker = await createWorker({ ...MOCK_WORKER_1 });
+    const community = await createCommunity({ ...MOCK_COMMUNITY, workerIds: [worker.id] });
+    const post = await createPost({
+      communityId: community.id,
+      workerId: worker.id,
+      ...MOCK_POST,
+    });
+
+    await devLogin(page);
+    await page.goto(`/posts/${post.id}`);
+
+    // 所属コミュニティの詳細（名前・説明）がサイドバーに表示される
+    await expect(page.getByRole("heading", { name: MOCK_COMMUNITY.name })).toBeVisible();
+    await expect(page.getByText(MOCK_COMMUNITY.description)).toBeVisible();
+
+    // 購読ボタンが表示され、クリックすると購読状態が切り替わる
+    const subscribeButton = page.getByRole("button", { name: "購読する" });
+    await expect(subscribeButton).toBeVisible();
+    await subscribeButton.click();
+    await expect(page.getByRole("button", { name: "購読解除" })).toBeVisible();
+
+    // クリーンアップ
+    await page.request.post("/api/auth/logout");
+    await post.delete();
+    await community.delete();
+    await worker.delete();
+  },
 );
 
 test(
@@ -346,8 +375,47 @@ test(
   },
 );
 
-test.todo(
+test(
   "UC-POST-11: スレッドの post / コメント本文が Markdown 書式で表示される（#513）",
+  async ({ page }) => {
+    const worker = await createWorker({ ...MOCK_WORKER_1 });
+    const community = await createCommunity({ ...MOCK_COMMUNITY, workerIds: [worker.id] });
+    const post = await createPost({
+      communityId: community.id,
+      workerId: worker.id,
+      title: MOCK_POST.title,
+      content:
+        "これは **太字テキスト** の説明です。\n\n- リスト項目イチ\n- リスト項目ニ\n\n[マークダウンリンク](https://example.com/markdown-doc)",
+    });
+    const comment = await createComment({
+      postId: post.id,
+      workerId: worker.id,
+      text: "コメントも **太字コメント** を含みます。",
+    });
+
+    await page.goto(`/posts/${post.id}`);
+
+    // post 本文: 太字が <strong> としてレンダリングされる
+    await expect(page.locator("strong", { hasText: "太字テキスト" })).toBeVisible();
+    // post 本文: リスト項目が <li> としてレンダリングされる
+    await expect(page.locator("li", { hasText: "リスト項目イチ" })).toBeVisible();
+    // post 本文: リンクがクリック可能な <a> としてレンダリングされる
+    const postLink = page.getByRole("link", { name: "マークダウンリンク" });
+    await expect(postLink).toBeVisible();
+    await expect(postLink).toHaveAttribute("href", "https://example.com/markdown-doc");
+    // 生の Markdown 記法（**太字テキスト**）がそのまま表示されない
+    await expect(page.getByText("**太字テキスト**")).not.toBeVisible();
+
+    // コメント本文の太字も装飾済みで表示され、生の Markdown 記法は表示されない
+    await expect(page.locator("strong", { hasText: "太字コメント" })).toBeVisible();
+    await expect(page.getByText("**太字コメント**")).not.toBeVisible();
+
+    // クリーンアップ
+    await comment.delete();
+    await post.delete();
+    await community.delete();
+    await worker.delete();
+  },
 );
 
 test(
@@ -819,6 +887,34 @@ test(
   },
 );
 
-test.todo(
+test(
   "UC-POST-23: コメントの共有リンクを開くと該当コメントまで自動スクロールされる（#861）",
+  async ({ page }) => {
+    const worker = await createWorker({ ...MOCK_WORKER_1 });
+    const community = await createCommunity({ ...MOCK_COMMUNITY, workerIds: [worker.id] });
+    const post = await createPost({
+      communityId: community.id,
+      workerId: worker.id,
+      ...MOCK_POST,
+    });
+    // 初期表示のビューポート外までスクロールが必要になるよう十分な件数のコメントを用意する
+    const comments = await Promise.all(
+      [...Array(15).keys()].map((i) =>
+        createComment({ postId: post.id, workerId: worker.id, text: `スクロールテスト用コメント本文 ${i}` }),
+      ),
+    );
+    const targetComment = comments[comments.length - 1];
+
+    // 共有リンク（#comment-$commentId 形式）を直接開く
+    await page.goto(`/posts/${post.id}#comment-${targetComment.id}`);
+
+    // 該当コメントが画面内（ビューポート）にスクロールして表示される
+    await expect(page.locator(`#comment-${targetComment.id}`)).toBeInViewport();
+
+    // クリーンアップ
+    await Promise.all(comments.map((c) => c.delete()));
+    await post.delete();
+    await community.delete();
+    await worker.delete();
+  },
 );

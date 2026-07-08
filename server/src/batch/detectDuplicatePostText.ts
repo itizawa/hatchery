@@ -32,7 +32,7 @@ function toNgramSet(input: string): Set<string> {
 }
 
 /** 2 つの文字列の Jaccard 類似度（0〜1）を計算する。両方空文字列なら 1、片方のみ空なら 0。 */
-function jaccardSimilarity(a: string, b: string): number {
+function jaccardSimilarity({ a, b }: { a: string; b: string }): number {
   const setA = toNgramSet(a);
   const setB = toNgramSet(b);
 
@@ -66,7 +66,7 @@ export function detectSimilarRecentPost({
   let best: DuplicatePostTextMatch | null = null;
 
   for (const recentPost of recentPosts) {
-    const similarity = jaccardSimilarity(candidateText, recentPost.text);
+    const similarity = jaccardSimilarity({ a: candidateText, b: recentPost.text });
     if (similarity >= threshold && (!best || similarity > best.similarity)) {
       best = { matchedTitle: recentPost.title, similarity };
     }

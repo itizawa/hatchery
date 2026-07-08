@@ -390,4 +390,35 @@ describe("AppHeader", () => {
       expect(input.value).toBe("");
     });
   });
+
+  // Issue #1112: ヘッダー検索欄を画面中央に配置する3領域グリッド構造
+  describe("3領域グリッド構造（#1112）", () => {
+    it("左・中央・右の3つの data-testid スロットが存在する", async () => {
+      stubFetch(true);
+      renderApp("/");
+
+      await screen.findByRole("button", { name: /ユーザーメニュー/ });
+      expect(screen.getByTestId("header-left-slot")).toBeInTheDocument();
+      expect(screen.getByTestId("header-center-slot")).toBeInTheDocument();
+      expect(screen.getByTestId("header-right-slot")).toBeInTheDocument();
+    });
+
+    it("header-center-slot の中に検索用 textbox が含まれる", async () => {
+      stubFetch(true);
+      renderApp("/");
+
+      const input = await screen.findByRole("searchbox", { name: /投稿を検索/ });
+      const centerSlot = screen.getByTestId("header-center-slot");
+      expect(centerSlot).toContainElement(input);
+    });
+
+    it("ヘッダーのルート要素が display: grid の3カラム構造である", async () => {
+      stubFetch(true);
+      renderApp("/");
+
+      await screen.findByRole("button", { name: /ユーザーメニュー/ });
+      const header = screen.getByTestId("app-header");
+      expect(header).toHaveStyle({ display: "grid" });
+    });
+  });
 });

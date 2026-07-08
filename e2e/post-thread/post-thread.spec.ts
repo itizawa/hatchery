@@ -897,12 +897,12 @@ test(
       workerId: worker.id,
       ...MOCK_POST,
     });
-    // 初期表示のビューポート外までスクロールが必要になるよう十分な件数のコメントを用意する
-    const comments = await Promise.all(
-      [...Array(15).keys()].map((i) =>
-        createComment({ postId: post.id, workerId: worker.id, text: `スクロールテスト用コメント本文 ${i}` }),
-      ),
-    );
+    // 初期表示のビューポート外までスクロールが必要になるよう十分な件数のコメントを用意する。
+    // コメントは createdAt 昇順で表示されるため、表示順を確定させるべく直列に作成する。
+    const comments = [];
+    for (const i of Array(15).keys()) {
+      comments.push(await createComment({ postId: post.id, workerId: worker.id, text: `スクロールテスト用コメント本文 ${i}` }));
+    }
     const targetComment = comments[comments.length - 1];
 
     // 共有リンク（#comment-$commentId 形式）を直接開く

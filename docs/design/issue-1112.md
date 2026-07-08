@@ -67,5 +67,15 @@
 
 ## 7. リスク・未決事項
 
-- 中央トラックの上限 480px は #1055 設計書の `HeaderSearchField` の既存 `maxWidth: 480` を踏襲した値であり、新たなデザイン判断ではない。
-- インストールボタンを右領域の固定高さ (`RIGHT_SLOT_HEIGHT` = 40px) 内に配置すると、ボタン自体の既定サイズ（MUI `IconButton` medium 相当）が 40px を超える場合があるが、これは既存の高さ固定テスト（`toHaveStyle({height: "40px"})`）がコンテナの CSS 宣言値のみを検証するため、テスト上の問題にはならない。視覚的な見え方の微調整は別 Issue のスコープとする。
+- 中央トラックの上限 480px は #1055 設計書の `HeaderSearchField` の既存 `maxWidth: 480` を踏襲した値であり、新たなデザイン判断ではない。`SEARCH_FIELD_MAX_WIDTH` 定数として `AppHeader.tsx` 内で一箇所に定義し、グリッド列と `HeaderSearchField` 自身の `maxWidth` の両方で共有する（セルフレビュー反映）。
+- インストールボタンを右領域の固定高さ (`RIGHT_SLOT_HEIGHT` = 40px) 内に配置すると、ボタン自体の既定サイズ（MUI `IconButton` medium 相当）が 40px を超える場合があるため、`size="small"` を指定して収まりやすくした（セルフレビュー反映）。既存の高さ固定テスト（`toHaveStyle({height: "40px"})`）はコンテナの CSS 宣言値のみを検証するため、テスト上は元々問題にならないが、視覚的な見え方も改善した。
+- `HeaderSearchField` の `preserveUnsyncedEdits: true` は本 Issue の「やらないこと」で変更対象外としている。ページ本体の検索フォームを削除したことで、`/search` を開いたまま未送信の編集中にブラウザの戻る/進むで `q` が変わった場合に入力欄が表示結果に追従しないケース（`useSearchQueryForm.ts` の既存の仕様）が、`/search` ページ上で唯一の入力欄となった分、以前より顕在化しやすくなった。これは `useSearchQueryForm` 側の既存の設計判断（ヘッダー用に意図的に選んだ挙動）であり、本 Issue のスコープ外として別 Issue で扱う。
+
+## 8. セルフレビュー反映
+
+`/code-review` セルフレビューで、モバイル幅でのグリッド縮小挙動に関する不具合が見つかったため修正した。
+
+- **左スロットの意図しない縮小**: `header-left-slot` に `minWidth: 0, overflow: "hidden"` を付けていたが、`header-right-slot` には付けていなかったため、狭い画面幅で CSS Grid が `1fr` トラックの自動最小サイズを計算する際、明示的に縮小可能と宣言した左トラック（ハンバーガーメニュー＋ロゴ）だけが先に圧縮され、右トラック（アカウント領域）は content-based の最小幅を保つ非対称な挙動になっていた。極端な狭幅では左スロットが 0 幅になりハンバーガーメニューが操作不能になりうる。
+  - **修正**: `header-left-slot` から `minWidth: 0, overflow: "hidden"` を削除し、旧 flex レイアウト時と同様に検索欄（中央トラックの `minmax(0, ...)`）のみが縮小を吸収する構造に戻した。
+- **中央スロットの重複スタイル**: `header-center-slot` ラッパーに `width: "100%"` を付けていたが、CSS Grid のグリッドアイテムは既定で列いっぱいに stretch されるため、`HeaderSearchField` 自身の `width: "100%"` と重複していた。
+  - **修正**: `header-center-slot` の `sx` を削除した。

@@ -13,6 +13,7 @@ import {
 import type { WorkerRecord } from "../persistence/workerRepository.js";
 import { createInMemoryWorldStateRepository } from "../persistence/worldStateRepository.js";
 
+import * as logger from "./logger.js";
 import { runPostBatch, POST_COUNT_MIN, POST_COUNT_MAX, DEFAULT_POST_DRIP_WINDOW_MS } from "./runPostBatch.js";
 
 const botWorkers: WorkerRecord[] = [
@@ -256,6 +257,80 @@ describe("runPostBatch (#672)", () => {
       (s) => s?.lastAppearedSlotKey === "2026-01-01T09:00",
     ).length;
     expect(updatedCount).toBeGreaterThan(0);
+  });
+
+  describe("直近投稿とのテキスト類似度検知（#1115）", () => {
+    it("生成された post 本文が直近 post 本文とほぼ同一のとき post_batch.duplicate_text_detected をログ出力する", async () => {
+      const now = new Date("2026-06-18T12:00:00Z");
+      const generate = vi.fn().mockResolvedValue({ text: validPostOutput });
+      const postRepo = createInMemoryPostRepository();
+      const logSpy = vi.spyOn(logger, "logBatchInfo");
+
+      // validPostOutput の p1.text と同一の既存 post をあらかじめ永続化しておく
+      await postRepo.createMany(community1.id, [
+        {
+          slotKey: "slot-existing",
+          seq: 0,
+          author: "haru",
+          title: "AIの進歩について",
+          text: "最近のAI技術の進歩が目覚ましいですね。",
+          createdAt: new Date(now.getTime() - 60 * 60 * 1000),
+        },
+      ]);
+
+      await runPostBatch({
+        communityRepo: createInMemoryCommunityRepository([community1]),
+        postRepo,
+        workerCommunityRepo: createInMemoryWorkerCommunityRepository({ workers: [], links: [] }),
+        botWorkerProvider: () => Promise.resolve(botWorkers),
+        generate,
+        anthropicApiKey: "test-key",
+        rng: () => 0,
+        now,
+      });
+
+      expect(logSpy).toHaveBeenCalledWith(
+        "post_batch.duplicate_text_detected",
+        expect.objectContaining({
+          communityId: community1.id,
+          matchedTitle: "AIの進歩について",
+        }),
+      );
+    });
+
+    it("直近 post と内容が異なる場合は post_batch.duplicate_text_detected をログ出力しない", async () => {
+      const now = new Date("2026-06-18T12:00:00Z");
+      const generate = vi.fn().mockResolvedValue({ text: validPostOutput });
+      const postRepo = createInMemoryPostRepository();
+      const logSpy = vi.spyOn(logger, "logBatchInfo");
+
+      await postRepo.createMany(community1.id, [
+        {
+          slotKey: "slot-existing",
+          seq: 0,
+          author: "haru",
+          title: "まったく無関係の話題",
+          text: "今日は近所のカフェでコーヒーを飲みながら本を読んだ。",
+          createdAt: new Date(now.getTime() - 60 * 60 * 1000),
+        },
+      ]);
+
+      await runPostBatch({
+        communityRepo: createInMemoryCommunityRepository([community1]),
+        postRepo,
+        workerCommunityRepo: createInMemoryWorkerCommunityRepository({ workers: [], links: [] }),
+        botWorkerProvider: () => Promise.resolve(botWorkers),
+        generate,
+        anthropicApiKey: "test-key",
+        rng: () => 0,
+        now,
+      });
+
+      expect(logSpy).not.toHaveBeenCalledWith(
+        "post_batch.duplicate_text_detected",
+        expect.anything(),
+      );
+    });
   });
 
   describe("リトライ (#626)", () => {

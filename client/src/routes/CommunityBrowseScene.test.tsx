@@ -148,4 +148,14 @@ describe("CommunityBrowseScene", () => {
     const img = screen.getByRole("img", { name: "コーディング日常" });
     expect(img).toHaveAttribute("src", generateCommunityIconUrl({ id: "community-2" }));
   });
+
+  it("統計行の各項目が単語の途中で改行されないよう white-space: nowrap が設定される（#1116）", async () => {
+    renderInBoundary(mockCommunities);
+    await screen.findByText("AI 開発者の集い");
+    expect(screen.getByText("5件の投稿")).toHaveStyle({ whiteSpace: "nowrap" });
+    expect(screen.getByText(/最終投稿:/)).toHaveStyle({ whiteSpace: "nowrap" });
+    for (const el of screen.getAllByText(/購読者/)) {
+      expect(el).toHaveStyle({ whiteSpace: "nowrap" });
+    }
+  });
 });

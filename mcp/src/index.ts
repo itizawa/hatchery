@@ -4,6 +4,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 
 import { createApiClient } from "./apiClient.js";
+import { hasNoUpdateFields } from "./updateWorkerValidation.js";
 
 const BASE_URL = process.env.HATCHERY_API_BASE_URL;
 const ADMIN_TOKEN = process.env.HATCHERY_ADMIN_TOKEN;
@@ -53,7 +54,7 @@ server.tool(
     verbosity: z.enum(["concise", "standard", "detailed"]).optional().describe("新しい文章量設定"),
   },
   async ({ id, displayName, role, personality, verbosity }) => {
-    if (displayName === undefined && role === undefined && personality === undefined && verbosity === undefined) {
+    if (hasNoUpdateFields({ displayName, role, personality, verbosity })) {
       throw new Error("更新するフィールドを少なくとも1つ指定してください（displayName / role / personality / verbosity）");
     }
     const result = await api.updateWorker({ id, data: { displayName, role, personality, verbosity } });

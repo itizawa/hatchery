@@ -291,3 +291,56 @@ describe("generationInstruction の admin CRUD（#488）", () => {
     expect(res.status).toBe(400);
   });
 });
+
+describe("feedUrl の admin CRUD（#491 / #1104）", () => {
+  const baseBody = {
+    slug: "feed-test",
+    name: "フィードテスト",
+    description: "公開用概要",
+  };
+
+  it("POST /api/admin/communities で feedUrl を設定できる", async () => {
+    const app = await makeApp();
+    const agent = await loginAgent(app);
+    const res = await agent.post("/api/admin/communities").send({
+      ...baseBody,
+      feedUrl: "https://zenn.dev/feed",
+    });
+    expect(res.status).toBe(201);
+    expect((res.body as { feedUrl: string }).feedUrl).toBe("https://zenn.dev/feed");
+  });
+
+  it("POST /api/admin/communities で feedUrl を省略できる（null が返る）", async () => {
+    const app = await makeApp();
+    const agent = await loginAgent(app);
+    const res = await agent.post("/api/admin/communities").send(baseBody);
+    expect(res.status).toBe(201);
+    expect((res.body as { feedUrl: unknown }).feedUrl).toBeNull();
+  });
+
+  it("POST /api/admin/communities で不正な URL 形式の feedUrl は 400 を返す", async () => {
+    const app = await makeApp();
+    const agent = await loginAgent(app);
+    const res = await agent.post("/api/admin/communities").send({
+      ...baseBody,
+      feedUrl: "not-a-url",
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("PATCH /api/admin/communities/:id で feedUrl を更新できる", async () => {
+    const repo = createInMemoryCommunityRepository();
+    const community = await repo.create({
+      slug: "patch-feed-test",
+      name: "更新テスト",
+      description: "説明",
+    });
+    const app = await makeApp(repo);
+    const agent = await loginAgent(app);
+    const res = await agent.patch(`/api/admin/communities/${community.id}`).send({
+      feedUrl: "https://example.com/feed.atom",
+    });
+    expect(res.status).toBe(200);
+    expect((res.body as { feedUrl: string }).feedUrl).toBe("https://example.com/feed.atom");
+  });
+});

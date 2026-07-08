@@ -54,6 +54,7 @@ const mockCommunity: AdminCommunity = {
   name: "AI 開発者の集い",
   description: "AI について語る community",
   generationInstruction: "率直に話す",
+  feedUrl: "https://zenn.dev/feed",
   iconUrl: null,
   coverUrl: null,
   created_at: new Date("2026-06-01T00:00:00.000Z"),
@@ -129,6 +130,12 @@ describe("EditCommunityScene（#889）", () => {
     stubAll();
     renderWithClient(<EditCommunityScene />);
     expect(screen.getByDisplayValue("率直に話す")).toBeInTheDocument();
+  });
+
+  it("外部フィード URL がフォームに反映される（#1104）", () => {
+    stubAll();
+    renderWithClient(<EditCommunityScene />);
+    expect(screen.getByDisplayValue("https://zenn.dev/feed")).toBeInTheDocument();
   });
 
   it("slug が読み取り専用で表示される（入力欄ではない）", () => {

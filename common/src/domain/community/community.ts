@@ -72,6 +72,12 @@ export const CommunitySchema = z.object({
 export type Community = z.infer<typeof CommunitySchema>;
 
 /**
+ * feedUrl（外部フィード URL）の Zod スキーマ（#491 / #1104）。
+ * AdminCommunitySchema / CreateCommunitySchema / UpdateCommunitySchema で共有する。
+ */
+const feedUrlSchema = z.string().url().max(COMMUNITY_FEED_URL_MAX_LENGTH).nullable().optional();
+
+/**
  * admin 向けコミュニティスキーマ（#488 / #491）。
  * 公開スキーマを extends し `generationInstruction`（非公開・生成プロンプト指示）と
  * `feedUrl`（外部フィード URL）を追加する。admin API のレスポンスのみで使用し、公開エンドポイントには絶対に含めない。
@@ -82,7 +88,7 @@ export const AdminCommunitySchema = CommunitySchema.extend({
     .max(COMMUNITY_GENERATION_INSTRUCTION_MAX_LENGTH)
     .nullable()
     .optional(),
-  feedUrl: z.string().url().max(COMMUNITY_FEED_URL_MAX_LENGTH).nullable().optional(),
+  feedUrl: feedUrlSchema,
   generationPaused: z.boolean(),
 });
 
@@ -101,7 +107,7 @@ export const CreateCommunitySchema = z.object({
     .string()
     .max(COMMUNITY_GENERATION_INSTRUCTION_MAX_LENGTH)
     .optional(),
-  feedUrl: z.string().url().max(COMMUNITY_FEED_URL_MAX_LENGTH).nullable().optional(),
+  feedUrl: feedUrlSchema,
 });
 
 export type CreateCommunityInput = z.infer<typeof CreateCommunitySchema>;
@@ -120,7 +126,7 @@ export const UpdateCommunitySchema = z.object({
     .max(COMMUNITY_GENERATION_INSTRUCTION_MAX_LENGTH)
     .nullable()
     .optional(),
-  feedUrl: z.string().url().max(COMMUNITY_FEED_URL_MAX_LENGTH).nullable().optional(),
+  feedUrl: feedUrlSchema,
   generationPaused: z.boolean().optional(),
 });
 

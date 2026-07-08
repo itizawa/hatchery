@@ -64,6 +64,7 @@ export function createPrismaCommunityRepository(prisma: PrismaClient): Community
           name: input.name,
           description: input.description,
           generationInstruction: input.generationInstruction ?? null,
+          feedUrl: input.feedUrl ?? null,
         },
       });
       return toRecord(row);

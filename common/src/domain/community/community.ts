@@ -101,6 +101,7 @@ export const CreateCommunitySchema = z.object({
     .string()
     .max(COMMUNITY_GENERATION_INSTRUCTION_MAX_LENGTH)
     .optional(),
+  feedUrl: z.string().url().max(COMMUNITY_FEED_URL_MAX_LENGTH).nullable().optional(),
 });
 
 export type CreateCommunityInput = z.infer<typeof CreateCommunitySchema>;

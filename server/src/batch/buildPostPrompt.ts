@@ -1,6 +1,7 @@
 import type { CommunityRecord } from "../persistence/communityRepository.js";
 import type { WorkerDef } from "./buildCommunityPrompt.js";
 import { TONE_GUIDELINES } from "./buildCommunityPrompt.js";
+import type { FeedArticle } from "./fetchExternalFeed.js";
 
 /** buildPostPrompt のパラメータ。 */
 export interface BuildPostPromptParams {
@@ -15,6 +16,12 @@ export interface BuildPostPromptParams {
    * 省略・空配列の場合は注入しない（後方互換）。
    */
   recentTitles?: readonly string[];
+  /**
+   * 外部フィードから取得した記事リスト（#491 / #1104 / ADR-0035）。
+   * 指定・非空の場合はプロンプトに「最新フィード記事」セクションとして注入する。
+   * 省略・空配列の場合はセクションを省略し、通常生成と同じプロンプトになる。
+   */
+  feedArticles?: readonly FeedArticle[];
 }
 
 /** buildPostPrompt の戻り値。 */
@@ -80,7 +87,7 @@ export function detectConvergentTitlePattern(titles: readonly string[]): string 
  * - 件数ヒント（postCount）に応じた枚数指示を追加する
  */
 export function buildPostPrompt(params: BuildPostPromptParams): BuildPostPromptResult {
-  const { community, workers, recentLog, countHints, recentTitles } = params;
+  const { community, workers, recentLog, countHints, recentTitles, feedArticles } = params;
 
   const workerLines = workers
     .map((w) => {
@@ -104,6 +111,21 @@ export function buildPostPrompt(params: BuildPostPromptParams): BuildPostPromptR
   const synopsisSection = community.synopsis
     ? `コミュニティのあらすじ:\n${community.synopsis}\n\n`
     : "";
+
+  // 外部フィード記事セクション（#491 / #1104 / ADR-0035）
+  // URL はプロンプトに含めない（#927: AIが本文にURLをコピーする問題を防ぐ）
+  const feedArticlesSection =
+    feedArticles && feedArticles.length > 0
+      ? `最新フィード記事（${feedArticles.length}件）:\n${feedArticles
+          .map((a) => {
+            const authorPart = a.author ? `（by ${a.author}）` : "";
+            const summaryPart = a.summary
+              ? `\n  概要: ${a.summary.replace(/https?:\/\/\S+/g, "").trim()}`
+              : "";
+            return `- 「${a.title}」${authorPart}${summaryPart}`;
+          })
+          .join("\n")}\n（↑ これらの記事を題材に会話を生成してください）\n\n`
+      : "";
 
   const exampleWorkerId = workers[0]?.id ?? "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx";
 
@@ -134,7 +156,7 @@ ${TONE_GUIDELINES}
 コミュニティ作風:
 ${toneInstruction}
 
-${synopsisSection}ワーカー一覧:
+${synopsisSection}${feedArticlesSection}ワーカー一覧:
 ${workerLines}
 
 ${recentLogSection}${recentTitlesSection}

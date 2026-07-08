@@ -83,11 +83,12 @@ export function createAdminRouter(
     // eslint-disable-next-line max-params
     async (req, res, next) => {
       try {
-        const { slug, name, description, generationInstruction } = req.body as {
+        const { slug, name, description, generationInstruction, feedUrl } = req.body as {
           slug: string;
           name: string;
           description: string;
           generationInstruction?: string;
+          feedUrl?: string | null;
         };
         const existing = await communityRepository.findBySlug(slug);
         if (existing) {
@@ -99,6 +100,7 @@ export function createAdminRouter(
           name,
           description,
           generationInstruction: generationInstruction ?? null,
+          feedUrl: feedUrl ?? null,
         });
         res.status(201).json(toAdminCommunityResponse(community));
       } catch (err) {

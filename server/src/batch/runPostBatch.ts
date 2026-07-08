@@ -153,34 +153,37 @@ async function processCommunitePosts({
   }));
   const workerIds = workers.map((w) => w.id);
 
-  // 直近 post/comment をコンテキストとして取得する（重複テーマ・タイトル抑制のため #1019）。
-  const { recentLog, recentPostsForReply } = await fetchRecentContext({
-    postRepo: deps.postRepo,
-    commentRepo: deps.commentRepo ?? {
-      listByCommunity: async () => [],
-      createMany: async () => [],
-      listByPost: async () => [],
-      findById: async () => null,
-      countByPostIds: async () => new Map(),
-      addScore: async () => null,
-      listByWorker: async () => ({ comments: [], nextCursor: null }),
-    },
-    community,
-    recentLimit,
-    maxPostsForReply: recentLimit,
-    now,
-    popularPostsWindowDays: 7,
-    popularPostsMinScore: 1,
-    popularPostsLimit: 0,
-  });
+  // 直近 post/comment のコンテキスト取得（#1019）と外部フィード記事取得（#491 / #1104 / ADR-0035）は
+  // 互いに独立した I/O のため Promise.all で並行実行する。fetchFeed（既定 fetchExternalFeed）は
+  // タイムアウト・HTTPエラー・パース失敗を内部で全て catch し空配列を返す契約のため、
+  // ここでの追加 try/catch は不要（通常生成にフォールバックする）。feedUrl 未設定なら呼び出さない。
+  const [{ recentLog, recentPostsForReply }, feedArticles] = await Promise.all([
+    fetchRecentContext({
+      postRepo: deps.postRepo,
+      commentRepo: deps.commentRepo ?? {
+        listByCommunity: async () => [],
+        createMany: async () => [],
+        listByPost: async () => [],
+        findById: async () => null,
+        countByPostIds: async () => new Map(),
+        addScore: async () => null,
+        listByWorker: async () => ({ comments: [], nextCursor: null }),
+      },
+      community,
+      recentLimit,
+      maxPostsForReply: recentLimit,
+      now,
+      popularPostsWindowDays: 7,
+      popularPostsMinScore: 1,
+      popularPostsLimit: 0,
+    }),
+    community.feedUrl
+      ? fetchFeed({ feedUrl: community.feedUrl })
+      : Promise.resolve<readonly FeedArticle[]>([]),
+  ]);
 
   // post 件数を rng で決定する（#672 AC2）。
   const postCount = pickInRange(postRange.min, postRange.max, rng);
-
-  // 外部フィード記事を取得する（#491 / #1104 / ADR-0035）。feedUrl 未設定なら呼び出さない。
-  // fetchFeed（既定 fetchExternalFeed）はタイムアウト・HTTPエラー・パース失敗を内部で
-  // 全て catch し空配列を返す契約のため、ここでの追加 try/catch は不要（通常生成にフォールバックする）。
-  const feedArticles = community.feedUrl ? await fetchFeed({ feedUrl: community.feedUrl }) : [];
 
   // post 専用プロンプトを構築する（コメント生成なし）。
   const { prompt } = buildPostPrompt({

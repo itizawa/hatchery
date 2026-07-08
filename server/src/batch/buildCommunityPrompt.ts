@@ -1,5 +1,5 @@
 import type { CommunityRecord } from "../persistence/communityRepository.js";
-import type { FeedArticle } from "./fetchExternalFeed.js";
+import { buildFeedArticlesSection, type FeedArticle } from "./fetchExternalFeed.js";
 import type { CountHints } from "./generateCountHints.js";
 
 /** ワーカー定義（プロンプト構築に必要な最小フィールド）。 */
@@ -147,17 +147,7 @@ export function buildCommunityPrompt(
     : "";
 
   // 外部フィード記事セクション（#491 / ADR-0035）
-  // URL はプロンプトに含めない（#927: AIが本文にURLをコピーする問題を防ぐ）
-  const feedArticlesSection =
-    feedArticles && feedArticles.length > 0
-      ? `最新フィード記事（${feedArticles.length}件）:\n${feedArticles
-          .map((a) => {
-            const authorPart = a.author ? `（by ${a.author}）` : "";
-            const summaryPart = a.summary ? `\n  概要: ${a.summary.replace(/https?:\/\/\S+/g, "").trim()}` : "";
-            return `- 「${a.title}」${authorPart}${summaryPart}`;
-          })
-          .join("\n")}\n（↑ これらの記事を題材に会話を生成してください）\n\n`
-      : "";
+  const feedArticlesSection = buildFeedArticlesSection(feedArticles);
 
   // 既存Post参照マップを構築（#555）
   const postRefMap = new Map<string, string>();

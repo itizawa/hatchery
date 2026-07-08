@@ -1,7 +1,7 @@
 import type { CommunityRecord } from "../persistence/communityRepository.js";
 import type { WorkerDef } from "./buildCommunityPrompt.js";
 import { TONE_GUIDELINES } from "./buildCommunityPrompt.js";
-import type { FeedArticle } from "./fetchExternalFeed.js";
+import { buildFeedArticlesSection, type FeedArticle } from "./fetchExternalFeed.js";
 
 /** buildPostPrompt のパラメータ。 */
 export interface BuildPostPromptParams {
@@ -113,19 +113,7 @@ export function buildPostPrompt(params: BuildPostPromptParams): BuildPostPromptR
     : "";
 
   // 外部フィード記事セクション（#491 / #1104 / ADR-0035）
-  // URL はプロンプトに含めない（#927: AIが本文にURLをコピーする問題を防ぐ）
-  const feedArticlesSection =
-    feedArticles && feedArticles.length > 0
-      ? `最新フィード記事（${feedArticles.length}件）:\n${feedArticles
-          .map((a) => {
-            const authorPart = a.author ? `（by ${a.author}）` : "";
-            const summaryPart = a.summary
-              ? `\n  概要: ${a.summary.replace(/https?:\/\/\S+/g, "").trim()}`
-              : "";
-            return `- 「${a.title}」${authorPart}${summaryPart}`;
-          })
-          .join("\n")}\n（↑ これらの記事を題材に会話を生成してください）\n\n`
-      : "";
+  const feedArticlesSection = buildFeedArticlesSection(feedArticles);
 
   const exampleWorkerId = workers[0]?.id ?? "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx";
 

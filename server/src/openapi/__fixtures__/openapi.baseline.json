@@ -839,6 +839,14 @@
           "generationInstruction": {
             "type": "string",
             "maxLength": 2000
+          },
+          "feedUrl": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 500,
+            "format": "uri"
           }
         },
         "required": [

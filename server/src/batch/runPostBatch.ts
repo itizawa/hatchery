@@ -21,6 +21,7 @@ import {
 } from "./aiMessageGenerator.js";
 import type { WorkerDef } from "./buildCommunityPrompt.js";
 import { buildPostPrompt } from "./buildPostPrompt.js";
+import { detectSimilarRecentPost } from "./detectDuplicatePostText.js";
 import { fetchExternalFeed, type FeedArticle } from "./fetchExternalFeed.js";
 import { fetchRecentContext } from "./fetchRecentContext.js";
 import { pickInRange } from "./generateCountHints.js";
@@ -246,6 +247,23 @@ async function processCommunitePosts({
     maxRetries: 2,
     label: `post_batch.${community.id}`,
   });
+
+  // 直近 post 本文とのテキスト類似度を検知する（#1115）。強いバリデーションではなく、
+  // 検知してもログ記録のみで生成は失敗させない（#1022 の URL 検知と同じ非ブロッキング方針）。
+  for (const post of output.posts) {
+    const duplicateMatch = detectSimilarRecentPost({
+      candidateText: post.text,
+      recentPosts: recentPostsForReply,
+    });
+    if (duplicateMatch) {
+      logBatchInfo("post_batch.duplicate_text_detected", {
+        communityId: community.id,
+        title: post.title,
+        matchedTitle: duplicateMatch.matchedTitle,
+        similarity: duplicateMatch.similarity,
+      });
+    }
+  }
 
   // post に drip タイムスタンプを割り当てて永続化する（#672 AC4）。
   const totalPostCount = output.posts.length;

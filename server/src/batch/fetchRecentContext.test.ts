@@ -112,6 +112,38 @@ describe("fetchRecentContext (#716)", () => {
     });
   });
 
+  it("recentPostsForReply の各エントリは text（投稿本文）を持つ（#1115）", async () => {
+    const postRepo = createInMemoryPostRepository();
+    const commentRepo = createInMemoryCommentRepository();
+
+    await postRepo.createMany(community.id, [
+      {
+        slotKey: "slot-1",
+        seq: 0,
+        author: "worker1",
+        title: "テストタイトル",
+        text: "テスト本文の内容",
+        createdAt: new Date(now.getTime() - 60000),
+      },
+    ]);
+
+    const result = await fetchRecentContext({
+      postRepo,
+      commentRepo,
+      community,
+      recentLimit: 30,
+      maxPostsForReply: 5,
+      now,
+      popularPostsWindowDays: 7,
+      popularPostsMinScore: 1,
+      popularPostsLimit: 3,
+    });
+
+    expect(result.recentPostsForReply[0]).toMatchObject({
+      text: "テスト本文の内容",
+    });
+  });
+
   it("popularPosts は minScore 未満の post を含まない", async () => {
     const postRepo = createInMemoryPostRepository();
     const commentRepo = createInMemoryCommentRepository();

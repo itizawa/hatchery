@@ -103,7 +103,7 @@ export function buildPostPrompt(params: BuildPostPromptParams): BuildPostPromptR
 
   const recentLogSection =
     recentLog.length > 0
-      ? `直近の投稿・コメント（${recentLog.length} 件）:\n${recentLog.join("\n")}\n\n（↑ 上記で既に扱った記事・話題と重複しない新しい題材を選んでください）`
+      ? `直近の投稿・コメント（${recentLog.length} 件）:\n${recentLog.join("\n")}\n\n（↑ 上記で既に扱った記事・話題と重複しない新しい題材を選んでください。話題だけでなく、主張・結論が上記の投稿とほぼ同じになる投稿も避けてください）`
       : "直近の投稿・コメント: (なし)";
 
   const toneInstruction = community.generationInstruction || community.description;

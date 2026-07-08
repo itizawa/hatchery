@@ -71,6 +71,15 @@ describe("buildPostPrompt", () => {
     expect(prompt).toContain("テスト投稿");
   });
 
+  it("直近ログが指定された場合、主張・結論の重複を避ける指示が含まれる（#1115）", () => {
+    const { prompt } = buildPostPrompt({
+      community,
+      workers,
+      recentLog: ["2026-01-01 haru: テスト投稿"],
+    });
+    expect(prompt).toMatch(/主張.*結論|結論.*主張/);
+  });
+
   it("comments フィールドは空配列で出力するよう指示する", () => {
     const { prompt } = buildPostPrompt({ community, workers, recentLog: [] });
     expect(prompt).toContain('"comments": []');

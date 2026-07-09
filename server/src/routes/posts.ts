@@ -15,6 +15,9 @@ import { toCommentResponse, toPostResponse } from "./postResponse.js";
 /** vote エンドポイント専用のレート制限（#777: ゲスト対応に伴い認証不要になったため IP ベースで制限）。 */
 const voteRateLimiter = createRateLimiter({ windowMs: 60_000, max: 60 });
 
+/** 関連投稿（タグ一致）の最大返却件数（#1087）。 */
+const RELATED_POSTS_LIMIT = 5;
+
 /**
  * /api/posts・/api/comments ルータ。
  * スレッド（post + comments）の取得、up/down vote、閲覧ビーコンを担う。ADR-0019 / ADR-0025 / ADR-0032。
@@ -84,6 +87,19 @@ export function createPostsRouter(
           // reveal 済みコメント件数を付与する（#779: 詳細 API でも comment_count を正確に返す）。
           const postWithCount = { ...(enrichedPost ?? post), commentCount: comments.length };
 
+          // 関連投稿（同一 community 内でタグを 1 つ以上共有する post・#1087）。
+          // tags が空のときは常に空配列になるため DB 問い合わせ自体を省略する。
+          const relatedPosts =
+            postWithCount.tags.length > 0
+              ? await postRepo.listRelatedByTags({
+                  communityId: postWithCount.communityId,
+                  tags: postWithCount.tags,
+                  excludePostId: postId,
+                  limit: RELATED_POSTS_LIMIT,
+                })
+              : [];
+          const relatedPostsResponse = relatedPosts.map((p) => toPostResponse(p));
+
           if (sessionId) {
             // sessionId 付きのとき post と comments の my_vote を一括取得して付与する（#831）。
             const [postVotes, commentVotes] = await Promise.all([
@@ -101,12 +117,14 @@ export function createPostsRouter(
             res.status(200).json({
               post: toPostResponse({ ...postWithCount, myVote: postVotes.get(postId) ?? null }),
               comments: enrichedComments.map((c) => toCommentResponse({ ...c, myVote: commentVotes.get(c.id) ?? null })),
+              related_posts: relatedPostsResponse,
             });
           } else {
             // OpenAPI 契約（snake_case）へ整形して返す（#499）。
             res.status(200).json({
               post: toPostResponse(postWithCount),
               comments: enrichedComments.map(toCommentResponse),
+              related_posts: relatedPostsResponse,
             });
           }
         });

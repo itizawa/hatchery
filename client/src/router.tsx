@@ -17,6 +17,7 @@ import {
 } from "./routes/settingsTabValues.js";
 
 export { SETTINGS_TAB_VALUES, type SettingsTabValue } from "./routes/settingsTabValues.js";
+import { parseSearchQueryParam } from "./routes/searchQueryParam.js";
 import { AuthLayout } from "./routes/AuthLayout";
 import { NotFoundScene } from "./routes/NotFoundScene";
 import { RootLayout } from "./routes/RootLayout";
@@ -241,10 +242,7 @@ const searchRoute = createRoute({
       <LazySearchScene />
     </QueryBoundary>
   ),
-  validateSearch: (search: Record<string, unknown>): { q?: string } => {
-    const q = typeof search.q === "string" && search.q.trim().length > 0 ? search.q.trim() : undefined;
-    return q !== undefined ? { q } : {};
-  },
+  validateSearch: parseSearchQueryParam,
 });
 
 /**

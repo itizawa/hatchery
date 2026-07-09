@@ -2,7 +2,9 @@
 
 ## 1. 目的 / 背景
 
-`client/src/components/ExternalLinkDialog.tsx` は遷移先ホスト名を表示する際、`new URL(url).host` が失敗した場合に `url`（フル URL 文字列）をそのまま表示する `catch` フォールバックを持つ。既存の `ExternalLinkDialog.test.tsx`（Issue #661）は有効な URL のみでテストしており、この `catch` 分岐は一度も実行されていない（`client/coverage/coverage-summary.json` で branches 66.7%）。この未検証分岐にテストを追加し、不正な URL 文字列が渡されてもコンポーネントがクラッシュせず妥当な表示になることを CI で保証する。
+`client/src/components/ExternalLinkDialog.tsx` は遷移先ホスト名を表示する際、`new URL(url).host` が失敗した場合に `url`（フル URL 文字列）をそのまま表示する `catch` フォールバックを持つ。既存の `ExternalLinkDialog.test.tsx`（Issue #661）は有効な URL のみでテストしており、この `catch` 分岐は一度も実行されていない。この未検証分岐にテストを追加し、不正な URL 文字列が渡されてもコンポーネントがクラッシュせず妥当な表示になることを CI で保証する。
+
+**補足（着手時点でのカバレッジ実測値）**: Issue #1033 本文は `client/coverage/coverage-summary.json` の branches 66.7% を根拠として挙げていたが、これは Issue 起票後の他 PR マージにより変動した後のスナップショットだった。本 PR 着手時点でフルスイート（`pnpm --filter @hatchery/client test`）を実行して実測したところ、`ExternalLinkDialog.tsx` の branches カバレッジは **33.33%**（3 分岐中 1 分岐のみ被覆）だった。以降の受け入れ条件はこの実測値を正本とする。
 
 ## 2. スコープ（やること / やらないこと）
 
@@ -13,7 +15,7 @@
 
 1. `url` に `new URL()` でパース失敗する文字列（`"not-a-valid-url"`）を渡した場合、`ExternalLinkDialog` が例外を投げずにレンダリングされる。
 2. 上記ケースで `displayHost` としてフル URL 文字列（渡した不正な文字列そのもの、`"not-a-valid-url"`）が画面に表示される。
-3. 追加後、`ExternalLinkDialog.tsx` の branches カバレッジが現状値（66.7%）を上回る。
+3. 追加後、`ExternalLinkDialog.tsx` の branches カバレッジが着手時点の実測値（33.33%）を上回る。
 4. `pnpm turbo run build|test|lint` が緑であること。
 
 ## 4. 設計方針（アーキ・データ構造・主要モジュール）

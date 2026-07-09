@@ -1,10 +1,4 @@
-import {
-  differenceInDays,
-  differenceInHours,
-  differenceInMinutes,
-  differenceInSeconds,
-  format,
-} from "date-fns";
+import { differenceInHours, differenceInMinutes, differenceInSeconds, format } from "date-fns";
 import { UTCDate } from "@date-fns/utc";
 
 const DAY_MS = 24 * 60 * 60_000;
@@ -47,7 +41,7 @@ export const formatRelativeTime = ({ target, now }: { target: Date; now: Date })
   }
 
   if (diffMs < WEEK_MS) {
-    return `${differenceInDays(now, target)}日前`;
+    return `${Math.trunc(diffMs / DAY_MS)}日前`;
   }
 
   return format(new UTCDate(target), "yyyy/M/d");

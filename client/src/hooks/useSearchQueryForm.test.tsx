@@ -45,10 +45,13 @@ const searchRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([indexRoute, searchRoute]);
 
-async function renderSearchQueryForm(
-  initialPath: string,
-  options?: { preserveUnsyncedEdits?: boolean },
-) {
+async function renderSearchQueryForm({
+  initialPath,
+  options,
+}: {
+  initialPath: string;
+  options?: { preserveUnsyncedEdits?: boolean };
+}) {
   currentHookOptions = options;
   formRef.current = null;
   const router = createRouter({
@@ -62,13 +65,13 @@ async function renderSearchQueryForm(
 
 describe("useSearchQueryForm", () => {
   it("/search 以外のパスでは URL に q があっても currentQ（フォーム初期値）が空文字になる", async () => {
-    const { getForm } = await renderSearchQueryForm("/?q=hello");
+    const { getForm } = await renderSearchQueryForm({ initialPath: "/?q=hello" });
 
     expect(getForm().state.values.q).toBe("");
   });
 
   it("preserveUnsyncedEdits: false（既定）では /search 上の q 変化にフォーム値が追従してリセットされる", async () => {
-    const { router, getForm } = await renderSearchQueryForm("/search?q=foo");
+    const { router, getForm } = await renderSearchQueryForm({ initialPath: "/search?q=foo" });
 
     expect(getForm().state.values.q).toBe("foo");
 
@@ -80,8 +83,9 @@ describe("useSearchQueryForm", () => {
   });
 
   it("preserveUnsyncedEdits: true かつ未送信の編集がある場合は /search 上の q 変化にリセットされない", async () => {
-    const { router, getForm } = await renderSearchQueryForm("/search?q=foo", {
-      preserveUnsyncedEdits: true,
+    const { router, getForm } = await renderSearchQueryForm({
+      initialPath: "/search?q=foo",
+      options: { preserveUnsyncedEdits: true },
     });
 
     act(() => {
@@ -97,8 +101,9 @@ describe("useSearchQueryForm", () => {
   });
 
   it("preserveUnsyncedEdits: true でも未送信の編集が無ければ /search 上の q 変化にリセットされる", async () => {
-    const { router, getForm } = await renderSearchQueryForm("/search?q=foo", {
-      preserveUnsyncedEdits: true,
+    const { router, getForm } = await renderSearchQueryForm({
+      initialPath: "/search?q=foo",
+      options: { preserveUnsyncedEdits: true },
     });
 
     expect(getForm().state.values.q).toBe("foo");
@@ -111,7 +116,7 @@ describe("useSearchQueryForm", () => {
   });
 
   it("onSubmit はトリムした値を持って /search へ navigate する", async () => {
-    const { router, getForm } = await renderSearchQueryForm("/");
+    const { router, getForm } = await renderSearchQueryForm({ initialPath: "/" });
     const navigateSpy = vi.spyOn(router, "navigate");
 
     act(() => {
@@ -128,7 +133,7 @@ describe("useSearchQueryForm", () => {
   });
 
   it("/search を開いていてトリム後の値が現在の q と同じ場合は navigate が呼ばれない", async () => {
-    const { router, getForm } = await renderSearchQueryForm("/search?q=cats");
+    const { router, getForm } = await renderSearchQueryForm({ initialPath: "/search?q=cats" });
     const navigateSpy = vi.spyOn(router, "navigate");
 
     await act(async () => {

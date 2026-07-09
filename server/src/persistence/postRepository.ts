@@ -15,6 +15,8 @@ export interface PostRecord {
   text: string;
   score: number;
   createdAt: Date;
+  /** 投稿に付与されたタグ一覧（#1087）。省略時 `[]`。 */
+  tags: string[];
 }
 
 /** Post 作成時の入力（バルク用）。 */
@@ -30,6 +32,8 @@ export interface PostCreateInput {
    * 複数 Post 生成時に軽く stagger させてフィード先頭が一度に埋まらないようにする場合に注入する。
    */
   createdAt?: Date;
+  /** 投稿に付与されたタグ一覧（#1087）。省略時 `[]`。 */
+  tags?: string[];
 }
 
 /** reveal フィルタのオプション（#556）。 */
@@ -163,10 +167,21 @@ export interface PostRepository {
    * 大文字小文字を区別しない部分一致（ILIKE 相当）で検索する。
    */
   search(params: { q: string; limit?: number; options?: RevealFilterOptions }): Promise<PostRecord[]>;
+  /**
+   * community 内で指定タグを 1 つ以上共有する post を新着順（createdAt 降順）で返す（#1087）。
+   * excludePostId は結果から除外する（通常は問い合わせ元の post 自身）。
+   * tags が空配列の場合は常に空配列を返す（DB 問い合わせを行わない）。
+   */
+  listRelatedByTags(params: {
+    communityId: string;
+    tags: readonly string[];
+    excludePostId: string;
+    limit: number;
+  }): Promise<PostRecord[]>;
 }
 
 function cloneRecord(r: PostRecord): PostRecord {
-  return { ...r };
+  return { ...r, tags: [...r.tags] };
 }
 
 interface CursorPayload {
@@ -276,6 +291,7 @@ export function createInMemoryPostRepository(): PostRepository {
           text: input.text,
           score: 0,
           createdAt: input.createdAt ?? new Date(),
+          tags: input.tags ?? [],
         };
         records.push(record);
         created.push(cloneRecord(record));
@@ -602,6 +618,33 @@ export function createInMemoryPostRepository(): PostRepository {
       const result = records
         .filter((r) => r.title.toLowerCase().includes(lower) || r.text.toLowerCase().includes(lower))
         .filter((r) => now === undefined || r.createdAt.getTime() <= now.getTime())
+        // eslint-disable-next-line max-params
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+        .slice(0, limit)
+        .map(cloneRecord);
+      return Promise.resolve(result);
+    },
+
+    listRelatedByTags({
+      communityId,
+      tags,
+      excludePostId,
+      limit,
+    }: {
+      communityId: string;
+      tags: readonly string[];
+      excludePostId: string;
+      limit: number;
+    }): Promise<PostRecord[]> {
+      if (tags.length === 0) return Promise.resolve([]);
+      const tagSet = new Set(tags);
+      const result = records
+        .filter(
+          (r) =>
+            r.communityId === communityId &&
+            r.id !== excludePostId &&
+            r.tags.some((t) => tagSet.has(t)),
+        )
         // eslint-disable-next-line max-params
         .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
         .slice(0, limit)

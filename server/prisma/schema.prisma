@@ -162,6 +162,8 @@ model Post {
   votes       Vote[]
   /// この post への閲覧記録（#665: Exclusive Arc 化の逆リレーション。Post 削除で cascade）。
   pageViews   PageView[]
+  /// 投稿に付与されたタグ一覧（#1087）。ワーカーが定時バッチ生成時に付与する。省略時 `[]`。
+  tags        String[] @default([])
 
   @@unique([communityId, slotKey, seq])
   @@index([communityId, createdAt])

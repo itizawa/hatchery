@@ -5,6 +5,8 @@ import {
   CreatePostRequestSchema,
   MANUAL_SLOT_KEY_PREFIX,
   PostSchema,
+  POST_TAGS_MAX_COUNT,
+  POST_TAG_MAX_LENGTH,
   POST_TEXT_MAX_LENGTH,
   POST_TITLE_MAX_LENGTH,
 } from "./post.js";
@@ -135,6 +137,35 @@ describe("PostSchema", () => {
 
   it("my_vote に無効な値は reject する（#831）", () => {
     expect(PostSchema.safeParse({ ...validPost, my_vote: "neutral" }).success).toBe(false);
+  });
+
+  it("tags は省略時 空配列（既定値）になる（#1087）", () => {
+    const result = PostSchema.parse(validPost);
+    expect(result.tags).toEqual([]);
+  });
+
+  it("tags を持てる（#1087）", () => {
+    const result = PostSchema.parse({ ...validPost, tags: ["react", "typescript"] });
+    expect(result.tags).toEqual(["react", "typescript"]);
+  });
+
+  it(`tags は最大 ${POST_TAGS_MAX_COUNT} 件まで（超過は reject・#1087）`, () => {
+    const tooMany = Array.from({ length: POST_TAGS_MAX_COUNT + 1 }, (_, i) => `tag${i}`);
+    expect(PostSchema.safeParse({ ...validPost, tags: tooMany }).success).toBe(false);
+  });
+
+  it(`tags は ${POST_TAGS_MAX_COUNT} 件までなら有効（#1087）`, () => {
+    const maxTags = Array.from({ length: POST_TAGS_MAX_COUNT }, (_, i) => `tag${i}`);
+    expect(PostSchema.safeParse({ ...validPost, tags: maxTags }).success).toBe(true);
+  });
+
+  it(`tags の要素は最大 ${POST_TAG_MAX_LENGTH} 文字まで（超過は reject・#1087）`, () => {
+    const data = { ...validPost, tags: ["あ".repeat(POST_TAG_MAX_LENGTH + 1)] };
+    expect(PostSchema.safeParse(data).success).toBe(false);
+  });
+
+  it("tags の要素が空文字だと reject する（#1087）", () => {
+    expect(PostSchema.safeParse({ ...validPost, tags: [""] }).success).toBe(false);
   });
 });
 

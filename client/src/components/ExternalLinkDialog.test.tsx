@@ -64,6 +64,13 @@ describe("ExternalLinkDialog", () => {
       render(<ExternalLinkDialog {...defaultProps} open={false} />);
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
+
+    it("URL パースに失敗する場合、例外を投げずフル URL 文字列がそのまま表示される", () => {
+      expect(() =>
+        render(<ExternalLinkDialog {...defaultProps} url="not-a-valid-url" />),
+      ).not.toThrow();
+      expect(screen.getByText("not-a-valid-url")).toBeInTheDocument();
+    });
   });
 
   describe("ボタン操作", () => {

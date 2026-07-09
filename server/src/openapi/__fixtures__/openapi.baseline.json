@@ -750,12 +750,16 @@
           },
           "created_at": {
             "type": "string"
+          },
+          "notify_enabled": {
+            "type": "boolean"
           }
         },
         "required": [
           "user_id",
           "community_id",
-          "created_at"
+          "created_at",
+          "notify_enabled"
         ],
         "description": "コミュニティへの購読。ADR-0019 / ADR-0020"
       },
@@ -835,6 +839,14 @@
           "generationInstruction": {
             "type": "string",
             "maxLength": 2000
+          },
+          "feedUrl": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 500,
+            "format": "uri"
           }
         },
         "required": [
@@ -878,15 +890,68 @@
         },
         "description": "コミュニティ更新リクエストボディ（#310 / #337）"
       },
+      "CommunityWorkerAssignments": {
+        "type": "object",
+        "properties": {
+          "workers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "displayName": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 50
+                }
+              },
+              "required": [
+                "id",
+                "displayName"
+              ]
+            }
+          }
+        },
+        "required": [
+          "workers"
+        ],
+        "description": "コミュニティ所属ワーカー一覧（id・displayName・#1079）"
+      },
+      "SetCommunityWorkers": {
+        "type": "object",
+        "properties": {
+          "workerIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "maxItems": 200
+          }
+        },
+        "required": [
+          "workerIds"
+        ],
+        "description": "コミュニティの所属ワーカーを置き換えるリクエストボディ（#1079）"
+      },
       "SubscriptionStatus": {
         "type": "object",
         "properties": {
           "subscribed": {
             "type": "boolean"
+          },
+          "notify_enabled": {
+            "type": "boolean"
           }
         },
         "required": [
-          "subscribed"
+          "subscribed",
+          "notify_enabled"
         ],
         "description": "コミュニティへの購読状態（#421）"
       },
@@ -1190,6 +1255,18 @@
         ],
         "description": "購読コミュニティ別未読数レスポンス（#933）"
       },
+      "UpdateSubscriptionNotifyEnabledBody": {
+        "type": "object",
+        "properties": {
+          "notify_enabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "notify_enabled"
+        ],
+        "description": "コミュニティ単位の通知 ON/OFF 更新リクエストボディ（#1088）"
+      },
       "SubscribePushBody": {
         "type": "object",
         "properties": {
@@ -1263,6 +1340,117 @@
           }
         },
         "description": "OGP メタデータ（#515）"
+      },
+      "TrendingItem": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "post_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "excerpt": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "community_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "community_slug": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 50
+              },
+              "net_score": {
+                "type": "integer"
+              },
+              "created_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "post"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "post_id",
+              "excerpt",
+              "community_id",
+              "community_slug",
+              "net_score",
+              "created_at",
+              "type"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "post_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "excerpt": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "community_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "community_slug": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 50
+              },
+              "net_score": {
+                "type": "integer"
+              },
+              "created_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "comment"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "post_id",
+              "excerpt",
+              "community_id",
+              "community_slug",
+              "net_score",
+              "created_at",
+              "type"
+            ]
+          }
+        ],
+        "description": "直近 7 日間で評価（vote）を多く獲得した Post / Comment（#1065）"
       }
     },
     "parameters": {}
@@ -1924,6 +2112,137 @@
         }
       }
     },
+    "/api/admin/communities/{id}/workers": {
+      "get": {
+        "summary": "コミュニティの所属ワーカー一覧を取得（認証必須・admin のみ・#1079）",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "所属ワーカー一覧（id・displayName）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommunityWorkerAssignments"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未認証",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "admin 権限なし",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "コミュニティが存在しない",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "コミュニティの所属ワーカーを置き換える（認証必須・admin のみ・#1079）",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetCommunityWorkers"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "置換後の所属ワーカー一覧",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommunityWorkerAssignments"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "バリデーションエラー / 存在しない workerId",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未認証",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "admin 権限なし",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "コミュニティが存在しない",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/posts": {
       "post": {
         "summary": "任意の worker 名義で post を手動作成（認証必須・admin のみ・#433 / ADR-0020）",
@@ -2179,9 +2498,9 @@
         }
       }
     },
-    "/api/communities/{slug}/recent-workers": {
+    "/api/communities/{slug}/workers": {
       "get": {
-        "summary": "community の最近投稿したワーカー一覧を取得（認証不要・distinct・最大 10 件）",
+        "summary": "community 所属の全ワーカー一覧を取得（認証不要・id 昇順・カーソルページネーション）",
         "parameters": [
           {
             "schema": {
@@ -2190,18 +2509,57 @@
             "required": true,
             "name": "slug",
             "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 512,
+              "description": "カーソル（直前ページ末尾ワーカー id の base64 エンコード）"
+            },
+            "required": false,
+            "name": "cursor",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "description": "1 ページあたりの取得件数（デフォルト 20・最大 100）"
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
           }
         ],
         "responses": {
           "200": {
-            "description": "最近投稿したワーカー一覧（新着投稿順・distinct）",
+            "description": "community 所属ワーカー一覧（id 昇順・カーソルページネーション）",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Worker"
-                  }
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Worker"
+                      }
+                    },
+                    "nextCursor": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "maxLength": 512,
+                      "description": "次ページ取得用カーソル。null の場合は末尾"
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "nextCursor"
+                  ]
                 }
               }
             }
@@ -2239,6 +2597,81 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SubscriptionStatus"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "コミュニティが存在しない",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "コミュニティ単位の Web Push 通知 ON/OFF を更新する（認証必須・購読済みのみ・#1088）",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "communities"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "slug",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSubscriptionNotifyEnabledBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "通知設定を更新した"
+          },
+          "400": {
+            "description": "バリデーションエラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未認証",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "未購読",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }
@@ -3631,6 +4064,57 @@
                   "required": [
                     "error"
                   ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ranking/trending": {
+      "get": {
+        "summary": "直近 7 日間で評価（vote）を多く獲得した Post / Comment を取得（認証不要・#1065）",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20,
+              "description": "取得件数（1〜20、既定 10）"
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "トレンド Post/Comment 一覧（net_score 降順）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/TrendingItem"
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "バリデーションエラー（limit 範囲外）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }

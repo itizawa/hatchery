@@ -6,14 +6,9 @@ import { openApiClient, unwrap } from "./client.js";
 
 export const COMMUNITY_ENGAGEMENT_QUERY_KEY = ["admin", "community-engagement"] as const;
 
-/**
- * GET /api/admin/community-engagement を取得する（#761）。
- * openapi.gen.ts は Turborepo のビルドパイプラインで生成されるため、
- * ここでは unknown 経由でキャストし Zod でランタイム検証する。
- */
+/** GET /api/admin/community-engagement を取得する（#761）。 */
 export async function fetchCommunityEngagement(): Promise<CommunityEngagement> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const result = await (openApiClient as any).GET("/api/admin/community-engagement", {
+  const result = await openApiClient.GET("/api/admin/community-engagement", {
     credentials: "include",
   });
   const data = unwrap({ result, label: "GET /api/admin/community-engagement" });

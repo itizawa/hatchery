@@ -68,18 +68,18 @@ export const CommunityBrowseScene = (): ReactElement => {
                       {community.description}
                     </Typography>
                   )}
-                  <Box sx={{ display: "flex", gap: 2, mt: 0.5, alignItems: "center" }}>
-                    <Typography variant="caption" color="text.secondary">
+                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, mt: 0.5, alignItems: "center" }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: "nowrap" }}>
                       {community.post_count === 0 ? "投稿なし" : `${community.post_count}件の投稿`}
                     </Typography>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: "flex", alignItems: "center", gap: 0.5, whiteSpace: "nowrap" }}>
                       {community.last_post_at == null ? (
                         "未投稿"
                       ) : (
                         <>最終投稿: <PostedTime createdAt={community.last_post_at} /></>
                       )}
                     </Typography>
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: "nowrap" }}>
                       {`${community.subscriber_count} 購読者`}
                     </Typography>
                   </Box>

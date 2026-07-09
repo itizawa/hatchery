@@ -144,4 +144,84 @@ describe.skipIf(!DATABASE_URL)("createPrismaSubscriptionRepository (integration)
       expect(result).toBe(false);
     });
   });
+
+  describe("find（#1088）", () => {
+    it("購読済みの場合 notifyEnabled: true（デフォルト）のレコードを返す", async () => {
+      await setupFixtures();
+      const repo = createPrismaSubscriptionRepository(prisma);
+
+      await repo.add(userId, communityId);
+      const record = await repo.find({ userId, communityId });
+
+      expect(record).toMatchObject({ userId, communityId, notifyEnabled: true });
+    });
+
+    it("未購読の場合 null を返す", async () => {
+      await setupFixtures();
+      const repo = createPrismaSubscriptionRepository(prisma);
+
+      const record = await repo.find({ userId, communityId });
+
+      expect(record).toBeNull();
+    });
+  });
+
+  describe("updateNotifyEnabled（#1088）", () => {
+    it("購読済みの場合 notifyEnabled を更新できる", async () => {
+      await setupFixtures();
+      const repo = createPrismaSubscriptionRepository(prisma);
+
+      await repo.add(userId, communityId);
+      await repo.updateNotifyEnabled({ userId, communityId, notifyEnabled: false });
+      const record = await repo.find({ userId, communityId });
+
+      expect(record?.notifyEnabled).toBe(false);
+    });
+
+    it("未購読（存在しない Subscription）に対しては no-op（エラーなし）", async () => {
+      await setupFixtures();
+      const repo = createPrismaSubscriptionRepository(prisma);
+
+      await expect(
+        repo.updateNotifyEnabled({ userId, communityId, notifyEnabled: false }),
+      ).resolves.toBeUndefined();
+    });
+  });
+
+  describe("listNotifiableUserIds（#1088）", () => {
+    it("指定 communityId 群で notifyEnabled=true の userId を重複なく返す", async () => {
+      await setupFixtures();
+      const repo = createPrismaSubscriptionRepository(prisma);
+
+      await repo.add(userId, communityId);
+      await repo.add(userId, communityId2);
+      await repo.add(userId2, communityId2);
+
+      const ids = await repo.listNotifiableUserIds([communityId, communityId2]);
+
+      expect(ids.sort()).toEqual([userId, userId2].sort());
+    });
+
+    it("notifyEnabled=false のユーザーは除外する", async () => {
+      await setupFixtures();
+      const repo = createPrismaSubscriptionRepository(prisma);
+
+      await repo.add(userId, communityId);
+      await repo.updateNotifyEnabled({ userId, communityId, notifyEnabled: false });
+
+      const ids = await repo.listNotifiableUserIds([communityId]);
+
+      expect(ids).toEqual([]);
+    });
+
+    it("communityIds が空配列の場合は空配列を返す", async () => {
+      await setupFixtures();
+      const repo = createPrismaSubscriptionRepository(prisma);
+
+      await repo.add(userId, communityId);
+      const ids = await repo.listNotifiableUserIds([]);
+
+      expect(ids).toEqual([]);
+    });
+  });
 });

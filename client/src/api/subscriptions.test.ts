@@ -1,6 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { subscribeCommunity, unsubscribeCommunity, fetchSubscriptionStatus, fetchUnreadCounts, markCommunityViewed } from "./subscriptions.js";
+import {
+  subscribeCommunity,
+  unsubscribeCommunity,
+  fetchSubscriptionStatus,
+  fetchUnreadCounts,
+  markCommunityViewed,
+  updateSubscriptionNotifyEnabled,
+} from "./subscriptions.js";
 
 /** JSON ボディを持つ Response を組み立てる小ヘルパ。 */
 // eslint-disable-next-line max-params
@@ -142,5 +149,33 @@ describe("markCommunityViewed (PATCH /api/communities/{slug}/mark-viewed)", () =
     const request = fetchMock.mock.calls[0][0] as Request;
     expect(request.url).toContain("/api/communities/ai-dev/mark-viewed");
     expect(request.method).toBe("PATCH");
+  });
+});
+
+describe("updateSubscriptionNotifyEnabled (PATCH /api/communities/{slug}/subscription)（#1088）", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("204 のとき正常終了し notify_enabled をボディで送る", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      updateSubscriptionNotifyEnabled({ slug: "ai-dev", notifyEnabled: false }),
+    ).resolves.toBeUndefined();
+    const request = fetchMock.mock.calls[0][0] as Request;
+    expect(request.url).toContain("/api/communities/ai-dev/subscription");
+    expect(request.method).toBe("PATCH");
+    const body = await request.clone().json();
+    expect(body).toEqual({ notify_enabled: false });
+  });
+
+  it("403 のとき例外を throw する", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 403 })));
+
+    await expect(
+      updateSubscriptionNotifyEnabled({ slug: "ai-dev", notifyEnabled: true }),
+    ).rejects.toThrow();
   });
 });

@@ -1,5 +1,9 @@
 import type { OpenAPIRegistry } from "@asteasolutions/zod-to-openapi";
-import { UnreadCountItemSchema, UnreadCountsResponseSchema } from "@hatchery/common";
+import {
+  UnreadCountItemSchema,
+  UnreadCountsResponseSchema,
+  UpdateSubscriptionNotifyEnabledBodySchema,
+} from "@hatchery/common";
 import { z } from "zod";
 
 import type { RegistryContext } from "./shared.js";
@@ -51,6 +55,32 @@ export function registerSubscriptions(registry: OpenAPIRegistry, ctx: RegistryCo
       204: { description: "既読に更新した" },
       401: { description: "未認証", ...errorJson },
       403: { description: "権限なし", ...errorJson },
+      404: { description: "コミュニティが存在しない", ...errorJson },
+    },
+    tags: ["communities"],
+  });
+
+  const UpdateSubscriptionNotifyEnabledBodyComponent = registry.register(
+    "UpdateSubscriptionNotifyEnabledBody",
+    UpdateSubscriptionNotifyEnabledBodySchema.openapi({
+      description: "コミュニティ単位の通知 ON/OFF 更新リクエストボディ（#1088）",
+    }),
+  );
+
+  registry.registerPath({
+    method: "patch",
+    path: "/api/communities/{slug}/subscription",
+    summary: "コミュニティ単位の Web Push 通知 ON/OFF を更新する（認証必須・購読済みのみ・#1088）",
+    security: [{ cookieAuth: [] }],
+    request: {
+      params: z.object({ slug: communitySlugParam }),
+      body: { content: { "application/json": { schema: UpdateSubscriptionNotifyEnabledBodyComponent } } },
+    },
+    responses: {
+      204: { description: "通知設定を更新した" },
+      400: { description: "バリデーションエラー", ...errorJson },
+      401: { description: "未認証", ...errorJson },
+      403: { description: "未購読", ...errorJson },
       404: { description: "コミュニティが存在しない", ...errorJson },
     },
     tags: ["communities"],

@@ -1,7 +1,13 @@
 import type { PrismaClient } from "@prisma/client";
 
 import type { WorkerRecord } from "./workerRepository.js";
-import type { WorkerCommunityRepository } from "./workerCommunityRepository.js";
+import {
+  decodeWorkerCursor,
+  encodeWorkerCursor,
+  type ListWorkersByCommunityOptions,
+  type ListWorkersByCommunityResult,
+  type WorkerCommunityRepository,
+} from "./workerCommunityRepository.js";
 
 function toRecord(row: {
   id: string;
@@ -28,12 +34,40 @@ export function createPrismaWorkerCommunityRepository(
   prisma: PrismaClient,
 ): WorkerCommunityRepository {
   return {
-    async listWorkersByCommunity(communityId: string): Promise<WorkerRecord[]> {
+    async listWorkersByCommunity({
+      communityId,
+      limit,
+      cursor,
+    }: ListWorkersByCommunityOptions): Promise<ListWorkersByCommunityResult> {
+      let cursorId: string | undefined;
+      if (cursor !== undefined) {
+        const payload = decodeWorkerCursor(cursor);
+        if (!payload) throw new Error("INVALID_CURSOR");
+        cursorId = payload.id;
+      }
+
       const rows = await prisma.workerCommunity.findMany({
-        where: { communityId, worker: { deletedAt: null } },
+        where: {
+          communityId,
+          worker: { deletedAt: null },
+          ...(cursorId !== undefined ? { workerId: { gt: cursorId } } : {}),
+        },
         include: { worker: true },
+        orderBy: { workerId: "asc" },
+        ...(limit !== undefined ? { take: limit + 1 } : {}),
       });
-      return rows.map((row) => toRecord(row.worker));
+
+      if (limit === undefined) {
+        return { items: rows.map((row) => toRecord(row.worker)), nextCursor: null };
+      }
+
+      const hasMore = rows.length > limit;
+      const sliced = hasMore ? rows.slice(0, limit) : rows;
+      const items = sliced.map((row) => toRecord(row.worker));
+      const lastWorker = sliced.at(-1)?.worker;
+      const nextCursor = hasMore && lastWorker ? encodeWorkerCursor(lastWorker) : null;
+
+      return { items, nextCursor };
     },
 
     async listCommunityIdsByWorker(workerId: string): Promise<string[]> {
@@ -55,6 +89,33 @@ export function createPrismaWorkerCommunityRepository(
         prisma.workerCommunity.deleteMany({ where: { workerId } }),
         prisma.workerCommunity.createMany({
           data: uniqueIds.map((communityId) => ({ workerId, communityId })),
+          skipDuplicates: true,
+        }),
+      ]);
+    },
+
+    async listWorkerSummariesByCommunity(
+      communityId: string,
+    ): Promise<{ id: string; displayName: string }[]> {
+      const rows = await prisma.workerCommunity.findMany({
+        where: { communityId, worker: { deletedAt: null } },
+        include: { worker: { select: { id: true, displayName: true } } },
+        orderBy: { workerId: "asc" },
+      });
+      return rows.map((row) => ({ id: row.worker.id, displayName: row.worker.displayName }));
+    },
+
+    // eslint-disable-next-line max-params
+    async setCommunityWorkers(
+      communityId: string,
+      workerIds: readonly string[],
+    ): Promise<void> {
+      const uniqueIds = [...new Set(workerIds)];
+      // 既存リンク削除 → 新規一括作成をトランザクションで原子的に行う（部分適用を避ける）。
+      await prisma.$transaction([
+        prisma.workerCommunity.deleteMany({ where: { communityId } }),
+        prisma.workerCommunity.createMany({
+          data: uniqueIds.map((workerId) => ({ workerId, communityId })),
           skipDuplicates: true,
         }),
       ]);

@@ -64,3 +64,31 @@ describe("WelcomeSection (#482)", () => {
     expect(screen.getByRole("link", { name: /コミュニティを探す/ })).toBeInTheDocument();
   });
 });
+
+describe("WelcomeSection コミュニティチップの選出（#1083）", () => {
+  // API は created_at 昇順（古い順）で返す想定。9件用意し、表示上限(8件)を超えさせる。
+  // eslint-disable-next-line max-params -- Array.from の mapFn コールバック（CLAUDE.md 例外）
+  const manyCommunities = Array.from({ length: 9 }, (_, i) => ({
+    id: `c-${i}`,
+    slug: `community-${i}`,
+    name: `コミュニティ${i}`,
+    description: "",
+    synopsis: undefined,
+    last_slot_key: undefined,
+    created_at: `2026-06-${String(i + 1).padStart(2, "0")}T00:00:00Z`,
+  }));
+
+  it("コミュニティが表示上限を超える場合、最も新しいコミュニティがチップ一覧に表示される", () => {
+    render(<WelcomeSection communities={manyCommunities} />);
+    // 9件中、最後(index=8)が created_at 最新の新設コミュニティ
+    expect(screen.getByText("コミュニティ8")).toBeInTheDocument();
+  });
+
+  it("コミュニティが表示上限を超える場合、表示されるチップ数は上限件数を超えない", () => {
+    render(<WelcomeSection communities={manyCommunities} />);
+    const chips = manyCommunities.filter((c) =>
+      screen.queryByText(c.name) !== null,
+    );
+    expect(chips.length).toBeLessThanOrEqual(8);
+  });
+});

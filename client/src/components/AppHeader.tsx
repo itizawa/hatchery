@@ -33,6 +33,8 @@ const HEADER_SEARCH_LABEL = "投稿を検索";
  * ヘッダー総高がログイン状態に依らず一定になるようにする（#485）。
  */
 const RIGHT_SLOT_HEIGHT = ACCOUNT_ICON_SIZE + 8;
+/** ヘッダー中央スロット（検索欄）の上限幅（px）。中央グリッド列の `minmax(0, ...)` と検索欄自身の `maxWidth` で共有する（#1112）。 */
+const SEARCH_FIELD_MAX_WIDTH = 480;
 
 export interface AppHeaderProps {
   /** モバイル幅でサイドバードロワーを開くコールバック。未指定の場合はハンバーガーボタンを表示しない。 */
@@ -165,7 +167,7 @@ const HeaderSearchField = (): ReactElement => {
         e.preventDefault();
         void form.handleSubmit();
       }}
-      sx={{ flex: 1, minWidth: 0, maxWidth: 480, mx: 2 }}
+      sx={{ width: "100%", maxWidth: SEARCH_FIELD_MAX_WIDTH, minWidth: 0 }}
     >
       <form.Field name="q">
         {(field) => (
@@ -223,8 +225,12 @@ export const AppHeader = ({ onMenuOpen }: AppHeaderProps): ReactElement => {
         zIndex: 1100,
         width: "100%",
         bgcolor: SLACK_COLORS.sidebar,
-        display: "flex",
+        // 左（メニュー＋ロゴ）／中央（検索欄）／右（インストールボタン＋アカウント領域）の3領域に分割し、
+        // 中央列を明示的な上限幅で確保することで、左右列の内容量が非対称でも中央が水平中央に来る（#1112）。
+        display: "grid",
+        gridTemplateColumns: `1fr minmax(0, ${SEARCH_FIELD_MAX_WIDTH}px) 1fr`,
         alignItems: "center",
+        columnGap: 2,
         px: 2,
         py: 1,
         // サイドバー⇔メインの区切り（borderRight: 1, borderColor: "divider"）と揃えた薄い境界線。
@@ -233,55 +239,58 @@ export const AppHeader = ({ onMenuOpen }: AppHeaderProps): ReactElement => {
         borderColor: "divider",
       }}
     >
-      {onMenuOpen && (
-        <IconButton
-          aria-label="メニューを開く"
-          onClick={onMenuOpen}
-          sx={{ color: SLACK_COLORS.sidebarText, mr: 1 }}
+      <Box data-testid="header-left-slot" sx={{ display: "flex", alignItems: "center" }}>
+        {onMenuOpen && (
+          <IconButton
+            aria-label="メニューを開く"
+            onClick={onMenuOpen}
+            sx={{ color: SLACK_COLORS.sidebarText, mr: 1 }}
+          >
+            <MenuIcon />
+          </IconButton>
+        )}
+        <Link
+          component={RouterLink}
+          to="/"
+          underline="none"
+          sx={{ color: SLACK_COLORS.sidebarText, fontWeight: "bold", fontSize: "1.1rem" }}
+          aria-label="Hatchery"
         >
-          <MenuIcon />
-        </IconButton>
-      )}
-      <Link
-        component={RouterLink}
-        to="/"
-        underline="none"
-        sx={{ color: SLACK_COLORS.sidebarText, fontWeight: "bold", fontSize: "1.1rem" }}
-        aria-label="Hatchery"
-      >
-        Hatchery
-      </Link>
+          Hatchery
+        </Link>
+      </Box>
 
-      <HeaderSearchField />
-
-      {showInstallButton && (
-        <IconButton
-          aria-label="アプリをインストール"
-          onClick={handleHeaderInstall}
-          sx={{ ml: 0.5, color: SLACK_COLORS.sidebarText }}
-        >
-          <GetAppRounded />
-        </IconButton>
-      )}
+      <Box data-testid="header-center-slot">
+        <HeaderSearchField />
+      </Box>
 
       <Box
         data-testid="header-right-slot"
         sx={{
-          ml: "auto",
           // 右端要素（アバターボタン / ログインリンク / Skeleton）を同一の固定高さスロットに
           // 縦中央配置し、各バリアントの高さ差がヘッダー総高に波及しないようにする（#485）。
           height: RIGHT_SLOT_HEIGHT,
           display: "flex",
           alignItems: "center",
           justifyContent: "flex-end",
+          gap: 0.5,
         }}
       >
+        {showInstallButton && (
+          <IconButton
+            aria-label="アプリをインストール"
+            onClick={handleHeaderInstall}
+            size="small"
+            sx={{ color: SLACK_COLORS.sidebarText }}
+          >
+            <GetAppRounded />
+          </IconButton>
+        )}
         {/* 認証状態の取得（Suspense）は局所的に QueryBoundary で受け、確認中は AccountSkeleton を表示する（#461）。 */}
         <QueryBoundary fallback={<AccountSkeleton />}>
           <AppHeaderAuthSection />
         </QueryBoundary>
       </Box>
-
     </Box>
   );
 };

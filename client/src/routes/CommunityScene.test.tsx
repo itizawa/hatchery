@@ -8,14 +8,14 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { CommunityScene } from "./CommunityScene";
 import {
   communityFeedQueryKey,
-  communityRecentWorkersQueryKey,
+  communityWorkersQueryKey,
   communitySubscriptionQueryKey,
 } from "../api/communities";
 import { AUTH_ME_QUERY_KEY } from "../api/auth";
 import { unreadCountsQueryKey } from "../api/subscriptions";
 import { QueryBoundary } from "../components/QueryBoundary";
 import { MainContentSkeleton } from "../components/MainContentSkeleton";
-import type { Community, RecentWorker } from "../api/communities";
+import type { Community, CommunityWorker } from "../api/communities";
 import type React from "react";
 
 const mockNavigate = vi.fn();
@@ -31,7 +31,7 @@ const mockCommunity: Community = {
   created_at: "2026-06-01T00:00:00Z",
 };
 
-const mockRecentWorkers: RecentWorker[] = [
+const mockCommunityWorkers: CommunityWorker[] = [
   { id: "worker-1", displayName: "haru", role: "ムードメーカー" },
 ];
 
@@ -51,7 +51,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
 const server = setupServer(
   http.get("/api/communities", () => HttpResponse.json([mockCommunity])),
   http.get("/api/communities/:slug/feed", () => HttpResponse.json({ posts: [], nextCursor: null })),
-  http.get("/api/communities/:slug/recent-workers", () => HttpResponse.json(mockRecentWorkers)),
+  http.get("/api/communities/:slug/workers", () => HttpResponse.json({ items: mockCommunityWorkers, nextCursor: null })),
 );
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
@@ -64,10 +64,10 @@ afterAll(() => server.close());
 
 /**
  * #462: CommunityScene を router と同じく QueryBoundary でラップして描画する。
- * recent-workers 以外（communities/feed/subscription/auth）はキャッシュにシードしておき、
- * recent-workers の挙動（成功/ローディング/失敗）を MSW で個別に検証できるようにする。
+ * workers（コミュニティ所属ワーカー一覧・#1078）以外（communities/feed/subscription/auth）はキャッシュにシードしておき、
+ * workers の挙動（成功/ローディング/失敗/スクロール追加読み込み）を MSW で個別に検証できるようにする。
  */
-function renderScene({ seedRecentWorkers = true }: { seedRecentWorkers?: boolean } = {}) {
+function renderScene({ seedCommunityWorkers = true }: { seedCommunityWorkers?: boolean } = {}) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   });
@@ -78,8 +78,11 @@ function renderScene({ seedRecentWorkers = true }: { seedRecentWorkers?: boolean
   });
   qc.setQueryData(communitySubscriptionQueryKey("ai-dev"), { subscribed: false });
   qc.setQueryData(AUTH_ME_QUERY_KEY, null);
-  if (seedRecentWorkers) {
-    qc.setQueryData(communityRecentWorkersQueryKey("ai-dev"), mockRecentWorkers);
+  if (seedCommunityWorkers) {
+    qc.setQueryData(communityWorkersQueryKey("ai-dev"), {
+      pages: [{ items: mockCommunityWorkers, nextCursor: null }],
+      pageParams: [undefined],
+    });
   }
 
   return render(
@@ -135,20 +138,20 @@ describe("CommunityScene", () => {
     expect(screen.getByText("2026年6月1日 作成")).toBeInTheDocument();
   });
 
-  it("サイドバーに最近投稿したワーカーが表示される（#207 / #462）", async () => {
+  it("サイドバーにコミュニティ所属ワーカーが表示される（#207 / #462 / #1078）", async () => {
     renderScene();
     expect(await screen.findByText("haru")).toBeInTheDocument();
     expect(screen.getByText("ムードメーカー")).toBeInTheDocument();
   });
 
-  it("最近投稿したワーカー取得中はサイドバーに局所ローディングが表示される（#462）", async () => {
+  it("コミュニティワーカー取得中はサイドバーに局所ローディングが表示される（#462）", async () => {
     server.use(
-      http.get("/api/communities/:slug/recent-workers", async () => {
+      http.get("/api/communities/:slug/workers", async () => {
         await delay(50);
-        return HttpResponse.json(mockRecentWorkers);
+        return HttpResponse.json({ items: mockCommunityWorkers, nextCursor: null });
       }),
     );
-    renderScene({ seedRecentWorkers: false });
+    renderScene({ seedCommunityWorkers: false });
     // 本体（見出し）は表示され、ワーカーパネルだけ「読み込み中...」になる
     expect(await screen.findByRole("heading", { level: 1 })).toBeInTheDocument();
     expect(screen.getByText("読み込み中...")).toBeInTheDocument();
@@ -156,15 +159,15 @@ describe("CommunityScene", () => {
     expect(await screen.findByText("haru")).toBeInTheDocument();
   });
 
-  it("最近投稿したワーカー取得に失敗するとサイドバーに失敗メッセージが表示される（#462）", async () => {
+  it("コミュニティワーカー取得に失敗するとサイドバーに失敗メッセージが表示される（#462）", async () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     server.use(
       http.get(
-        "/api/communities/:slug/recent-workers",
+        "/api/communities/:slug/workers",
         () => new HttpResponse(null, { status: 500 }),
       ),
     );
-    renderScene({ seedRecentWorkers: false });
+    renderScene({ seedCommunityWorkers: false });
     expect(await screen.findByText("読み込みに失敗しました")).toBeInTheDocument();
     // 本体（見出し）は表示され続ける
     expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument();
@@ -276,7 +279,10 @@ describe("CommunityScene", () => {
     });
     qc.setQueryData(communitySubscriptionQueryKey("ai-dev"), { subscribed: false });
     qc.setQueryData(AUTH_ME_QUERY_KEY, null);
-    qc.setQueryData(communityRecentWorkersQueryKey("ai-dev"), mockRecentWorkers);
+    qc.setQueryData(communityWorkersQueryKey("ai-dev"), {
+      pages: [{ items: mockCommunityWorkers, nextCursor: null }],
+      pageParams: [undefined],
+    });
 
     render(
       <QueryClientProvider client={qc}>
@@ -324,7 +330,10 @@ describe("CommunityScene", () => {
     });
     qc.setQueryData(communitySubscriptionQueryKey("ai-dev"), { subscribed: false });
     qc.setQueryData(AUTH_ME_QUERY_KEY, null);
-    qc.setQueryData(communityRecentWorkersQueryKey("ai-dev"), mockRecentWorkers);
+    qc.setQueryData(communityWorkersQueryKey("ai-dev"), {
+      pages: [{ items: mockCommunityWorkers, nextCursor: null }],
+      pageParams: [undefined],
+    });
 
     render(
       <QueryClientProvider client={qc}>
@@ -367,7 +376,10 @@ describe("CommunityScene — vote 楽観的更新（#924）", () => {
     });
     qc.setQueryData(communitySubscriptionQueryKey("ai-dev"), { subscribed: false });
     qc.setQueryData(AUTH_ME_QUERY_KEY, null);
-    qc.setQueryData(communityRecentWorkersQueryKey("ai-dev"), mockRecentWorkers);
+    qc.setQueryData(communityWorkersQueryKey("ai-dev"), {
+      pages: [{ items: mockCommunityWorkers, nextCursor: null }],
+      pageParams: [undefined],
+    });
     render(
       <QueryClientProvider client={qc}>
         <QueryBoundary fallback={<MainContentSkeleton />}>
@@ -483,9 +495,12 @@ describe("CommunityScene — mark-viewed（#934）", () => {
       pages: [{ posts: [], nextCursor: null }],
       pageParams: [undefined],
     });
-    qc.setQueryData(communitySubscriptionQueryKey("ai-dev"), { subscribed: true });
+    qc.setQueryData(communitySubscriptionQueryKey("ai-dev"), { subscribed: true, notify_enabled: true });
     qc.setQueryData(AUTH_ME_QUERY_KEY, mockUser);
-    qc.setQueryData(communityRecentWorkersQueryKey("ai-dev"), mockRecentWorkers);
+    qc.setQueryData(communityWorkersQueryKey("ai-dev"), {
+      pages: [{ items: mockCommunityWorkers, nextCursor: null }],
+      pageParams: [undefined],
+    });
     qc.setQueryData(unreadCountsQueryKey(), { unread_counts: [] });
 
     return render(
@@ -532,6 +547,85 @@ describe("CommunityScene — mark-viewed（#934）", () => {
   });
 });
 
+describe("CommunityScene — community 単位の通知 ON/OFF トグル（#1088）", () => {
+  const mockUser = {
+    id: "user-1",
+    name: "テスト",
+    email: "test@test.com",
+    role: "user" as const,
+    imageUrl: null,
+    isPremium: false,
+  };
+
+  function renderSubscribedScene({ notifyEnabled = true }: { notifyEnabled?: boolean } = {}) {
+    const qc = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    });
+    qc.setQueryData(["communities"], [mockCommunity]);
+    qc.setQueryData(communityFeedQueryKey({ slug: "ai-dev" }), {
+      pages: [{ posts: [], nextCursor: null }],
+      pageParams: [undefined],
+    });
+    qc.setQueryData(communitySubscriptionQueryKey("ai-dev"), {
+      subscribed: true,
+      notify_enabled: notifyEnabled,
+    });
+    qc.setQueryData(AUTH_ME_QUERY_KEY, mockUser);
+    qc.setQueryData(communityWorkersQueryKey("ai-dev"), {
+      pages: [{ items: mockCommunityWorkers, nextCursor: null }],
+      pageParams: [undefined],
+    });
+    qc.setQueryData(unreadCountsQueryKey(), { unread_counts: [] });
+    server.use(http.patch("/api/communities/:slug/mark-viewed", () => new HttpResponse(null, { status: 200 })));
+
+    return { qc, ...render(
+      <QueryClientProvider client={qc}>
+        <QueryBoundary fallback={<></>}>
+          <CommunityScene />
+        </QueryBoundary>
+      </QueryClientProvider>,
+    ) };
+  }
+
+  it("購読中は notify_enabled: true のとき「通知をオフにする」トグルが表示される", async () => {
+    renderSubscribedScene({ notifyEnabled: true });
+    await screen.findByRole("heading", { level: 1 });
+    expect(screen.getByRole("button", { name: "通知をオフにする" })).toBeInTheDocument();
+  });
+
+  it("購読中は notify_enabled: false のとき「通知をオンにする」トグルが表示される", async () => {
+    renderSubscribedScene({ notifyEnabled: false });
+    await screen.findByRole("heading", { level: 1 });
+    expect(screen.getByRole("button", { name: "通知をオンにする" })).toBeInTheDocument();
+  });
+
+  it("未購読の場合はトグルが表示されない", async () => {
+    renderScene();
+    await screen.findByRole("heading", { level: 1 });
+    expect(screen.queryByRole("button", { name: "通知をオフにする" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "通知をオンにする" })).not.toBeInTheDocument();
+  });
+
+  it("トグルをクリックすると PATCH で notify_enabled が反転して送られる", async () => {
+    const patchSpy = vi.fn();
+    server.use(
+      http.patch("/api/communities/:slug/subscription", async ({ request }) => {
+        patchSpy(await request.json());
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    renderSubscribedScene({ notifyEnabled: true });
+    await screen.findByRole("heading", { level: 1 });
+
+    await userEvent.click(screen.getByRole("button", { name: "通知をオフにする" }));
+
+    await waitFor(() => {
+      expect(patchSpy).toHaveBeenCalledWith({ notify_enabled: false });
+    });
+  });
+});
+
 describe("CommunityScene — 著者名がワーカープロフィールへのリンクになる (#1017)", () => {
   it("author_worker を持つ投稿の著者名がリンクとして描画される", async () => {
     const postWithWorker = {
@@ -557,7 +651,10 @@ describe("CommunityScene — 著者名がワーカープロフィールへのリ
     });
     qc.setQueryData(communitySubscriptionQueryKey("ai-dev"), { subscribed: false });
     qc.setQueryData(AUTH_ME_QUERY_KEY, null);
-    qc.setQueryData(communityRecentWorkersQueryKey("ai-dev"), mockRecentWorkers);
+    qc.setQueryData(communityWorkersQueryKey("ai-dev"), {
+      pages: [{ items: mockCommunityWorkers, nextCursor: null }],
+      pageParams: [undefined],
+    });
 
     render(
       <QueryClientProvider client={qc}>
@@ -595,7 +692,10 @@ describe("CommunityScene — ゲスト購読誘導（#882）", () => {
     });
     qc.setQueryData(communitySubscriptionQueryKey("ai-dev"), { subscribed: false });
     qc.setQueryData(AUTH_ME_QUERY_KEY, mockUser);
-    qc.setQueryData(communityRecentWorkersQueryKey("ai-dev"), mockRecentWorkers);
+    qc.setQueryData(communityWorkersQueryKey("ai-dev"), {
+      pages: [{ items: mockCommunityWorkers, nextCursor: null }],
+      pageParams: [undefined],
+    });
     qc.setQueryData(unreadCountsQueryKey(), { unread_counts: [] });
     return render(
       <QueryClientProvider client={qc}>
@@ -636,5 +736,77 @@ describe("CommunityScene — ゲスト購読誘導（#882）", () => {
     await screen.findByRole("heading", { level: 1 });
     const subscribeButtons = screen.getAllByRole("button", { name: "購読する" });
     expect(subscribeButtons.length).toBeGreaterThan(0);
+  });
+});
+
+describe("CommunityScene — コミュニティワーカーの無限スクロール（sentinelRef）（#1078）", () => {
+  it("hasNextPage=true かつ番兵要素が intersect するとき次ページのワーカーが読み込まれる", async () => {
+    let observerCallback: ((entries: IntersectionObserverEntry[]) => void) | null = null;
+    vi.stubGlobal(
+      "IntersectionObserver",
+      vi.fn((cb: (entries: IntersectionObserverEntry[]) => void) => {
+        observerCallback = cb;
+        return { observe: vi.fn(), disconnect: vi.fn() };
+      }),
+    );
+
+    server.use(
+      http.get("/api/communities/:slug/workers", ({ request }) => {
+        const url = new URL(request.url);
+        const isNextPage = url.searchParams.has("cursor");
+        if (isNextPage) {
+          return HttpResponse.json({
+            items: [{ id: "worker-2", displayName: "ken", role: "ベテラン" }],
+            nextCursor: null,
+          });
+        }
+        return HttpResponse.json({
+          items: [{ id: "worker-1", displayName: "haru", role: "ムードメーカー" }],
+          nextCursor: "cursor-1",
+        });
+      }),
+    );
+
+    renderScene({ seedCommunityWorkers: false });
+    expect(await screen.findByText("haru")).toBeInTheDocument();
+    expect(observerCallback).not.toBeNull();
+
+    observerCallback!([{ isIntersecting: true } as IntersectionObserverEntry]);
+
+    expect(await screen.findByText("ken")).toBeInTheDocument();
+
+    vi.unstubAllGlobals();
+  });
+
+  it("hasNextPage=false のとき番兵要素が intersect しても追加読み込みされない", async () => {
+    let observerCallback: ((entries: IntersectionObserverEntry[]) => void) | null = null;
+    vi.stubGlobal(
+      "IntersectionObserver",
+      vi.fn((cb: (entries: IntersectionObserverEntry[]) => void) => {
+        observerCallback = cb;
+        return { observe: vi.fn(), disconnect: vi.fn() };
+      }),
+    );
+
+    const workersHandler = vi.fn(() =>
+      HttpResponse.json({
+        items: [{ id: "worker-1", displayName: "haru", role: "ムードメーカー" }],
+        nextCursor: null,
+      }),
+    );
+    server.use(http.get("/api/communities/:slug/workers", workersHandler));
+
+    renderScene({ seedCommunityWorkers: false });
+    expect(await screen.findByText("haru")).toBeInTheDocument();
+    expect(observerCallback).not.toBeNull();
+    const callCountBeforeIntersect = workersHandler.mock.calls.length;
+
+    observerCallback!([{ isIntersecting: true } as IntersectionObserverEntry]);
+
+    // 追加のフェッチが発火しないことを確認するため、他の非同期処理が落ち着くまで少し待つ。
+    await new Promise((r) => setTimeout(r, 50));
+    expect(workersHandler.mock.calls.length).toBe(callCountBeforeIntersect);
+
+    vi.unstubAllGlobals();
   });
 });

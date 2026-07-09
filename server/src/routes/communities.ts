@@ -1,22 +1,27 @@
-import { CommunityFeedQuerySchema, NotFoundError } from "@hatchery/common";
+import {
+  CommunityFeedQuerySchema,
+  CommunityWorkersQuerySchema,
+  NotFoundError,
+  UpdateSubscriptionNotifyEnabledBodySchema,
+} from "@hatchery/common";
 import { Router } from "express";
 
 import { buildPrivateCacheControl } from "../config/security.js";
 import { getAuthUser } from "../middleware/getAuthUser.js";
 import { requireAuth } from "../middleware/requireAuth.js";
+import { validateBody } from "../middleware/validateBody.js";
 import { toCommunityResponse } from "./communityResponse.js";
 import type { CommentRepository } from "../persistence/commentRepository.js";
 import type { CommunityRepository } from "../persistence/communityRepository.js";
 import type { PostRepository } from "../persistence/postRepository.js";
 import type { SubscriptionRepository } from "../persistence/subscriptionRepository.js";
 import type { VoteRepository } from "../persistence/voteRepository.js";
+import type { WorkerCommunityRepository } from "../persistence/workerCommunityRepository.js";
 import type { WorkerRepository } from "../persistence/workerRepository.js";
 import { attachAuthorWorker } from "./authorWorker.js";
 import { attachCommentCount } from "./commentCount.js";
 import { extractSessionId } from "./extractSessionId.js";
 import { toPostResponse } from "./postResponse.js";
-
-const RECENT_WORKERS_LIMIT = 10;
 
 /**
  * /api/communities ルータ。公共コミュニティの読み取り API と購読 API。ADR-0019 / ADR-0020。
@@ -32,6 +37,7 @@ export function createCommunitiesRouter(
   workerRepo: WorkerRepository,
   commentRepo: CommentRepository,
   voteRepo: VoteRepository,
+  workerCommunityRepo: WorkerCommunityRepository,
 ): Router {
   const router = Router();
 
@@ -105,36 +111,32 @@ export function createCommunitiesRouter(
       });
   });
 
-  // community に最近投稿したワーカー一覧（認証不要・#207）
+  // community 所属の全ワーカー一覧（認証不要・カーソルページネーション・#1078）
   // eslint-disable-next-line max-params
-  router.get("/:slug/recent-workers", (req, res, next) => {
+  router.get("/:slug/workers", (req, res, next) => {
+    const parsed = CommunityWorkersQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      res.status(400).json({ error: "ValidationError", issues: parsed.error.issues });
+      return;
+    }
+    const { cursor, limit } = parsed.data;
     const { slug } = req.params as { slug: string };
-    // reveal フィルタ（#556）: createdAt <= now の post の author のみ対象にする。
-    const recentWorkersNow = new Date();
     communityRepo
       .findBySlug(slug)
       .then((community) => {
         if (!community) {
           throw new NotFoundError("CommunityNotFound");
         }
-        return postRepo.listByCommunity(community.id, undefined, { now: recentWorkersNow });
+        return workerCommunityRepo.listWorkersByCommunity({ communityId: community.id, cursor, limit });
       })
-      .then((posts) => {
-        // post.author は worker の id（UUID）か displayName（旧データ）のいずれか（#478）。
-        // 新着順の distinct author を集め、id/displayName 両対応の resolveByAuthors で Worker を解決する。
-        const seen = new Set<string>();
-        const distinctAuthors: string[] = [];
-        for (const post of posts) {
-          if (!seen.has(post.author)) {
-            seen.add(post.author);
-            distinctAuthors.push(post.author);
-            if (distinctAuthors.length >= RECENT_WORKERS_LIMIT) break;
-          }
+      .then((result) => res.status(200).json({ items: result.items, nextCursor: result.nextCursor }))
+      .catch((err: unknown) => {
+        if (err instanceof Error && err.message === "INVALID_CURSOR") {
+          res.status(400).json({ error: "ValidationError", issues: [{ message: "カーソルが不正です" }] });
+          return;
         }
-        return workerRepo.resolveByAuthors(distinctAuthors);
-      })
-      .then((workers) => res.status(200).json(workers))
-      .catch(next);
+        next(err);
+      });
   });
 
   // 購読状態取得（認証任意・未認証は subscribed: false を返す・#421）
@@ -151,14 +153,46 @@ export function createCommunitiesRouter(
           throw new NotFoundError("CommunityNotFound");
         }
         if (!req.user) {
-          return res.status(200).json({ subscribed: false });
+          return res.status(200).json({ subscribed: false, notify_enabled: true });
         }
         return subscriptionRepo
-          .hasSubscription(req.user.id, community.id)
-          .then((subscribed) => res.status(200).json({ subscribed }));
+          .find({ userId: req.user.id, communityId: community.id })
+          .then((record) =>
+            res.status(200).json({ subscribed: record !== null, notify_enabled: record?.notifyEnabled ?? true }),
+          );
       })
       .catch(next);
   });
+
+  // community 単位の通知 ON/OFF 更新（認証必須・購読済みのみ・#1088）
+  router.patch(
+    "/:slug/subscription",
+    requireAuth,
+    validateBody(UpdateSubscriptionNotifyEnabledBodySchema),
+    // eslint-disable-next-line max-params
+    (req, res, next) => {
+      const { slug } = req.params as { slug: string };
+      const { notify_enabled: notifyEnabled } = req.body as { notify_enabled: boolean };
+      const userId = getAuthUser(req).id;
+
+      communityRepo
+        .findBySlug(slug)
+        .then((community) => {
+          if (!community) {
+            throw new NotFoundError("CommunityNotFound");
+          }
+          return subscriptionRepo.find({ userId, communityId: community.id }).then((record) => {
+            if (!record) {
+              return res.status(403).json({ error: "NotSubscribed" });
+            }
+            return subscriptionRepo
+              .updateNotifyEnabled({ userId, communityId: community.id, notifyEnabled })
+              .then(() => res.status(204).end());
+          });
+        })
+        .catch(next);
+    },
+  );
 
   // community 購読（認証必須・ADR-0020）
   // eslint-disable-next-line max-params

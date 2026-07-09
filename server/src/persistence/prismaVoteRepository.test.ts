@@ -424,4 +424,106 @@ describe.skipIf(!DATABASE_URL)("createPrismaVoteRepository (integration)", () =>
       expect(result.size).toBe(0);
     });
   });
+
+  describe("trendingItemsSince (#1065)", () => {
+    it("vote が 0 件のとき空配列を返す", async () => {
+      await setupFixtures();
+      const repo = createPrismaVoteRepository(prisma);
+
+      const result = await repo.trendingItemsSince({ since: new Date("2020-01-01"), limit: 10 });
+
+      expect(result).toEqual([]);
+    });
+
+    it("post への vote を net_score に集計し type: post のアイテムを返す（community_slug 付き）", async () => {
+      await setupFixtures();
+      const repo = createPrismaVoteRepository(prisma);
+
+      await repo.vote({ sessionId: sessId1, userId, targetType: "post", targetId: postId, direction: "up" });
+      await repo.vote({ sessionId: sessId2, userId: userId2, targetType: "post", targetId: postId, direction: "up" });
+
+      const result = await repo.trendingItemsSince({ since: new Date("2020-01-01"), limit: 10 });
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toMatchObject({
+        type: "post",
+        id: postId,
+        post_id: postId,
+        community_id: communityId,
+        community_slug: "vote-int",
+        net_score: 2,
+        excerpt: "x1",
+      });
+    });
+
+    it("comment への vote は post_id に親 post の id を設定し type: comment を返す", async () => {
+      await setupFixtures();
+      const repo = createPrismaVoteRepository(prisma);
+
+      await repo.vote({ sessionId: sessId1, userId, targetType: "comment", targetId: commentId, direction: "down" });
+
+      const result = await repo.trendingItemsSince({ since: new Date("2020-01-01"), limit: 10 });
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toMatchObject({
+        type: "comment",
+        id: commentId,
+        post_id: postId,
+        community_slug: "vote-int",
+        net_score: -1,
+      });
+    });
+
+    it("excerpt を本文冒頭60文字（コードポイント単位）+ '…' に切り詰める", async () => {
+      await setupFixtures();
+      const longText = "あ".repeat(70);
+      const longPost = await prisma.post.create({
+        data: { communityId, slotKey: "2026-06-10T09:01", seq: 5, author: "w1", title: "long", text: longText },
+      });
+      const repo = createPrismaVoteRepository(prisma);
+
+      await repo.vote({ sessionId: sessId1, userId, targetType: "post", targetId: longPost.id, direction: "up" });
+
+      const result = await repo.trendingItemsSince({ since: new Date("2020-01-01"), limit: 10 });
+
+      expect(result[0]?.excerpt).toBe("あ".repeat(60) + "…");
+    });
+
+    it("net_score 降順でソートされる", async () => {
+      await setupFixtures();
+      const repo = createPrismaVoteRepository(prisma);
+
+      await repo.vote({ sessionId: sessId1, userId, targetType: "post", targetId: postId, direction: "up" });
+      await repo.vote({ sessionId: sessId1, userId, targetType: "post", targetId: postId2, direction: "up" });
+      await repo.vote({ sessionId: sessId2, userId: userId2, targetType: "post", targetId: postId2, direction: "up" });
+
+      const result = await repo.trendingItemsSince({ since: new Date("2020-01-01"), limit: 10 });
+
+      expect(result.map((item) => item.id)).toEqual([postId2, postId]);
+    });
+
+    it("limit で件数を制限する", async () => {
+      await setupFixtures();
+      const repo = createPrismaVoteRepository(prisma);
+
+      await repo.vote({ sessionId: sessId1, userId, targetType: "post", targetId: postId, direction: "up" });
+      await repo.vote({ sessionId: sessId1, userId, targetType: "post", targetId: postId2, direction: "up" });
+
+      const result = await repo.trendingItemsSince({ since: new Date("2020-01-01"), limit: 1 });
+
+      expect(result).toHaveLength(1);
+    });
+
+    it("since より前の vote は集計から除外する", async () => {
+      await setupFixtures();
+      const repo = createPrismaVoteRepository(prisma);
+
+      await repo.vote({ sessionId: sessId1, userId, targetType: "post", targetId: postId, direction: "up" });
+
+      const future = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      const result = await repo.trendingItemsSince({ since: future, limit: 10 });
+
+      expect(result).toEqual([]);
+    });
+  });
 });

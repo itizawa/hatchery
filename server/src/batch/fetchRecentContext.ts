@@ -6,7 +6,7 @@ import type { PostRepository } from "../persistence/postRepository.js";
 
 export interface RecentContext {
   recentLog: string[];
-  recentPostsForReply: Array<{ ref: string; id: string; title: string }>;
+  recentPostsForReply: Array<{ ref: string; id: string; title: string; text: string }>;
   popularPosts: Array<{ title: string; author: string; score: number }>;
 }
 
@@ -58,6 +58,7 @@ export async function fetchRecentContext({
     ref: `ref-${i + 1}`,
     id: p.id,
     title: p.title,
+    text: p.text,
   }));
 
   const popularPostsSince = new Date(

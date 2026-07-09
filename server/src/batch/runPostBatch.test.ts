@@ -13,6 +13,7 @@ import {
 import type { WorkerRecord } from "../persistence/workerRepository.js";
 import { createInMemoryWorldStateRepository } from "../persistence/worldStateRepository.js";
 
+import * as logger from "./logger.js";
 import { runPostBatch, POST_COUNT_MIN, POST_COUNT_MAX, DEFAULT_POST_DRIP_WINDOW_MS } from "./runPostBatch.js";
 
 const botWorkers: WorkerRecord[] = [
@@ -258,6 +259,80 @@ describe("runPostBatch (#672)", () => {
     expect(updatedCount).toBeGreaterThan(0);
   });
 
+  describe("直近投稿とのテキスト類似度検知（#1115）", () => {
+    it("生成された post 本文が直近 post 本文とほぼ同一のとき post_batch.duplicate_text_detected をログ出力する", async () => {
+      const now = new Date("2026-06-18T12:00:00Z");
+      const generate = vi.fn().mockResolvedValue({ text: validPostOutput });
+      const postRepo = createInMemoryPostRepository();
+      const logSpy = vi.spyOn(logger, "logBatchInfo");
+
+      // validPostOutput の p1.text と同一の既存 post をあらかじめ永続化しておく
+      await postRepo.createMany(community1.id, [
+        {
+          slotKey: "slot-existing",
+          seq: 0,
+          author: "haru",
+          title: "AIの進歩について",
+          text: "最近のAI技術の進歩が目覚ましいですね。",
+          createdAt: new Date(now.getTime() - 60 * 60 * 1000),
+        },
+      ]);
+
+      await runPostBatch({
+        communityRepo: createInMemoryCommunityRepository([community1]),
+        postRepo,
+        workerCommunityRepo: createInMemoryWorkerCommunityRepository({ workers: [], links: [] }),
+        botWorkerProvider: () => Promise.resolve(botWorkers),
+        generate,
+        anthropicApiKey: "test-key",
+        rng: () => 0,
+        now,
+      });
+
+      expect(logSpy).toHaveBeenCalledWith(
+        "post_batch.duplicate_text_detected",
+        expect.objectContaining({
+          communityId: community1.id,
+          matchedTitle: "AIの進歩について",
+        }),
+      );
+    });
+
+    it("直近 post と内容が異なる場合は post_batch.duplicate_text_detected をログ出力しない", async () => {
+      const now = new Date("2026-06-18T12:00:00Z");
+      const generate = vi.fn().mockResolvedValue({ text: validPostOutput });
+      const postRepo = createInMemoryPostRepository();
+      const logSpy = vi.spyOn(logger, "logBatchInfo");
+
+      await postRepo.createMany(community1.id, [
+        {
+          slotKey: "slot-existing",
+          seq: 0,
+          author: "haru",
+          title: "まったく無関係の話題",
+          text: "今日は近所のカフェでコーヒーを飲みながら本を読んだ。",
+          createdAt: new Date(now.getTime() - 60 * 60 * 1000),
+        },
+      ]);
+
+      await runPostBatch({
+        communityRepo: createInMemoryCommunityRepository([community1]),
+        postRepo,
+        workerCommunityRepo: createInMemoryWorkerCommunityRepository({ workers: [], links: [] }),
+        botWorkerProvider: () => Promise.resolve(botWorkers),
+        generate,
+        anthropicApiKey: "test-key",
+        rng: () => 0,
+        now,
+      });
+
+      expect(logSpy).not.toHaveBeenCalledWith(
+        "post_batch.duplicate_text_detected",
+        expect.anything(),
+      );
+    });
+  });
+
   describe("リトライ (#626)", () => {
     it("JSON パース失敗が 1 回でリトライ成功する場合、generate が 2 回呼ばれ post が永続化される", async () => {
       const generate = vi.fn()
@@ -373,5 +448,87 @@ describe("runPostBatch (#672)", () => {
     expect(pausedPosts).toHaveLength(0);
     // generate は稼働中の 1 件のみに対して呼ばれる
     expect(generate).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("外部フィード（feedUrl）の post バッチへの注入（#1104 / ADR-0035）", () => {
+  beforeEach(() => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("(a) feedUrl 未設定のコミュニティでは fetchFeed を呼ばない", async () => {
+    const generate = vi.fn().mockResolvedValue({ text: validPostOutput });
+    const fetchFeed = vi.fn().mockResolvedValue([]);
+
+    await runPostBatch({
+      communityRepo: createInMemoryCommunityRepository([community1]),
+      postRepo: createInMemoryPostRepository(),
+      workerCommunityRepo: createInMemoryWorkerCommunityRepository({ workers: [], links: [] }),
+      botWorkerProvider: () => Promise.resolve(botWorkers),
+      generate,
+      fetchFeed,
+      anthropicApiKey: "test-key",
+      rng: () => 0,
+    });
+
+    expect(fetchFeed).not.toHaveBeenCalled();
+  });
+
+  it("(b) feedUrl 設定時に fetchFeed を呼び、取得記事がプロンプトに注入される", async () => {
+    const communityWithFeed: CommunityRecord = {
+      ...community1,
+      feedUrl: "https://zenn.dev/feed",
+    };
+    const generate = vi.fn().mockResolvedValue({ text: validPostOutput });
+    const fetchFeed = vi.fn().mockResolvedValue([
+      { title: "TypeScript 5.0 の新機能", url: "https://zenn.dev/a", summary: "概要", author: "yamada" },
+    ]);
+
+    await runPostBatch({
+      communityRepo: createInMemoryCommunityRepository([communityWithFeed]),
+      postRepo: createInMemoryPostRepository(),
+      workerCommunityRepo: createInMemoryWorkerCommunityRepository({ workers: [], links: [] }),
+      botWorkerProvider: () => Promise.resolve(botWorkers),
+      generate,
+      fetchFeed,
+      anthropicApiKey: "test-key",
+      rng: () => 0,
+    });
+
+    expect(fetchFeed).toHaveBeenCalledWith({ feedUrl: "https://zenn.dev/feed" });
+    const promptArg = generate.mock.calls[0]?.[0] as string;
+    expect(promptArg).toContain("TypeScript 5.0 の新機能");
+  });
+
+  it("(c) フィード取得失敗（空配列）時は通常生成にフォールバックしバッチが中断しない", async () => {
+    const communityWithFeed: CommunityRecord = {
+      ...community1,
+      feedUrl: "https://zenn.dev/feed",
+    };
+    const generate = vi.fn().mockResolvedValue({ text: validPostOutput });
+    const fetchFeed = vi.fn().mockResolvedValue([]);
+    const postRepo = createInMemoryPostRepository();
+
+    const result = await runPostBatch({
+      communityRepo: createInMemoryCommunityRepository([communityWithFeed]),
+      postRepo,
+      workerCommunityRepo: createInMemoryWorkerCommunityRepository({ workers: [], links: [] }),
+      botWorkerProvider: () => Promise.resolve(botWorkers),
+      generate,
+      fetchFeed,
+      anthropicApiKey: "test-key",
+      rng: () => 0,
+    });
+
+    expect(fetchFeed).toHaveBeenCalledWith({ feedUrl: "https://zenn.dev/feed" });
+    expect(result.posts.length).toBeGreaterThan(0);
+    const promptArg = generate.mock.calls[0]?.[0] as string;
+    expect(promptArg).not.toContain("最新フィード記事");
   });
 });

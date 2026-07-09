@@ -1,7 +1,6 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider, createMemoryHistory } from "@tanstack/react-router";
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createQueryClient } from "../queryClient.js";
@@ -69,25 +68,21 @@ describe("SearchScene", () => {
     vi.unstubAllGlobals();
   });
 
-  // #1055 のセルフレビューで検出: ページ本体の検索欄は表示中の検索結果と常に一致させる必要が
-  // あるため、未送信の編集があっても q の変化（search param のみの遷移。TanStack Router は
-  // この種の遷移でコンポーネントを再マウントしない）に追従してリセットされることを確認する。
-  it("未送信の編集中に q が変わる（戻る/進む相当）と、入力欄が新しい q に追従してリセットされる", async () => {
+  // Issue #1112: ヘッダー検索欄の常設に伴い、ページ本体の重複する見出し・検索フォームを削除した。
+  it("見出し「投稿を検索」が表示されない", async () => {
     stubFetch();
-    const { router } = renderApp("/search?q=dogs");
+    renderApp("/search?q=dogs");
 
-    const input = await screen.findByPlaceholderText<HTMLInputElement>("キーワードを入力...");
-    expect(input.value).toBe("dogs");
+    await screen.findByText("「dogs」に一致する投稿が見つかりませんでした。");
+    expect(screen.queryByRole("heading", { name: "投稿を検索" })).not.toBeInTheDocument();
+  });
 
-    await userEvent.clear(input);
-    await userEvent.type(input, "dogs2");
-    expect(input.value).toBe("dogs2");
+  it("ページ内検索フォーム（プレースホルダー「キーワードを入力...」）が表示されない", async () => {
+    stubFetch();
+    renderApp("/search?q=dogs");
 
-    await router.navigate({ to: "/search", search: { q: "cats" } });
-
-    await waitFor(() => {
-      expect(input.value).toBe("cats");
-    });
+    await screen.findByText("「dogs」に一致する投稿が見つかりませんでした。");
+    expect(screen.queryByPlaceholderText("キーワードを入力...")).not.toBeInTheDocument();
   });
 
   it("my_vote: 'up' の投稿は検索結果一覧で up vote 済み表示になる（#1059）", async () => {

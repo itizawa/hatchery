@@ -1,10 +1,14 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { formatRelativeTime } from "./formatRelativeTime.js";
 
 const now = new Date("2026-06-14T12:00:00Z");
 
 describe("formatRelativeTime", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it("0秒（同時刻）は『たった今』", () => {
     expect(formatRelativeTime({ target: new Date("2026-06-14T12:00:00Z"), now })).toBe("たった今");
   });
@@ -68,5 +72,18 @@ describe("formatRelativeTime", () => {
   it("不正な Date（NaN）は空文字を返す", () => {
     expect(formatRelativeTime({ target: new Date("invalid"), now })).toBe("");
     expect(formatRelativeTime({ target: new Date("2026-06-14T11:00:00Z"), now: new Date("invalid") })).toBe("");
+  });
+
+  it("DST（夏時間）の切り替え跨ぎでも UTC 差分ベースで『N日前』を判定する（#1043 回帰テスト）", () => {
+    // 2026-11-01 は America/New_York の DST 終了日（02:00 EDT → 01:00 EST、25時間ある日）。
+    // target/now とも同じローカル暦日（Nov 1）に収まるため、旧実装（date-fns の differenceInDays
+    // によるローカル暦日差判定）だと「0日前」になってしまっていた（修正前に本テストで確認済み）。
+    // 現在の実装は diffMs（UTC ミリ秒差）のみを使いタイムゾーンを参照しないため、TZ 設定に関わらず
+    // 常に正しく「1日前」を返す。TZ スタブは、将来 differenceInDays 的なローカル暦日ベースの実装へ
+    // 回帰した場合にこのテストが再び失敗するようにするための固定である。
+    vi.stubEnv("TZ", "America/New_York");
+    const dstTarget = new Date("2026-11-01T04:30:00Z");
+    const dstNow = new Date("2026-11-02T04:30:00Z");
+    expect(formatRelativeTime({ target: dstTarget, now: dstNow })).toBe("1日前");
   });
 });

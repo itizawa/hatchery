@@ -9,8 +9,10 @@ import type { ReactElement } from "react";
 import { AdminWorkerTable } from "./AdminWorkerTable";
 
 const mockNavigate = vi.fn();
+const mockUseSearch = vi.fn();
 vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => mockNavigate,
+  useSearch: () => mockUseSearch(),
 }));
 
 // eslint-disable-next-line max-params
@@ -44,6 +46,8 @@ function renderWithClient(ui: ReactElement) {
 describe("AdminWorkerTable（useSuspenseQuery + QueryBoundary）", () => {
   beforeEach(() => {
     vi.spyOn(console, "error").mockImplementation(() => {});
+    mockNavigate.mockClear();
+    mockUseSearch.mockReturnValue({ tab: "users" });
   });
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -113,5 +117,34 @@ describe("AdminWorkerTable（useSuspenseQuery + QueryBoundary）", () => {
     );
     await userEvent.click(screen.getByRole("button", { name: "ワーカーを追加" }));
     expect(mockNavigate).toHaveBeenCalledWith({ to: "/admin/workers/new" });
+  });
+
+  it("workerSaved=1 のとき保存成功のSnackbarが表示される（#1080）", async () => {
+    mockUseSearch.mockReturnValue({ tab: "users", workerSaved: 1 });
+    stubWorkers(200, []);
+    renderWithClient(<AdminWorkerTable />);
+    expect(await screen.findByText("ワーカーを保存しました")).toBeInTheDocument();
+  });
+
+  it("workerSaved=1 のとき navigate で search からフラグを除去する（#1080）", async () => {
+    mockUseSearch.mockReturnValue({ tab: "users", workerSaved: 1 });
+    stubWorkers(200, []);
+    renderWithClient(<AdminWorkerTable />);
+    await waitFor(() =>
+      expect(mockNavigate).toHaveBeenCalledWith({
+        to: "/admin",
+        search: { tab: "users" },
+        replace: true,
+      }),
+    );
+  });
+
+  it("workerSaved が無いとき保存成功のSnackbarは表示されない（#1080）", async () => {
+    stubWorkers(200, []);
+    renderWithClient(<AdminWorkerTable />);
+    await waitFor(() =>
+      expect(screen.queryAllByTestId("worker-table-skeleton-item")).toHaveLength(0),
+    );
+    expect(screen.queryByText("ワーカーを保存しました")).not.toBeInTheDocument();
   });
 });

@@ -32,6 +32,8 @@ export interface CreateCommunityRecordInput {
   name: string;
   description: string;
   generationInstruction?: string | null;
+  /** 外部フィード URL（#491 / #1104）。 */
+  feedUrl?: string | null;
 }
 
 /** コミュニティ更新の入力型（#310 / #457 / #488 / #491）。slug は不変。 */
@@ -101,7 +103,7 @@ export function createInMemoryCommunityRepository(
         iconUrl: null,
         coverUrl: null,
         generationInstruction: input.generationInstruction ?? null,
-        feedUrl: null,
+        feedUrl: input.feedUrl ?? null,
         generationPaused: false,
         createdAt: new Date(),
       };

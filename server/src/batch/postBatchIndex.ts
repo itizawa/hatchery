@@ -10,6 +10,7 @@ import {
   type RunPostBatchResult,
 } from "./runPostBatch.js";
 import type { PushNotificationService } from "../services/pushNotificationService.js";
+import type { SubscriptionRepository } from "../persistence/subscriptionRepository.js";
 
 /** CLI エントリ関数の依存（テスト用注入対応）。 */
 export interface PostBatchCliDeps {
@@ -19,6 +20,8 @@ export interface PostBatchCliDeps {
   disconnect: () => Promise<void>;
   /** プッシュ通知サービス（#798）。未設定ならプッシュ通知はスキップ。 */
   pushNotificationService?: PushNotificationService;
+  /** notify 対象ユーザーの絞り込みに使う（#1088）。未設定ならプッシュ通知はスキップ。 */
+  subscriptionRepo?: SubscriptionRepository;
 }
 
 /**
@@ -35,9 +38,18 @@ export async function runPostBatchCli(cliDeps: PostBatchCliDeps): Promise<RunPos
       posts: result.posts.length,
     });
 
-    if (cliDeps.pushNotificationService && result.posts.length > 0) {
-      pushPromise = cliDeps.pushNotificationService
-        .sendToAllSubscribers({ title: "新着投稿", body: "コミュニティに新しい投稿があります", url: "/" })
+    if (cliDeps.pushNotificationService && cliDeps.subscriptionRepo && result.posts.length > 0) {
+      const { pushNotificationService, subscriptionRepo } = cliDeps;
+      const communityIds = [...new Set(result.posts.map((p) => p.communityId))];
+      pushPromise = subscriptionRepo
+        .listNotifiableUserIds(communityIds)
+        .then((userIds) => {
+          if (userIds.length === 0) return;
+          return pushNotificationService.sendToUsers({
+            payload: { title: "新着投稿", body: "コミュニティに新しい投稿があります", url: "/" },
+            userIds,
+          });
+        })
         .catch((err: unknown) => logBatchError("push_notification.batch_send_failed", err));
     }
 
@@ -67,6 +79,7 @@ async function main(): Promise<void> {
     { createPrismaTokenUsageLogRepository },
     { createPrismaPushSubscriptionRepository },
     { createPushNotificationService },
+    { createPrismaSubscriptionRepository },
   ] = await Promise.all([
     import("../persistence/prismaClient.js"),
     import("../persistence/prismaBatchRunLogRepository.js"),
@@ -79,6 +92,7 @@ async function main(): Promise<void> {
     import("../persistence/prismaTokenUsageLogRepository.js"),
     import("../persistence/prismaPushSubscriptionRepository.js"),
     import("../services/pushNotificationService.js"),
+    import("../persistence/prismaSubscriptionRepository.js"),
   ]);
 
   const workerRepo = createPrismaWorkerRepository(prisma);
@@ -112,6 +126,7 @@ async function main(): Promise<void> {
     },
     disconnect: () => prisma.$disconnect(),
     pushNotificationService,
+    subscriptionRepo: createPrismaSubscriptionRepository(prisma),
   });
 }
 

@@ -1,4 +1,9 @@
-import type { VoteDirection } from "@hatchery/common";
+import type { TrendingItem, VoteDirection } from "@hatchery/common";
+
+import type { CommentRepository } from "./commentRepository.js";
+import type { CommunityRepository } from "./communityRepository.js";
+import type { PostRepository } from "./postRepository.js";
+import { buildTrendingExcerpt } from "./trendingItemBuilder.js";
 
 export type { VoteDirection };
 
@@ -82,14 +87,91 @@ export interface VoteRepository {
 
   /** 指定日時以降の vote をワーカー単位で生カウントする（#761 vote 分布用）。author → 総 vote 件数 の Map。 */
   rawVoteCountsByWorkerSince(since: Date): Promise<Map<string, number>>;
+
+  /**
+   * 指定日時以降の vote を Post 単位・Comment 単位で集計し、net_score 降順で上位 limit 件を返す（#1065）。
+   * ランキング画面右サイドバーの「直近7日間で評価を多く獲得した Post / Comment」表示に使う。
+   */
+  trendingItemsSince(params: { since: Date; limit: number }): Promise<TrendingItem[]>;
+}
+
+/**
+ * trendingItemsSince（in-memory）で対象（post / comment）のメタデータを解決するための情報。
+ * comment の場合 postId は親 post の id、post の場合は自身の id。
+ */
+export interface TrendingTargetMeta {
+  postId: string;
+  communityId: string;
+  communitySlug: string;
+  text: string;
+  createdAt: Date;
+}
+
+/**
+ * in-memory trendingItemsSince で targetId → 対象メタデータを解決する関数。
+ * 対象が見つからない（削除済み等）場合は null を返す（呼び出し元でスキップする）。
+ */
+// eslint-disable-next-line max-params
+export type ResolveTrendingTargetMeta = (
+  targetType: VoteTargetType,
+  targetId: string,
+) => Promise<TrendingTargetMeta | null>;
+
+/**
+ * postRepository / commentRepository / communityRepository を橋渡しする
+ * ResolveTrendingTargetMeta を組み立てる（#1065）。
+ * in-memory VoteRepository で trendingItemsSince を実際に使う全ての呼び出し元
+ * （`createTestDeps` / ルートテスト等）がこれを共有し、解決ロジックを重複させない。
+ */
+export function buildResolveTrendingTargetMeta({
+  postRepository,
+  commentRepository,
+  communityRepository,
+}: {
+  postRepository: PostRepository;
+  commentRepository: CommentRepository;
+  communityRepository: CommunityRepository;
+}): ResolveTrendingTargetMeta {
+  // eslint-disable-next-line max-params
+  return async (targetType, targetId) => {
+    if (targetType === "post") {
+      const post = await postRepository.findById(targetId);
+      if (!post) return null;
+      const community = await communityRepository.findById(post.communityId);
+      return {
+        postId: post.id,
+        communityId: post.communityId,
+        communitySlug: community?.slug ?? "",
+        text: post.text,
+        createdAt: post.createdAt,
+      };
+    }
+    const comment = await commentRepository.findById(targetId);
+    if (!comment) return null;
+    const community = await communityRepository.findById(comment.communityId);
+    return {
+      postId: comment.postId,
+      communityId: comment.communityId,
+      communitySlug: community?.slug ?? "",
+      text: comment.text,
+      createdAt: comment.createdAt,
+    };
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // In-Memory 実装
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** in-memory VoteRepository（テスト / ローカル dev 用）。 */
-export function createInMemoryVoteRepository(): VoteRepository {
+/**
+ * in-memory VoteRepository（テスト / ローカル dev 用）。
+ * @param options.resolveTrendingTargetMeta trendingItemsSince で targetId → 対象メタデータを
+ *   解決する関数。省略時は trendingItemsSince が常に空配列を返す（#1065）。
+ */
+export function createInMemoryVoteRepository(
+  options: { resolveTrendingTargetMeta?: ResolveTrendingTargetMeta } = {},
+): VoteRepository {
+  const { resolveTrendingTargetMeta } = options;
   const records: VoteRecord[] = [];
 
   function findExisting({
@@ -198,6 +280,57 @@ export function createInMemoryVoteRepository(): VoteRepository {
 
     async rawVoteCountsByWorkerSince() {
       return new Map();
+    },
+
+    async trendingItemsSince({ since, limit }): Promise<TrendingItem[]> {
+      if (!resolveTrendingTargetMeta) return [];
+
+      interface Aggregate {
+        targetType: VoteTargetType;
+        targetId: string;
+        netScore: number;
+      }
+      const aggregates = new Map<string, Aggregate>();
+      for (const r of records) {
+        if (r.createdAt.getTime() < since.getTime()) continue;
+        const key = `${r.targetType} ${r.targetId}`;
+        const delta = r.direction === "up" ? 1 : -1;
+        const existing = aggregates.get(key);
+        if (existing) {
+          existing.netScore += delta;
+        } else {
+          aggregates.set(key, { targetType: r.targetType, targetId: r.targetId, netScore: delta });
+        }
+      }
+
+      const resolved = await Promise.all(
+        Array.from(aggregates.values()).map(async ({ targetType, targetId, netScore }) => {
+          const meta = await resolveTrendingTargetMeta(targetType, targetId);
+          if (!meta) return null;
+          const item: TrendingItem = {
+            type: targetType,
+            id: targetId,
+            post_id: targetType === "post" ? targetId : meta.postId,
+            excerpt: buildTrendingExcerpt(meta.text),
+            community_id: meta.communityId,
+            community_slug: meta.communitySlug,
+            net_score: netScore,
+            created_at: meta.createdAt.toISOString(),
+          };
+          return item;
+        }),
+      );
+      const items = resolved.filter((item): item is TrendingItem => item !== null);
+
+      // net_score 降順。タイ時は created_at 降順・id 降順で決定的にする（Prisma 実装の ORDER BY と揃える・#1065）。
+      items.sort(
+        // eslint-disable-next-line max-params
+        (a, b) =>
+          b.net_score - a.net_score ||
+          b.created_at.localeCompare(a.created_at) ||
+          b.id.localeCompare(a.id),
+      );
+      return items.slice(0, limit);
     },
   };
 }

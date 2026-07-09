@@ -30,6 +30,7 @@ import { createApiDocsRouter, isApiDocsEnabled } from "./routes/apiDocs.js";
 import { createAdminWorkerImageRouter } from "./routes/adminWorkerImage.js";
 import { createAdminCommunityImageRouter } from "./routes/adminCommunityImage.js";
 import { createAdminWorkerCommunitiesRouter } from "./routes/adminWorkerCommunities.js";
+import { createAdminCommunityWorkersRouter } from "./routes/adminCommunityWorkers.js";
 import { createBatchLogsRouter } from "./routes/batch-logs.js";
 import { createTokenUsageRouter } from "./routes/token-usage.js";
 import { createAuthRouter } from "./routes/auth.js";
@@ -43,6 +44,7 @@ import { createPostsRouter } from "./routes/posts.js";
 import { createSitemapRouter } from "./routes/sitemap.js";
 import { createSubscriptionsRouter } from "./routes/subscriptions.js";
 import { createPushSubscriptionsRouter } from "./routes/pushSubscriptions.js";
+import { createRankingRouter } from "./routes/ranking.js";
 
 /** DDoS/過負荷対策（#34）の設定。未指定の項目は安全な既定値を使う。 */
 export interface SecurityOptions {
@@ -187,7 +189,7 @@ export function createApp(deps: AppDeps): Express {
       deps.userRepository,
       deps.googleAuth,
       process.env.NODE_ENV ?? "development",
-      // #78: OAuth 後の戻り先はフロント（公開ページ）のオリジン。sitemap と同じ publicBaseUrl を使う。
+      // #78: OAuth 後の戻り先はフロントエンド（公開ページ）のオリジン。sitemap と同じ publicBaseUrl を使う。
       deps.publicBaseUrl ?? DEFAULT_PUBLIC_BASE_URL,
     ),
   );
@@ -248,6 +250,15 @@ export function createApp(deps: AppDeps): Express {
     ),
   );
   app.use(
+    "/api/admin",
+    noStoreCache,
+    createAdminCommunityWorkersRouter(
+      communityRepo,
+      deps.workerCommunityRepository,
+      deps.workerRepository,
+    ),
+  );
+  app.use(
     "/api/communities",
     publicCache,
     createCommunitiesRouter(
@@ -257,9 +268,11 @@ export function createApp(deps: AppDeps): Express {
       deps.workerRepository,
       commentRepo,
       voteRepo,
+      deps.workerCommunityRepository,
     ),
   );
   app.use("/api/feed", publicCache, createFeedRouter({ postRepo, workerRepo: deps.workerRepository, commentRepo, voteRepo }));
+  app.use("/api/ranking", publicCache, createRankingRouter({ voteRepository: voteRepo }));
   app.use(
     "/api/subscriptions",
     noStoreCache,

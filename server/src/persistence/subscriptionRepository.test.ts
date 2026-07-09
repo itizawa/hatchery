@@ -82,6 +82,64 @@ describe("createInMemorySubscriptionRepository", () => {
     });
   });
 
+  describe("find（#1088）", () => {
+    it("購読済みの場合 notifyEnabled: true（デフォルト）のレコードを返す", async () => {
+      const repo = createInMemorySubscriptionRepository();
+      await repo.add("user-1", "community-1");
+      const record = await repo.find({ userId: "user-1", communityId: "community-1" });
+      expect(record).toMatchObject({ userId: "user-1", communityId: "community-1", notifyEnabled: true });
+    });
+
+    it("未購読の場合 null を返す", async () => {
+      const repo = createInMemorySubscriptionRepository();
+      const record = await repo.find({ userId: "user-1", communityId: "not-subscribed" });
+      expect(record).toBeNull();
+    });
+  });
+
+  describe("updateNotifyEnabled（#1088）", () => {
+    it("購読済みの場合 notifyEnabled を更新できる", async () => {
+      const repo = createInMemorySubscriptionRepository();
+      await repo.add("user-1", "community-1");
+      await repo.updateNotifyEnabled({ userId: "user-1", communityId: "community-1", notifyEnabled: false });
+      const record = await repo.find({ userId: "user-1", communityId: "community-1" });
+      expect(record?.notifyEnabled).toBe(false);
+    });
+
+    it("未購読（存在しない Subscription）に対しては no-op（エラーなし）", async () => {
+      const repo = createInMemorySubscriptionRepository();
+      await expect(
+        repo.updateNotifyEnabled({ userId: "user-1", communityId: "not-subscribed", notifyEnabled: false }),
+      ).resolves.toBeUndefined();
+    });
+  });
+
+  describe("listNotifiableUserIds（#1088）", () => {
+    it("指定 communityId 群で notifyEnabled=true の userId を重複なく返す", async () => {
+      const repo = createInMemorySubscriptionRepository();
+      await repo.add("user-1", "community-1");
+      await repo.add("user-1", "community-2");
+      await repo.add("user-2", "community-2");
+      const ids = await repo.listNotifiableUserIds(["community-1", "community-2"]);
+      expect(ids.sort()).toEqual(["user-1", "user-2"]);
+    });
+
+    it("notifyEnabled=false のユーザーは除外する", async () => {
+      const repo = createInMemorySubscriptionRepository();
+      await repo.add("user-1", "community-1");
+      await repo.updateNotifyEnabled({ userId: "user-1", communityId: "community-1", notifyEnabled: false });
+      const ids = await repo.listNotifiableUserIds(["community-1"]);
+      expect(ids).toEqual([]);
+    });
+
+    it("communityIds が空配列の場合は空配列を返す", async () => {
+      const repo = createInMemorySubscriptionRepository();
+      await repo.add("user-1", "community-1");
+      const ids = await repo.listNotifiableUserIds([]);
+      expect(ids).toEqual([]);
+    });
+  });
+
   describe("listWithUnreadCounts", () => {
     it("購読なしの場合は空配列を返す", async () => {
       const repo = createInMemorySubscriptionRepository();

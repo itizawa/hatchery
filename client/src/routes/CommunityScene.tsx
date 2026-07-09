@@ -21,15 +21,21 @@ import {
   useUnsubscribe,
   useVotePost,
   usePublicCommunities,
-  useRecentWorkers,
+  useCommunityWorkers,
 } from "../api/communities.js";
 import { useAuth } from "../api/auth.js";
-import { useMarkCommunityViewed, useUnreadCountsForNewLabel } from "../api/subscriptions.js";
+import {
+  useMarkCommunityViewed,
+  useSubscriptionStatus,
+  useUnreadCountsForNewLabel,
+  useUpdateNotifyEnabled,
+} from "../api/subscriptions.js";
 import { CommunityHeader } from "../components/CommunityHeader.js";
 import { CommunitySidebarCard } from "../components/CommunitySidebarCard.js";
+import { CommunityWorkersSection } from "../components/CommunityWorkersSection.js";
+import { NotifyToggle } from "../components/NotifyToggle.js";
 import { PostCard } from "../components/PostCard.js";
 import { QueryBoundary } from "../components/QueryBoundary.js";
-import { RecentWorkersSection } from "../components/RecentWorkersSection.js";
 import { ShareButton } from "../components/ShareButton.js";
 import type { VoteDirection } from "../components/VoteControl.js";
 import { SubscribeButton } from "../components/SubscribeButton.js";
@@ -52,7 +58,7 @@ const SORT_OPTIONS = Object.keys(SORT_LABELS) as CommunityFeedSort[];
 /**
  * コミュニティフィードの並べ替えボタン+メニュー（#1062）。
  * 従来の `Tabs`/`Tab` を、選択中の並び順をラベル表示するボタン + `Menu`/`MenuItem` に置き換える。
- * 開閉パターンは `AppHeader.tsx` の `AppHeaderAuthSection`（ButtonBase + aria-haspopup/aria-expanded/aria-controls）を踏襲。
+ * 開閉パターンは `AppHeader.tsx` の `AppHeaderAuthSection`（ButtonBase + aria-haspopup/aria-expanded/aria-controls）を踏襲する。
  */
 const SortMenuButton = ({
   sort,
@@ -122,13 +128,40 @@ const SortMenuButton = ({
 };
 
 /**
- * 最近投稿したワーカーパネル（#207）。
- * #462: useRecentWorkers は Suspense 化。ローディング/エラーは局所 QueryBoundary に委譲し、
+ * コミュニティ所属ワーカーパネル（#207 / #1078: 全ワーカー + 無限スクロール）。
+ * #462: useCommunityWorkers は Suspense 化。ローディング/エラーは局所 QueryBoundary に委譲し、
  * コミュニティ本体（feed など）と独立して描画する。
+ * #1078: CommunityContent の post 一覧と同じ sentinel パターンで、スクロールが sentinel に
+ * 交差したときに hasNextPage && !isFetchingNextPage の場合のみ次ページを読み込む。
  */
-const RecentWorkersPanel = ({ slug }: { slug: string }): ReactElement => {
-  const { data: recentWorkers } = useRecentWorkers(slug);
-  return <RecentWorkersSection workers={recentWorkers} />;
+const CommunityWorkersPanel = ({ slug }: { slug: string }): ReactElement => {
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useCommunityWorkers(slug);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && hasNextPage && !isFetchingNextPage) {
+          void fetchNextPage();
+        }
+      },
+      { threshold: 0.1 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const workers = data.pages.flatMap((page) => page.items);
+
+  return (
+    <CommunityWorkersSection
+      workers={workers}
+      sentinelRef={sentinelRef}
+      isFetchingNextPage={isFetchingNextPage}
+    />
+  );
 };
 
 /** フラットリスト行の hover スタイル（#834）。borderRadius は付けず bgcolor 変化のみ。 */
@@ -148,6 +181,24 @@ const MarkViewedEffect = ({ slug }: { slug: string }): null => {
     markViewed();
   }, [slug, markViewed]);
   return null;
+};
+
+/**
+ * community 単位の通知 ON/OFF トグル（#1088）。
+ * SubscriptionStatus render-prop 内で subscribed === true のときのみレンダーされる。
+ * communitySubscriptionQueryKey を SubscriptionStatus と共有するため、追加のリクエストは発生しない。
+ */
+const NotifySubscriptionToggle = ({ slug }: { slug: string }): ReactElement => {
+  const { data } = useSubscriptionStatus(slug);
+  const { mutate: updateNotifyEnabled, isPending } = useUpdateNotifyEnabled(slug);
+
+  return (
+    <NotifyToggle
+      notifyEnabled={data.notify_enabled}
+      onToggle={() => updateNotifyEnabled(!data.notify_enabled)}
+      disabled={isPending}
+    />
+  );
 };
 
 /**
@@ -215,6 +266,7 @@ const CommunityContent = ({
             actions={
               <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
                 <ShareButton shareUrl={shareUrl} shareTitle={shareTitle} />
+                {authUser && subscribed && <NotifySubscriptionToggle slug={communitySlug} />}
                 {authUser ? (
                   <SubscribeButton
                     subscribed={subscribed}
@@ -322,10 +374,11 @@ const CommunityContent = ({
                 onUnsubscribe={() => unsubscribe()}
               >
                 <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                  最近投稿したワーカー
+                  ワーカー一覧
                 </Typography>
-                {/* #462: useRecentWorkers は Suspense 化。サイドバー内の局所 QueryBoundary で
-                    ローディング/エラーを分離し、ページ本体（feed など）と独立して描画する。 */}
+                {/* #462: useCommunityWorkers は Suspense 化。サイドバー内の局所 QueryBoundary で
+                    ローディング/エラーを分離し、ページ本体（feed など）と独立して描画する。
+                    #1078: 所属ワーカー全員をカーソルページネーション + 無限スクロールで表示する。 */}
                 <Box sx={{ mb: 2 }}>
                   <QueryBoundary
                     fallback={
@@ -339,7 +392,7 @@ const CommunityContent = ({
                       </Typography>
                     )}
                   >
-                    <RecentWorkersPanel slug={communitySlug} />
+                    <CommunityWorkersPanel slug={communitySlug} />
                   </QueryBoundary>
                 </Box>
               </CommunitySidebarCard>
@@ -357,7 +410,7 @@ const CommunityContent = ({
  * Reddit 風 2 カラムレイアウト（左: Post 一覧 / 右: コミュニティ詳細 sticky サイドバー）。
  * ADR-0018 / Issue #370。
  * #462: usePublicCommunities は Suspense 化（ローディング/エラーは router の QueryBoundary に委譲）。
- * useRecentWorkers はサイドバーの局所 QueryBoundary に委譲する。
+ * useCommunityWorkers（#1078: 全ワーカー無限スクロール）はサイドバーの局所 QueryBoundary に委譲する。
  * #481: ゲストの vote 押下は guardVote で握りつぶさずログイン誘導する。
  * #524: 存在しない slug のとき「コミュニティが見つかりません」を表示する。
  * #748: vote 連打防止。#890: 押した方向のみ disabled にし、反対方向は操作可能にする。

@@ -20,7 +20,7 @@ enum UserRole {
 }
 
 /// 認証ユーザー（Issue #26 / ADR-0009 / ADR-0029 / #455）。
-/// #455: Google 認証のみに統一。loginId / passwordHash を廃止し email / googleId を必須化。
+/// #455: Google 認証のみに統一。loginId / passwordHash を廢止し email / googleId を必須化。
 /// id はサロゲートキー（UUIDv7 自動採番）。
 model User {
   id            String         @id @default(uuid(7))
@@ -40,18 +40,18 @@ model User {
 
 /// AI ワーカー（社員）。ADR-0019: post / comment の author として使う。
 /// #329: Employee → Worker リネーム（@@map("workers") で DB テーブル名は "workers"）。
-/// #331: ADR-0020 後処理。Worker は AI 投稿者のみとなり isBot / userId / user（User 1:1）を撤廃した。
+/// #331: ADR-0020 後処理。Worker は AI 投稿者のみとなり isBot / userId / user（User 1:1）を撃廃した。
 model Worker {
   id          String    @id @default(uuid(7))
   displayName String
   role        String?
-  /// AI バッチのプロンプト指針となる性格設定（任意・500 文字以内）（#38）。
+  /// AI バッチのプロンプト方針となる性格設定（任意・500 文字以内）（#38）。
   personality String?
   /// 文章量設定（#625）。concise / standard / detailed の 3 段階。既定は standard。
   verbosity   String    @default("standard")
   /// 論理削除日時（#218）。null=有効、値=削除済み。物理削除は行わない。
   deletedAt   DateTime?
-  /// GCS 上のアバター画像 URL（#204）。admin がアップロード後に設定される。最大 500 文字（#91）。
+  /// GCS 上のアバター画像 URL（#204）。admin がアップロード後に設定される。
   imageUrl    String?
 
   /// 参加コミュニティ（#489）。定時バッチはこの紐づきから登場ワーカーを解決する。
@@ -62,7 +62,7 @@ model Worker {
 
 /// ワーカーの community 参加（#489）。worker ↔ community の多対多中間テーブル。
 /// 定時バッチはこの紐づきから community ごとの登場ワーカーを DB 取得して
-/// 会話生成・author 検証に使う（DEFAULT_WORKERS への直接依存を外すデータ基盤）。
+/// 会話生成・ author 検証に使う（DEFAULT_WORKERS への直接依存を外すデータ基盤）。
 model WorkerCommunity {
   workerId    String
   worker      Worker    @relation(fields: [workerId], references: [id], onDelete: Cascade)
@@ -71,7 +71,7 @@ model WorkerCommunity {
   createdAt   DateTime  @default(now())
 
   @@id([workerId, communityId])
-  @@index([communityId])
+  @@index([communityId, workerId])
   @@map("worker_communities")
 }
 
@@ -107,7 +107,7 @@ model TokenUsageLog {
   @@index([occurredAt])
 }
 
-/// コミュニティ（サブレディット相当）。ADR-0019。
+/// コミュニティ（サブレディト相当）。ADR-0019。
 /// admin が CRUD できる第一級エンティティ（作成 API は #310）。
 /// slug は URL セーフな識別子（例: "technology"）。
 model Community {
@@ -213,6 +213,8 @@ model Subscription {
   createdAt     DateTime  @default(now())
   /// 最後にコミュニティを訪問した時刻（#933）。null=未訪問。
   lastViewedAt  DateTime?
+  /// コミュニティ単位の Web Push 通知 ON/OFF（#1088）。デフォルト true（既存動作を維持）。
+  notifyEnabled Boolean   @default(true)
 
   @@id([userId, communityId])
   @@index([userId])

@@ -71,6 +71,15 @@ describe("buildPostPrompt", () => {
     expect(prompt).toContain("テスト投稿");
   });
 
+  it("直近ログが指定された場合、主張・結論の重複を避ける指示が含まれる（#1115）", () => {
+    const { prompt } = buildPostPrompt({
+      community,
+      workers,
+      recentLog: ["2026-01-01 haru: テスト投稿"],
+    });
+    expect(prompt).toMatch(/主張.*結論|結論.*主張/);
+  });
+
   it("comments フィールドは空配列で出力するよう指示する", () => {
     const { prompt } = buildPostPrompt({ community, workers, recentLog: [] });
     expect(prompt).toContain('"comments": []');
@@ -189,6 +198,58 @@ describe("detectConvergentTitlePattern（#1086）", () => {
       "この件、放置してない？",
     ];
     expect(detectConvergentTitlePattern(titles)).toBeNull();
+  });
+});
+
+describe("buildPostPrompt: feedArticles の注入（#1104 / ADR-0035）", () => {
+  it("feedArticles が指定された場合にプロンプトに注入される", () => {
+    const { prompt } = buildPostPrompt({
+      community,
+      workers,
+      recentLog: [],
+      feedArticles: [
+        {
+          title: "TypeScript 5.0 の新機能",
+          url: "https://zenn.dev/articles/ts50",
+          summary: "TS5.0 の概要。",
+          author: "yamada",
+        },
+      ],
+    });
+    expect(prompt).toContain("TypeScript 5.0 の新機能");
+    expect(prompt).not.toContain("https://zenn.dev/articles/ts50"); // URL は含めない（#927）
+    expect(prompt).toContain("TS5.0 の概要。");
+    expect(prompt).toContain("yamada");
+  });
+
+  it("feedArticles の URL・summary 内の URL はプロンプトに含まれない（#927）", () => {
+    const { prompt } = buildPostPrompt({
+      community,
+      workers,
+      recentLog: [],
+      feedArticles: [
+        {
+          title: "ある記事",
+          url: "https://b.hatena.ne.jp/hotentry/general",
+          summary: "詳細は https://example.com/article を参照してください。面白い内容です。",
+          author: null,
+        },
+      ],
+    });
+    expect(prompt).not.toContain("https://b.hatena.ne.jp/hotentry/general");
+    expect(prompt).not.toContain("https://example.com/article");
+    expect(prompt).toContain("ある記事");
+    expect(prompt).toContain("面白い内容です");
+  });
+
+  it("feedArticles が省略された場合はプロンプトに変化なし（フィード関連テキストなし）", () => {
+    const { prompt } = buildPostPrompt({ community, workers, recentLog: [] });
+    expect(prompt).not.toContain("最新フィード記事");
+  });
+
+  it("feedArticles が空配列の場合はプロンプトに変化なし（フィード関連テキストなし）", () => {
+    const { prompt } = buildPostPrompt({ community, workers, recentLog: [], feedArticles: [] });
+    expect(prompt).not.toContain("最新フィード記事");
   });
 });
 

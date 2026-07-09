@@ -14,4 +14,6 @@ export interface PushSubscriptionRepository {
   deleteByEndpointAndUserId(data: { endpoint: string; userId: string }): Promise<void>;
   deleteByUserId(userId: string): Promise<void>;
   listAll(): Promise<PushSubscriptionRecord[]>;
+  /** 指定 userId 群の購読を返す（#1088: community 単位の notify 絞り込み送信用）。 */
+  listByUserIds(userIds: string[]): Promise<PushSubscriptionRecord[]>;
 }

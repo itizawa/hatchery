@@ -626,6 +626,16 @@
               "up",
               "down"
             ]
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 30
+            },
+            "maxItems": 5,
+            "default": []
           }
         },
         "required": [
@@ -3611,7 +3621,7 @@
         ],
         "responses": {
           "200": {
-            "description": "post と comments の一覧",
+            "description": "post と comments の一覧（related_posts: 同一 community 内でタグを 1 つ以上共有する post 一覧・最大 5 件・#1087）",
             "content": {
               "application/json": {
                 "schema": {
@@ -3625,11 +3635,19 @@
                       "items": {
                         "$ref": "#/components/schemas/Comment"
                       }
+                    },
+                    "related_posts": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Post"
+                      },
+                      "description": "同一 community 内でタグを 1 つ以上共有する関連投稿一覧（新着順・最大 5 件・#1087）"
                     }
                   },
                   "required": [
                     "post",
-                    "comments"
+                    "comments",
+                    "related_posts"
                   ]
                 }
               }

@@ -71,6 +71,7 @@ describe("GenerationOutputSchema", () => {
   });
 
   it("post の tags が 6 件を超えると reject する（#1087）", () => {
+    // eslint-disable-next-line max-params
     const tooMany = Array.from({ length: 6 }, (_, i) => `tag${i}`);
     const data = { ...validOutput, posts: [{ ...validOutput.posts[0], tags: tooMany }] };
     expect(GenerationOutputSchema.safeParse(data).success).toBe(false);

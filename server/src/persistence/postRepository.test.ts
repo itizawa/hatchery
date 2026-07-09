@@ -618,7 +618,6 @@ describe("createInMemoryPostRepository", () => {
     it("limit で件数を絞る", async () => {
       const repo = createInMemoryPostRepository();
       for (let i = 0; i < 3; i++) {
-        // eslint-disable-next-line no-await-in-loop
         await repo.createMany("community-1", [
           { slotKey: "s", seq: i, author: "w", title: `match-${i}`, text: "text", tags: ["react"] },
         ]);

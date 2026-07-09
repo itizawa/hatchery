@@ -150,11 +150,13 @@ describe("PostSchema", () => {
   });
 
   it(`tags は最大 ${POST_TAGS_MAX_COUNT} 件まで（超過は reject・#1087）`, () => {
+    // eslint-disable-next-line max-params
     const tooMany = Array.from({ length: POST_TAGS_MAX_COUNT + 1 }, (_, i) => `tag${i}`);
     expect(PostSchema.safeParse({ ...validPost, tags: tooMany }).success).toBe(false);
   });
 
   it(`tags は ${POST_TAGS_MAX_COUNT} 件までなら有効（#1087）`, () => {
+    // eslint-disable-next-line max-params
     const maxTags = Array.from({ length: POST_TAGS_MAX_COUNT }, (_, i) => `tag${i}`);
     expect(PostSchema.safeParse({ ...validPost, tags: maxTags }).success).toBe(true);
   });

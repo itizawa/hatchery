@@ -1,12 +1,7 @@
 import { z } from "zod";
 
 import { COMMENT_TEXT_MAX_LENGTH } from "../comment/comment.js";
-import {
-  POST_TAGS_MAX_COUNT,
-  POST_TAG_MAX_LENGTH,
-  POST_TEXT_MAX_LENGTH,
-  POST_TITLE_MAX_LENGTH,
-} from "../post/post.js";
+import { POST_TEXT_MAX_LENGTH, POST_TITLE_MAX_LENGTH, PostTagsSchema } from "../post/post.js";
 
 /**
  * 生成出力のコメント部分スキーマ。ADR-0019。
@@ -38,7 +33,7 @@ export const GenerationOutputPostSchema = z.object({
   title: z.string().min(1).max(POST_TITLE_MAX_LENGTH),
   text: z.string().min(1).max(POST_TEXT_MAX_LENGTH),
   comments: z.array(GenerationOutputCommentSchema).default([]),
-  tags: z.array(z.string().min(1).max(POST_TAG_MAX_LENGTH)).max(POST_TAGS_MAX_COUNT).default([]),
+  tags: PostTagsSchema,
 });
 
 export type GenerationOutputPost = z.infer<typeof GenerationOutputPostSchema>;

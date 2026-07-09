@@ -107,7 +107,7 @@ describe("PostThreadScene (#380)", () => {
   it("コメントが 1 件以上あるときコメント一覧（CommentCard）が描画される", async () => {
     server.use(
       http.get("/api/posts/:postId", () =>
-        HttpResponse.json({ post: mockPosts[0], comments: mockComments }),
+        HttpResponse.json({ post: mockPosts[0], comments: mockComments, related_posts: [] }),
       ),
     );
     render(<BoundedScene />, { wrapper: Wrapper });
@@ -121,7 +121,7 @@ describe("PostThreadScene (#380)", () => {
 
   it("コメント 0 件のとき空状態の文言が表示される", async () => {
     server.use(
-      http.get("/api/posts/:postId", () => HttpResponse.json({ post: mockPosts[0], comments: [] })),
+      http.get("/api/posts/:postId", () => HttpResponse.json({ post: mockPosts[0], comments: [], related_posts: [] })),
     );
     render(<BoundedScene />, { wrapper: Wrapper });
 
@@ -135,7 +135,7 @@ describe("PostThreadScene (#380)", () => {
     server.use(
       http.get("/api/posts/:postId", async () => {
         await delay(100);
-        return HttpResponse.json({ post: mockPosts[0], comments: [] });
+        return HttpResponse.json({ post: mockPosts[0], comments: [], related_posts: [] });
       }),
     );
     render(<BoundedScene />, { wrapper: Wrapper });
@@ -293,7 +293,7 @@ describe("PostThreadScene コメントセクション id (#836)", () => {
   it("コメントが 1 件以上あるとき、コメントセクションに id='comments' が付与されている", async () => {
     server.use(
       http.get("/api/posts/:postId", () =>
-        HttpResponse.json({ post: mockPosts[0], comments: mockComments }),
+        HttpResponse.json({ post: mockPosts[0], comments: mockComments, related_posts: [] }),
       ),
     );
     const { container } = render(<BoundedScene />, { wrapper: Wrapper });
@@ -362,7 +362,7 @@ describe("PostThreadScene レイアウトシフト解消 (#409)", () => {
     server.use(
       http.get("/api/posts/:postId", async () => {
         await delay(100);
-        return HttpResponse.json({ post: mockPosts[0], comments: [] });
+        return HttpResponse.json({ post: mockPosts[0], comments: [], related_posts: [] });
       }),
     );
     render(<BoundedScene />, { wrapper: Wrapper });
@@ -491,7 +491,7 @@ describe("PostThreadScene コメントアンカー＆自動スクロール (#861
   it("コメントの wrapper div に id='comment-{comment.id}' が付与されている", async () => {
     server.use(
       http.get("/api/posts/:postId", () =>
-        HttpResponse.json({ post: mockPosts[0], comments: mockComments }),
+        HttpResponse.json({ post: mockPosts[0], comments: mockComments, related_posts: [] }),
       ),
     );
     const { container } = render(<BoundedScene />, { wrapper: Wrapper });
@@ -509,7 +509,7 @@ describe("PostThreadScene コメントアンカー＆自動スクロール (#861
 
     server.use(
       http.get("/api/posts/:postId", () =>
-        HttpResponse.json({ post: mockPosts[0], comments: mockComments }),
+        HttpResponse.json({ post: mockPosts[0], comments: mockComments, related_posts: [] }),
       ),
     );
     render(<BoundedScene />, { wrapper: Wrapper });
@@ -526,7 +526,7 @@ describe("PostThreadScene コメントアンカー＆自動スクロール (#861
 
     server.use(
       http.get("/api/posts/:postId", () =>
-        HttpResponse.json({ post: mockPosts[0], comments: mockComments }),
+        HttpResponse.json({ post: mockPosts[0], comments: mockComments, related_posts: [] }),
       ),
     );
     render(<BoundedScene />, { wrapper: Wrapper });

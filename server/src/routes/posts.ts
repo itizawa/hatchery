@@ -4,7 +4,7 @@ import { Router } from "express";
 import { validateBody } from "../middleware/validateBody.js";
 import { createRateLimiter } from "../middleware/rateLimiter.js";
 import type { CommentRepository } from "../persistence/commentRepository.js";
-import type { PostRepository } from "../persistence/postRepository.js";
+import type { PostRecord, PostRepository } from "../persistence/postRepository.js";
 import type { ViewRepository } from "../persistence/viewRepository.js";
 import type { VoteRepository } from "../persistence/voteRepository.js";
 import type { WorkerRepository } from "../persistence/workerRepository.js";
@@ -89,20 +89,22 @@ export function createPostsRouter(
 
           // 関連投稿（同一 community 内でタグを 1 つ以上共有する post・#1087）。
           // tags が空のときは常に空配列になるため DB 問い合わせ自体を省略する。
-          const relatedPosts =
+          // reveal フィルタ（now）を渡し、ドリップ配信でまだ公開されていない post を除外する（ADR-0034）。
+          const relatedPostsPromise: Promise<PostRecord[]> =
             postWithCount.tags.length > 0
-              ? await postRepo.listRelatedByTags({
+              ? postRepo.listRelatedByTags({
                   communityId: postWithCount.communityId,
                   tags: postWithCount.tags,
                   excludePostId: postId,
                   limit: RELATED_POSTS_LIMIT,
+                  options: { now },
                 })
-              : [];
-          const relatedPostsResponse = relatedPosts.map((p) => toPostResponse(p));
+              : Promise.resolve([]);
 
           if (sessionId) {
-            // sessionId 付きのとき post と comments の my_vote を一括取得して付与する（#831）。
-            const [postVotes, commentVotes] = await Promise.all([
+            // 関連投稿の取得と post/comments の my_vote 取得は互いに依存しないため並行実行する（#1059 と同様の方針）。
+            const [relatedPosts, postVotes, commentVotes] = await Promise.all([
+              relatedPostsPromise,
               voteRepo.findVotesBySessionAndTargets({
                 sessionId,
                 targetType: "post",
@@ -117,14 +119,15 @@ export function createPostsRouter(
             res.status(200).json({
               post: toPostResponse({ ...postWithCount, myVote: postVotes.get(postId) ?? null }),
               comments: enrichedComments.map((c) => toCommentResponse({ ...c, myVote: commentVotes.get(c.id) ?? null })),
-              related_posts: relatedPostsResponse,
+              related_posts: relatedPosts.map((p) => toPostResponse(p)),
             });
           } else {
+            const relatedPosts = await relatedPostsPromise;
             // OpenAPI 契約（snake_case）へ整形して返す（#499）。
             res.status(200).json({
               post: toPostResponse(postWithCount),
               comments: enrichedComments.map(toCommentResponse),
-              related_posts: relatedPostsResponse,
+              related_posts: relatedPosts.map((p) => toPostResponse(p)),
             });
           }
         });

@@ -406,18 +406,22 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
       tags,
       excludePostId,
       limit,
+      options,
     }: {
       communityId: string;
       tags: readonly string[];
       excludePostId: string;
       limit: number;
+      options?: RevealFilterOptions;
     }): Promise<PostRecord[]> {
       if (tags.length === 0) return [];
+      const now = options?.now;
       const rows = await prisma.post.findMany({
         where: {
           communityId,
           id: { not: excludePostId },
           tags: { hasSome: [...tags] },
+          ...(now !== undefined ? { createdAt: { lte: now } } : {}),
         },
         orderBy: [{ createdAt: "desc" }, { id: "desc" }],
         take: limit,

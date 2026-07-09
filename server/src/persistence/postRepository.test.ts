@@ -632,5 +632,64 @@ describe("createInMemoryPostRepository", () => {
 
       expect(result).toHaveLength(2);
     });
+
+    it("options.now を渡すと createdAt > now（ドリップ配信で未公開）の post を除外する", async () => {
+      const repo = createInMemoryPostRepository();
+      const now = new Date("2026-07-09T12:00:00Z");
+      await repo.createMany("community-1", [
+        {
+          slotKey: "s",
+          seq: 0,
+          author: "w",
+          title: "revealed",
+          text: "text",
+          tags: ["react"],
+          createdAt: new Date("2026-07-09T11:00:00Z"),
+        },
+        {
+          slotKey: "s",
+          seq: 1,
+          author: "w",
+          title: "not-yet-revealed",
+          text: "text",
+          tags: ["react"],
+          createdAt: new Date("2026-07-09T13:00:00Z"),
+        },
+      ]);
+
+      const result = await repo.listRelatedByTags({
+        communityId: "community-1",
+        tags: ["react"],
+        excludePostId: "nonexistent",
+        limit: 5,
+        options: { now },
+      });
+
+      expect(result.map((p) => p.title)).toEqual(["revealed"]);
+    });
+
+    it("options を渡さないときは createdAt によるフィルタを行わない（後方互換）", async () => {
+      const repo = createInMemoryPostRepository();
+      await repo.createMany("community-1", [
+        {
+          slotKey: "s",
+          seq: 0,
+          author: "w",
+          title: "future",
+          text: "text",
+          tags: ["react"],
+          createdAt: new Date("2999-01-01T00:00:00Z"),
+        },
+      ]);
+
+      const result = await repo.listRelatedByTags({
+        communityId: "community-1",
+        tags: ["react"],
+        excludePostId: "nonexistent",
+        limit: 5,
+      });
+
+      expect(result).toHaveLength(1);
+    });
   });
 });

@@ -171,12 +171,14 @@ export interface PostRepository {
    * community 内で指定タグを 1 つ以上共有する post を新着順（createdAt 降順）で返す（#1087）。
    * excludePostId は結果から除外する（通常は問い合わせ元の post 自身）。
    * tags が空配列の場合は常に空配列を返す（DB 問い合わせを行わない）。
+   * options.now を渡すと `createdAt <= now` の reveal フィルタが有効になる（ドリップ配信で未公開の post を除外・ADR-0034）。
    */
   listRelatedByTags(params: {
     communityId: string;
     tags: readonly string[];
     excludePostId: string;
     limit: number;
+    options?: RevealFilterOptions;
   }): Promise<PostRecord[]>;
 }
 
@@ -630,14 +632,17 @@ export function createInMemoryPostRepository(): PostRepository {
       tags,
       excludePostId,
       limit,
+      options,
     }: {
       communityId: string;
       tags: readonly string[];
       excludePostId: string;
       limit: number;
+      options?: RevealFilterOptions;
     }): Promise<PostRecord[]> {
       if (tags.length === 0) return Promise.resolve([]);
       const tagSet = new Set(tags);
+      const now = options?.now;
       const result = records
         .filter(
           (r) =>
@@ -645,6 +650,8 @@ export function createInMemoryPostRepository(): PostRepository {
             r.id !== excludePostId &&
             r.tags.some((t) => tagSet.has(t)),
         )
+        // reveal フィルタ（#1087 / ADR-0034）: now が渡された場合、createdAt > now の post を除外する。
+        .filter((r) => now === undefined || r.createdAt.getTime() <= now.getTime())
         // eslint-disable-next-line max-params
         .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
         .slice(0, limit)

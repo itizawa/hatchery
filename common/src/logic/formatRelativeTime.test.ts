@@ -69,4 +69,19 @@ describe("formatRelativeTime", () => {
     expect(formatRelativeTime({ target: new Date("invalid"), now })).toBe("");
     expect(formatRelativeTime({ target: new Date("2026-06-14T11:00:00Z"), now: new Date("invalid") })).toBe("");
   });
+
+  it("DST（夏時間）の切り替え跨ぎでも UTC 差分ベースで『N日前』を判定する（#1043）", () => {
+    // 2026-11-01 は America/New_York の DST 終了日（02:00 EDT → 01:00 EST、25時間ある日）。
+    // target/now とも同じローカル暦日（Nov 1）に収まるため、ローカル暦日差ベースの判定だと
+    // 「0日前」になってしまうが、UTC ミリ秒差はちょうど 24 時間（DAY_MS）あるため「1日前」が正しい。
+    const originalTZ = process.env.TZ;
+    process.env.TZ = "America/New_York";
+    try {
+      const dstTarget = new Date("2026-11-01T04:30:00Z");
+      const dstNow = new Date("2026-11-02T04:30:00Z");
+      expect(formatRelativeTime({ target: dstTarget, now: dstNow })).toBe("1日前");
+    } finally {
+      process.env.TZ = originalTZ;
+    }
+  });
 });

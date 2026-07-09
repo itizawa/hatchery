@@ -511,4 +511,127 @@ describe("createInMemoryPostRepository", () => {
       expect(posts).toHaveLength(2);
     });
   });
+
+  describe("tags（#1087）", () => {
+    it("createMany で tags を永続化できる", async () => {
+      const repo = createInMemoryPostRepository();
+      const [created] = await repo.createMany("community-1", [
+        { slotKey: "s", seq: 0, author: "w", title: "t", text: "text", tags: ["react", "vite"] },
+      ]);
+      expect(created.tags).toEqual(["react", "vite"]);
+    });
+
+    it("tags を省略すると空配列になる", async () => {
+      const repo = createInMemoryPostRepository();
+      const [created] = await repo.createMany("community-1", [
+        { slotKey: "s", seq: 0, author: "w", title: "t", text: "text" },
+      ]);
+      expect(created.tags).toEqual([]);
+    });
+
+    it("findById で取得した post も tags を持つ", async () => {
+      const repo = createInMemoryPostRepository();
+      const [created] = await repo.createMany("community-1", [
+        { slotKey: "s", seq: 0, author: "w", title: "t", text: "text", tags: ["react"] },
+      ]);
+      const found = await repo.findById(created.id);
+      expect(found?.tags).toEqual(["react"]);
+    });
+  });
+
+  describe("listRelatedByTags（#1087）", () => {
+    it("同一 community 内でタグを 1 つ以上共有する post を新着順で返す", async () => {
+      const repo = createInMemoryPostRepository();
+      const [target] = await repo.createMany("community-1", [
+        { slotKey: "s", seq: 0, author: "w", title: "target", text: "text", tags: ["react", "vite"] },
+      ]);
+      await new Promise((r) => setTimeout(r, 5));
+      const [older] = await repo.createMany("community-1", [
+        { slotKey: "s", seq: 1, author: "w", title: "older-match", text: "text", tags: ["react"] },
+      ]);
+      await new Promise((r) => setTimeout(r, 5));
+      const [newer] = await repo.createMany("community-1", [
+        { slotKey: "s", seq: 2, author: "w", title: "newer-match", text: "text", tags: ["vite", "typescript"] },
+      ]);
+      await repo.createMany("community-1", [
+        { slotKey: "s", seq: 3, author: "w", title: "no-match", text: "text", tags: ["golang"] },
+      ]);
+
+      const result = await repo.listRelatedByTags({
+        communityId: "community-1",
+        tags: target.tags,
+        excludePostId: target.id,
+        limit: 5,
+      });
+
+      expect(result.map((p) => p.id)).toEqual([newer.id, older.id]);
+    });
+
+    it("自分自身（excludePostId）は結果に含めない", async () => {
+      const repo = createInMemoryPostRepository();
+      const [target] = await repo.createMany("community-1", [
+        { slotKey: "s", seq: 0, author: "w", title: "target", text: "text", tags: ["react"] },
+      ]);
+
+      const result = await repo.listRelatedByTags({
+        communityId: "community-1",
+        tags: target.tags,
+        excludePostId: target.id,
+        limit: 5,
+      });
+
+      expect(result).toEqual([]);
+    });
+
+    it("別 community の post は含めない", async () => {
+      const repo = createInMemoryPostRepository();
+      await repo.createMany("community-2", [
+        { slotKey: "s", seq: 0, author: "w", title: "other-community", text: "text", tags: ["react"] },
+      ]);
+
+      const result = await repo.listRelatedByTags({
+        communityId: "community-1",
+        tags: ["react"],
+        excludePostId: "nonexistent",
+        limit: 5,
+      });
+
+      expect(result).toEqual([]);
+    });
+
+    it("tags が空配列のときは空配列を返す", async () => {
+      const repo = createInMemoryPostRepository();
+      await repo.createMany("community-1", [
+        { slotKey: "s", seq: 0, author: "w", title: "post", text: "text", tags: ["react"] },
+      ]);
+
+      const result = await repo.listRelatedByTags({
+        communityId: "community-1",
+        tags: [],
+        excludePostId: "nonexistent",
+        limit: 5,
+      });
+
+      expect(result).toEqual([]);
+    });
+
+    it("limit で件数を絞る", async () => {
+      const repo = createInMemoryPostRepository();
+      for (let i = 0; i < 3; i++) {
+        // eslint-disable-next-line no-await-in-loop
+        await repo.createMany("community-1", [
+          { slotKey: "s", seq: i, author: "w", title: `match-${i}`, text: "text", tags: ["react"] },
+        ]);
+      }
+
+      const result = await repo.listRelatedByTags({
+        communityId: "community-1",
+        tags: ["react"],
+        excludePostId: "nonexistent",
+        limit: 2,
+      });
+
+      expect(result).toHaveLength(2);
+    });
+  });
 });

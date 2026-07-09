@@ -161,6 +161,65 @@ describe("PostThreadScene (#380)", () => {
   });
 });
 
+// #1087: タグ表示・関連投稿セクション。
+describe("PostThreadScene タグ・関連投稿（#1087）", () => {
+  it("post に tags があるとき、タグバッジが表示される", async () => {
+    server.use(
+      http.get("/api/posts/:postId", () =>
+        HttpResponse.json({
+          post: { ...mockPosts[0], tags: ["react", "vite"] },
+          comments: [],
+          related_posts: [],
+        }),
+      ),
+    );
+    render(<BoundedScene />, { wrapper: Wrapper });
+
+    expect(await screen.findByText("react")).toBeInTheDocument();
+    expect(screen.getByText("vite")).toBeInTheDocument();
+  });
+
+  it("post に tags が無いとき、タグバッジ行は表示されない", async () => {
+    server.use(
+      http.get("/api/posts/:postId", () =>
+        HttpResponse.json({ post: { ...mockPosts[0], tags: [] }, comments: [], related_posts: [] }),
+      ),
+    );
+    render(<BoundedScene />, { wrapper: Wrapper });
+
+    expect(await screen.findByText(mockPosts[0].title)).toBeInTheDocument();
+    expect(screen.queryByTestId("post-tags")).not.toBeInTheDocument();
+  });
+
+  it("related_posts が 1 件以上あるとき「関連投稿」セクションが表示され、タイトルが表示される", async () => {
+    server.use(
+      http.get("/api/posts/:postId", () =>
+        HttpResponse.json({
+          post: { ...mockPosts[0], tags: ["react"] },
+          comments: [],
+          related_posts: [{ ...mockPosts[1], tags: ["react"] }],
+        }),
+      ),
+    );
+    render(<BoundedScene />, { wrapper: Wrapper });
+
+    expect(await screen.findByText("関連投稿")).toBeInTheDocument();
+    expect(screen.getByText(mockPosts[1].title)).toBeInTheDocument();
+  });
+
+  it("related_posts が空のとき「関連投稿」セクションは表示されない", async () => {
+    server.use(
+      http.get("/api/posts/:postId", () =>
+        HttpResponse.json({ post: mockPosts[0], comments: [], related_posts: [] }),
+      ),
+    );
+    render(<BoundedScene />, { wrapper: Wrapper });
+
+    expect(await screen.findByText(mockPosts[0].title)).toBeInTheDocument();
+    expect(screen.queryByText("関連投稿")).not.toBeInTheDocument();
+  });
+});
+
 // #390: 右サイドバー（コミュニティ詳細カード）。
 // TanStack Query キャッシュをシードして描画する（staleTime 内のため fetch は発生しない）。
 function createWrapper({ communities }: { communities: Community[] }) {

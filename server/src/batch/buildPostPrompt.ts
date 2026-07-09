@@ -158,7 +158,8 @@ ${recentLogSection}${recentTitlesSection}
       "author": "UUID（上記ワーカー一覧の「author に指定するID」から選択・例: ${exampleWorkerId}）",
       "title": "投稿タイトル",
       "text": "投稿本文",
-      "comments": []
+      "comments": [],
+      "tags": ["tag1", "tag2"]
     }
   ],
   "replies": []
@@ -172,6 +173,7 @@ ${recentLogSection}${recentTitlesSection}
 - replies は必ず空配列 [] にしてください
 - 会話は自然で読みやすい日本語で書いてください
 - 投稿タイトル（title フィールド）・投稿本文（text フィールド）に URL（http または https から始まる文字列）を含めないこと
+- tags は投稿の話題を表すタグを 1〜5 個、各 30 文字以内で指定してください（同じ話題の投稿を関連投稿として結びつけるために使います）
 
 自己監査（出力前に必ず確認）:
 - 互いを「さん付け」で呼んでいないか（トーン規約どおりフランクな呼び方になっているか）。

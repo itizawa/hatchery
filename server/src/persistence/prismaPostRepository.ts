@@ -24,6 +24,7 @@ function toRecord(row: {
   text: string;
   score: number;
   createdAt: Date;
+  tags: string[];
 }): PostRecord {
   return {
     id: row.id,
@@ -35,6 +36,7 @@ function toRecord(row: {
     text: row.text,
     score: row.score,
     createdAt: row.createdAt,
+    tags: row.tags,
   };
 }
 
@@ -63,6 +65,8 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
               text: input.text,
               // createdAt は input から注入可能（#556 ドリップ割当）。省略時は DB @default(now())。
               ...(input.createdAt !== undefined ? { createdAt: input.createdAt } : {}),
+              // tags は input から注入可能（#1087）。省略時は DB @default([])。
+              ...(input.tags !== undefined ? { tags: input.tags } : {}),
             },
           }),
         ),
@@ -389,6 +393,34 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
             { title: { contains: q, mode: "insensitive" } },
             { text: { contains: q, mode: "insensitive" } },
           ],
+          ...(now !== undefined ? { createdAt: { lte: now } } : {}),
+        },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        take: limit,
+      });
+      return rows.map(toRecord);
+    },
+
+    async listRelatedByTags({
+      communityId,
+      tags,
+      excludePostId,
+      limit,
+      options,
+    }: {
+      communityId: string;
+      tags: readonly string[];
+      excludePostId: string;
+      limit: number;
+      options?: RevealFilterOptions;
+    }): Promise<PostRecord[]> {
+      if (tags.length === 0) return [];
+      const now = options?.now;
+      const rows = await prisma.post.findMany({
+        where: {
+          communityId,
+          id: { not: excludePostId },
+          tags: { hasSome: [...tags] },
           ...(now !== undefined ? { createdAt: { lte: now } } : {}),
         },
         orderBy: [{ createdAt: "desc" }, { id: "desc" }],

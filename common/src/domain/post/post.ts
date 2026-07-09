@@ -8,6 +8,21 @@ export const POST_TITLE_MAX_LENGTH = 100;
 /** Post の text の最大文字数（#91）。 */
 export const POST_TEXT_MAX_LENGTH = 1000;
 
+/** Post の tags 1 要素あたりの最大文字数（#91 / #1087）。 */
+export const POST_TAG_MAX_LENGTH = 30;
+
+/** Post の tags の最大件数（#1087）。 */
+export const POST_TAGS_MAX_COUNT = 5;
+
+/**
+ * Post の tags の Zod スキーマ（#1087）。最大 5 件・各 30 文字以内。省略時 `[]`。
+ * PostSchema と GenerationOutputPostSchema（common/src/domain/generation/generation.ts）で共有する。
+ */
+export const PostTagsSchema = z
+  .array(z.string().min(1).max(POST_TAG_MAX_LENGTH))
+  .max(POST_TAGS_MAX_COUNT)
+  .default([]);
+
 /** vote 方向（ADR-0025: down vote 導入）。 */
 export const VoteDirectionSchema = z.enum(["up", "down"]);
 export type VoteDirection = z.infer<typeof VoteDirectionSchema>;
@@ -32,6 +47,8 @@ export type VoteRequest = z.infer<typeof VoteRequestSchema>;
  *   集計して付与する内部集計値（新規ユーザー入力ではないため .max() 対象外）。省略時 0。
  * - my_vote は sessionId を元にした現セッションの投票状態（#831）。GET 時に sessionId を
  *   付与すると付く任意フィールド。未投票 / 未指定は省略。永続化・生成出力には含めない。
+ * - tags は投稿に付与されたタグ一覧（#1087）。ワーカーが定時バッチ生成時に付与する想定で、
+ *   AI 生成物であっても件数・文字数の上限を設ける（#91）。省略時 `[]`。
  */
 export const PostSchema = z.object({
   id: z.string().min(1),
@@ -47,6 +64,8 @@ export const PostSchema = z.object({
   comment_count: z.number().int().nonnegative().default(0),
   /** 現セッションの投票状態（#831）。sessionId 付き GET 時のみ付与。未投票 / 未指定は省略。 */
   my_vote: VoteDirectionSchema.nullable().optional(),
+  /** 投稿に付与されたタグ一覧（#1087）。最大 5 件・各 30 文字以内。省略時 `[]`。 */
+  tags: PostTagsSchema,
 });
 
 export type Post = z.infer<typeof PostSchema>;

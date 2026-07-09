@@ -26,7 +26,7 @@ export async function fetchPostThread({
 }: {
   postId: string;
   sessionId?: string;
-}): Promise<{ post: Post; comments: Comment[] }> {
+}): Promise<{ post: Post; comments: Comment[]; related_posts: Post[] }> {
   const query = sessionId ? { sessionId } : undefined;
   const result = await openApiClient.GET("/api/posts/{postId}", {
     params: {

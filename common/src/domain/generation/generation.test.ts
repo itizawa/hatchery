@@ -57,6 +57,34 @@ describe("GenerationOutputSchema", () => {
     expect(comment?.text).toBe("お疲れ様、どんなバグだった？");
   });
 
+  it("post の tags は省略時 空配列（既定値）になる（#1087）", () => {
+    const result = GenerationOutputSchema.parse(validOutput);
+    expect(result.posts[0]?.tags).toEqual([]);
+  });
+
+  it("post の tags を持てる（#1087）", () => {
+    const result = GenerationOutputSchema.parse({
+      ...validOutput,
+      posts: [{ ...validOutput.posts[0], tags: ["バグ", "デバッグ"] }],
+    });
+    expect(result.posts[0]?.tags).toEqual(["バグ", "デバッグ"]);
+  });
+
+  it("post の tags が 6 件を超えると reject する（#1087）", () => {
+    // eslint-disable-next-line max-params
+    const tooMany = Array.from({ length: 6 }, (_, i) => `tag${i}`);
+    const data = { ...validOutput, posts: [{ ...validOutput.posts[0], tags: tooMany }] };
+    expect(GenerationOutputSchema.safeParse(data).success).toBe(false);
+  });
+
+  it("post の tags の要素が 30 文字を超えると reject する（#1087）", () => {
+    const data = {
+      ...validOutput,
+      posts: [{ ...validOutput.posts[0], tags: ["あ".repeat(31)] }],
+    };
+    expect(GenerationOutputSchema.safeParse(data).success).toBe(false);
+  });
+
   it("score を含まない（事後更新フィールド・ADR-0019）", () => {
     const result = GenerationOutputSchema.parse(validOutput);
     const post = result.posts[0];

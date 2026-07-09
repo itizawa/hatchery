@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { COMMENT_TEXT_MAX_LENGTH } from "../comment/comment.js";
-import { POST_TEXT_MAX_LENGTH, POST_TITLE_MAX_LENGTH } from "../post/post.js";
+import { POST_TEXT_MAX_LENGTH, POST_TITLE_MAX_LENGTH, PostTagsSchema } from "../post/post.js";
 
 /**
  * 生成出力のコメント部分スキーマ。ADR-0019。
@@ -25,6 +25,7 @@ export type GenerationOutputComment = z.infer<typeof GenerationOutputCommentSche
  * - author は既知 workerId のみ（人間は出力に現れない・ADR-0020）
  * - score は含めない（事後更新フィールド・ADR-0019）
  * - community は含めない（呼び出し側が保持）
+ * - tags は投稿のタグ一覧（#1087）。最大 5 件・各 30 文字以内。省略時 `[]`。
  */
 export const GenerationOutputPostSchema = z.object({
   id: z.string().min(1),
@@ -32,6 +33,7 @@ export const GenerationOutputPostSchema = z.object({
   title: z.string().min(1).max(POST_TITLE_MAX_LENGTH),
   text: z.string().min(1).max(POST_TEXT_MAX_LENGTH),
   comments: z.array(GenerationOutputCommentSchema).default([]),
+  tags: PostTagsSchema,
 });
 
 export type GenerationOutputPost = z.infer<typeof GenerationOutputPostSchema>;

@@ -107,7 +107,7 @@ describe("PostThreadScene (#380)", () => {
   it("コメントが 1 件以上あるときコメント一覧（CommentCard）が描画される", async () => {
     server.use(
       http.get("/api/posts/:postId", () =>
-        HttpResponse.json({ post: mockPosts[0], comments: mockComments }),
+        HttpResponse.json({ post: mockPosts[0], comments: mockComments, related_posts: [] }),
       ),
     );
     render(<BoundedScene />, { wrapper: Wrapper });
@@ -121,7 +121,7 @@ describe("PostThreadScene (#380)", () => {
 
   it("コメント 0 件のとき空状態の文言が表示される", async () => {
     server.use(
-      http.get("/api/posts/:postId", () => HttpResponse.json({ post: mockPosts[0], comments: [] })),
+      http.get("/api/posts/:postId", () => HttpResponse.json({ post: mockPosts[0], comments: [], related_posts: [] })),
     );
     render(<BoundedScene />, { wrapper: Wrapper });
 
@@ -135,7 +135,7 @@ describe("PostThreadScene (#380)", () => {
     server.use(
       http.get("/api/posts/:postId", async () => {
         await delay(100);
-        return HttpResponse.json({ post: mockPosts[0], comments: [] });
+        return HttpResponse.json({ post: mockPosts[0], comments: [], related_posts: [] });
       }),
     );
     render(<BoundedScene />, { wrapper: Wrapper });
@@ -158,6 +158,65 @@ describe("PostThreadScene (#380)", () => {
     expect(await screen.findByText("データの取得に失敗しました。")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "再試行" })).toBeInTheDocument();
     errorSpy.mockRestore();
+  });
+});
+
+// #1087: タグ表示・関連投稿セクション。
+describe("PostThreadScene タグ・関連投稿（#1087）", () => {
+  it("post に tags があるとき、タグバッジが表示される", async () => {
+    server.use(
+      http.get("/api/posts/:postId", () =>
+        HttpResponse.json({
+          post: { ...mockPosts[0], tags: ["react", "vite"] },
+          comments: [],
+          related_posts: [],
+        }),
+      ),
+    );
+    render(<BoundedScene />, { wrapper: Wrapper });
+
+    expect(await screen.findByText("react")).toBeInTheDocument();
+    expect(screen.getByText("vite")).toBeInTheDocument();
+  });
+
+  it("post に tags が無いとき、タグバッジ行は表示されない", async () => {
+    server.use(
+      http.get("/api/posts/:postId", () =>
+        HttpResponse.json({ post: { ...mockPosts[0], tags: [] }, comments: [], related_posts: [] }),
+      ),
+    );
+    render(<BoundedScene />, { wrapper: Wrapper });
+
+    expect(await screen.findByText(mockPosts[0].title)).toBeInTheDocument();
+    expect(screen.queryByTestId("post-tags")).not.toBeInTheDocument();
+  });
+
+  it("related_posts が 1 件以上あるとき「関連投稿」セクションが表示され、タイトルが表示される", async () => {
+    server.use(
+      http.get("/api/posts/:postId", () =>
+        HttpResponse.json({
+          post: { ...mockPosts[0], tags: ["react"] },
+          comments: [],
+          related_posts: [{ ...mockPosts[1], tags: ["react"] }],
+        }),
+      ),
+    );
+    render(<BoundedScene />, { wrapper: Wrapper });
+
+    expect(await screen.findByText("関連投稿")).toBeInTheDocument();
+    expect(screen.getByText(mockPosts[1].title)).toBeInTheDocument();
+  });
+
+  it("related_posts が空のとき「関連投稿」セクションは表示されない", async () => {
+    server.use(
+      http.get("/api/posts/:postId", () =>
+        HttpResponse.json({ post: mockPosts[0], comments: [], related_posts: [] }),
+      ),
+    );
+    render(<BoundedScene />, { wrapper: Wrapper });
+
+    expect(await screen.findByText(mockPosts[0].title)).toBeInTheDocument();
+    expect(screen.queryByText("関連投稿")).not.toBeInTheDocument();
   });
 });
 
@@ -234,7 +293,7 @@ describe("PostThreadScene コメントセクション id (#836)", () => {
   it("コメントが 1 件以上あるとき、コメントセクションに id='comments' が付与されている", async () => {
     server.use(
       http.get("/api/posts/:postId", () =>
-        HttpResponse.json({ post: mockPosts[0], comments: mockComments }),
+        HttpResponse.json({ post: mockPosts[0], comments: mockComments, related_posts: [] }),
       ),
     );
     const { container } = render(<BoundedScene />, { wrapper: Wrapper });
@@ -303,7 +362,7 @@ describe("PostThreadScene レイアウトシフト解消 (#409)", () => {
     server.use(
       http.get("/api/posts/:postId", async () => {
         await delay(100);
-        return HttpResponse.json({ post: mockPosts[0], comments: [] });
+        return HttpResponse.json({ post: mockPosts[0], comments: [], related_posts: [] });
       }),
     );
     render(<BoundedScene />, { wrapper: Wrapper });
@@ -432,7 +491,7 @@ describe("PostThreadScene コメントアンカー＆自動スクロール (#861
   it("コメントの wrapper div に id='comment-{comment.id}' が付与されている", async () => {
     server.use(
       http.get("/api/posts/:postId", () =>
-        HttpResponse.json({ post: mockPosts[0], comments: mockComments }),
+        HttpResponse.json({ post: mockPosts[0], comments: mockComments, related_posts: [] }),
       ),
     );
     const { container } = render(<BoundedScene />, { wrapper: Wrapper });
@@ -450,7 +509,7 @@ describe("PostThreadScene コメントアンカー＆自動スクロール (#861
 
     server.use(
       http.get("/api/posts/:postId", () =>
-        HttpResponse.json({ post: mockPosts[0], comments: mockComments }),
+        HttpResponse.json({ post: mockPosts[0], comments: mockComments, related_posts: [] }),
       ),
     );
     render(<BoundedScene />, { wrapper: Wrapper });
@@ -467,7 +526,7 @@ describe("PostThreadScene コメントアンカー＆自動スクロール (#861
 
     server.use(
       http.get("/api/posts/:postId", () =>
-        HttpResponse.json({ post: mockPosts[0], comments: mockComments }),
+        HttpResponse.json({ post: mockPosts[0], comments: mockComments, related_posts: [] }),
       ),
     );
     render(<BoundedScene />, { wrapper: Wrapper });

@@ -33,7 +33,7 @@ export const handlers = [
 
   http.get("/api/feed", () => HttpResponse.json({ posts: mockPosts, nextCursor: null })),
 
-  http.get("/api/posts/:postId", () => HttpResponse.json({ post: mockPosts[0], comments: [] })),
+  http.get("/api/posts/:postId", () => HttpResponse.json({ post: mockPosts[0], comments: [], related_posts: [] })),
 
   // POST /api/posts/:postId/vote — vote（認証不要・#777 ゲスト対応。sessionId を body に含む）。
   http.post("/api/posts/:postId/vote", () =>

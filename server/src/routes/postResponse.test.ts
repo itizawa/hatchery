@@ -13,6 +13,7 @@ const basePost: PostRecord = {
   text: "本文",
   score: 3,
   createdAt: new Date("2026-06-01T09:00:00Z"),
+  tags: [],
 };
 
 const baseComment: CommentRecord = {
@@ -54,6 +55,16 @@ describe("toPostResponse", () => {
   it("myVote 省略のとき my_vote フィールドを含まない（#831）", () => {
     const result = toPostResponse(basePost);
     expect(result).not.toHaveProperty("my_vote");
+  });
+
+  it("tags を含む（#1087）", () => {
+    const result = toPostResponse({ ...basePost, tags: ["react", "vite"] });
+    expect(result.tags).toEqual(["react", "vite"]);
+  });
+
+  it("tags 省略時は空配列を返す（#1087）", () => {
+    const result = toPostResponse(basePost);
+    expect(result.tags).toEqual([]);
   });
 });
 

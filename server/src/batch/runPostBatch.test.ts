@@ -166,6 +166,60 @@ describe("runPostBatch (#672)", () => {
     }
   });
 
+  it("生成出力の tags が post に保存される（#1087）", async () => {
+    const generate = vi.fn().mockResolvedValue({
+      text: JSON.stringify({
+        topic: "タグ付きの投稿",
+        posts: [
+          {
+            id: "p1",
+            author: "haru",
+            title: "タグ付き投稿",
+            text: "本文",
+            comments: [],
+            tags: ["react", "vite"],
+          },
+        ],
+      }),
+    });
+    const postRepo = createInMemoryPostRepository();
+
+    await runPostBatch({
+      communityRepo: createInMemoryCommunityRepository([community1]),
+      postRepo,
+      workerCommunityRepo: createInMemoryWorkerCommunityRepository({ workers: [], links: [] }),
+      botWorkerProvider: () => Promise.resolve(botWorkers),
+      generate,
+      anthropicApiKey: "test-key",
+      rng: () => 0,
+    });
+
+    const posts = await postRepo.listByCommunity("community-1");
+    expect(posts).toHaveLength(1);
+    expect(posts[0].tags).toEqual(["react", "vite"]);
+  });
+
+  it("生成出力に tags が無い場合は空配列で保存される（#1087）", async () => {
+    const generate = vi.fn().mockResolvedValue({ text: validPostOutput });
+    const postRepo = createInMemoryPostRepository();
+
+    await runPostBatch({
+      communityRepo: createInMemoryCommunityRepository([community1]),
+      postRepo,
+      workerCommunityRepo: createInMemoryWorkerCommunityRepository({ workers: [], links: [] }),
+      botWorkerProvider: () => Promise.resolve(botWorkers),
+      generate,
+      anthropicApiKey: "test-key",
+      rng: () => 0,
+    });
+
+    const posts = await postRepo.listByCommunity("community-1");
+    expect(posts.length).toBeGreaterThan(0);
+    for (const post of posts) {
+      expect(post.tags).toEqual([]);
+    }
+  });
+
   it("コメントリポジトリに何も書き込まれない（post-only バッチ）", async () => {
     const generate = vi.fn().mockResolvedValue({ text: validPostOutput });
     const commentRepo = createInMemoryCommentRepository();

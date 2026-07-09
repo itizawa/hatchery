@@ -8,6 +8,20 @@ export interface WelcomeSectionProps {
   communities: Community[];
 }
 
+/** ようこそ演出で表示するコミュニティチップの上限件数（#1083）。 */
+const WELCOME_CHIP_LIMIT = 8;
+
+/**
+ * コミュニティ数が上限を超えても新設コミュニティが恒常的に除外されないよう、
+ * created_at 降順（新しい順）に並べ替えたうえで上限件数のチップを選出する（#1083）。
+ */
+function selectWelcomeChipCommunities(communities: Community[]): Community[] {
+  return [...communities]
+    // eslint-disable-next-line max-params -- Array.prototype.sort のコールバック（CLAUDE.md 例外）
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .slice(0, WELCOME_CHIP_LIMIT);
+}
+
 export function WelcomeSection({ communities }: WelcomeSectionProps): ReactElement {
   return (
     <Box
@@ -29,7 +43,7 @@ export function WelcomeSection({ communities }: WelcomeSectionProps): ReactEleme
       </Typography>
       {communities.length > 0 && (
         <Box sx={{ mt: 2, display: "flex", flexWrap: "wrap", gap: 1 }}>
-          {communities.slice(0, 6).map((community) => (
+          {selectWelcomeChipCommunities(communities).map((community) => (
             <Button
               key={community.id}
               component="a"

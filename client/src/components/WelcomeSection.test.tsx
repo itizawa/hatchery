@@ -67,6 +67,7 @@ describe("WelcomeSection (#482)", () => {
 
 describe("WelcomeSection コミュニティチップの選出（#1083）", () => {
   // API は created_at 昇順（古い順）で返す想定。9件用意し、表示上限(8件)を超えさせる。
+  // eslint-disable-next-line max-params -- Array.from の mapFn コールバック（CLAUDE.md 例外）
   const manyCommunities = Array.from({ length: 9 }, (_, i) => ({
     id: `c-${i}`,
     slug: `community-${i}`,

@@ -1,6 +1,7 @@
 import MenuIcon from "@mui/icons-material/MenuRounded";
 import SearchIcon from "@mui/icons-material/SearchRounded";
 import GetAppRounded from "@mui/icons-material/GetAppRounded";
+import AccountCircleRounded from "@mui/icons-material/AccountCircleRounded";
 import {
   Avatar,
   Box,
@@ -78,32 +79,61 @@ const AppHeaderAuthSection = (): ReactElement => {
   };
 
   // #454: ログイン導線はページ遷移せず、現在の閲覧コンテキストを保ったままモーダルを開く。
+  // #1146: 「ログイン」は Menu 経由の選択肢になったため、選択後は Menu を閉じる。
   const handleLoginClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
+    handleClose();
     openLogin();
   };
 
   if (!user) {
     return (
-      <Link
-        component={RouterLink}
-        // #454: 現在パスを保ったまま ?login=1 を付与してログインモーダルを開く。
-        // href も /?login=1 になりリロード・新規タブでも復元可能（middle-click 互換）。
-        to="."
-        search={((prev: Record<string, unknown>) => ({ ...prev, login: 1 })) as never}
-        onClick={handleLoginClick}
-        underline="none"
-        sx={{
-          color: SLACK_COLORS.sidebarText,
-          fontWeight: "bold",
-          px: 1.5,
-          py: 0.5,
-          borderRadius: 1,
-          "&:hover": { bgcolor: "rgba(0,0,0,0.08)" },
-        }}
-      >
-        ログイン
-      </Link>
+      <>
+        <ButtonBase
+          onClick={handleOpen}
+          aria-label="ゲストメニュー"
+          aria-controls={open ? "app-header-guest-menu" : undefined}
+          aria-haspopup="true"
+          aria-expanded={open}
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            borderRadius: 1,
+            p: 0.5,
+            "&:hover": { bgcolor: "rgba(0,0,0,0.08)" },
+          }}
+        >
+          <Avatar
+            sx={{
+              width: ACCOUNT_ICON_SIZE,
+              height: ACCOUNT_ICON_SIZE,
+              bgcolor: "rgba(0,0,0,0.08)",
+              color: SLACK_COLORS.sidebarText,
+            }}
+          >
+            <AccountCircleRounded fontSize="small" />
+          </Avatar>
+        </ButtonBase>
+        <Menu
+          id="app-header-guest-menu"
+          anchorEl={anchorEl}
+          open={open}
+          onClose={handleClose}
+          anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+          transformOrigin={{ vertical: "top", horizontal: "right" }}
+        >
+          <MenuItem
+            component={RouterLink}
+            // #454: 現在パスを保ったまま ?login=1 を付与してログインモーダルを開く。
+            // href も /?login=1 になりリロード・新規タブでも復元可能(middle-click 互換)。
+            to="."
+            search={((prev: Record<string, unknown>) => ({ ...prev, login: 1 })) as never}
+            onClick={handleLoginClick}
+          >
+            ログイン
+          </MenuItem>
+        </Menu>
+      </>
     );
   }
 

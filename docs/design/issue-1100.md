@@ -25,7 +25,10 @@
 - 既存パターンを踏襲: 共有ボタンテストは `e2e/community/community.spec.ts` の UC-COMM-19（同機能のコミュニティ版）、New ラベルテストは UC-COMM-26（community 版）のモック構成（`**/api/subscriptions/unread-counts` を軸にした `lastViewedAt` 制御）を参考にした。
 - スクロール restoration は TanStack Router の `scrollRestoration: true` + `scrollToTopSelectors: ['[data-scroll-restoration-id="main-content"]']`（`client/src/router.tsx`）が担う。テストは実装の内部状態を検証するのではなく、`<main data-scroll-restoration-id="main-content">` の `scrollTop` という観察可能な DOM 状態で UX を検証する。
 - 右サイドバー（`RecentPostsSidebarCard`、#928）が同じ投稿タイトルを表示しうるため、メインリストの投稿カード見出し（`<h3>` = `getByRole("heading", ...)`）に絞り込んでロケータの strict mode 違反を避けた。
-- UC-HOME-33 でスクロール後にクリックする投稿は、スクロールでビューポート外に出た先頭投稿ではなく、スクロール後もビューポート内に留まる投稿（3 番目の投稿）を選んだ。先頭投稿をクリック対象にすると Playwright の actionability チェック（要素をビューへ自動スクロール）がテスト側のスクロール位置を上書きしてしまうため。
+- UC-HOME-33 でスクロール後に投稿詳細へ遷移する際は、Playwright の通常の `click()`（`{ force: true }` を含む）を使わず、対象要素の `<a>` を DOM 経由で直接 `.click()` する。通常の `click()` は要素を自動でビューへスクロールし直す（actionability チェック）ため、スクロールでビューポート外に出た投稿をクリック対象にするとテスト側が設定したスクロール位置を上書きしてしまう。`{ force: true }` はこの自動スクロール自体は回避しない（実機検証済み）ため、DOM 直接クリックを採用し、投稿の並び順・行の高さに依存しない頑健な実装にした。復元後の scrollTop は緩い下限（`>300`）ではなく、実際にスクロールした値（`scrolledPosition`）と厳密に一致することを検証する。
+- UC-HOME-34 の中間遷移先に `/about` を選んだ妥当性: `/about` は `scrollHeight(836px) > clientHeight(663px)` で実際にスクロール可能な高さを持つため、ブラウザのネイティブなスクロール位置クランプ（コンテンツ縮小時の自動調整。この場合はクランプ後も 173px 分のスクロール余地が残るはず）だけでは scrollTop が 0 まで落ちきらないことを実機で確認済み。テストが観測する scrollTop=0 は、この自然なクランプではなく、ルータの明示的なリセット機構（本 Issue が検証する対象）によるものだと判断できる。
+- UC-HOME-32 の「New」チップ表示検証は、ページ全体のテキスト件数（`getByText("New").toHaveCount(1)`）ではなく、`data-post-id` で該当投稿カードに絞り込んだ上で表示/非表示を検証する。ページ全体のカウントのみでは、チップが誤って別の投稿（例: 未購読コミュニティ側）に付与されるバグを見逃す。
+- UC-HOME-33 / UC-HOME-34 で共通する認証(401)・フィード・コミュニティのモック設定は `setupScrollablePostsMocks` ヘルパーに切り出し、重複を排除した。
 
 ## 5. 影響範囲 / 既存への変更
 

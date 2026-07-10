@@ -896,65 +896,77 @@ test(
       }),
     );
 
+    const subscribedCard = page.locator(`[data-post-id="${SUBSCRIBED_NEW_POST.id}"]`);
+    const otherCard = page.locator(`[data-post-id="${OTHER_COMMUNITY_NEW_POST.id}"]`);
+
     await page.goto("/");
     await expect(page.getByRole("heading", { name: SUBSCRIBED_NEW_POST.title })).toBeVisible();
     await expect(
       page.getByRole("heading", { name: OTHER_COMMUNITY_NEW_POST.title }),
     ).toBeVisible();
 
-    // 購読コミュニティの lastViewedAt より後の投稿にのみ「New」チップが表示される
-    // （未購読コミュニティの同時刻の投稿には表示されない）
-    await expect(page.getByText("New", { exact: true })).toHaveCount(1);
+    // 購読コミュニティの lastViewedAt より後の投稿のカードにのみ「New」チップが表示される
+    // （未購読コミュニティの同時刻の投稿のカードには表示されない）
+    await expect(subscribedCard.getByText("New", { exact: true })).toBeVisible();
+    await expect(otherCard.getByText("New", { exact: true })).not.toBeVisible();
 
     // 未ログインの場合は「New」チップが一切表示されない
     isAuthenticated = false;
     await page.reload();
     await expect(page.getByRole("heading", { name: SUBSCRIBED_NEW_POST.title })).toBeVisible();
-    await expect(page.getByText("New", { exact: true })).not.toBeVisible();
+    await expect(subscribedCard.getByText("New", { exact: true })).not.toBeVisible();
 
     // lastViewedAt が null（初回購読直後）の場合も「New」チップは表示されない
     isAuthenticated = true;
     lastViewedAt = null;
     await page.reload();
     await expect(page.getByRole("heading", { name: SUBSCRIBED_NEW_POST.title })).toBeVisible();
-    await expect(page.getByText("New", { exact: true })).not.toBeVisible();
+    await expect(subscribedCard.getByText("New", { exact: true })).not.toBeVisible();
   },
 );
+
+/** UC-HOME-33/34 共通: スクロール可能な件数の投稿一覧 + 認証/フィード/コミュニティのモックを設定する。 */
+async function setupScrollablePostsMocks({
+  page,
+  posts,
+}: {
+  page: import("@playwright/test").Page;
+  posts: (typeof MOCK_POST_VOTE)[];
+}) {
+  await page.route("**/api/auth/me", (route) =>
+    route.fulfill({
+      status: 401,
+      contentType: "application/json",
+      body: JSON.stringify({ message: "Unauthorized" }),
+    }),
+  );
+  await page.route("**/api/feed?*", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ posts, nextCursor: null }),
+    }),
+  );
+  await page.route("**/api/communities", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([MOCK_COMMUNITY_VOTE]),
+    }),
+  );
+}
 
 test(
   "UC-HOME-33: フィードでスクロール後に別画面へ遷移し、ブラウザ戻るで元のスクロール位置が復元される（#950）",
   async ({ page }) => {
-    const MANY_POSTS = Array.from({ length: 30 }, (_, i) => ({
+    // eslint-disable-next-line max-params -- Array.from の mapFn コールバック（CLAUDE.md 例外）
+    const MANY_POSTS = Array.from({ length: 10 }, (_, i) => ({
       ...MOCK_POST_VOTE,
       id: `post-${i}`,
       title: `投稿タイトル${i}`,
     }));
-
-    await page.route("**/api/auth/me", (route) =>
-      route.fulfill({
-        status: 401,
-        contentType: "application/json",
-        body: JSON.stringify({ message: "Unauthorized" }),
-      }),
-    );
-    await page.route("**/api/feed?*", (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({ posts: MANY_POSTS, nextCursor: null }),
-      }),
-    );
-    await page.route("**/api/communities", (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify([MOCK_COMMUNITY_VOTE]),
-      }),
-    );
-    // スクロール後もビューポート内に残る投稿（先頭付近は scrollTo(0, 500) でビュー外になる）をクリック対象にする。
-    // 先頭の投稿をクリックすると Playwright の actionability チェックが要素をビューへスクロールし直してしまい、
-    // スクロール位置がクリック時点で失われるため避ける。
-    const TARGET_POST = MANY_POSTS[3];
+    await setupScrollablePostsMocks({ page, posts: MANY_POSTS });
+    const TARGET_POST = MANY_POSTS[0];
     await page.route(`**/api/posts/${TARGET_POST.id}*`, (route) =>
       route.fulfill({
         status: 200,
@@ -964,7 +976,7 @@ test(
     );
 
     await page.goto("/");
-    await expect(page.getByRole("heading", { name: MANY_POSTS[0].title })).toBeVisible();
+    await expect(page.getByRole("heading", { name: TARGET_POST.title })).toBeVisible();
 
     // メインコンテンツ領域（<main data-scroll-restoration-id="main-content">）を下方向へスクロールする
     const mainContent = page.locator('[data-scroll-restoration-id="main-content"]');
@@ -972,52 +984,37 @@ test(
     await expect
       .poll(() => mainContent.evaluate((el) => el.scrollTop))
       .toBeGreaterThan(300);
+    const scrolledPosition = await mainContent.evaluate((el) => el.scrollTop);
 
-    // 投稿カードをクリックしてスレッドページへ遷移する
-    await page.getByRole("heading", { name: TARGET_POST.title }).click();
+    // 投稿カードのリンクを DOM 経由で直接クリックし、スレッドページへ遷移する。
+    // Playwright の通常の click() は要素を自動でビューへスクロールし直す（actionability チェック）ため、
+    // テストが設定したスクロール位置を上書きしてしまう（{ force: true } でもこのスクロールは回避できない）。
+    await page.getByRole("heading", { name: TARGET_POST.title }).evaluate((el) => {
+      (el.closest("a") as HTMLAnchorElement | null)?.click();
+    });
     await expect(page).toHaveURL(`/posts/${TARGET_POST.id}`);
 
     // ブラウザの戻るでホームフィードへ戻る
     await page.goBack();
     await expect(page).toHaveURL("/");
 
-    // 先頭（scrollTop: 0）ではなく、スクロールした位置付近まで自動復元される
+    // 先頭（scrollTop: 0）ではなく、スクロールした位置（手順2の値）まで自動復元される
     await expect
       .poll(() => mainContent.evaluate((el) => el.scrollTop))
-      .toBeGreaterThan(300);
+      .toBe(scrolledPosition);
   },
 );
 
 test(
   "UC-HOME-34: ホームフィードへ前方遷移（新規遷移）すると常に先頭（scrollTop: 0）から表示される（#950）",
   async ({ page }) => {
-    const MANY_POSTS = Array.from({ length: 30 }, (_, i) => ({
+    // eslint-disable-next-line max-params -- Array.from の mapFn コールバック（CLAUDE.md 例外）
+    const MANY_POSTS = Array.from({ length: 10 }, (_, i) => ({
       ...MOCK_POST_VOTE,
       id: `post-${i}`,
       title: `投稿タイトル${i}`,
     }));
-
-    await page.route("**/api/auth/me", (route) =>
-      route.fulfill({
-        status: 401,
-        contentType: "application/json",
-        body: JSON.stringify({ message: "Unauthorized" }),
-      }),
-    );
-    await page.route("**/api/feed?*", (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({ posts: MANY_POSTS, nextCursor: null }),
-      }),
-    );
-    await page.route("**/api/communities", (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify([MOCK_COMMUNITY_VOTE]),
-      }),
-    );
+    await setupScrollablePostsMocks({ page, posts: MANY_POSTS });
 
     await page.goto("/");
     await expect(page.getByRole("heading", { name: MANY_POSTS[0].title })).toBeVisible();
@@ -1037,6 +1034,8 @@ test(
     await expect(page).toHaveURL("/");
 
     // 前の画面のスクロール位置は引き継がれず、常に先頭（scrollTop: 0）から表示される
-    await expect(mainContent.evaluate((el) => el.scrollTop)).resolves.toBe(0);
+    await expect
+      .poll(() => mainContent.evaluate((el) => el.scrollTop))
+      .toBe(0);
   },
 );

@@ -698,15 +698,23 @@ test(
     await mockCommunityWorkersApi(page, MOCK_COMMUNITY.slug);
     await mockSubscriptionApi(page, MOCK_COMMUNITY.slug, false);
 
+    await page.goto(`/communities/${MOCK_COMMUNITY.slug}`);
+
+    // clipboard.writeText をスタブして実際にコピーされた文字列を検証できるようにする
+    // (page.goto によるナビゲーションでコンテキストがリセットされるため goto の後に設定する)
     await page.evaluate(() => {
+      (window as unknown as { __copiedText: string | null }).__copiedText = null;
       Object.defineProperty(navigator, "clipboard", {
-        value: { writeText: () => Promise.resolve() },
+        value: {
+          writeText: (text: string) => {
+            (window as unknown as { __copiedText: string | null }).__copiedText = text;
+            return Promise.resolve();
+          },
+        },
         writable: true,
         configurable: true,
       });
     });
-
-    await page.goto(`/communities/${MOCK_COMMUNITY.slug}`);
 
     // 投稿カード（data-variant="list"）に絞り込み、コミュニティ全体の共有ボタンと区別する
     const postCard = page.locator('[data-variant="list"]').first();
@@ -723,6 +731,10 @@ test(
     // 「URL をコピー」で /posts/$postId の絶対 URL がコピーされる
     await menu.getByRole("menuitem", { name: "URL をコピー" }).click();
     await expect(page.getByText("URL をコピーしました")).toBeVisible();
+    const copiedText = await page.evaluate(
+      () => (window as unknown as { __copiedText: string | null }).__copiedText,
+    );
+    expect(copiedText).toBe(`${new URL(page.url()).origin}/posts/${MOCK_POST.id}`);
 
     // 共有ボタンのクリックが投稿カード全体のクリック（スレッド遷移）に干渉しない
     await expect(page).toHaveURL(`/communities/${MOCK_COMMUNITY.slug}`);
@@ -745,7 +757,9 @@ test(
     await mockCommunityWorkersApi(page, MOCK_COMMUNITY.slug);
     await mockSubscriptionApi(page, MOCK_COMMUNITY.slug, false);
 
+    let feedRequestCount = 0;
     await page.route(`**/api/communities/${MOCK_COMMUNITY.slug}/feed**`, (route) => {
+      feedRequestCount++;
       const url = new URL(route.request().url());
       const cursor = url.searchParams.get("cursor");
       const body = cursor
@@ -774,6 +788,14 @@ test(
     await expect(page.getByRole("heading", { name: "21件目の投稿" })).toBeVisible();
     // 1ページ目の内容も引き続き表示されている（スクロール位置維持・置き換わらない）
     await expect(page.getByRole("heading", { name: "投稿タイトル0" })).toBeVisible();
+
+    // 全件読み込み済み（nextCursor: null）のため、これ以上スクロールしても追加リクエストは発生しない
+    await expect.poll(() => feedRequestCount).toBe(2);
+    await page
+      .locator('[data-scroll-restoration-id="main-content"]')
+      .evaluate((el) => el.scrollTo(0, el.scrollHeight));
+    await page.waitForTimeout(300);
+    expect(feedRequestCount).toBe(2);
   },
 );
 
@@ -864,6 +886,25 @@ test(
 
     // コミュニティ訪問により mark-viewed が完了すると、既読化されて「New」チップが消える
     resolveMarkViewed();
+    await expect(page.getByText("New", { exact: true })).not.toBeVisible();
+
+    // 未購読コミュニティでは、同条件（lastViewedAt より後に作成された投稿）でも「New」チップは表示されない
+    const UNSUBSCRIBED_NEW_POST = {
+      ...MOCK_POST,
+      id: "post-unsubscribed-new",
+      community_id: MOCK_COMMUNITY_WITH_IMAGES.id,
+      title: "未購読コミュニティの新着投稿",
+      created_at: new Date(now - 30 * 60 * 1000).toISOString(),
+    };
+    await mockCommunitiesApi(page, [MOCK_COMMUNITY, MOCK_COMMUNITY_WITH_IMAGES]);
+    await mockCommunityFeedApi(page, MOCK_COMMUNITY_WITH_IMAGES.slug, [UNSUBSCRIBED_NEW_POST]);
+    await mockCommunityWorkersApi(page, MOCK_COMMUNITY_WITH_IMAGES.slug, []);
+    await mockSubscriptionApi(page, MOCK_COMMUNITY_WITH_IMAGES.slug, false);
+
+    await page.goto(`/communities/${MOCK_COMMUNITY_WITH_IMAGES.slug}`);
+    await expect(
+      page.getByRole("heading", { name: UNSUBSCRIBED_NEW_POST.title }),
+    ).toBeVisible();
     await expect(page.getByText("New", { exact: true })).not.toBeVisible();
   },
 );

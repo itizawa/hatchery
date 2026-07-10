@@ -1,10 +1,10 @@
 import type { NextFunction, Request, Response } from "express";
 import express, { type Express } from "express";
-import multer from "multer";
 import request from "supertest";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { MAX_IMAGE_SIZE_BYTES } from "../services/storageService.js";
+import { errorHandler } from "./errorHandler.js";
 import { imageFileFilter, singleImageUpload } from "./imageUpload.js";
 
 describe("imageFileFilter", () => {
@@ -30,6 +30,10 @@ describe("imageFileFilter", () => {
 });
 
 describe("singleImageUpload", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("非 multipart なリクエストでは next() が呼ばれ、レスポンスに書き込みが行われない", () => {
     const req = { headers: {} } as Request;
     const res = {
@@ -47,16 +51,15 @@ describe("singleImageUpload", () => {
 
   function appWithUpload(): Express {
     const app = express();
-    app.post("/t", singleImageUpload, (req, res) => {
-      res.status(200).json({ hasFile: req.file != null });
-    });
-    app.use(
+    app.post(
+      "/t",
+      singleImageUpload,
       // eslint-disable-next-line max-params
-      (err: unknown, _req: Request, res: Response, _next: NextFunction) => {
-        const code = err instanceof multer.MulterError ? err.code : undefined;
-        res.status(599).json({ viaNext: true, code });
+      (req, res) => {
+        res.status(200).json({ hasFile: req.file != null });
       },
     );
+    app.use(errorHandler);
     return app;
   }
 
@@ -73,15 +76,18 @@ describe("singleImageUpload", () => {
     });
   });
 
-  it("LIMIT_FILE_SIZE 以外のエラーでは next(err) でエラーハンドラーに委譲される", async () => {
+  it("LIMIT_FILE_SIZE 以外のエラーでは next(err) でエラーハンドラーに委譲される（singleImageUpload 自身は 400 を返さない）", async () => {
+    // 想定外エラーは errorHandler の 500 経路（console.error にログ出力）に到達する。
+    // テスト出力を汚さないようモックする（errorHandler.test.ts と同じパターン）。
+    vi.spyOn(console, "error").mockImplementation(() => {});
     const small = Buffer.from("not a real image but small");
 
     const res = await request(appWithUpload())
       .post("/t")
       .attach("wrongField", small, "x.png");
 
-    expect(res.status).toBe(599);
-    expect(res.body).toEqual({ viaNext: true, code: "LIMIT_UNEXPECTED_FILE" });
+    expect(res.status).toBe(500);
+    expect(res.body).toEqual({ error: "InternalServerError" });
   });
 
   it("正常なアップロードでは next() が呼ばれ req.file が設定される", async () => {

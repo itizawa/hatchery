@@ -43,7 +43,13 @@ async function mockCommunitiesApi(page: Page): Promise<void> {
   );
 }
 
-async function mockSearchApi(page: Page, posts: unknown[] = []): Promise<void> {
+async function mockSearchApi({
+  page,
+  posts = [],
+}: {
+  page: Page;
+  posts?: unknown[];
+}): Promise<void> {
   await page.route("**/api/posts/search**", (route) =>
     route.fulfill({
       status: 200,
@@ -60,7 +66,7 @@ test("UC-SEARCH-01: ヘッダーの検索欄にキーワードを入力すると
 }) => {
   await mockUnauthenticated(page);
   await mockCommunitiesApi(page);
-  await mockSearchApi(page, [MOCK_POST]);
+  await mockSearchApi({ page, posts: [MOCK_POST] });
 
   await page.goto("/");
 
@@ -72,7 +78,9 @@ test("UC-SEARCH-01: ヘッダーの検索欄にキーワードを入力すると
   await expect(page.getByRole("heading", { name: MOCK_POST.title })).toBeVisible();
 });
 
-test.todo("UC-SEARCH-02: ヘッダーの検索欄で何も入力せず Enter を押すと案内テキストの検索ページが表示される");
+test.todo(
+  "UC-SEARCH-02: ヘッダーの検索欄で何も入力せず Enter を押すと案内テキストの検索ページが表示される",
+);
 
 test.todo("UC-SEARCH-03: /search を開いている間、ヘッダーの検索欄に現在のキーワードが表示される");
 
@@ -81,7 +89,7 @@ test("UC-SEARCH-04: ヘッダーの検索欄からキーワードを入力して
 }) => {
   await mockUnauthenticated(page);
   await mockCommunitiesApi(page);
-  await mockSearchApi(page, [MOCK_POST]);
+  await mockSearchApi({ page, posts: [MOCK_POST] });
 
   await page.goto("/search");
 
@@ -101,7 +109,7 @@ test("UC-SEARCH-06: キーワードにヒットする投稿が 0 件のとき「
 }) => {
   await mockUnauthenticated(page);
   await mockCommunitiesApi(page);
-  await mockSearchApi(page, []);
+  await mockSearchApi({ page, posts: [] });
 
   await page.goto("/search");
 
@@ -116,7 +124,9 @@ test("UC-SEARCH-06: キーワードにヒットする投稿が 0 件のとき「
   ).toBeVisible();
 });
 
-test("UC-SEARCH-07: 検索クエリなしで /search を開くと案内テキストが表示される", async ({ page }) => {
+test("UC-SEARCH-07: 検索クエリなしで /search を開くと案内テキストが表示される", async ({
+  page,
+}) => {
   await mockUnauthenticated(page);
   await mockCommunitiesApi(page);
 

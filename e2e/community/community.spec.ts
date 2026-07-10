@@ -135,11 +135,13 @@ async function mockSubscriptionApi(
   slug: string,
   subscribed: boolean,
 ): Promise<void> {
+  // notify_enabled は SubscriptionStatusSchema の必須フィールド（#1088）。
+  // subscribed=true かつ認証済みの場合のみ NotifySubscriptionToggle が読み取るため常に含めておく。
   await page.route(`**/api/communities/${slug}/subscription`, (route) =>
     route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ subscribed }),
+      body: JSON.stringify({ subscribed, notify_enabled: true }),
     }),
   );
 }
@@ -688,13 +690,226 @@ test(
   },
 );
 
-test.todo("UC-COMM-19: コミュニティ詳細の各投稿カードに共有ボタンが表示される（#838）");
+test(
+  "UC-COMM-19: コミュニティ詳細の各投稿カードに共有ボタンが表示される（#838）",
+  async ({ page }) => {
+    await mockUnauthenticated(page);
+    await mockCommunitiesApi(page);
+    await mockFeedApi(page);
+    await mockCommunityFeedApi(page, MOCK_COMMUNITY.slug);
+    await mockCommunityWorkersApi(page, MOCK_COMMUNITY.slug);
+    await mockSubscriptionApi(page, MOCK_COMMUNITY.slug, false);
 
-test.todo("UC-COMM-23: コミュニティフィードを無限スクロールで閲覧できる（#881）");
+    await page.goto(`/communities/${MOCK_COMMUNITY.slug}`);
 
-test.todo("UC-COMM-24: モバイル幅でもコミュニティ概要（description）が表示される（#883）");
+    // clipboard.writeText をスタブして実際にコピーされた文字列を検証できるようにする
+    // (page.goto によるナビゲーションでコンテキストがリセットされるため goto の後に設定する)
+    await page.evaluate(() => {
+      (window as unknown as { __copiedText: string | null }).__copiedText = null;
+      Object.defineProperty(navigator, "clipboard", {
+        value: {
+          writeText: (text: string) => {
+            (window as unknown as { __copiedText: string | null }).__copiedText = text;
+            return Promise.resolve();
+          },
+        },
+        writable: true,
+        configurable: true,
+      });
+    });
 
-test.todo("UC-COMM-26: 購読コミュニティの新着投稿に「New」ラベルが表示される（#935）");
+    // 投稿カード（data-variant="list"）に絞り込み、コミュニティ全体の共有ボタンと区別する
+    const postCard = page.locator('[data-variant="list"]').first();
+    const shareButton = postCard.getByLabel("共有");
+    await expect(shareButton).toBeVisible();
+
+    // 共有ボタンをクリックすると「URL をコピー」「X でシェア」の選択肢が表示される
+    await shareButton.click();
+    const menu = page.getByRole("menu");
+    await expect(menu).toBeVisible();
+    await expect(menu.getByRole("menuitem", { name: "URL をコピー" })).toBeVisible();
+    await expect(menu.getByRole("menuitem", { name: "X でシェア" })).toBeVisible();
+
+    // 「URL をコピー」で /posts/$postId の絶対 URL がコピーされる
+    await menu.getByRole("menuitem", { name: "URL をコピー" }).click();
+    await expect(page.getByText("URL をコピーしました")).toBeVisible();
+    const copiedText = await page.evaluate(
+      () => (window as unknown as { __copiedText: string | null }).__copiedText,
+    );
+    expect(copiedText).toBe(`${new URL(page.url()).origin}/posts/${MOCK_POST.id}`);
+
+    // 共有ボタンのクリックが投稿カード全体のクリック（スレッド遷移）に干渉しない
+    await expect(page).toHaveURL(`/communities/${MOCK_COMMUNITY.slug}`);
+  },
+);
+
+test(
+  "UC-COMM-23: コミュニティフィードを無限スクロールで閲覧できる（#881）",
+  async ({ page }) => {
+    const PAGE_1_POSTS = Array.from({ length: 20 }, (_, i) => ({
+      ...MOCK_POST,
+      id: `post-page1-${i}`,
+      title: `投稿タイトル${i}`,
+    }));
+    const PAGE_2_POSTS = [{ ...MOCK_POST, id: "post-page2-0", title: "21件目の投稿" }];
+
+    await mockUnauthenticated(page);
+    await mockCommunitiesApi(page);
+    await mockFeedApi(page);
+    await mockCommunityWorkersApi(page, MOCK_COMMUNITY.slug);
+    await mockSubscriptionApi(page, MOCK_COMMUNITY.slug, false);
+
+    let feedRequestCount = 0;
+    await page.route(`**/api/communities/${MOCK_COMMUNITY.slug}/feed**`, (route) => {
+      feedRequestCount++;
+      const url = new URL(route.request().url());
+      const cursor = url.searchParams.get("cursor");
+      const body = cursor
+        ? { posts: PAGE_2_POSTS, nextCursor: null }
+        : { posts: PAGE_1_POSTS, nextCursor: "cursor-1" };
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(body),
+      });
+    });
+
+    await page.goto(`/communities/${MOCK_COMMUNITY.slug}`);
+
+    // 初回表示: 最新20件が表示される
+    await expect(page.getByRole("heading", { name: "投稿タイトル0" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "21件目の投稿" })).not.toBeVisible();
+
+    // 最下部までスクロールすると次ページが自動読み込みされる
+    // スクロール可能なのは window ではなく RootLayout の main コンテナ（overflow: auto）
+    await page
+      .locator('[data-scroll-restoration-id="main-content"]')
+      .evaluate((el) => el.scrollTo(0, el.scrollHeight));
+
+    // 21件目（2ページ目）が末尾に追加表示される
+    await expect(page.getByRole("heading", { name: "21件目の投稿" })).toBeVisible();
+    // 1ページ目の内容も引き続き表示されている（スクロール位置維持・置き換わらない）
+    await expect(page.getByRole("heading", { name: "投稿タイトル0" })).toBeVisible();
+
+    // 全件読み込み済み（nextCursor: null）のため、これ以上スクロールしても追加リクエストは発生しない
+    await expect.poll(() => feedRequestCount).toBe(2);
+    await page
+      .locator('[data-scroll-restoration-id="main-content"]')
+      .evaluate((el) => el.scrollTo(0, el.scrollHeight));
+    await page.waitForTimeout(300);
+    expect(feedRequestCount).toBe(2);
+  },
+);
+
+test(
+  "UC-COMM-24: モバイル幅でもコミュニティ概要（description）が表示される（#883）",
+  async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+
+    await mockUnauthenticated(page);
+    await mockCommunitiesApi(page);
+    await mockFeedApi(page);
+    await mockCommunityFeedApi(page, MOCK_COMMUNITY.slug, []);
+    await mockCommunityWorkersApi(page, MOCK_COMMUNITY.slug, []);
+    await mockSubscriptionApi(page, MOCK_COMMUNITY.slug, false);
+
+    await page.goto(`/communities/${MOCK_COMMUNITY.slug}`);
+
+    // コミュニティ名の下に説明文が表示される（モバイル幅でも常に visible）。
+    // 右サイドバー（md 未満で display:none）にも同じ説明文があるため、
+    // ヘッダーの名前セクションに絞り込んで検証する。
+    await expect(
+      page.getByRole("heading", { name: MOCK_COMMUNITY.name }).first(),
+    ).toBeVisible();
+    const nameSection = page.getByTestId("community-name-section");
+    await expect(nameSection.getByText(MOCK_COMMUNITY.description)).toBeVisible();
+  },
+);
+
+test(
+  "UC-COMM-26: 購読コミュニティの新着投稿に「New」ラベルが表示される（#935）",
+  async ({ page }) => {
+    const now = Date.now();
+    const OLD_LAST_VIEWED_AT = new Date(now - 3 * 60 * 60 * 1000).toISOString();
+    const NEW_LAST_VIEWED_AT = new Date(now).toISOString();
+    const NEW_POST = {
+      ...MOCK_POST,
+      id: "post-new",
+      title: "訪問後に追加された投稿",
+      created_at: new Date(now - 30 * 60 * 1000).toISOString(),
+    };
+
+    await mockAuthenticated(page);
+    await mockCommunitiesApi(page);
+    await mockFeedApi(page);
+    await mockCommunityFeedApi(page, MOCK_COMMUNITY.slug, [NEW_POST]);
+    await mockCommunityWorkersApi(page, MOCK_COMMUNITY.slug, []);
+    await mockSubscriptionApi(page, MOCK_COMMUNITY.slug, true);
+
+    // 初回は前回訪問（3時間前）、mark-viewed 後は最新時刻を返す
+    let unreadCallCount = 0;
+    await page.route("**/api/subscriptions/unread-counts", (route) => {
+      unreadCallCount++;
+      const lastViewedAt = unreadCallCount === 1 ? OLD_LAST_VIEWED_AT : NEW_LAST_VIEWED_AT;
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          unread_counts: [
+            {
+              community_id: MOCK_COMMUNITY.id,
+              community_slug: MOCK_COMMUNITY.slug,
+              unread_count: unreadCallCount === 1 ? 1 : 0,
+              last_viewed_at: lastViewedAt,
+            },
+          ],
+        }),
+      });
+    });
+
+    // mark-viewed のレスポンスを保留し、「New」が最初に表示された状態を確実に観測できるようにする
+    let resolveMarkViewed!: () => void;
+    await page.route(`**/api/communities/${MOCK_COMMUNITY.slug}/mark-viewed`, async (route) => {
+      await new Promise<void>((resolve) => {
+        resolveMarkViewed = resolve;
+      });
+      await route.fulfill({ status: 200, contentType: "application/json", body: "{}" });
+    });
+
+    const markViewedRequestPromise = page.waitForRequest(
+      `**/api/communities/${MOCK_COMMUNITY.slug}/mark-viewed`,
+    );
+    await page.goto(`/communities/${MOCK_COMMUNITY.slug}`);
+    await markViewedRequestPromise;
+
+    // lastViewedAt より後に作成された投稿に「New」チップが表示される
+    await expect(page.getByRole("heading", { name: NEW_POST.title })).toBeVisible();
+    await expect(page.getByText("New", { exact: true })).toBeVisible();
+
+    // コミュニティ訪問により mark-viewed が完了すると、既読化されて「New」チップが消える
+    resolveMarkViewed();
+    await expect(page.getByText("New", { exact: true })).not.toBeVisible();
+
+    // 未購読コミュニティでは、同条件（lastViewedAt より後に作成された投稿）でも「New」チップは表示されない
+    const UNSUBSCRIBED_NEW_POST = {
+      ...MOCK_POST,
+      id: "post-unsubscribed-new",
+      community_id: MOCK_COMMUNITY_WITH_IMAGES.id,
+      title: "未購読コミュニティの新着投稿",
+      created_at: new Date(now - 30 * 60 * 1000).toISOString(),
+    };
+    await mockCommunitiesApi(page, [MOCK_COMMUNITY, MOCK_COMMUNITY_WITH_IMAGES]);
+    await mockCommunityFeedApi(page, MOCK_COMMUNITY_WITH_IMAGES.slug, [UNSUBSCRIBED_NEW_POST]);
+    await mockCommunityWorkersApi(page, MOCK_COMMUNITY_WITH_IMAGES.slug, []);
+    await mockSubscriptionApi(page, MOCK_COMMUNITY_WITH_IMAGES.slug, false);
+
+    await page.goto(`/communities/${MOCK_COMMUNITY_WITH_IMAGES.slug}`);
+    await expect(
+      page.getByRole("heading", { name: UNSUBSCRIBED_NEW_POST.title }),
+    ).toBeVisible();
+    await expect(page.getByText("New", { exact: true })).not.toBeVisible();
+  },
+);
 
 test.todo("UC-COMM-30: コミュニティ詳細のワーカー一覧がスクロールで無限に追加読み込まれる（#1078）");
 

@@ -135,11 +135,13 @@ async function mockSubscriptionApi(
   slug: string,
   subscribed: boolean,
 ): Promise<void> {
+  // notify_enabled は SubscriptionStatusSchema の必須フィールド（#1088）。
+  // subscribed=true かつ認証済みの場合のみ NotifySubscriptionToggle が読み取るため常に含めておく。
   await page.route(`**/api/communities/${slug}/subscription`, (route) =>
     route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ subscribed }),
+      body: JSON.stringify({ subscribed, notify_enabled: true }),
     }),
   );
 }

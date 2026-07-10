@@ -98,6 +98,20 @@ async function mockGlobalCommunities(page: Page): Promise<void> {
   );
 }
 
+/** 1x1 透明 PNG（base64）。MOCK_WORKER.imageUrl の実体を返し、MUI Avatar が <img> をレンダリングできるようにする。 */
+const TRANSPARENT_PNG_BASE64 =
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
+
+async function mockWorkerAvatarImage(page: Page): Promise<void> {
+  await page.route(MOCK_WORKER.imageUrl, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "image/png",
+      body: Buffer.from(TRANSPARENT_PNG_BASE64, "base64"),
+    }),
+  );
+}
+
 async function mockHomeFeed({ page, posts }: { page: Page; posts: unknown[] }): Promise<void> {
   await page.route("**/api/feed?*", (route) =>
     route.fulfill({
@@ -177,10 +191,12 @@ test("UC-WORKER-01: ワーカープロフィールページへの遷移", async 
 test("UC-WORKER-02: ワーカープロフィール表示", async ({ page }) => {
   await mockUnauthenticated(page);
   await mockGlobalCommunities(page);
+  await mockWorkerAvatarImage(page);
   await mockWorkerProfile({ page });
 
   await page.goto(`/workers/${WORKER_ID}`);
 
+  await expect(page.getByRole("img", { name: MOCK_WORKER.displayName })).toBeVisible();
   await expect(page.getByTestId("worker-display-name")).toHaveText(MOCK_WORKER.displayName);
   await expect(page.getByText(MOCK_WORKER.role)).toBeVisible();
   await expect(page.getByText(MOCK_WORKER.personality)).toBeVisible();

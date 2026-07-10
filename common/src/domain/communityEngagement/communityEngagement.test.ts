@@ -82,4 +82,17 @@ describe("CommunityEngagementSchema", () => {
       CommunityEngagementSchema.parse({ ...validEngagement, loyaltyScore: 1.1 })
     ).toThrow();
   });
+
+  it("windowDays が 0 の場合はエラー", () => {
+    expect(() => CommunityEngagementSchema.parse({ ...validEngagement, windowDays: 0 })).toThrow();
+  });
+
+  it("subscriberCountByCommunity の値が負の場合はエラー", () => {
+    expect(() =>
+      CommunityEngagementSchema.parse({
+        ...validEngagement,
+        subscriberCountByCommunity: { "community-1": -1 },
+      })
+    ).toThrow();
+  });
 });

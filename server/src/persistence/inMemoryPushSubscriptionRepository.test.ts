@@ -43,6 +43,9 @@ describe("createInMemoryPushSubscriptionRepository", () => {
 
       expect(result.userId).toBe("user-1");
       expect(result.endpoint).toBe("https://push.example.com/1");
+      expect(result.p256dh).toBe("k1");
+      expect(result.auth).toBe("a1");
+      expect(result.createdAt).toBeInstanceOf(Date);
       expect(result.id).toBeTruthy();
     });
 
@@ -132,6 +135,11 @@ describe("createInMemoryPushSubscriptionRepository", () => {
       const result = await repo.listAll();
 
       expect(result).toHaveLength(2);
+      expect(result.map((r) => r.userId).sort()).toEqual(["user-1", "user-2"]);
+      expect(result.map((r) => r.endpoint).sort()).toEqual([
+        "https://push.example.com/1",
+        "https://push.example.com/2",
+      ]);
     });
   });
 });

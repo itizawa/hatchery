@@ -787,10 +787,256 @@ test(
   },
 );
 
-test.todo("UC-HOME-26: ホームフィードの各投稿カードに共有ボタンが表示される（#838）");
+test(
+  "UC-HOME-26: ホームフィードの各投稿カードに共有ボタンが表示される（#838）",
+  async ({ page }) => {
+    await setupVoteTestMocks({ page });
+    await page.goto("/");
+    // 右サイドバー（新着ポスト）にも同じ投稿タイトルが表示されるため、
+    // メインリストの投稿カード見出し（h3）に絞り込む。
+    await expect(page.getByRole("heading", { name: MOCK_POST_VOTE.title })).toBeVisible();
 
-test.todo("UC-HOME-32: 購読コミュニティの新着投稿に「New」ラベルが表示される（#935）");
+    // 投稿カード（data-variant="list"）内の共有ボタンを確認する
+    const postCard = page.locator('[data-variant="list"]').first();
+    const shareButton = postCard.getByLabel("共有");
+    await expect(shareButton).toBeVisible();
 
-test.todo("UC-HOME-33: フィードでスクロール後に別画面へ遷移し、ブラウザ戻るで元のスクロール位置が復元される（#950）");
+    // 共有ボタンをクリックすると「URL をコピー」「X でシェア」の選択肢が表示される
+    await shareButton.click();
+    const menu = page.getByRole("menu");
+    await expect(menu).toBeVisible();
+    await expect(menu.getByRole("menuitem", { name: "URL をコピー" })).toBeVisible();
+    await expect(menu.getByRole("menuitem", { name: "X でシェア" })).toBeVisible();
+  },
+);
 
-test.todo("UC-HOME-34: ホームフィードへ前方遷移（新規遷移）すると常に先頭（scrollTop: 0）から表示される（#950）");
+test(
+  "UC-HOME-32: 購読コミュニティの新着投稿に「New」ラベルが表示される（#935）",
+  async ({ page }) => {
+    const now = Date.now();
+    const OLD_LAST_VIEWED_AT = new Date(now - 3 * 60 * 60 * 1000).toISOString();
+
+    const SUBSCRIBED_COMMUNITY = MOCK_COMMUNITY_VOTE;
+    const OTHER_COMMUNITY = {
+      ...MOCK_COMMUNITY_VOTE,
+      id: "comm2",
+      slug: "other-talk",
+      name: "Other Talk",
+    };
+
+    const SUBSCRIBED_NEW_POST = {
+      ...MOCK_POST_VOTE,
+      id: "post-subscribed-new",
+      title: "購読中コミュニティの新着投稿",
+      community_id: SUBSCRIBED_COMMUNITY.id,
+      created_at: new Date(now - 30 * 60 * 1000).toISOString(),
+    };
+    const OTHER_COMMUNITY_NEW_POST = {
+      ...MOCK_POST_VOTE,
+      id: "post-other-new",
+      title: "別コミュニティの新着投稿",
+      community_id: OTHER_COMMUNITY.id,
+      created_at: new Date(now - 30 * 60 * 1000).toISOString(),
+    };
+
+    let isAuthenticated = true;
+    let lastViewedAt: string | null = OLD_LAST_VIEWED_AT;
+
+    await page.route("**/api/auth/me", (route) =>
+      isAuthenticated
+        ? route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify({
+              id: "user1",
+              name: "Test User",
+              email: "test@example.com",
+              imageUrl: null,
+              isAdmin: false,
+            }),
+          })
+        : route.fulfill({
+            status: 401,
+            contentType: "application/json",
+            body: JSON.stringify({ message: "Unauthorized" }),
+          }),
+    );
+    await page.route("**/api/feed?*", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          posts: [SUBSCRIBED_NEW_POST, OTHER_COMMUNITY_NEW_POST],
+          nextCursor: null,
+        }),
+      }),
+    );
+    await page.route("**/api/communities", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([SUBSCRIBED_COMMUNITY, OTHER_COMMUNITY]),
+      }),
+    );
+    // OTHER_COMMUNITY は購読していないため unread_counts に含めない
+    await page.route("**/api/subscriptions/unread-counts", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          unread_counts: [
+            {
+              community_id: SUBSCRIBED_COMMUNITY.id,
+              community_slug: SUBSCRIBED_COMMUNITY.slug,
+              unread_count: lastViewedAt ? 1 : 0,
+              last_viewed_at: lastViewedAt,
+            },
+          ],
+        }),
+      }),
+    );
+
+    await page.goto("/");
+    await expect(page.getByRole("heading", { name: SUBSCRIBED_NEW_POST.title })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: OTHER_COMMUNITY_NEW_POST.title }),
+    ).toBeVisible();
+
+    // 購読コミュニティの lastViewedAt より後の投稿にのみ「New」チップが表示される
+    // （未購読コミュニティの同時刻の投稿には表示されない）
+    await expect(page.getByText("New", { exact: true })).toHaveCount(1);
+
+    // 未ログインの場合は「New」チップが一切表示されない
+    isAuthenticated = false;
+    await page.reload();
+    await expect(page.getByRole("heading", { name: SUBSCRIBED_NEW_POST.title })).toBeVisible();
+    await expect(page.getByText("New", { exact: true })).not.toBeVisible();
+
+    // lastViewedAt が null（初回購読直後）の場合も「New」チップは表示されない
+    isAuthenticated = true;
+    lastViewedAt = null;
+    await page.reload();
+    await expect(page.getByRole("heading", { name: SUBSCRIBED_NEW_POST.title })).toBeVisible();
+    await expect(page.getByText("New", { exact: true })).not.toBeVisible();
+  },
+);
+
+test(
+  "UC-HOME-33: フィードでスクロール後に別画面へ遷移し、ブラウザ戻るで元のスクロール位置が復元される（#950）",
+  async ({ page }) => {
+    const MANY_POSTS = Array.from({ length: 30 }, (_, i) => ({
+      ...MOCK_POST_VOTE,
+      id: `post-${i}`,
+      title: `投稿タイトル${i}`,
+    }));
+
+    await page.route("**/api/auth/me", (route) =>
+      route.fulfill({
+        status: 401,
+        contentType: "application/json",
+        body: JSON.stringify({ message: "Unauthorized" }),
+      }),
+    );
+    await page.route("**/api/feed?*", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ posts: MANY_POSTS, nextCursor: null }),
+      }),
+    );
+    await page.route("**/api/communities", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([MOCK_COMMUNITY_VOTE]),
+      }),
+    );
+    // スクロール後もビューポート内に残る投稿（先頭付近は scrollTo(0, 500) でビュー外になる）をクリック対象にする。
+    // 先頭の投稿をクリックすると Playwright の actionability チェックが要素をビューへスクロールし直してしまい、
+    // スクロール位置がクリック時点で失われるため避ける。
+    const TARGET_POST = MANY_POSTS[3];
+    await page.route(`**/api/posts/${TARGET_POST.id}*`, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ post: TARGET_POST, comments: [], related_posts: [] }),
+      }),
+    );
+
+    await page.goto("/");
+    await expect(page.getByRole("heading", { name: MANY_POSTS[0].title })).toBeVisible();
+
+    // メインコンテンツ領域（<main data-scroll-restoration-id="main-content">）を下方向へスクロールする
+    const mainContent = page.locator('[data-scroll-restoration-id="main-content"]');
+    await mainContent.evaluate((el) => el.scrollTo(0, 500));
+    await expect
+      .poll(() => mainContent.evaluate((el) => el.scrollTop))
+      .toBeGreaterThan(300);
+
+    // 投稿カードをクリックしてスレッドページへ遷移する
+    await page.getByRole("heading", { name: TARGET_POST.title }).click();
+    await expect(page).toHaveURL(`/posts/${TARGET_POST.id}`);
+
+    // ブラウザの戻るでホームフィードへ戻る
+    await page.goBack();
+    await expect(page).toHaveURL("/");
+
+    // 先頭（scrollTop: 0）ではなく、スクロールした位置付近まで自動復元される
+    await expect
+      .poll(() => mainContent.evaluate((el) => el.scrollTop))
+      .toBeGreaterThan(300);
+  },
+);
+
+test(
+  "UC-HOME-34: ホームフィードへ前方遷移（新規遷移）すると常に先頭（scrollTop: 0）から表示される（#950）",
+  async ({ page }) => {
+    const MANY_POSTS = Array.from({ length: 30 }, (_, i) => ({
+      ...MOCK_POST_VOTE,
+      id: `post-${i}`,
+      title: `投稿タイトル${i}`,
+    }));
+
+    await page.route("**/api/auth/me", (route) =>
+      route.fulfill({
+        status: 401,
+        contentType: "application/json",
+        body: JSON.stringify({ message: "Unauthorized" }),
+      }),
+    );
+    await page.route("**/api/feed?*", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ posts: MANY_POSTS, nextCursor: null }),
+      }),
+    );
+    await page.route("**/api/communities", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([MOCK_COMMUNITY_VOTE]),
+      }),
+    );
+
+    await page.goto("/");
+    await expect(page.getByRole("heading", { name: MANY_POSTS[0].title })).toBeVisible();
+
+    const mainContent = page.locator('[data-scroll-restoration-id="main-content"]');
+    await mainContent.evaluate((el) => el.scrollTo(0, 500));
+    await expect
+      .poll(() => mainContent.evaluate((el) => el.scrollTop))
+      .toBeGreaterThan(300);
+
+    // サイドバーのリンクで別画面（/about）へ遷移する
+    await page.getByRole("link", { name: "Hatcheryとは？" }).click();
+    await expect(page).toHaveURL("/about");
+
+    // サイドバーの「ホーム」リンクで / へ前方（新規）遷移する
+    await page.getByRole("link", { name: "ホーム" }).click();
+    await expect(page).toHaveURL("/");
+
+    // 前の画面のスクロール位置は引き継がれず、常に先頭（scrollTop: 0）から表示される
+    await expect(mainContent.evaluate((el) => el.scrollTop)).resolves.toBe(0);
+  },
+);

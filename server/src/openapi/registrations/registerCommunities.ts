@@ -24,6 +24,9 @@ import {
   communitySlugParam,
 } from "./shared.js";
 
+/** admin post 操作（pin/unpin 等）の path パラメータ `id`（#1089）。 */
+const adminPostIdParam = z.string().openapi({ param: { name: "id", in: "path" } });
+
 /**
  * 公共コミュニティ API（#305 / ADR-0019 / ADR-0020）の OpenAPI 登録（#535）。
  *
@@ -286,6 +289,41 @@ export function registerCommunities(registry: OpenAPIRegistry, ctx: RegistryCont
       401: { description: "未認証", ...errorJson },
       403: { description: "admin 権限なし", ...errorJson },
       404: { description: "community / worker（削除済み含む）が存在しない", ...errorJson },
+    },
+  });
+
+  // admin: post を pin する（認証必須・admin のみ・#1089・community あたり最大 3 件）
+  registry.registerPath({
+    method: "post",
+    path: "/api/admin/posts/{id}/pin",
+    summary: "post を pin する（認証必須・admin のみ・#1089・community あたり最大 3 件）",
+    request: { params: z.object({ id: adminPostIdParam }) },
+    responses: {
+      200: {
+        description: "pin 済みの Post",
+        content: { "application/json": { schema: PostComponent } },
+      },
+      401: { description: "未認証", ...errorJson },
+      403: { description: "admin 権限なし", ...errorJson },
+      404: { description: "post が存在しない", ...errorJson },
+      409: { description: "community あたりの pin 上限（3件）を超える", ...errorJson },
+    },
+  });
+
+  // admin: post の pin を解除する（認証必須・admin のみ・#1089・冪等）
+  registry.registerPath({
+    method: "delete",
+    path: "/api/admin/posts/{id}/pin",
+    summary: "post の pin を解除する（認証必須・admin のみ・#1089・未 pin でも冪等に 200）",
+    request: { params: z.object({ id: adminPostIdParam }) },
+    responses: {
+      200: {
+        description: "pin 解除後の Post",
+        content: { "application/json": { schema: PostComponent } },
+      },
+      401: { description: "未認証", ...errorJson },
+      403: { description: "admin 権限なし", ...errorJson },
+      404: { description: "post が存在しない", ...errorJson },
     },
   });
 

@@ -428,5 +428,24 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
       });
       return rows.map(toRecord);
     },
+
+    // eslint-disable-next-line max-params
+    async updateTitleAndText(
+      id: string,
+      input: { title: string; text: string },
+    ): Promise<PostRecord | null> {
+      try {
+        const row = await prisma.post.update({
+          where: { id },
+          data: { title: input.title, text: input.text },
+        });
+        return toRecord(row);
+      } catch (err) {
+        if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025") {
+          return null;
+        }
+        throw err;
+      }
+    },
   };
 }

@@ -3,13 +3,15 @@
  * admin が community の作成・編集・一覧表示を行う。
  * #889: 作成・編集をダイアログからページ遷移に移行した。
  */
-import { useNavigate } from "@tanstack/react-router";
-import { type ReactElement } from "react";
+import { useNavigate, useSearch } from "@tanstack/react-router";
+import { useEffect, useState, type ReactElement } from "react";
 
 import {
+  Alert,
   Box,
   Button,
   Skeleton,
+  Snackbar,
   Table,
   TableBody,
   TableCell,
@@ -111,6 +113,17 @@ function CommunityListSkeleton(): ReactElement {
  */
 export function CommunitiesTab(): ReactElement {
   const navigate = useNavigate();
+  const { communitySaved } = useSearch({ from: "/admin" });
+  const [showSavedSnackbar, setShowSavedSnackbar] = useState(false);
+
+  // #1081: コミュニティ編集の保存成功後に付与される一時フラグ。検知したら
+  // Snackbar を表示しつつ URL から即座に除去し、再訪問時の再表示を防ぐ。
+  useEffect(() => {
+    if (communitySaved) {
+      setShowSavedSnackbar(true);
+      void navigate({ to: "/admin", search: { tab: "communities" }, replace: true });
+    }
+  }, [communitySaved]);
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
@@ -132,6 +145,16 @@ export function CommunitiesTab(): ReactElement {
           <CommunityListPanel />
         </QueryBoundary>
       </Box>
+      <Snackbar
+        open={showSavedSnackbar}
+        autoHideDuration={3000}
+        onClose={() => setShowSavedSnackbar(false)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert severity="success" onClose={() => setShowSavedSnackbar(false)}>
+          コミュニティを保存しました
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

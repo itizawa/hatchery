@@ -163,6 +163,35 @@ describe.skipIf(!DATABASE_URL)("createPrismaPostRepository (integration)", () =>
     });
   });
 
+  describe("updateTitleAndText (#1117)", () => {
+    it("title/text を更新できる", async () => {
+      await setupCommunities();
+      const repo = createPrismaPostRepository(prisma);
+      const [created] = await repo.createMany(communityId, [
+        { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "旧タイトル", text: "旧本文" },
+      ]);
+
+      const updated = await repo.updateTitleAndText(created!.id, {
+        title: "新タイトル",
+        text: "新本文",
+      });
+
+      expect(updated?.title).toBe("新タイトル");
+      expect(updated?.text).toBe("新本文");
+    });
+
+    it("存在しない id は null を返す", async () => {
+      const repo = createPrismaPostRepository(prisma);
+
+      const result = await repo.updateTitleAndText("non-existent-id", {
+        title: "新タイトル",
+        text: "新本文",
+      });
+
+      expect(result).toBeNull();
+    });
+  });
+
   describe("listLatest", () => {
     it("全 community の post を createdAt 降順で返す", async () => {
       await setupCommunities();

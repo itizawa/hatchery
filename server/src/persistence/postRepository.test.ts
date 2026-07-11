@@ -692,4 +692,33 @@ describe("createInMemoryPostRepository", () => {
       expect(result).toHaveLength(1);
     });
   });
+
+  describe("updateTitleAndText (#1117)", () => {
+    it("指定 id の title/text を更新する", async () => {
+      const repo = createInMemoryPostRepository();
+      const [created] = await repo.createMany("community-1", [
+        { slotKey: "s", seq: 0, author: "w", title: "旧タイトル", text: "旧本文" },
+      ]);
+
+      const updated = await repo.updateTitleAndText(created.id, {
+        title: "新タイトル",
+        text: "新本文",
+      });
+
+      expect(updated?.title).toBe("新タイトル");
+      expect(updated?.text).toBe("新本文");
+      const found = await repo.findById(created.id);
+      expect(found?.title).toBe("新タイトル");
+      expect(found?.text).toBe("新本文");
+    });
+
+    it("存在しない id の場合は null を返す", async () => {
+      const repo = createInMemoryPostRepository();
+      const updated = await repo.updateTitleAndText("nonexistent", {
+        title: "新タイトル",
+        text: "新本文",
+      });
+      expect(updated).toBeNull();
+    });
+  });
 });

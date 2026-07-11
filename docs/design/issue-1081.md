@@ -48,3 +48,10 @@
 ## 7. リスク・未決事項
 
 特になし（#1080 で確立済みのパターンをそのまま横展開するのみ）。
+
+### セルフレビューでの修正（develop マージ前）
+
+`/code-review`（high effort）で以下2点の指摘が確認され、実装 PR 内で修正済み:
+
+1. **[correctness] `useSavedFlagSnackbar` の `navigate` が search 全体を `{ tab }` で置き換えていた**ため、`workerSaved` と `communitySaved` が同時に URL に存在する場合（例: タブ切替や直接 URL アクセスで両フラグが並存）、片方のフラグを検知した hook の navigate がもう片方のフラグを消費前に消してしまう不具合があった。`useLoginModal`（#588）と同様に `search` を関数更新（`(prev) => { const next = {...prev}; delete next[flagKey]; return next; }`）にし、自分の `flagKey` だけを取り除くよう修正した（呼び出し側は `tab` の代わりに `flagKey: "workerSaved" | "communitySaved"` を渡す）。
+2. **[reuse] `CommunitiesTab.tsx` と `AdminWorkerTable.tsx` の Snackbar/Alert JSX が重複**していたため、`client/src/components/SavedFlagSnackbar.tsx` に共通の表示コンポーネントとして切り出した。

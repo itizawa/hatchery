@@ -7,11 +7,9 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 import { type ReactElement } from "react";
 
 import {
-  Alert,
   Box,
   Button,
   Skeleton,
-  Snackbar,
   Table,
   TableBody,
   TableCell,
@@ -24,6 +22,7 @@ import type { AdminCommunity } from "@hatchery/common";
 import { useCommunities } from "../api/communities.js";
 import { useSavedFlagSnackbar } from "../hooks/useSavedFlagSnackbar.js";
 import { QueryBoundary } from "./QueryBoundary.js";
+import { SavedFlagSnackbar } from "./SavedFlagSnackbar.js";
 
 /** コミュニティ一覧テーブル行（編集ページへ遷移するボタンを持つ）。 */
 interface CommunityRowProps {
@@ -119,7 +118,7 @@ export function CommunitiesTab(): ReactElement {
   // Snackbar を表示しつつ URL から即座に除去し、再訪問時の再表示を防ぐ（#1080 と同じ共通フック）。
   const { open: showSavedSnackbar, close: closeSavedSnackbar } = useSavedFlagSnackbar({
     flag: !!communitySaved,
-    tab: "communities",
+    flagKey: "communitySaved",
   });
 
   return (
@@ -142,16 +141,11 @@ export function CommunitiesTab(): ReactElement {
           <CommunityListPanel />
         </QueryBoundary>
       </Box>
-      <Snackbar
+      <SavedFlagSnackbar
         open={showSavedSnackbar}
-        autoHideDuration={3000}
         onClose={closeSavedSnackbar}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-      >
-        <Alert severity="success" onClose={closeSavedSnackbar}>
-          コミュニティを保存しました
-        </Alert>
-      </Snackbar>
+        message="コミュニティを保存しました"
+      />
     </Box>
   );
 }

@@ -1,4 +1,4 @@
-import { Alert, Box, Button, Snackbar, TablePagination } from "./uiParts";
+import { Box, Button, TablePagination } from "./uiParts";
 
 import { useState, type ReactElement } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
@@ -6,6 +6,7 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 import { ADMIN_WORKERS_PAGE_SIZE, useAdminWorkers } from "../api/admin.js";
 import { useSavedFlagSnackbar } from "../hooks/useSavedFlagSnackbar.js";
 import { QueryBoundary } from "./QueryBoundary.js";
+import { SavedFlagSnackbar } from "./SavedFlagSnackbar.js";
 import { WorkerTable } from "./WorkerTable.js";
 
 /** 「ワーカーを追加」ボタン（ローディング・成功で共有するヘッダ）。 */
@@ -43,7 +44,7 @@ const AdminWorkerTableInner = (): ReactElement => {
   // Snackbar を表示しつつ URL から即座に除去し、再訪問時の再表示を防ぐ（#1081 で共通フック化）。
   const { open: showSavedSnackbar, close: closeSavedSnackbar } = useSavedFlagSnackbar({
     flag: !!workerSaved,
-    tab: "users",
+    flagKey: "workerSaved",
   });
 
   const handleAddWorker = (): void => {
@@ -63,16 +64,11 @@ const AdminWorkerTableInner = (): ReactElement => {
         // eslint-disable-next-line max-params
         onPageChange={(_, newPage) => setPage(newPage)}
       />
-      <Snackbar
+      <SavedFlagSnackbar
         open={showSavedSnackbar}
-        autoHideDuration={3000}
         onClose={closeSavedSnackbar}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-      >
-        <Alert severity="success" onClose={closeSavedSnackbar}>
-          ワーカーを保存しました
-        </Alert>
-      </Snackbar>
+        message="ワーカーを保存しました"
+      />
     </Box>
   );
 };

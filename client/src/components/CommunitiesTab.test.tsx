@@ -112,16 +112,17 @@ describe("CommunitiesTab（#833 / #889）", () => {
     expect(await screen.findByText("コミュニティを保存しました")).toBeInTheDocument();
   });
 
-  it("communitySaved=1 のとき navigate で search からフラグを除去する（#1081）", async () => {
+  it("communitySaved=1 のとき navigate で自分のフラグのみ除去する（#1081）", async () => {
     mockUseSearch.mockReturnValue({ tab: "communities", communitySaved: 1 });
     renderWithClient(<CommunitiesTab />);
     await waitFor(() =>
-      expect(mockNavigate).toHaveBeenCalledWith({
-        to: "/admin",
-        search: { tab: "communities" },
-        replace: true,
-      }),
+      expect(mockNavigate).toHaveBeenCalledWith(expect.objectContaining({ replace: true })),
     );
+    const { search } = mockNavigate.mock.calls[0][0];
+    expect(search({ tab: "communities", communitySaved: 1, workerSaved: 1 })).toEqual({
+      tab: "communities",
+      workerSaved: 1,
+    });
   });
 
   it("communitySaved が無いとき保存成功のSnackbarは表示されない（#1081）", async () => {

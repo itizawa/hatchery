@@ -126,17 +126,18 @@ describe("AdminWorkerTable（useSuspenseQuery + QueryBoundary）", () => {
     expect(await screen.findByText("ワーカーを保存しました")).toBeInTheDocument();
   });
 
-  it("workerSaved=1 のとき navigate で search からフラグを除去する（#1080）", async () => {
+  it("workerSaved=1 のとき navigate で自分のフラグのみ除去する（#1080）", async () => {
     mockUseSearch.mockReturnValue({ tab: "users", workerSaved: 1 });
     stubWorkers(200, []);
     renderWithClient(<AdminWorkerTable />);
     await waitFor(() =>
-      expect(mockNavigate).toHaveBeenCalledWith({
-        to: "/admin",
-        search: { tab: "users" },
-        replace: true,
-      }),
+      expect(mockNavigate).toHaveBeenCalledWith(expect.objectContaining({ replace: true })),
     );
+    const { search } = mockNavigate.mock.calls[0][0];
+    expect(search({ tab: "users", workerSaved: 1, communitySaved: 1 })).toEqual({
+      tab: "users",
+      communitySaved: 1,
+    });
   });
 
   it("workerSaved が無いとき保存成功のSnackbarは表示されない（#1080）", async () => {

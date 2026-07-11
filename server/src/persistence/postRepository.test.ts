@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createInMemoryPostRepository } from "./postRepository.js";
+import type { PostRecord } from "./postRepository.js";
 
 describe("createInMemoryPostRepository", () => {
   describe("createMany", () => {
@@ -872,6 +873,67 @@ describe("createInMemoryPostRepository", () => {
       await repo.pinPost({ id: post!.id, pinnedAt: new Date() });
       const result = await repo.listPinnedByCommunity("community-1");
       expect(result).toHaveLength(1);
+    });
+  });
+
+  describe("pinPostIfUnderLimit（#1089・上限チェックの原子化・セルフレビュー指摘）", () => {
+    it("community あたりの pin 件数が上限未満なら pin して post を返す", async () => {
+      const repo = createInMemoryPostRepository();
+      const [created] = await repo.createMany("community-1", [
+        { slotKey: "s", seq: 0, author: "w", title: "post", text: "text" },
+      ]);
+      const pinnedAt = new Date("2026-07-11T00:00:00Z");
+
+      const result = await repo.pinPostIfUnderLimit({ id: created.id, pinnedAt, maxCount: 3 });
+
+      expect(result).not.toBe("not_found");
+      expect(result).not.toBe("limit_exceeded");
+      expect((result as PostRecord).isPinned).toBe(true);
+      expect((result as PostRecord).pinnedAt).toEqual(pinnedAt);
+    });
+
+    it("community あたりの pin 件数が上限に達している場合は limit_exceeded を返し pin しない", async () => {
+      const repo = createInMemoryPostRepository();
+      const posts = await repo.createMany("community-1", [
+        { slotKey: "s", seq: 0, author: "w", title: "p1", text: "t" },
+        { slotKey: "s", seq: 1, author: "w", title: "p2", text: "t" },
+        { slotKey: "s", seq: 2, author: "w", title: "p3", text: "t" },
+        { slotKey: "s", seq: 3, author: "w", title: "p4", text: "t" },
+      ]);
+      await repo.pinPostIfUnderLimit({ id: posts[0]!.id, pinnedAt: new Date(), maxCount: 3 });
+      await repo.pinPostIfUnderLimit({ id: posts[1]!.id, pinnedAt: new Date(), maxCount: 3 });
+      await repo.pinPostIfUnderLimit({ id: posts[2]!.id, pinnedAt: new Date(), maxCount: 3 });
+
+      const result = await repo.pinPostIfUnderLimit({ id: posts[3]!.id, pinnedAt: new Date(), maxCount: 3 });
+
+      expect(result).toBe("limit_exceeded");
+      const found = await repo.findById(posts[3]!.id);
+      expect(found?.isPinned).toBe(false);
+    });
+
+    it("既に pin 済みの post を再度 pin しても上限チェックの対象にならない（冪等）", async () => {
+      const repo = createInMemoryPostRepository();
+      const posts = await repo.createMany("community-1", [
+        { slotKey: "s", seq: 0, author: "w", title: "p1", text: "t" },
+        { slotKey: "s", seq: 1, author: "w", title: "p2", text: "t" },
+        { slotKey: "s", seq: 2, author: "w", title: "p3", text: "t" },
+      ]);
+      await repo.pinPostIfUnderLimit({ id: posts[0]!.id, pinnedAt: new Date(), maxCount: 3 });
+      await repo.pinPostIfUnderLimit({ id: posts[1]!.id, pinnedAt: new Date(), maxCount: 3 });
+      await repo.pinPostIfUnderLimit({ id: posts[2]!.id, pinnedAt: new Date(), maxCount: 3 });
+
+      // community は既に上限 3 件の pin 済みだが、posts[0] 自身は既に pin 済みなので再 pin は成功する
+      const newPinnedAt = new Date("2026-07-11T09:00:00Z");
+      const result = await repo.pinPostIfUnderLimit({ id: posts[0]!.id, pinnedAt: newPinnedAt, maxCount: 3 });
+
+      expect(result).not.toBe("limit_exceeded");
+      expect((result as PostRecord).pinnedAt).toEqual(newPinnedAt);
+    });
+
+    it("存在しない id の場合は not_found を返す", async () => {
+      const repo = createInMemoryPostRepository();
+      const result = await repo.pinPostIfUnderLimit({ id: "nonexistent", pinnedAt: new Date(), maxCount: 3 });
+      expect(result).toBe("not_found");
     });
   });
 

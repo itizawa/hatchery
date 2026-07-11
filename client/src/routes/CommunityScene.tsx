@@ -13,6 +13,7 @@ import {
 } from "../components/uiParts";
 import { Link as RouterLink, useNavigate, useParams } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type ReactElement } from "react";
+import { isAdmin } from "@hatchery/common";
 import type { CommunityFeedSort } from "@hatchery/common";
 
 import {
@@ -23,6 +24,7 @@ import {
   usePublicCommunities,
   useCommunityWorkers,
 } from "../api/communities.js";
+import { usePinPost, useUnpinPost } from "../api/posts.js";
 import { useAuth } from "../api/auth.js";
 import {
   useMarkCommunityViewed,
@@ -248,6 +250,10 @@ const CommunityContent = ({
   const { mutate: subscribe, isPending: isSubscribing } = useSubscribe(communitySlug);
   const { mutate: unsubscribe, isPending: isUnsubscribing } = useUnsubscribe(communitySlug);
   const { mutate: votePost, isPending: isVotingPost, variables: votingPostVars } = useVotePost(communitySlug);
+  // admin による post の pin / unpin（#1089）。community 管理者のみに操作ボタンを表示する。
+  const isAdminUser = Boolean(authUser && isAdmin(authUser));
+  const { mutate: pinPost } = usePinPost(communitySlug);
+  const { mutate: unpinPost } = useUnpinPost(communitySlug);
 
   const isSubscriptionPending = isSubscribing || isUnsubscribing;
 
@@ -331,6 +337,12 @@ const CommunityContent = ({
                             currentVote={post.my_vote ?? null}
                             postUrl={`${window.location.origin}/posts/${post.id}`}
                             isNew={isNew}
+                            isPinned={post.is_pinned}
+                            onTogglePin={
+                              isAdminUser
+                                ? () => (post.is_pinned ? unpinPost(post.id) : pinPost(post.id))
+                                : undefined
+                            }
                             onWorkerClick={post.author_worker ? () => {} : undefined}
                             onCommentClick={
                               post.comment_count

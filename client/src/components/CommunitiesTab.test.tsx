@@ -4,19 +4,21 @@
  * 本タブのテストは「ボタンでページ遷移する」フローと一覧表示の検証に絞る。
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import type { ReactElement } from "react";
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockNavigate = vi.fn();
+const mockUseSearch = vi.fn();
 vi.mock("@tanstack/react-router", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@tanstack/react-router")>();
   return {
     ...actual,
     useNavigate: () => mockNavigate,
+    useSearch: () => mockUseSearch(),
   };
 });
 
@@ -43,6 +45,7 @@ beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 afterEach(() => {
   server.resetHandlers();
   mockNavigate.mockReset();
+  mockUseSearch.mockReset();
 });
 afterAll(() => server.close());
 
@@ -52,6 +55,10 @@ function renderWithClient(ui: ReactElement) {
 }
 
 describe("CommunitiesTab（#833 / #889）", () => {
+  beforeEach(() => {
+    mockUseSearch.mockReturnValue({ tab: "communities" });
+  });
+
   it("既存コミュニティ一覧（名前・slug）が表示される", async () => {
     renderWithClient(<CommunitiesTab />);
     expect(await screen.findByText("AI 開発者の集い")).toBeInTheDocument();
@@ -97,5 +104,30 @@ describe("CommunitiesTab（#833 / #889）", () => {
     await screen.findByText("AI 開発者の集い");
     await userEvent.click(screen.getByRole("button", { name: "編集" }));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("communitySaved=1 のとき保存成功のSnackbarが表示される（#1081）", async () => {
+    mockUseSearch.mockReturnValue({ tab: "communities", communitySaved: 1 });
+    renderWithClient(<CommunitiesTab />);
+    expect(await screen.findByText("コミュニティを保存しました")).toBeInTheDocument();
+  });
+
+  it("communitySaved=1 のとき navigate で自分のフラグのみ除去する（#1081）", async () => {
+    mockUseSearch.mockReturnValue({ tab: "communities", communitySaved: 1 });
+    renderWithClient(<CommunitiesTab />);
+    await waitFor(() =>
+      expect(mockNavigate).toHaveBeenCalledWith(expect.objectContaining({ replace: true })),
+    );
+    const { search } = mockNavigate.mock.calls[0][0];
+    expect(search({ tab: "communities", communitySaved: 1, workerSaved: 1 })).toEqual({
+      tab: "communities",
+      workerSaved: 1,
+    });
+  });
+
+  it("communitySaved が無いとき保存成功のSnackbarは表示されない（#1081）", async () => {
+    renderWithClient(<CommunitiesTab />);
+    await screen.findByText("AI 開発者の集い");
+    expect(screen.queryByText("コミュニティを保存しました")).not.toBeInTheDocument();
   });
 });

@@ -914,3 +914,7 @@ test(
 test.todo("UC-COMM-30: コミュニティ詳細のワーカー一覧がスクロールで無限に追加読み込まれる（#1078）");
 
 test.todo("UC-COMM-31: コミュニティ単位で Web Push 通知の ON/OFF を切り替えられる（#1088）");
+
+test.todo(
+  "UC-COMM-32: 共有メニューから LINE / Facebook / OS ネイティブ共有シートでも共有できる（#1068）",
+);

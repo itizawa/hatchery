@@ -1,6 +1,9 @@
 import ShareIcon from "@mui/icons-material/ShareRounded";
 import ContentCopyIcon from "@mui/icons-material/ContentCopyRounded";
 import XIcon from "@mui/icons-material/X";
+import FacebookIcon from "@mui/icons-material/FacebookRounded";
+import ChatIcon from "@mui/icons-material/ChatRounded";
+import IosShareIcon from "@mui/icons-material/IosShareRounded";
 import { useState, type ReactElement } from "react";
 
 import { useExternalLink } from "../hooks/useExternalLink.js";
@@ -24,6 +27,22 @@ export function buildXShareUrl({ shareTitle, shareUrl }: { shareTitle: string; s
 }
 
 /**
+ * LINE の共有 URL を生成する純粋関数。
+ */
+export function buildLineShareUrl({ shareUrl }: { shareUrl: string }): string {
+  const params = new URLSearchParams({ url: shareUrl });
+  return `https://social-plugins.line.me/lineit/share?${params.toString()}`;
+}
+
+/**
+ * Facebook の共有 URL を生成する純粋関数。
+ */
+export function buildFacebookShareUrl({ shareUrl }: { shareUrl: string }): string {
+  const params = new URLSearchParams({ u: shareUrl });
+  return `https://www.facebook.com/sharer/sharer.php?${params.toString()}`;
+}
+
+/**
  * SNS 共有ボタン（#257 / #747）。
  * Chip（pill 型ボタン）でトリガーし、クリックで既存のメニューを展開する。
  */
@@ -34,6 +53,7 @@ export const ShareButton = ({ shareUrl, shareTitle }: ShareButtonProps): ReactEl
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [feedback, setFeedback] = useState<CopyFeedback>({ open: false, severity: "success" });
   const open = anchorEl !== null;
+  const canUseNativeShare = typeof navigator.share === "function";
 
   const handleOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -88,6 +108,43 @@ export const ShareButton = ({ shareUrl, shareTitle }: ShareButtonProps): ReactEl
           </ListItemIcon>
           <ListItemText>X でシェア</ListItemText>
         </MenuItem>
+        <MenuItem
+          onClick={() => {
+            handleClose();
+            openExternalLink(buildLineShareUrl({ shareUrl }));
+          }}
+        >
+          <ListItemIcon>
+            <ChatIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>LINE でシェア</ListItemText>
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            handleClose();
+            openExternalLink(buildFacebookShareUrl({ shareUrl }));
+          }}
+        >
+          <ListItemIcon>
+            <FacebookIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Facebook でシェア</ListItemText>
+        </MenuItem>
+        {canUseNativeShare ? (
+          <MenuItem
+            onClick={() => {
+              handleClose();
+              // ユーザーが共有シートをキャンセルすると AbortError で reject するため、
+              // unhandled rejection にならないよう明示的に握りつぶす。
+              navigator.share({ title: shareTitle, url: shareUrl }).catch(() => {});
+            }}
+          >
+            <ListItemIcon>
+              <IosShareIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>その他のアプリで共有</ListItemText>
+          </MenuItem>
+        ) : null}
       </Menu>
       <Snackbar
         open={feedback.open}

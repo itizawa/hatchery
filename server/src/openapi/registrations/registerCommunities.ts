@@ -22,10 +22,8 @@ import {
   type RegistryContext,
   communityIdParam,
   communitySlugParam,
+  workerPathIdParam,
 } from "./shared.js";
-
-/** admin post 操作（pin/unpin 等）の path パラメータ `id`（#1089）。 */
-const adminPostIdParam = z.string().openapi({ param: { name: "id", in: "path" } });
 
 /**
  * 公共コミュニティ API（#305 / ADR-0019 / ADR-0020）の OpenAPI 登録（#535）。
@@ -297,7 +295,7 @@ export function registerCommunities(registry: OpenAPIRegistry, ctx: RegistryCont
     method: "post",
     path: "/api/admin/posts/{id}/pin",
     summary: "post を pin する（認証必須・admin のみ・#1089・community あたり最大 3 件）",
-    request: { params: z.object({ id: adminPostIdParam }) },
+    request: { params: z.object({ id: workerPathIdParam }) },
     responses: {
       200: {
         description: "pin 済みの Post",
@@ -315,7 +313,7 @@ export function registerCommunities(registry: OpenAPIRegistry, ctx: RegistryCont
     method: "delete",
     path: "/api/admin/posts/{id}/pin",
     summary: "post の pin を解除する（認証必須・admin のみ・#1089・未 pin でも冪等に 200）",
-    request: { params: z.object({ id: adminPostIdParam }) },
+    request: { params: z.object({ id: workerPathIdParam }) },
     responses: {
       200: {
         description: "pin 解除後の Post",

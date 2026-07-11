@@ -105,6 +105,25 @@ describe("runBackfillNewsPostUrls (#1117)", () => {
     expect(result).toEqual({ updatedCount: 0, updatedIds: [] });
   });
 
+  it("除去すると本文が空文字になる場合は本文を更新せず元の値を維持する", async () => {
+    const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
+    const postRepo = createInMemoryPostRepository();
+    await postRepo.createMany("community-news", [
+      {
+        slotKey: "s",
+        seq: 0,
+        author: "worker-1",
+        title: "普通のタイトル",
+        text: "https://b.hatena.ne.jp/hotentry/general\n\n",
+      },
+    ]);
+
+    const result = await runBackfillNewsPostUrls({ communityRepository: communityRepo, postRepository: postRepo });
+
+    // 本文がURL行のみで除去後に空文字になるため、更新せず元の値を維持する（PostSchema min(1) 違反を避ける）。
+    expect(result).toEqual({ updatedCount: 0, updatedIds: [] });
+  });
+
   it("news 以外のコミュニティの post は対象に含めない", async () => {
     const communityRepo = createInMemoryCommunityRepository([
       makeCommunity(),

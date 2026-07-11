@@ -171,7 +171,8 @@ describe.skipIf(!DATABASE_URL)("createPrismaPostRepository (integration)", () =>
         { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "旧タイトル", text: "旧本文" },
       ]);
 
-      const updated = await repo.updateTitleAndText(created!.id, {
+      const updated = await repo.updateTitleAndText({
+        id: created!.id,
         title: "新タイトル",
         text: "新本文",
       });
@@ -183,7 +184,8 @@ describe.skipIf(!DATABASE_URL)("createPrismaPostRepository (integration)", () =>
     it("存在しない id は null を返す", async () => {
       const repo = createPrismaPostRepository(prisma);
 
-      const result = await repo.updateTitleAndText("non-existent-id", {
+      const result = await repo.updateTitleAndText({
+        id: "non-existent-id",
         title: "新タイトル",
         text: "新本文",
       });

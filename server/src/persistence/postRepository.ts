@@ -184,7 +184,7 @@ export interface PostRepository {
    * post の title/text をまとめて更新する（#1117・過去生成データのURL露出バックフィル用）。
    * 存在しない id は null を返す。
    */
-  updateTitleAndText(id: string, input: { title: string; text: string }): Promise<PostRecord | null>;
+  updateTitleAndText(params: { id: string; title: string; text: string }): Promise<PostRecord | null>;
 }
 
 function cloneRecord(r: PostRecord): PostRecord {
@@ -664,12 +664,11 @@ export function createInMemoryPostRepository(): PostRepository {
       return Promise.resolve(result);
     },
 
-    // eslint-disable-next-line max-params
-    updateTitleAndText(id: string, input: { title: string; text: string }): Promise<PostRecord | null> {
+    updateTitleAndText({ id, title, text }: { id: string; title: string; text: string }): Promise<PostRecord | null> {
       const record = records.find((r) => r.id === id);
       if (!record) return Promise.resolve(null);
-      record.title = input.title;
-      record.text = input.text;
+      record.title = title;
+      record.text = text;
       return Promise.resolve(cloneRecord(record));
     },
   };

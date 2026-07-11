@@ -700,7 +700,8 @@ describe("createInMemoryPostRepository", () => {
         { slotKey: "s", seq: 0, author: "w", title: "旧タイトル", text: "旧本文" },
       ]);
 
-      const updated = await repo.updateTitleAndText(created.id, {
+      const updated = await repo.updateTitleAndText({
+        id: created.id,
         title: "新タイトル",
         text: "新本文",
       });
@@ -714,7 +715,8 @@ describe("createInMemoryPostRepository", () => {
 
     it("存在しない id の場合は null を返す", async () => {
       const repo = createInMemoryPostRepository();
-      const updated = await repo.updateTitleAndText("nonexistent", {
+      const updated = await repo.updateTitleAndText({
+        id: "nonexistent",
         title: "新タイトル",
         text: "新本文",
       });

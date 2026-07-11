@@ -55,10 +55,15 @@ export async function runBackfillNewsPostUrls({
     const trailingExposed = hasTrailingUrlExposure(post.title);
     if (!leadingExposed && !trailingExposed) continue;
 
-    const newText = leadingExposed ? stripLeadingUrlLineFromPostText(post.text) : post.text;
-    const newTitle = trailingExposed ? stripTrailingUrlSuffixFromPostTitle(post.title) : post.title;
+    const strippedText = leadingExposed ? stripLeadingUrlLineFromPostText(post.text) : post.text;
+    const strippedTitle = trailingExposed ? stripTrailingUrlSuffixFromPostTitle(post.title) : post.title;
+    // 除去後に空文字になる場合は PostSchema の min(1) 制約に反する可能性があるため、
+    // その項目は更新せず元の値を維持する（安全側に倒す・#1117）。
+    const newText = strippedText.trim().length > 0 ? strippedText : post.text;
+    const newTitle = strippedTitle.trim().length > 0 ? strippedTitle : post.title;
+    if (newText === post.text && newTitle === post.title) continue;
 
-    const updated = await postRepository.updateTitleAndText(post.id, { title: newTitle, text: newText });
+    const updated = await postRepository.updateTitleAndText({ id: post.id, title: newTitle, text: newText });
     if (updated) updatedIds.push(post.id);
   }
 

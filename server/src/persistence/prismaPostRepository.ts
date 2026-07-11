@@ -429,15 +429,19 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
       return rows.map(toRecord);
     },
 
-    // eslint-disable-next-line max-params
-    async updateTitleAndText(
-      id: string,
-      input: { title: string; text: string },
-    ): Promise<PostRecord | null> {
+    async updateTitleAndText({
+      id,
+      title,
+      text,
+    }: {
+      id: string;
+      title: string;
+      text: string;
+    }): Promise<PostRecord | null> {
       try {
         const row = await prisma.post.update({
           where: { id },
-          data: { title: input.title, text: input.text },
+          data: { title, text },
         });
         return toRecord(row);
       } catch (err) {

@@ -189,15 +189,16 @@ const indexRoute = createRoute({
   ),
 });
 
-/** 人気フィード（/popular）。vote 数降順の公開フィード（#435）。認証不要。 */
+/**
+ * 旧人気フィード（/popular）。#1067 でホーム（/）に統合し、人気投稿のみを表示するようにした。
+ * 既存のブックマーク・外部リンクの互換のため / へリダイレクトする。
+ */
 const popularRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/popular",
-  component: () => (
-    <QueryBoundary fallback={<MainContentSkeleton />}>
-      <LazyHomeFeedScene sort="popular" />
-    </QueryBoundary>
-  ),
+  beforeLoad: () => {
+    throw redirect({ to: "/" });
+  },
 });
 
 /** コミュニティブラウズ（/communities）。認証不要の公開ページ。 */

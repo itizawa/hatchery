@@ -1,5 +1,4 @@
 import { Box, Button, Typography } from "../components/uiParts";
-import type { HomeFeedSort } from "@hatchery/common";
 import { Link as RouterLink, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 import { useInfiniteHomeFeed, usePublicCommunities, useVotePost } from "../api/communities.js";
@@ -21,16 +20,8 @@ const listItemSx = {
   transition: "background-color 150ms ease-out",
 } as const;
 
-/** sort ごとの画面見出し。 */
-const FEED_HEADING: Record<HomeFeedSort, string> = {
-  latest: "ホームフィード",
-  popular: "人気の投稿",
-};
-
-export interface HomeFeedSceneProps {
-  /** フィードの並び順。latest=新着順（/）/ popular=vote 数降順（/popular）。既定は latest。 */
-  sort?: HomeFeedSort;
-}
+/** ホーム（/）のメインリストの見出し。#1067 で人気順固定になったため単一の固定文言にする。 */
+const FEED_HEADING = "人気の投稿";
 
 /**
  * 右サイドバー内に新着ポスト一覧を表示するパネル（#928）。
@@ -46,16 +37,16 @@ const RecentPostsSidebarPanel = ({
 };
 
 /**
- * ホームフィード（/ = 新着順 / /popular = 人気順）。
+ * ホームフィード（/）。人気順（vote スコア降順）固定でメインリストを表示する（#1067）。
  * 購読状態・認証状態に関わらず全 community の post を表示する（ADR-0020 更新）。
- * #367: 無限スクロール（カーソルページネーション）対応。#435: 並び順パラメータ化。
+ * #367: 無限スクロール（カーソルページネーション）対応。
  * #748: vote 連打防止。#890: 押した方向のみ disabled にし、反対方向は操作可能にする。
- * #928: 2 カラムレイアウト化・右サイドバーに横断新着ポスト表示。
+ * #928: 2 カラムレイアウト化・右サイドバーに横断新着ポスト表示（新着順固定・左の人気順メインリストと役割分担）。
  */
-export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactElement => {
+export const HomeFeedScene = (): ReactElement => {
   // #462: useInfiniteHomeFeed は Suspense 化。data は non-undefined。
   // ローディング/エラーは router の QueryBoundary に委譲する。
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteHomeFeed(sort);
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteHomeFeed("popular");
   const { data: user } = useAuth();
   const { mutate: votePost, isPending: isVotingPost, variables: votingPostVars } = useVotePost();
   const navigate = useNavigate();
@@ -137,7 +128,7 @@ export const HomeFeedScene = ({ sort = "latest" }: HomeFeedSceneProps): ReactEle
     <Box component="section" sx={{ p: 3, maxWidth: 1200, mx: "auto" }}>
       <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1 }}>
         <Typography variant="h5" component="h1">
-          {FEED_HEADING[sort]}
+          {FEED_HEADING}
         </Typography>
       </Box>
 

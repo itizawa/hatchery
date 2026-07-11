@@ -3,12 +3,16 @@ import { describe, expect, it } from "vitest";
 import {
   buildManualSlotKey,
   CreatePostRequestSchema,
+  hasLeadingUrlExposure,
+  hasTrailingUrlExposure,
   MANUAL_SLOT_KEY_PREFIX,
   PostSchema,
   POST_TAGS_MAX_COUNT,
   POST_TAG_MAX_LENGTH,
   POST_TEXT_MAX_LENGTH,
   POST_TITLE_MAX_LENGTH,
+  stripLeadingUrlLineFromPostText,
+  stripTrailingUrlSuffixFromPostTitle,
 } from "./post.js";
 
 describe("PostSchema", () => {
@@ -230,5 +234,68 @@ describe("buildManualSlotKey (#433)", () => {
     const slotKey = buildManualSlotKey("2026-06-13T09:00");
     expect(slotKey.startsWith(MANUAL_SLOT_KEY_PREFIX)).toBe(true);
     expect(slotKey).not.toBe("2026-06-13T09:00");
+  });
+});
+
+describe("hasLeadingUrlExposure / stripLeadingUrlLineFromPostText (#1117)", () => {
+  it("本文が http から始まる場合に露出ありと判定する", () => {
+    const text = "https://b.hatena.ne.jp/hotentry/general\n\n本文の要約がここに続く。";
+    expect(hasLeadingUrlExposure(text)).toBe(true);
+  });
+
+  it("本文が https から始まる場合に露出ありと判定する", () => {
+    expect(hasLeadingUrlExposure("https://example.com/entry\n\n本文")).toBe(true);
+  });
+
+  it("本文が URL から始まらない場合は露出なしと判定する", () => {
+    expect(hasLeadingUrlExposure("今日はいい天気だった。")).toBe(false);
+  });
+
+  it("本文中間に URL を含むだけの場合は露出なしと判定する（先頭のみ対象）", () => {
+    const text = "参考: https://example.com/entry を見た感想です。";
+    expect(hasLeadingUrlExposure(text)).toBe(false);
+  });
+
+  it("先頭の URL 行（改行込み）を除去し本文の意味内容は変更しない", () => {
+    const text = "https://b.hatena.ne.jp/hotentry/general\n\n「週休3日制」導入企業じわじわ増加——という話。";
+    const stripped = stripLeadingUrlLineFromPostText(text);
+    expect(stripped).toBe("「週休3日制」導入企業じわじわ増加——という話。");
+  });
+
+  it("URL 露出がない本文は変更しない", () => {
+    const text = "今日はいい天気だった。";
+    expect(stripLeadingUrlLineFromPostText(text)).toBe(text);
+  });
+});
+
+describe("hasTrailingUrlExposure / stripTrailingUrlSuffixFromPostTitle (#1117)", () => {
+  it("タイトル末尾が ' / URL' の場合に露出ありと判定する", () => {
+    const title =
+      "ライドシェア解禁の議論、またループしてるけど今回こそ本気でやる気あるの？ / https://b.hatena.ne.jp/hotentry/general";
+    expect(hasTrailingUrlExposure(title)).toBe(true);
+  });
+
+  it("末尾に URL が無いタイトルは露出なしと判定する", () => {
+    expect(hasTrailingUrlExposure("普通のタイトルです")).toBe(false);
+  });
+
+  it("タイトル中間に URL を含むだけ（末尾形式でない）場合は露出なしと判定する", () => {
+    expect(hasTrailingUrlExposure("https://example.com を貼っただけの本文っぽいタイトル")).toBe(
+      false,
+    );
+  });
+
+  it("末尾の ' / URL' を除去しタイトルの意味内容は変更しない", () => {
+    const title =
+      "ライドシェア解禁の議論、またループしてるけど今回こそ本気でやる気あるの？ / https://b.hatena.ne.jp/hotentry/general";
+    const stripped = stripTrailingUrlSuffixFromPostTitle(title);
+    expect(stripped).toBe(
+      "ライドシェア解禁の議論、またループしてるけど今回こそ本気でやる気あるの？",
+    );
+  });
+
+  it("URL 露出がないタイトルは変更しない", () => {
+    const title = "普通のタイトルです";
+    expect(stripTrailingUrlSuffixFromPostTitle(title)).toBe(title);
   });
 });

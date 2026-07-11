@@ -134,7 +134,9 @@ export const ShareButton = ({ shareUrl, shareTitle }: ShareButtonProps): ReactEl
           <MenuItem
             onClick={() => {
               handleClose();
-              void navigator.share({ title: shareTitle, url: shareUrl });
+              // ユーザーが共有シートをキャンセルすると AbortError で reject するため、
+              // unhandled rejection にならないよう明示的に握りつぶす。
+              navigator.share({ title: shareTitle, url: shareUrl }).catch(() => {});
             }}
           >
             <ListItemIcon>

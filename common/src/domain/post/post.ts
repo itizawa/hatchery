@@ -100,3 +100,35 @@ export const CreatePostRequestSchema = z.object({
 });
 
 export type CreatePostRequest = z.infer<typeof CreatePostRequestSchema>;
+
+/**
+ * 本文冒頭のURL露出を検出する正規表現（#927 修正前に生成された投稿に残存。#1117）。
+ * 本文が `http(s)://` から始まり、URLの後に改行が続く形（`https://...\n\n本文`）のみを対象とする。
+ */
+const LEADING_URL_LINE_PATTERN = /^https?:\/\/\S+\n+/;
+
+/**
+ * タイトル末尾のURL露出を検出する正規表現（#1022 修正前に生成された投稿に残存。#1117）。
+ * タイトル末尾が ` / http(s)://...` の形式のときのみを対象とする。
+ */
+const TRAILING_URL_SUFFIX_PATTERN = /\s*\/\s*https?:\/\/\S+$/;
+
+/** 本文冒頭にURL行が露出しているかを判定する（#1117）。 */
+export function hasLeadingUrlExposure(text: string): boolean {
+  return LEADING_URL_LINE_PATTERN.test(text);
+}
+
+/** 本文冒頭のURL行（改行込み）を除去する。露出が無ければ変更しない（#1117）。 */
+export function stripLeadingUrlLineFromPostText(text: string): string {
+  return text.replace(LEADING_URL_LINE_PATTERN, "");
+}
+
+/** タイトル末尾に ` / URL` が露出しているかを判定する（#1117）。 */
+export function hasTrailingUrlExposure(title: string): boolean {
+  return TRAILING_URL_SUFFIX_PATTERN.test(title);
+}
+
+/** タイトル末尾の ` / URL` を除去する。露出が無ければ変更しない（#1117）。 */
+export function stripTrailingUrlSuffixFromPostTitle(title: string): string {
+  return title.replace(TRAILING_URL_SUFFIX_PATTERN, "");
+}

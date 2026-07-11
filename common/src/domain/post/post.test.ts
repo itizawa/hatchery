@@ -7,6 +7,7 @@ import {
   hasTrailingUrlExposure,
   MANUAL_SLOT_KEY_PREFIX,
   PostSchema,
+  POST_PIN_MAX_COUNT,
   POST_TAGS_MAX_COUNT,
   POST_TAG_MAX_LENGTH,
   POST_TEXT_MAX_LENGTH,
@@ -172,6 +173,36 @@ describe("PostSchema", () => {
 
   it("tags の要素が空文字だと reject する（#1087）", () => {
     expect(PostSchema.safeParse({ ...validPost, tags: [""] }).success).toBe(false);
+  });
+
+  it("is_pinned は省略時 false（既定値）になる（#1089）", () => {
+    const result = PostSchema.parse(validPost);
+    expect(result.is_pinned).toBe(false);
+  });
+
+  it("is_pinned に true を設定できる（#1089）", () => {
+    const result = PostSchema.parse({ ...validPost, is_pinned: true });
+    expect(result.is_pinned).toBe(true);
+  });
+
+  it("pinned_at は省略可能（後方互換・#1089）", () => {
+    const result = PostSchema.safeParse(validPost);
+    expect(result.success).toBe(true);
+  });
+
+  it("pinned_at に Date を設定できる（#1089）", () => {
+    const pinnedAt = new Date("2026-07-01T00:00:00.000Z");
+    const result = PostSchema.parse({ ...validPost, pinned_at: pinnedAt });
+    expect(result.pinned_at).toEqual(pinnedAt);
+  });
+
+  it("pinned_at に null を設定できる（未 pin・#1089）", () => {
+    const result = PostSchema.parse({ ...validPost, pinned_at: null });
+    expect(result.pinned_at).toBeNull();
+  });
+
+  it("POST_PIN_MAX_COUNT は 3 件（#1089）", () => {
+    expect(POST_PIN_MAX_COUNT).toBe(3);
   });
 });
 

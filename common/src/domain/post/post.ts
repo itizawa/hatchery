@@ -14,6 +14,9 @@ export const POST_TAG_MAX_LENGTH = 30;
 /** Post の tags の最大件数（#1087）。 */
 export const POST_TAGS_MAX_COUNT = 5;
 
+/** community あたりの pin 済み post の最大件数（#1089）。 */
+export const POST_PIN_MAX_COUNT = 3;
+
 /**
  * Post の tags の Zod スキーマ（#1087）。最大 5 件・各 30 文字以内。省略時 `[]`。
  * PostSchema と GenerationOutputPostSchema（common/src/domain/generation/generation.ts）で共有する。
@@ -66,6 +69,10 @@ export const PostSchema = z.object({
   my_vote: VoteDirectionSchema.nullable().optional(),
   /** 投稿に付与されたタグ一覧（#1087）。最大 5 件・各 30 文字以内。省略時 `[]`。 */
   tags: PostTagsSchema,
+  /** admin による pin 状態（#1089）。community あたり最大 POST_PIN_MAX_COUNT 件。省略時 false。 */
+  is_pinned: z.boolean().default(false),
+  /** pin された日時（#1089）。未 pin は null。省略可（後方互換）。 */
+  pinned_at: z.date().nullable().optional(),
 });
 
 export type Post = z.infer<typeof PostSchema>;

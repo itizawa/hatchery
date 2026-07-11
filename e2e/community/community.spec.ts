@@ -918,3 +918,7 @@ test.todo("UC-COMM-31: コミュニティ単位で Web Push 通知の ON/OFF を
 test.todo(
   "UC-COMM-32: 共有メニューから LINE / Facebook / OS ネイティブ共有シートでも共有できる（#1068）",
 );
+
+test.todo(
+  "UC-COMM-33: コミュニティ管理者が重要な投稿をピン留めしフィード上部に固定表示できる（#1089）",
+);

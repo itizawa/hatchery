@@ -100,3 +100,48 @@ export const CreatePostRequestSchema = z.object({
 });
 
 export type CreatePostRequest = z.infer<typeof CreatePostRequestSchema>;
+
+/**
+ * 本文冒頭のURL露出を検出する正規表現（#927 修正前に生成された投稿に残存。#1117）。
+ * 本文が `http(s)://` から始まり、URLの後に改行が続く形（`https://...\n\n本文`）のみを対象とする。
+ */
+const LEADING_URL_LINE_PATTERN = /^https?:\/\/\S+\n+/;
+
+/** タイトル末尾のURL露出を区切る文字列（#1022 修正前に生成された投稿に残存。#1117）。 */
+const TRAILING_URL_SEPARATOR = " / ";
+
+/** 本文冒頭にURL行が露出しているかを判定する（#1117）。 */
+export function hasLeadingUrlExposure(text: string): boolean {
+  return LEADING_URL_LINE_PATTERN.test(text);
+}
+
+/** 本文冒頭のURL行（改行込み）を除去する。露出が無ければ変更しない（#1117）。 */
+export function stripLeadingUrlLineFromPostText(text: string): string {
+  return text.replace(LEADING_URL_LINE_PATTERN, "");
+}
+
+/**
+ * タイトル末尾の ` / URL` 露出の開始位置を返す。無ければ -1。
+ * 正規表現ではなく文字列操作（lastIndexOf・startsWith）で判定することで、
+ * 非アンカーの正規表現に起因する多項式時間の ReDoS を構造的に避ける（#1117）。
+ */
+function findTrailingUrlSuffixStart(title: string): number {
+  const separatorIndex = title.lastIndexOf(TRAILING_URL_SEPARATOR);
+  if (separatorIndex === -1) return -1;
+  const rest = title.slice(separatorIndex + TRAILING_URL_SEPARATOR.length);
+  const isUrl = rest.startsWith("http://") || rest.startsWith("https://");
+  if (!isUrl) return -1;
+  // 末尾まで空白を含まない（URL の後に他のテキストが続かない）ことを確認する。
+  return /\s/.test(rest) ? -1 : separatorIndex;
+}
+
+/** タイトル末尾に ` / URL` が露出しているかを判定する（#1117）。 */
+export function hasTrailingUrlExposure(title: string): boolean {
+  return findTrailingUrlSuffixStart(title) !== -1;
+}
+
+/** タイトル末尾の ` / URL` を除去する。露出が無ければ変更しない（#1117）。 */
+export function stripTrailingUrlSuffixFromPostTitle(title: string): string {
+  const start = findTrailingUrlSuffixStart(title);
+  return start === -1 ? title : title.slice(0, start);
+}

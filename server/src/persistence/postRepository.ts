@@ -180,6 +180,11 @@ export interface PostRepository {
     limit: number;
     options?: RevealFilterOptions;
   }): Promise<PostRecord[]>;
+  /**
+   * post の title/text をまとめて更新する（#1117・過去生成データのURL露出バックフィル用）。
+   * 存在しない id は null を返す。
+   */
+  updateTitleAndText(params: { id: string; title: string; text: string }): Promise<PostRecord | null>;
 }
 
 function cloneRecord(r: PostRecord): PostRecord {
@@ -657,6 +662,14 @@ export function createInMemoryPostRepository(): PostRepository {
         .slice(0, limit)
         .map(cloneRecord);
       return Promise.resolve(result);
+    },
+
+    updateTitleAndText({ id, title, text }: { id: string; title: string; text: string }): Promise<PostRecord | null> {
+      const record = records.find((r) => r.id === id);
+      if (!record) return Promise.resolve(null);
+      record.title = title;
+      record.text = text;
+      return Promise.resolve(cloneRecord(record));
     },
   };
 }

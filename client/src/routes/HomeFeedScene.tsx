@@ -20,9 +20,6 @@ const listItemSx = {
   transition: "background-color 150ms ease-out",
 } as const;
 
-/** ホーム（/）のメインリストの見出し。#1067 で人気順固定になったため単一の固定文言にする。 */
-const FEED_HEADING = "人気の投稿";
-
 /**
  * 右サイドバー内に新着ポスト一覧を表示するパネル（#928）。
  * useRecentPostsSidebar は Suspense 化済のため、QueryBoundary で局所フォールバックを与える。
@@ -128,7 +125,7 @@ export const HomeFeedScene = (): ReactElement => {
     <Box component="section" sx={{ p: 3, maxWidth: 1200, mx: "auto" }}>
       <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1 }}>
         <Typography variant="h5" component="h1">
-          {FEED_HEADING}
+          人気の投稿
         </Typography>
       </Box>
 

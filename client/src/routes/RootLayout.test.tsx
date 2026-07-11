@@ -93,12 +93,6 @@ function renderWithRouter(initialPath = "/") {
     component: (): ReactElement => <RootLayout />,
   });
 
-  const popularRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: "/popular",
-    component: (): ReactElement => <RootLayout />,
-  });
-
   const adminRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/admin",
@@ -133,7 +127,6 @@ function renderWithRouter(initialPath = "/") {
       indexRoute,
       communitiesRoute,
       communityRoute,
-      popularRoute,
       adminRoute,
       termsRoute,
       privacyRoute,

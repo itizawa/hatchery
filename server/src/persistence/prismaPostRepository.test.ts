@@ -194,6 +194,118 @@ describe.skipIf(!DATABASE_URL)("createPrismaPostRepository (integration)", () =>
     });
   });
 
+  describe("pin / unpin (#1089)", () => {
+    it("pinPost で post を pin できる", async () => {
+      await setupCommunities();
+      const repo = createPrismaPostRepository(prisma);
+      const [created] = await repo.createMany(communityId, [
+        { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "post", text: "text" },
+      ]);
+      const pinnedAt = new Date("2026-07-11T00:00:00Z");
+
+      const updated = await repo.pinPost({ id: created!.id, pinnedAt });
+
+      expect(updated?.isPinned).toBe(true);
+      expect(updated?.pinnedAt).toEqual(pinnedAt);
+    });
+
+    it("pinPost で存在しない id は null を返す", async () => {
+      const repo = createPrismaPostRepository(prisma);
+
+      const result = await repo.pinPost({ id: "non-existent-id", pinnedAt: new Date() });
+
+      expect(result).toBeNull();
+    });
+
+    it("unpinPost で pin を解除できる", async () => {
+      await setupCommunities();
+      const repo = createPrismaPostRepository(prisma);
+      const [created] = await repo.createMany(communityId, [
+        { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "post", text: "text" },
+      ]);
+      await repo.pinPost({ id: created!.id, pinnedAt: new Date() });
+
+      const updated = await repo.unpinPost(created!.id);
+
+      expect(updated?.isPinned).toBe(false);
+      expect(updated?.pinnedAt).toBeNull();
+    });
+
+    it("unpinPost で存在しない id は null を返す", async () => {
+      const repo = createPrismaPostRepository(prisma);
+
+      const result = await repo.unpinPost("non-existent-id");
+
+      expect(result).toBeNull();
+    });
+
+    it("countPinnedByCommunity は community 内の pin 済み件数を返す", async () => {
+      await setupCommunities();
+      const repo = createPrismaPostRepository(prisma);
+      const posts = await repo.createMany(communityId, [
+        { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "p1", text: "text" },
+        { slotKey: "2026-06-10T09:00", seq: 1, author: "worker-1", title: "p2", text: "text" },
+      ]);
+      await repo.pinPost({ id: posts[0]!.id, pinnedAt: new Date() });
+
+      const count = await repo.countPinnedByCommunity(communityId);
+
+      expect(count).toBe(1);
+    });
+
+    it("listPinnedByCommunity は pin 済み post を pinnedAt 降順で返す", async () => {
+      await setupCommunities();
+      const repo = createPrismaPostRepository(prisma);
+      const posts = await repo.createMany(communityId, [
+        { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "older-pin", text: "text" },
+        { slotKey: "2026-06-10T09:00", seq: 1, author: "worker-1", title: "newer-pin", text: "text" },
+      ]);
+      await repo.pinPost({ id: posts[0]!.id, pinnedAt: new Date("2026-07-01T00:00:00Z") });
+      await repo.pinPost({ id: posts[1]!.id, pinnedAt: new Date("2026-07-05T00:00:00Z") });
+
+      const result = await repo.listPinnedByCommunity(communityId);
+
+      expect(result.map((p) => p.title)).toEqual(["newer-pin", "older-pin"]);
+    });
+  });
+
+  describe("listByCommunityPaged の excludePostIds (#1089)", () => {
+    it("excludePostIds で指定した id を結果から除外する", async () => {
+      await setupCommunities();
+      const repo = createPrismaPostRepository(prisma);
+      const posts = await repo.createMany(communityId, [
+        { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "a", text: "text" },
+        { slotKey: "2026-06-10T09:00", seq: 1, author: "worker-1", title: "b", text: "text" },
+      ]);
+
+      const result = await repo.listByCommunityPaged({
+        communityId,
+        excludePostIds: [posts[1]!.id],
+      });
+
+      expect(result.posts.map((p) => p.title)).toEqual(["a"]);
+    });
+  });
+
+  describe("listByCommunityPopularPaged の excludePostIds (#1089)", () => {
+    it("excludePostIds で指定した id を結果から除外する", async () => {
+      await setupCommunities();
+      const repo = createPrismaPostRepository(prisma);
+      const posts = await repo.createMany(communityId, [
+        { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "a", text: "text" },
+        { slotKey: "2026-06-10T09:00", seq: 1, author: "worker-1", title: "b", text: "text" },
+      ]);
+      await repo.addScore(posts[1]!.id, 10);
+
+      const result = await repo.listByCommunityPopularPaged({
+        communityId,
+        excludePostIds: [posts[1]!.id],
+      });
+
+      expect(result.posts.map((p) => p.title)).toEqual(["a"]);
+    });
+  });
+
   describe("listLatest", () => {
     it("全 community の post を createdAt 降順で返す", async () => {
       await setupCommunities();

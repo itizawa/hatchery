@@ -25,6 +25,8 @@ function toRecord(row: {
   score: number;
   createdAt: Date;
   tags: string[];
+  isPinned: boolean;
+  pinnedAt: Date | null;
 }): PostRecord {
   return {
     id: row.id,
@@ -37,6 +39,8 @@ function toRecord(row: {
     score: row.score,
     createdAt: row.createdAt,
     tags: row.tags,
+    isPinned: row.isPinned,
+    pinnedAt: row.pinnedAt,
   };
 }
 
@@ -94,16 +98,19 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
       cursor,
       limit = 20,
       options,
+      excludePostIds,
     }: {
       communityId: string;
       cursor?: string;
       limit?: number;
       options?: RevealFilterOptions;
+      excludePostIds?: string[];
     }): Promise<{ posts: PostRecord[]; nextCursor: string | null }> {
       const now = options?.now;
       let where: Prisma.PostWhereInput = {
         communityId,
         ...(now !== undefined ? { createdAt: { lte: now } } : {}),
+        ...(excludePostIds && excludePostIds.length > 0 ? { id: { notIn: excludePostIds } } : {}),
       };
 
       if (cursor !== undefined) {
@@ -141,16 +148,19 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
       cursor,
       limit = 20,
       options,
+      excludePostIds,
     }: {
       communityId: string;
       cursor?: string;
       limit?: number;
       options?: RevealFilterOptions;
+      excludePostIds?: string[];
     }): Promise<{ posts: PostRecord[]; nextCursor: string | null }> {
       const now = options?.now;
       let where: Prisma.PostWhereInput = {
         communityId,
         ...(now !== undefined ? { createdAt: { lte: now } } : {}),
+        ...(excludePostIds && excludePostIds.length > 0 ? { id: { notIn: excludePostIds } } : {}),
       };
 
       if (cursor !== undefined) {
@@ -450,6 +460,48 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
         }
         throw err;
       }
+    },
+
+    async pinPost({ id, pinnedAt }: { id: string; pinnedAt: Date }): Promise<PostRecord | null> {
+      try {
+        const row = await prisma.post.update({
+          where: { id },
+          data: { isPinned: true, pinnedAt },
+        });
+        return toRecord(row);
+      } catch (err) {
+        if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025") {
+          return null;
+        }
+        throw err;
+      }
+    },
+
+    async unpinPost(id: string): Promise<PostRecord | null> {
+      try {
+        const row = await prisma.post.update({
+          where: { id },
+          data: { isPinned: false, pinnedAt: null },
+        });
+        return toRecord(row);
+      } catch (err) {
+        if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025") {
+          return null;
+        }
+        throw err;
+      }
+    },
+
+    async countPinnedByCommunity(communityId: string): Promise<number> {
+      return prisma.post.count({ where: { communityId, isPinned: true } });
+    },
+
+    async listPinnedByCommunity(communityId: string): Promise<PostRecord[]> {
+      const rows = await prisma.post.findMany({
+        where: { communityId, isPinned: true },
+        orderBy: [{ pinnedAt: "desc" }, { id: "desc" }],
+      });
+      return rows.map(toRecord);
     },
   };
 }

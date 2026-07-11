@@ -82,7 +82,8 @@ export function createCommunitiesRouter(
         }
         // pin された post は sort に関わらず 1 ページ目（cursor 未指定）の先頭に表示する（#1089）。
         // 通常のページ取得からは全ページで pin 済み post を除外し、2 ページ目以降での重複表示を防ぐ。
-        const allPinned = await postRepo.listPinnedByCommunity(community.id);
+        // options.now の reveal フィルタ（ADR-0034）は pin 済み post にも適用し、ドリップ配信で未公開の post を先頭表示しない。
+        const allPinned = await postRepo.listPinnedByCommunity(community.id, { now });
         const excludePostIds = allPinned.map((p) => p.id);
         const pinnedForThisPage = cursor === undefined ? allPinned : [];
         const fetchPage =

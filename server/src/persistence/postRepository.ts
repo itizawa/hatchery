@@ -201,8 +201,11 @@ export interface PostRepository {
   unpinPost(id: string): Promise<PostRecord | null>;
   /** community 内の pin 済み post 件数を返す（#1089・POST_PIN_MAX_COUNT の上限チェック用）。 */
   countPinnedByCommunity(communityId: string): Promise<number>;
-  /** community 内の pin 済み post を pinnedAt 降順で返す（#1089・community フィード先頭表示用）。 */
-  listPinnedByCommunity(communityId: string): Promise<PostRecord[]>;
+  /**
+   * community 内の pin 済み post を pinnedAt 降順（同点は id 降順）で返す（#1089・community フィード先頭表示用）。
+   * options.now を渡すと `createdAt <= now` の reveal フィルタが有効になる（ADR-0034・ドリップ配信で未公開の post を pin 表示しない）。
+   */
+  listPinnedByCommunity(communityId: string, options?: RevealFilterOptions): Promise<PostRecord[]>;
 }
 
 function cloneRecord(r: PostRecord): PostRecord {
@@ -721,11 +724,18 @@ export function createInMemoryPostRepository(): PostRepository {
       return Promise.resolve(count);
     },
 
-    listPinnedByCommunity(communityId: string): Promise<PostRecord[]> {
+    // eslint-disable-next-line max-params
+    listPinnedByCommunity(communityId: string, options?: RevealFilterOptions): Promise<PostRecord[]> {
+      const now = options?.now;
       const result = records
         .filter((r) => r.communityId === communityId && r.isPinned)
+        .filter((r) => now === undefined || r.createdAt.getTime() <= now.getTime())
         // eslint-disable-next-line max-params
-        .sort((a, b) => (b.pinnedAt?.getTime() ?? 0) - (a.pinnedAt?.getTime() ?? 0))
+        .sort((a, b) => {
+          const pinnedAtDiff = (b.pinnedAt?.getTime() ?? 0) - (a.pinnedAt?.getTime() ?? 0);
+          if (pinnedAtDiff !== 0) return pinnedAtDiff;
+          return b.id < a.id ? -1 : b.id > a.id ? 1 : 0;
+        })
         .map(cloneRecord);
       return Promise.resolve(result);
     },

@@ -496,9 +496,15 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
       return prisma.post.count({ where: { communityId, isPinned: true } });
     },
 
-    async listPinnedByCommunity(communityId: string): Promise<PostRecord[]> {
+    // eslint-disable-next-line max-params
+    async listPinnedByCommunity(communityId: string, options?: RevealFilterOptions): Promise<PostRecord[]> {
+      const now = options?.now;
       const rows = await prisma.post.findMany({
-        where: { communityId, isPinned: true },
+        where: {
+          communityId,
+          isPinned: true,
+          ...(now !== undefined ? { createdAt: { lte: now } } : {}),
+        },
         orderBy: [{ pinnedAt: "desc" }, { id: "desc" }],
       });
       return rows.map(toRecord);

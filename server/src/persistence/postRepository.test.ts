@@ -814,6 +814,65 @@ describe("createInMemoryPostRepository", () => {
       const result = await repo.listPinnedByCommunity("community-1");
       expect(result).toEqual([]);
     });
+
+    it("同一 pinnedAt の場合は id 降順を tie-break にする（バックエンド間の順序整合）", async () => {
+      const repo = createInMemoryPostRepository();
+      const posts = await repo.createMany("community-1", [
+        { slotKey: "s", seq: 0, author: "w", title: "a", text: "t" },
+        { slotKey: "s", seq: 1, author: "w", title: "b", text: "t" },
+      ]);
+      const samePinnedAt = new Date("2026-07-01T00:00:00Z");
+      await repo.pinPost({ id: posts[0]!.id, pinnedAt: samePinnedAt });
+      await repo.pinPost({ id: posts[1]!.id, pinnedAt: samePinnedAt });
+      const result = await repo.listPinnedByCommunity("community-1");
+      // eslint-disable-next-line max-params
+      const sortedByIdDesc = [...posts].sort((x, y) => (x.id < y.id ? 1 : x.id > y.id ? -1 : 0));
+      expect(result.map((p) => p.id)).toEqual(sortedByIdDesc.map((p) => p.id));
+    });
+
+    it("options.now を渡すと createdAt > now（ドリップ配信で未公開）の pin 済み post を除外する（ADR-0034）", async () => {
+      const repo = createInMemoryPostRepository();
+      const now = new Date("2026-07-11T12:00:00Z");
+      const posts = await repo.createMany("community-1", [
+        {
+          slotKey: "s",
+          seq: 0,
+          author: "w",
+          title: "revealed",
+          text: "t",
+          createdAt: new Date("2026-07-11T11:00:00Z"),
+        },
+        {
+          slotKey: "s",
+          seq: 1,
+          author: "w",
+          title: "not-yet-revealed",
+          text: "t",
+          createdAt: new Date("2026-07-11T13:00:00Z"),
+        },
+      ]);
+      await repo.pinPost({ id: posts[0]!.id, pinnedAt: new Date("2026-07-10T00:00:00Z") });
+      await repo.pinPost({ id: posts[1]!.id, pinnedAt: new Date("2026-07-10T00:00:00Z") });
+      const result = await repo.listPinnedByCommunity("community-1", { now });
+      expect(result.map((p) => p.title)).toEqual(["revealed"]);
+    });
+
+    it("options を渡さないときは createdAt によるフィルタを行わない（後方互換）", async () => {
+      const repo = createInMemoryPostRepository();
+      const [post] = await repo.createMany("community-1", [
+        {
+          slotKey: "s",
+          seq: 0,
+          author: "w",
+          title: "future",
+          text: "t",
+          createdAt: new Date("2999-01-01T00:00:00Z"),
+        },
+      ]);
+      await repo.pinPost({ id: post!.id, pinnedAt: new Date() });
+      const result = await repo.listPinnedByCommunity("community-1");
+      expect(result).toHaveLength(1);
+    });
   });
 
   describe("listByCommunityPaged の excludePostIds (#1089)", () => {

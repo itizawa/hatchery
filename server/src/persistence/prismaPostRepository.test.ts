@@ -267,6 +267,29 @@ describe.skipIf(!DATABASE_URL)("createPrismaPostRepository (integration)", () =>
 
       expect(result.map((p) => p.title)).toEqual(["newer-pin", "older-pin"]);
     });
+
+    it("options.now を渡すと createdAt > now（ドリップ配信で未公開）の pin 済み post を除外する（ADR-0034）", async () => {
+      await setupCommunities();
+      const repo = createPrismaPostRepository(prisma);
+      const now = new Date("2026-07-11T12:00:00Z");
+      const posts = await repo.createMany(communityId, [
+        { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "revealed", text: "text" },
+        {
+          slotKey: "2026-06-10T09:00",
+          seq: 1,
+          author: "worker-1",
+          title: "not-yet-revealed",
+          text: "text",
+          createdAt: new Date("2026-07-11T13:00:00Z"),
+        },
+      ]);
+      await repo.pinPost({ id: posts[0]!.id, pinnedAt: new Date("2026-07-10T00:00:00Z") });
+      await repo.pinPost({ id: posts[1]!.id, pinnedAt: new Date("2026-07-10T00:00:00Z") });
+
+      const result = await repo.listPinnedByCommunity(communityId, { now });
+
+      expect(result.map((p) => p.title)).toEqual(["revealed"]);
+    });
   });
 
   describe("listByCommunityPaged の excludePostIds (#1089)", () => {

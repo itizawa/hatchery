@@ -488,6 +488,32 @@ describe("GET /api/communities/:slug/feed", () => {
     expect(res.body.posts.map((p: { title: string }) => p.title)).toEqual(["P0"]);
     expect(res.body.posts[0]).toMatchObject({ is_pinned: false });
   });
+
+  it("ドリップ配信で未公開（createdAt が未来）の pin 済み post は先頭表示されない（ADR-0034・#1089）", async () => {
+    const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
+    const postRepo = createInMemoryPostRepository();
+    const posts = await postRepo.createMany("community-1", [
+      { slotKey: "s", seq: 0, author: "w", title: "revealed", text: "t" },
+      {
+        slotKey: "s",
+        seq: 1,
+        author: "w",
+        title: "not-yet-revealed",
+        text: "t",
+        createdAt: new Date("2999-01-01T00:00:00Z"),
+      },
+    ]);
+    await postRepo.pinPost({ id: posts[0]!.id, pinnedAt: new Date() });
+    await postRepo.pinPost({ id: posts[1]!.id, pinnedAt: new Date() });
+    const deps = await createTestDeps({ communityRepository: communityRepo, postRepository: postRepo });
+    const app = createApp(deps);
+
+    const res = await request(app).get("/api/communities/technology/feed");
+    expect(res.status).toBe(200);
+    const titles = res.body.posts.map((p: { title: string }) => p.title);
+    expect(titles).toContain("revealed");
+    expect(titles).not.toContain("not-yet-revealed");
+  });
 });
 
 describe("POST /api/communities/:slug/subscribe", () => {

@@ -1,4 +1,4 @@
-import { Box, Chip, Link, Skeleton, Typography } from "./uiParts";
+import { Box, Chip, IconButton, Link, Skeleton, Tooltip, Typography } from "./uiParts";
 import type { ReactElement } from "react";
 import type React from "react";
 import type { Post } from "../api/communities.js";
@@ -11,6 +11,7 @@ import { ShareButton } from "./ShareButton.js";
 import { MarkdownContent } from "./MarkdownContent.js";
 import type { VoteDirection } from "./VoteControl.js";
 import CommentRounded from "@mui/icons-material/CommentRounded";
+import PushPinRounded from "@mui/icons-material/PushPinRounded";
 import { SLACK_COLORS } from "../theme.js";
 
 /** 投稿カードに表示する所属コミュニティの最小情報（#503）。 */
@@ -56,6 +57,13 @@ type PostCardProps =
       onCommentClick?: () => void;
       /** 購読コミュニティの前回訪問後に投稿された新着投稿を示すラベル（#935）。 */
       isNew?: boolean;
+      /** admin による pin 状態を示す「固定」ラベル（#1089）。 */
+      isPinned?: boolean;
+      /**
+       * pin / unpin 操作ボタンのクリック時のコールバック（#1089）。
+       * 指定時のみボタンを表示する（admin ユーザーのみに渡す想定）。
+       */
+      onTogglePin?: () => void;
       /**
        * ワーカー名・アバタークリック時のコールバック（#929）。指定時は AuthorByline をクリック可能にし、
        * ワーカープロフィールページへ遷移する RouterLink に切り替える。
@@ -162,6 +170,8 @@ export const PostCard = (props: PostCardProps): ReactElement => {
     onWorkerClick,
     variant = "card",
     isNew = false,
+    isPinned = false,
+    onTogglePin,
   } = props;
 
   // comment_count はサーバ集計値（#500）。未指定（後方互換）は 0 として扱う。
@@ -192,6 +202,20 @@ export const PostCard = (props: PostCardProps): ReactElement => {
             sx={{
               bgcolor: SLACK_COLORS.blue,
               color: "#fff",
+              fontWeight: 600,
+              height: 20,
+              borderRadius: "4px",
+              "& .MuiChip-label": { px: "6px", fontSize: "0.7rem" },
+            }}
+          />
+        )}
+        {isPinned && (
+          <Chip
+            icon={<PushPinRounded sx={{ fontSize: "0.8rem !important" }} />}
+            label="固定"
+            size="small"
+            variant="outlined"
+            sx={{
               fontWeight: 600,
               height: 20,
               borderRadius: "4px",
@@ -242,6 +266,24 @@ export const PostCard = (props: PostCardProps): ReactElement => {
         {postUrl && (
           <Box onClick={handleVoteClick}>
             <ShareButton shareUrl={postUrl} shareTitle={post.title} />
+          </Box>
+        )}
+        {onTogglePin && (
+          <Box onClick={handleVoteClick}>
+            <Tooltip title={isPinned ? "固定を解除する" : "固定する"}>
+              <IconButton
+                size="small"
+                aria-label={isPinned ? "固定を解除する" : "固定する"}
+                onClick={(e: React.MouseEvent) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  onTogglePin();
+                }}
+                sx={{ color: isPinned ? SLACK_COLORS.blue : "text.secondary" }}
+              >
+                <PushPinRounded fontSize="small" />
+              </IconButton>
+            </Tooltip>
           </Box>
         )}
       </Box>

@@ -5,7 +5,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type React from "react";
 
 import type { AdminCommunity } from "@hatchery/common";
@@ -108,6 +108,10 @@ function stubAll(opts?: {
 }
 
 describe("EditCommunityScene（#889）", () => {
+  beforeEach(() => {
+    mockNavigate.mockClear();
+  });
+
   it("ページタイトル「コミュニティを編集」が表示される", () => {
     stubAll();
     renderWithClient(<EditCommunityScene />);
@@ -170,6 +174,28 @@ describe("EditCommunityScene（#889）", () => {
     stubAll();
     renderWithClient(<EditCommunityScene />);
     expect(screen.getByRole("link", { name: /一覧に戻る/ })).toBeInTheDocument();
+  });
+
+  it("保存に成功すると一覧画面（/admin?tab=communities&communitySaved=1）へ遷移する（#1081）", async () => {
+    const updateMutateAsync = vi.fn().mockResolvedValue(mockCommunity);
+    stubAll({ updateMutateAsync });
+    renderWithClient(<EditCommunityScene />);
+    await userEvent.click(screen.getByRole("button", { name: "保存" }));
+    await waitFor(() =>
+      expect(mockNavigate).toHaveBeenCalledWith({
+        to: "/admin",
+        search: { tab: "communities", communitySaved: 1 },
+      }),
+    );
+  });
+
+  it("保存に失敗した場合は画面遷移しない（#1081）", async () => {
+    const updateMutateAsync = vi.fn().mockRejectedValue(new Error("update failed"));
+    stubAll({ updateMutateAsync });
+    renderWithClient(<EditCommunityScene />);
+    await userEvent.click(screen.getByRole("button", { name: "保存" }));
+    await waitFor(() => expect(updateMutateAsync).toHaveBeenCalled());
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 
   it("存在しない ID のとき「コミュニティが見つかりません」が表示される", () => {

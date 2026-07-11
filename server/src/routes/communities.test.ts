@@ -373,6 +373,121 @@ describe("GET /api/communities/:slug/feed", () => {
     const allTitles = [...res1.body.posts, ...res2.body.posts].map((p: { title: string }) => p.title);
     expect(allTitles).toEqual(["P2", "P1", "P0"]);
   });
+
+  it("pin された post は新着順に関わらず先頭に表示される（#1089）", async () => {
+    const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
+    const postRepo = createInMemoryPostRepository();
+    const titles = ["P0-oldest", "P1", "P2-newest"];
+    const posts = [];
+    for (const title of titles) {
+      const [created] = await postRepo.createMany("community-1", [
+        { slotKey: "s", seq: posts.length, author: "w", title, text: "t" },
+      ]);
+      posts.push(created!);
+      await new Promise((r) => setTimeout(r, 2));
+    }
+    // 最も古い post を pin する。新着順なら本来末尾のはずが先頭に出ること。
+    await postRepo.pinPost({ id: posts[0]!.id, pinnedAt: new Date() });
+    const deps = await createTestDeps({ communityRepository: communityRepo, postRepository: postRepo });
+    const app = createApp(deps);
+
+    const res = await request(app).get("/api/communities/technology/feed");
+    expect(res.status).toBe(200);
+    expect(res.body.posts.map((p: { title: string }) => p.title)).toEqual([
+      "P0-oldest",
+      "P2-newest",
+      "P1",
+    ]);
+    expect(res.body.posts[0]).toMatchObject({ is_pinned: true });
+  });
+
+  it("pin された post は sort=popular でも先頭に表示される（#1089）", async () => {
+    const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
+    const postRepo = createInMemoryPostRepository();
+    const posts = await postRepo.createMany("community-1", [
+      { slotKey: "s", seq: 0, author: "w", title: "Low Score", text: "t" },
+      { slotKey: "s", seq: 1, author: "w", title: "High Score", text: "t" },
+    ]);
+    await postRepo.addScore(posts[0]!.id, 1);
+    await postRepo.addScore(posts[1]!.id, 100);
+    // score が最も低い post を pin する。人気順なら本来末尾のはずが先頭に出ること。
+    await postRepo.pinPost({ id: posts[0]!.id, pinnedAt: new Date() });
+    const deps = await createTestDeps({ communityRepository: communityRepo, postRepository: postRepo });
+    const app = createApp(deps);
+
+    const res = await request(app).get("/api/communities/technology/feed?sort=popular");
+    expect(res.status).toBe(200);
+    expect(res.body.posts.map((p: { title: string }) => p.title)).toEqual([
+      "Low Score",
+      "High Score",
+    ]);
+  });
+
+  it("複数 pin は pinned_at 降順で表示される（#1089）", async () => {
+    const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
+    const postRepo = createInMemoryPostRepository();
+    const posts = await postRepo.createMany("community-1", [
+      { slotKey: "s", seq: 0, author: "w", title: "older-pin", text: "t" },
+      { slotKey: "s", seq: 1, author: "w", title: "newer-pin", text: "t" },
+      { slotKey: "s", seq: 2, author: "w", title: "normal", text: "t" },
+    ]);
+    await postRepo.pinPost({ id: posts[0]!.id, pinnedAt: new Date("2026-07-01T00:00:00Z") });
+    await postRepo.pinPost({ id: posts[1]!.id, pinnedAt: new Date("2026-07-05T00:00:00Z") });
+    const deps = await createTestDeps({ communityRepository: communityRepo, postRepository: postRepo });
+    const app = createApp(deps);
+
+    const res = await request(app).get("/api/communities/technology/feed");
+    expect(res.status).toBe(200);
+    expect(res.body.posts.map((p: { title: string }) => p.title)).toEqual([
+      "newer-pin",
+      "older-pin",
+      "normal",
+    ]);
+  });
+
+  it("pin された post は 2 ページ目には重複して表示されない（#1089）", async () => {
+    const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
+    const postRepo = createInMemoryPostRepository();
+    const posts = [];
+    for (let i = 0; i < 4; i++) {
+      const [created] = await postRepo.createMany("community-1", [
+        { slotKey: "s", seq: i, author: "w", title: `P${i}`, text: "t" },
+      ]);
+      posts.push(created!);
+      await new Promise((r) => setTimeout(r, 2));
+    }
+    // 最新の post（P3）を pin する。
+    await postRepo.pinPost({ id: posts[3]!.id, pinnedAt: new Date() });
+    const deps = await createTestDeps({ communityRepository: communityRepo, postRepository: postRepo });
+    const app = createApp(deps);
+
+    const res1 = await request(app).get("/api/communities/technology/feed?limit=2");
+    expect(res1.status).toBe(200);
+    // 1 ページ目: pin (P3) + 通常 2 件（P3 は通常枠から除外されるため P2, P1）
+    expect(res1.body.posts.map((p: { title: string }) => p.title)).toEqual(["P3", "P2", "P1"]);
+
+    const res2 = await request(app).get(
+      `/api/communities/technology/feed?limit=2&cursor=${res1.body.nextCursor}`,
+    );
+    expect(res2.status).toBe(200);
+    // 2 ページ目に P3 が重複して現れないこと
+    expect(res2.body.posts.map((p: { title: string }) => p.title)).toEqual(["P0"]);
+  });
+
+  it("pin が 0 件の community では従来どおりの表示になる（#1089）", async () => {
+    const communityRepo = createInMemoryCommunityRepository([makeCommunity()]);
+    const postRepo = createInMemoryPostRepository();
+    await postRepo.createMany("community-1", [
+      { slotKey: "s", seq: 0, author: "w", title: "P0", text: "t" },
+    ]);
+    const deps = await createTestDeps({ communityRepository: communityRepo, postRepository: postRepo });
+    const app = createApp(deps);
+
+    const res = await request(app).get("/api/communities/technology/feed");
+    expect(res.status).toBe(200);
+    expect(res.body.posts.map((p: { title: string }) => p.title)).toEqual(["P0"]);
+    expect(res.body.posts[0]).toMatchObject({ is_pinned: false });
+  });
 });
 
 describe("POST /api/communities/:slug/subscribe", () => {

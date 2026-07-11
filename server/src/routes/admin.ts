@@ -6,6 +6,7 @@ import {
   CreatePostRequestSchema,
   CreateWorkerSchema,
   NotFoundError,
+  POST_PIN_MAX_COUNT,
   UpdateCommunitySchema,
   type UpdateCommunityInput,
 } from "@hatchery/common";
@@ -15,6 +16,7 @@ import { Router } from "express";
 import { requireAdminAccess } from "../middleware/requireAdminAccess.js";
 import { validateBody } from "../middleware/validateBody.js";
 import { toAdminCommunityResponse } from "./communityResponse.js";
+import { toPostResponse } from "./postResponse.js";
 import type { CommentRepository } from "../persistence/commentRepository.js";
 import type { CommunityRepository } from "../persistence/communityRepository.js";
 import type { PostRepository } from "../persistence/postRepository.js";
@@ -157,6 +159,45 @@ export function createAdminRouter(
         { slotKey: buildManualSlotKey(randomUUID()), seq: 0, author: authorWorkerId, title, text },
       ]);
       res.status(201).json(post);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // admin: post を pin する（#1089）。community あたり最大 POST_PIN_MAX_COUNT 件。
+  // eslint-disable-next-line max-params
+  router.post("/posts/:id/pin", async (req, res, next) => {
+    try {
+      const { id } = req.params as { id: string };
+      const post = await postRepository.findById(id);
+      if (!post) {
+        next(new NotFoundError("PostNotFound"));
+        return;
+      }
+      const pinnedCount = await postRepository.countPinnedByCommunity(post.communityId);
+      if (!post.isPinned && pinnedCount >= POST_PIN_MAX_COUNT) {
+        next(new ConflictError("PostPinLimitExceeded"));
+        return;
+      }
+      const updated = await postRepository.pinPost({ id, pinnedAt: new Date() });
+      res.status(200).json(toPostResponse(updated!));
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // admin: post の pin を解除する（#1089）。未 pin でも冪等に 200 を返す。
+  // eslint-disable-next-line max-params
+  router.delete("/posts/:id/pin", async (req, res, next) => {
+    try {
+      const { id } = req.params as { id: string };
+      const post = await postRepository.findById(id);
+      if (!post) {
+        next(new NotFoundError("PostNotFound"));
+        return;
+      }
+      const updated = await postRepository.unpinPost(id);
+      res.status(200).json(toPostResponse(updated!));
     } catch (err) {
       next(err);
     }

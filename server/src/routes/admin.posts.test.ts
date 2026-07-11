@@ -313,3 +313,95 @@ describe("POST /api/admin/comments (#433)", () => {
     expect(res.status).toBe(400);
   });
 });
+
+describe("POST/DELETE /api/admin/posts/:id/pin (#1089)", () => {
+  async function makeAppWithPosts(count: number, role: "admin" | "member" = "admin") {
+    const repos = makeRepos();
+    const posts = await repos.postRepo.createMany(
+      COMMUNITY_ID,
+      Array.from({ length: count }, (_, i) => ({
+        slotKey: "manual:seed",
+        seq: i,
+        author: WORKER_ID,
+        title: `投稿${i}`,
+        text: "本文",
+      })),
+    );
+    const app = await makeApp(repos, role);
+    return { app, posts, repos };
+  }
+
+  it("未認証の場合は 401 を返す", async () => {
+    const { app, posts } = await makeAppWithPosts(1);
+    const res = await request(app).post(`/api/admin/posts/${posts[0]!.id}/pin`);
+    expect(res.status).toBe(401);
+  });
+
+  it("member ユーザーは 403 を返す", async () => {
+    const { app, posts } = await makeAppWithPosts(1, "member");
+    const agent = await loginAgent(app);
+    const res = await agent.post(`/api/admin/posts/${posts[0]!.id}/pin`);
+    expect(res.status).toBe(403);
+  });
+
+  it("admin ユーザーは 200 と is_pinned: true を返す", async () => {
+    const { app, posts } = await makeAppWithPosts(1);
+    const agent = await loginAgent(app);
+    const res = await agent.post(`/api/admin/posts/${posts[0]!.id}/pin`);
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ id: posts[0]!.id, is_pinned: true });
+  });
+
+  it("存在しない post は 404 を返す", async () => {
+    const { app } = await makeAppWithPosts(0);
+    const agent = await loginAgent(app);
+    const res = await agent.post(`/api/admin/posts/${MISSING_UUID}/pin`);
+    expect(res.status).toBe(404);
+  });
+
+  it(`community あたり pin 済みが既に上限（3件）ある場合は 409 を返す`, async () => {
+    const { app, posts } = await makeAppWithPosts(4);
+    const agent = await loginAgent(app);
+    await agent.post(`/api/admin/posts/${posts[0]!.id}/pin`);
+    await agent.post(`/api/admin/posts/${posts[1]!.id}/pin`);
+    await agent.post(`/api/admin/posts/${posts[2]!.id}/pin`);
+    const res = await agent.post(`/api/admin/posts/${posts[3]!.id}/pin`);
+    expect(res.status).toBe(409);
+  });
+
+  it("未認証で unpin を呼ぶと 401 を返す", async () => {
+    const { app, posts } = await makeAppWithPosts(1);
+    const res = await request(app).delete(`/api/admin/posts/${posts[0]!.id}/pin`);
+    expect(res.status).toBe(401);
+  });
+
+  it("member が unpin を呼ぶと 403 を返す", async () => {
+    const { app, posts } = await makeAppWithPosts(1, "member");
+    const agent = await loginAgent(app);
+    const res = await agent.delete(`/api/admin/posts/${posts[0]!.id}/pin`);
+    expect(res.status).toBe(403);
+  });
+
+  it("admin が unpin すると 200 と is_pinned: false を返す", async () => {
+    const { app, posts } = await makeAppWithPosts(1);
+    const agent = await loginAgent(app);
+    await agent.post(`/api/admin/posts/${posts[0]!.id}/pin`);
+    const res = await agent.delete(`/api/admin/posts/${posts[0]!.id}/pin`);
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ id: posts[0]!.id, is_pinned: false });
+  });
+
+  it("未 pin の post を unpin しても冪等に 200 を返す", async () => {
+    const { app, posts } = await makeAppWithPosts(1);
+    const agent = await loginAgent(app);
+    const res = await agent.delete(`/api/admin/posts/${posts[0]!.id}/pin`);
+    expect(res.status).toBe(200);
+  });
+
+  it("存在しない post を unpin すると 404 を返す", async () => {
+    const { app } = await makeAppWithPosts(0);
+    const agent = await loginAgent(app);
+    const res = await agent.delete(`/api/admin/posts/${MISSING_UUID}/pin`);
+    expect(res.status).toBe(404);
+  });
+});

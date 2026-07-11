@@ -131,6 +131,14 @@ const listBoxSx = {
   p: 2,
 } as const;
 
+/** タイトル横の小さいラベル Chip 共通スタイル（New / 固定・#935 / #1089）。 */
+const feedBadgeChipSx = {
+  fontWeight: 600,
+  height: 20,
+  borderRadius: "4px",
+  "& .MuiChip-label": { px: "6px", fontSize: "0.7rem" },
+} as const;
+
 /**
  * 投稿カード。タイトル・本文・author・score・up/down vote ボタンを表示する（ADR-0019 / ADR-0025）。
  * post のアクションバー（本文下）に VoteControl・コメント数・ShareButton を横並びで配置（ADR-0025）。
@@ -199,14 +207,7 @@ export const PostCard = (props: PostCardProps): ReactElement => {
           <Chip
             label="New"
             size="small"
-            sx={{
-              bgcolor: SLACK_COLORS.blue,
-              color: "#fff",
-              fontWeight: 600,
-              height: 20,
-              borderRadius: "4px",
-              "& .MuiChip-label": { px: "6px", fontSize: "0.7rem" },
-            }}
+            sx={{ ...feedBadgeChipSx, bgcolor: SLACK_COLORS.blue, color: "#fff" }}
           />
         )}
         {isPinned && (
@@ -215,12 +216,7 @@ export const PostCard = (props: PostCardProps): ReactElement => {
             label="固定"
             size="small"
             variant="outlined"
-            sx={{
-              fontWeight: 600,
-              height: 20,
-              borderRadius: "4px",
-              "& .MuiChip-label": { px: "6px", fontSize: "0.7rem" },
-            }}
+            sx={feedBadgeChipSx}
           />
         )}
       </Box>

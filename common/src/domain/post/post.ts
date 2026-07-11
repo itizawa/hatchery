@@ -110,8 +110,9 @@ const LEADING_URL_LINE_PATTERN = /^https?:\/\/\S+\n+/;
 /**
  * タイトル末尾のURL露出を検出する正規表現（#1022 修正前に生成された投稿に残存。#1117）。
  * タイトル末尾が ` / http(s)://...` の形式のときのみを対象とする。
+ * `\s*` を使わず前後の空白を1文字までの範囲に限定し、多項式時間の正規表現（ReDoS）を避ける。
  */
-const TRAILING_URL_SUFFIX_PATTERN = /\s*\/\s*https?:\/\/\S+$/;
+const TRAILING_URL_SUFFIX_PATTERN = /[ \t]?\/[ \t]?https?:\/\/\S+$/;
 
 /** 本文冒頭にURL行が露出しているかを判定する（#1117）。 */
 export function hasLeadingUrlExposure(text: string): boolean {

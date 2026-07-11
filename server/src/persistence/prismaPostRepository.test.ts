@@ -239,6 +239,47 @@ describe.skipIf(!DATABASE_URL)("createPrismaPostRepository (integration)", () =>
       expect(result).toBeNull();
     });
 
+    it("pinPostIfUnderLimit は上限未満なら pin して post を返す", async () => {
+      await setupCommunities();
+      const repo = createPrismaPostRepository(prisma);
+      const [created] = await repo.createMany(communityId, [
+        { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "post", text: "text" },
+      ]);
+      const pinnedAt = new Date("2026-07-11T00:00:00Z");
+
+      const result = await repo.pinPostIfUnderLimit({ id: created!.id, pinnedAt, maxCount: 3 });
+
+      expect(result).not.toBe("not_found");
+      expect(result).not.toBe("limit_exceeded");
+      expect((result as { isPinned: boolean }).isPinned).toBe(true);
+    });
+
+    it("pinPostIfUnderLimit は上限到達時に limit_exceeded を返し pin しない", async () => {
+      await setupCommunities();
+      const repo = createPrismaPostRepository(prisma);
+      const posts = await repo.createMany(communityId, [
+        { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "p1", text: "text" },
+        { slotKey: "2026-06-10T09:00", seq: 1, author: "worker-1", title: "p2", text: "text" },
+        { slotKey: "2026-06-10T09:00", seq: 2, author: "worker-1", title: "p3", text: "text" },
+        { slotKey: "2026-06-10T09:00", seq: 3, author: "worker-1", title: "p4", text: "text" },
+      ]);
+      await repo.pinPostIfUnderLimit({ id: posts[0]!.id, pinnedAt: new Date(), maxCount: 3 });
+      await repo.pinPostIfUnderLimit({ id: posts[1]!.id, pinnedAt: new Date(), maxCount: 3 });
+      await repo.pinPostIfUnderLimit({ id: posts[2]!.id, pinnedAt: new Date(), maxCount: 3 });
+
+      const result = await repo.pinPostIfUnderLimit({ id: posts[3]!.id, pinnedAt: new Date(), maxCount: 3 });
+
+      expect(result).toBe("limit_exceeded");
+    });
+
+    it("pinPostIfUnderLimit で存在しない id は not_found を返す", async () => {
+      const repo = createPrismaPostRepository(prisma);
+
+      const result = await repo.pinPostIfUnderLimit({ id: "non-existent-id", pinnedAt: new Date(), maxCount: 3 });
+
+      expect(result).toBe("not_found");
+    });
+
     it("countPinnedByCommunity は community 内の pin 済み件数を返す", async () => {
       await setupCommunities();
       const repo = createPrismaPostRepository(prisma);

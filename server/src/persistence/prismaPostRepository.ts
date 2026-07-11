@@ -477,6 +477,44 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
       }
     },
 
+    async pinPostIfUnderLimit({
+      id,
+      pinnedAt,
+      maxCount,
+    }: {
+      id: string;
+      pinnedAt: Date;
+      maxCount: number;
+    }): Promise<PostRecord | "not_found" | "limit_exceeded"> {
+      try {
+        return await prisma.$transaction(
+          async (tx) => {
+            const post = await tx.post.findUnique({ where: { id } });
+            if (!post) return "not_found" as const;
+            if (!post.isPinned) {
+              const pinnedCount = await tx.post.count({
+                where: { communityId: post.communityId, isPinned: true },
+              });
+              if (pinnedCount >= maxCount) return "limit_exceeded" as const;
+            }
+            const updated = await tx.post.update({
+              where: { id },
+              data: { isPinned: true, pinnedAt },
+            });
+            return toRecord(updated);
+          },
+          { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+        );
+      } catch (err) {
+        // SERIALIZABLE 分離レベルでの直列化失敗（同時 pin リクエストの競合・P2034）は、
+        // 安全側に倒して上限超過扱いにする（#1089・TOCTOU 対策）。
+        if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2034") {
+          return "limit_exceeded" as const;
+        }
+        throw err;
+      }
+    },
+
     async unpinPost(id: string): Promise<PostRecord | null> {
       try {
         const row = await prisma.post.update({

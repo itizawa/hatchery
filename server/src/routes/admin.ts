@@ -165,22 +165,26 @@ export function createAdminRouter(
   });
 
   // admin: post を pin する（#1089）。community あたり最大 POST_PIN_MAX_COUNT 件。
+  // 上限チェックと更新は pinPostIfUnderLimit で原子的に行い、同時リクエストによる
+  // 上限超過（TOCTOU）を防ぐ（セルフレビュー指摘）。
   // eslint-disable-next-line max-params
   router.post("/posts/:id/pin", async (req, res, next) => {
     try {
       const { id } = req.params as { id: string };
-      const post = await postRepository.findById(id);
-      if (!post) {
+      const result = await postRepository.pinPostIfUnderLimit({
+        id,
+        pinnedAt: new Date(),
+        maxCount: POST_PIN_MAX_COUNT,
+      });
+      if (result === "not_found") {
         next(new NotFoundError("PostNotFound"));
         return;
       }
-      const pinnedCount = await postRepository.countPinnedByCommunity(post.communityId);
-      if (!post.isPinned && pinnedCount >= POST_PIN_MAX_COUNT) {
+      if (result === "limit_exceeded") {
         next(new ConflictError("PostPinLimitExceeded"));
         return;
       }
-      const updated = await postRepository.pinPost({ id, pinnedAt: new Date() });
-      res.status(200).json(toPostResponse(updated!));
+      res.status(200).json(toPostResponse(result));
     } catch (err) {
       next(err);
     }
@@ -191,13 +195,12 @@ export function createAdminRouter(
   router.delete("/posts/:id/pin", async (req, res, next) => {
     try {
       const { id } = req.params as { id: string };
-      const post = await postRepository.findById(id);
-      if (!post) {
+      const updated = await postRepository.unpinPost(id);
+      if (!updated) {
         next(new NotFoundError("PostNotFound"));
         return;
       }
-      const updated = await postRepository.unpinPost(id);
-      res.status(200).json(toPostResponse(updated!));
+      res.status(200).json(toPostResponse(updated));
     } catch (err) {
       next(err);
     }

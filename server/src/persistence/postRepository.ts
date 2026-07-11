@@ -197,6 +197,19 @@ export interface PostRepository {
   updateTitleAndText(params: { id: string; title: string; text: string }): Promise<PostRecord | null>;
   /** post を pin する（#1089・admin 限定）。存在しない id は null を返す。 */
   pinPost(params: { id: string; pinnedAt: Date }): Promise<PostRecord | null>;
+  /**
+   * community あたりの pin 済み件数が maxCount 未満のときのみ pin する（#1089）。
+   * 件数チェックと更新を単一の原子操作として行い、同時リクエストによる上限超過（TOCTOU）を防ぐ
+   * （Prisma 実装は SERIALIZABLE トランザクション + 直列化失敗の limit_exceeded フォールバックで担保する。
+   * in-memory 実装は JS のシングルスレッド性により本来的に原子的）。
+   * 既に pin 済みの post の再 pin は件数チェックの対象にしない（冪等）。
+   * 戻り値: pin 後の post / "not_found"（id が存在しない）/ "limit_exceeded"（上限到達）。
+   */
+  pinPostIfUnderLimit(params: {
+    id: string;
+    pinnedAt: Date;
+    maxCount: number;
+  }): Promise<PostRecord | "not_found" | "limit_exceeded">;
   /** post の pin を解除する（#1089・admin 限定）。存在しない id は null を返す。 */
   unpinPost(id: string): Promise<PostRecord | null>;
   /** community 内の pin 済み post 件数を返す（#1089・POST_PIN_MAX_COUNT の上限チェック用）。 */
@@ -706,6 +719,28 @@ export function createInMemoryPostRepository(): PostRepository {
     pinPost({ id, pinnedAt }: { id: string; pinnedAt: Date }): Promise<PostRecord | null> {
       const record = records.find((r) => r.id === id);
       if (!record) return Promise.resolve(null);
+      record.isPinned = true;
+      record.pinnedAt = pinnedAt;
+      return Promise.resolve(cloneRecord(record));
+    },
+
+    pinPostIfUnderLimit({
+      id,
+      pinnedAt,
+      maxCount,
+    }: {
+      id: string;
+      pinnedAt: Date;
+      maxCount: number;
+    }): Promise<PostRecord | "not_found" | "limit_exceeded"> {
+      const record = records.find((r) => r.id === id);
+      if (!record) return Promise.resolve("not_found" as const);
+      if (!record.isPinned) {
+        const pinnedCount = records.filter(
+          (r) => r.communityId === record.communityId && r.isPinned,
+        ).length;
+        if (pinnedCount >= maxCount) return Promise.resolve("limit_exceeded" as const);
+      }
       record.isPinned = true;
       record.pinnedAt = pinnedAt;
       return Promise.resolve(cloneRecord(record));

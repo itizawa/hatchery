@@ -314,7 +314,14 @@ describe.skipIf(!DATABASE_URL)("createPrismaPostRepository (integration)", () =>
       const repo = createPrismaPostRepository(prisma);
       const now = new Date("2026-07-11T12:00:00Z");
       const posts = await repo.createMany(communityId, [
-        { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "revealed", text: "text" },
+        {
+          slotKey: "2026-06-10T09:00",
+          seq: 0,
+          author: "worker-1",
+          title: "revealed",
+          text: "text",
+          createdAt: new Date("2026-07-11T11:00:00Z"),
+        },
         {
           slotKey: "2026-06-10T09:00",
           seq: 1,

@@ -4,7 +4,7 @@
  * #889: 作成・編集をダイアログからページ遷移に移行した。
  */
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { useEffect, useState, type ReactElement } from "react";
+import { type ReactElement } from "react";
 
 import {
   Alert,
@@ -22,6 +22,7 @@ import {
 
 import type { AdminCommunity } from "@hatchery/common";
 import { useCommunities } from "../api/communities.js";
+import { useSavedFlagSnackbar } from "../hooks/useSavedFlagSnackbar.js";
 import { QueryBoundary } from "./QueryBoundary.js";
 
 /** コミュニティ一覧テーブル行（編集ページへ遷移するボタンを持つ）。 */
@@ -114,16 +115,12 @@ function CommunityListSkeleton(): ReactElement {
 export function CommunitiesTab(): ReactElement {
   const navigate = useNavigate();
   const { communitySaved } = useSearch({ from: "/admin" });
-  const [showSavedSnackbar, setShowSavedSnackbar] = useState(false);
-
   // #1081: コミュニティ編集の保存成功後に付与される一時フラグ。検知したら
-  // Snackbar を表示しつつ URL から即座に除去し、再訪問時の再表示を防ぐ。
-  useEffect(() => {
-    if (communitySaved) {
-      setShowSavedSnackbar(true);
-      void navigate({ to: "/admin", search: { tab: "communities" }, replace: true });
-    }
-  }, [communitySaved]);
+  // Snackbar を表示しつつ URL から即座に除去し、再訪問時の再表示を防ぐ（#1080 と同じ共通フック）。
+  const { open: showSavedSnackbar, close: closeSavedSnackbar } = useSavedFlagSnackbar({
+    flag: !!communitySaved,
+    tab: "communities",
+  });
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
@@ -148,10 +145,10 @@ export function CommunitiesTab(): ReactElement {
       <Snackbar
         open={showSavedSnackbar}
         autoHideDuration={3000}
-        onClose={() => setShowSavedSnackbar(false)}
+        onClose={closeSavedSnackbar}
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
-        <Alert severity="success" onClose={() => setShowSavedSnackbar(false)}>
+        <Alert severity="success" onClose={closeSavedSnackbar}>
           コミュニティを保存しました
         </Alert>
       </Snackbar>

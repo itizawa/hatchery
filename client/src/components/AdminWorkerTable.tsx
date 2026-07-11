@@ -1,9 +1,10 @@
 import { Alert, Box, Button, Snackbar, TablePagination } from "./uiParts";
 
-import { useEffect, useState, type ReactElement } from "react";
+import { useState, type ReactElement } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 
 import { ADMIN_WORKERS_PAGE_SIZE, useAdminWorkers } from "../api/admin.js";
+import { useSavedFlagSnackbar } from "../hooks/useSavedFlagSnackbar.js";
 import { QueryBoundary } from "./QueryBoundary.js";
 import { WorkerTable } from "./WorkerTable.js";
 
@@ -38,16 +39,12 @@ const AdminWorkerTableInner = (): ReactElement => {
   const { data } = useAdminWorkers(page + 1); // API は 1-indexed
   const navigate = useNavigate();
   const { workerSaved } = useSearch({ from: "/admin" });
-  const [showSavedSnackbar, setShowSavedSnackbar] = useState(false);
-
   // #1080: ワーカー編集の保存成功後に付与される一時フラグ。検知したら
-  // Snackbar を表示しつつ URL から即座に除去し、再訪問時の再表示を防ぐ。
-  useEffect(() => {
-    if (workerSaved) {
-      setShowSavedSnackbar(true);
-      void navigate({ to: "/admin", search: { tab: "users" }, replace: true });
-    }
-  }, [workerSaved]);
+  // Snackbar を表示しつつ URL から即座に除去し、再訪問時の再表示を防ぐ（#1081 で共通フック化）。
+  const { open: showSavedSnackbar, close: closeSavedSnackbar } = useSavedFlagSnackbar({
+    flag: !!workerSaved,
+    tab: "users",
+  });
 
   const handleAddWorker = (): void => {
     void navigate({ to: "/admin/workers/new" });
@@ -69,10 +66,10 @@ const AdminWorkerTableInner = (): ReactElement => {
       <Snackbar
         open={showSavedSnackbar}
         autoHideDuration={3000}
-        onClose={() => setShowSavedSnackbar(false)}
+        onClose={closeSavedSnackbar}
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
-        <Alert severity="success" onClose={() => setShowSavedSnackbar(false)}>
+        <Alert severity="success" onClose={closeSavedSnackbar}>
           ワーカーを保存しました
         </Alert>
       </Snackbar>

@@ -64,5 +64,6 @@ export function toCommentResponse(r: EnrichedCommentRecord) {
     parent_comment_id: r.parentCommentId ?? null,
     ...(r.author_worker ? { author_worker: r.author_worker } : {}),
     ...(r.myVote != null ? { my_vote: r.myVote } : {}),
+    is_summary: r.isSummary,
   };
 }

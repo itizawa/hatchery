@@ -18,6 +18,7 @@ function toRecord(row: {
   score: number;
   createdAt: Date;
   parentCommentId: string | null;
+  isSummary: boolean;
 }): CommentRecord {
   return {
     id: row.id,
@@ -30,6 +31,7 @@ function toRecord(row: {
     score: row.score,
     createdAt: row.createdAt,
     parentCommentId: row.parentCommentId,
+    isSummary: row.isSummary,
   };
 }
 
@@ -57,6 +59,7 @@ export function createPrismaCommentRepository(prisma: PrismaClient): CommentRepo
               author: input.author,
               text: input.text,
               parentCommentId: input.parentCommentId ?? null,
+              isSummary: input.isSummary ?? false,
               // createdAt は input から注入可能（#556 ドリップ割当）。省略時は DB @default(now())。
               ...(input.createdAt !== undefined ? { createdAt: input.createdAt } : {}),
             },

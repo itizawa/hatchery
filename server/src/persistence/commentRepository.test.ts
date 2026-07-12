@@ -28,6 +28,25 @@ describe("createInMemoryCommentRepository", () => {
     });
   });
 
+  describe("isSummary（まとめコメント・#1165）", () => {
+    it("isSummary を省略すると false になる", async () => {
+      const repo = createInMemoryCommentRepository();
+      const [created] = await repo.createMany("community-1", [
+        { postId: "post-1", slotKey: "s", seq: 0, author: "worker-1", text: "通常コメント" },
+      ]);
+      expect(created.isSummary).toBe(false);
+    });
+
+    it("isSummary: true を指定して作成でき、そのまま読み出せる", async () => {
+      const repo = createInMemoryCommentRepository();
+      await repo.createMany("community-1", [
+        { postId: "post-1", slotKey: "s", seq: 0, author: "worker-1", text: "まとめコメント", isSummary: true },
+      ]);
+      const result = await repo.listByPost("post-1");
+      expect(result[0].isSummary).toBe(true);
+    });
+  });
+
   describe("listByPost", () => {
     it("post のコメントを createdAt 昇順で返す", async () => {
       const repo = createInMemoryCommentRepository();

@@ -12,7 +12,11 @@ import {
   type ConversationGenerator,
 } from "./aiMessageGenerator.js";
 import { assignDripTimestamps } from "./assignDripTimestamps.js";
-import { buildCommentBatchPrompt, type TargetPostForComment } from "./buildCommentBatchPrompt.js";
+import {
+  buildCommentBatchPrompt,
+  COMMENT_SUMMARY_THRESHOLD,
+  type TargetPostForComment,
+} from "./buildCommentBatchPrompt.js";
 import type { WorkerDef } from "./buildCommunityPrompt.js";
 import { calcCommentCount, pickOldPostForRevival, REVIVAL_PROBABILITY } from "./calcCommentCounts.js";
 import { extractErrorMessage, logBatchError, logBatchInfo } from "./logger.js";
@@ -29,6 +33,12 @@ export const DEFAULT_COMMENT_DRIP_WINDOW_MS = 3 * 60 * 60 * 1000;
 
 /** 古い post を取得する際の上限件数（#673）。 */
 const OLD_POSTS_LIMIT = 20;
+
+/**
+ * まとめコメント生成の文脈として渡す既存コメントの上限件数（#1165）。
+ * プロンプト肥大化を避けるため、直近 N 件のみを渡す。
+ */
+const EXISTING_COMMENTS_CONTEXT_LIMIT = 20;
 
 /** comment バッチの実行結果。 */
 export interface RunCommentBatchResult {
@@ -115,6 +125,30 @@ async function processCommunityComments({
     return [];
   }
 
+  // まとめコメント生成候補判定用に、対象 post の既存コメント総数を取得する（#1165）。
+  const existingCommentCounts = await deps.commentRepo.countByPostIds(
+    allTargetPosts.map((post) => post.id),
+    { now },
+  );
+
+  // 閾値超過 post のみ、まとめコメント生成に必要な既存コメント本文を取得する（#1165）。
+  // プロンプト肥大化を避けるため、まとめコメント指示を出す post に限定し、直近
+  // EXISTING_COMMENTS_CONTEXT_LIMIT 件のみを文脈として渡す。
+  const existingCommentsByPostId = new Map<string, Array<{ author: string; text: string }>>();
+  await Promise.all(
+    allTargetPosts
+      .filter((post) => (existingCommentCounts.get(post.id) ?? 0) > COMMENT_SUMMARY_THRESHOLD)
+      .map(async (post) => {
+        const comments = await deps.commentRepo.listByPost(post.id, { now });
+        existingCommentsByPostId.set(
+          post.id,
+          comments
+            .slice(-EXISTING_COMMENTS_CONTEXT_LIMIT)
+            .map((c) => ({ author: c.author, text: c.text })),
+        );
+      }),
+  );
+
   // 各 post のコメント数を vote スコアから計算し、TargetPostForComment を構築する。
   // eslint-disable-next-line max-params
   const targetPosts: TargetPostForComment[] = allTargetPosts.map((post, idx) => ({
@@ -124,7 +158,8 @@ async function processCommunityComments({
     text: post.text,
     authorId: post.author,
     commentCount: calcCommentCount(post.score),
-    existingComments: [],
+    existingComments: existingCommentsByPostId.get(post.id) ?? [],
+    existingCommentCount: existingCommentCounts.get(post.id) ?? 0,
   }));
 
   // ref -> 投稿者ワーカーID（自己返信除外・#1069）。
@@ -256,6 +291,7 @@ async function processCommunityComments({
         text: comment.text,
         createdAt,
         parentCommentId: null as string | null,
+        isSummary: comment.is_summary === true,
       };
     });
 

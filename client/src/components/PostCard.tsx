@@ -131,8 +131,8 @@ const listBoxSx = {
   p: 2,
 } as const;
 
-/** タイトル横の小さいラベル Chip 共通スタイル（New / 固定・#935 / #1089）。 */
-const feedBadgeChipSx = {
+/** タイトル横の小さいラベル Chip 共通スタイル（New / 固定・#935 / #1089・まとめ #1165 と共有）。 */
+export const feedBadgeChipSx = {
   fontWeight: 600,
   height: 20,
   borderRadius: "4px",

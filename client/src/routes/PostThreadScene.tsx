@@ -251,7 +251,7 @@ export const PostThreadScene = (): ReactElement => {
     }
   }, [comments]);
 
-  const commentTree = useMemo(
+  const rawCommentTree = useMemo(
     () =>
       buildCommentTree(
         comments.map((c) => ({ id: c.id, parent_comment_id: c.parent_comment_id ?? null })),
@@ -261,6 +261,19 @@ export const PostThreadScene = (): ReactElement => {
   const commentMap = useMemo(
     () => new Map<string, Comment>(comments.map((c) => [c.id, c])),
     [comments],
+  );
+
+  // まとめコメント（is_summary: true）をトップレベルの先頭に固定表示する（#1165）。
+  // ルート（トップレベル）配列のみを並び替え、各ノードの children（返信の順序）には触れない。
+  const commentTree = useMemo(
+    () =>
+      [...rawCommentTree].sort(
+        // eslint-disable-next-line max-params
+        (a, b) =>
+          Number(commentMap.get(b.id)?.is_summary === true) -
+          Number(commentMap.get(a.id)?.is_summary === true),
+      ),
+    [rawCommentTree, commentMap],
   );
 
   return (

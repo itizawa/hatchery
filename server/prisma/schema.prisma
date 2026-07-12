@@ -203,6 +203,8 @@ model Comment {
   votes       Vote[]
   /// この comment への閲覧記録（#665: Exclusive Arc 化の逆リレーション。Comment 削除で cascade）。
   pageViews   PageView[]
+  /// まとめコメントフラグ（#1165）。長いスレッドの要点をまとめたコメントに定時バッチが立てる。
+  isSummary   Boolean   @default(false)
 
   @@unique([communityId, slotKey, seq])
   @@index([postId, createdAt])

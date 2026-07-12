@@ -2,6 +2,12 @@ import type { CommunityRecord } from "../persistence/communityRepository.js";
 import type { WorkerDef } from "./buildCommunityPrompt.js";
 import { TONE_GUIDELINES } from "./buildCommunityPrompt.js";
 
+/**
+ * まとめコメント生成候補をプロンプトに含める既存コメント数の閾値（#1165）。
+ * この件数を超えたスレッドに限り、まとめコメント生成候補の指示を注入する。
+ */
+export const COMMENT_SUMMARY_THRESHOLD = 10;
+
 /** コメントバッチのプロンプトに渡す対象 post の定義（#673）。 */
 export interface TargetPostForComment {
   /** プロンプトに露出する安定参照ID（"ref-1" 等）。 */
@@ -16,6 +22,11 @@ export interface TargetPostForComment {
   commentCount: number;
   /** 既存コメント（文脈提供のためプロンプトに含める）。 */
   existingComments: Array<{ author: string; text: string }>;
+  /**
+   * この post の既存コメント総数（まとめコメント生成候補の要否判定に使用・#1165）。
+   * 省略時は 0 とみなし、まとめコメント指示は注入されない。
+   */
+  existingCommentCount?: number;
 }
 
 /** buildCommentBatchPrompt の戻り値。 */
@@ -73,7 +84,12 @@ export function buildCommentBatchPrompt(params: {
         post.existingComments.length > 0
           ? `\n  既存コメント:\n${post.existingComments.map((c) => `    - ${c.author}: ${c.text}`).join("\n")}`
           : "";
-      return `  ref: ${post.ref}\n  title: ${post.title}\n  text: ${post.text}\n  投稿者ID: ${post.authorId}（この投稿者自身をコメント候補から除外すること）\n  コメント目標件数: ${post.commentCount} 件${existingSection}`;
+      // まとめコメント候補指示（#1165）: 既存コメント数が閾値を超えたスレッドにのみ注入する。
+      const summarySection =
+        (post.existingCommentCount ?? 0) > COMMENT_SUMMARY_THRESHOLD
+          ? `\n  まとめコメント候補: この投稿は既存コメントが ${post.existingCommentCount} 件と多いため、直近の議論の要点を1〜2文でまとめた「まとめコメント」を1件だけ生成候補にできます（省略可・強制ではありません）。生成する場合はそのコメントの is_summary を true にしてください（1 投稿につき最大 1 件）。`
+          : "";
+      return `  ref: ${post.ref}\n  title: ${post.title}\n  text: ${post.text}\n  投稿者ID: ${post.authorId}（この投稿者自身をコメント候補から除外すること）\n  コメント目標件数: ${post.commentCount} 件${existingSection}${summarySection}`;
     })
     .join("\n\n");
 
@@ -103,7 +119,8 @@ ${postLines}
         {
           "author": "UUID（上記ワーカー一覧の「author に指定するID」から選択・例: ${exampleWorkerId}）",
           "text": "コメント本文",
-          "reply_to": null
+          "reply_to": null,
+          "is_summary": false
         }
       ]
     }
@@ -113,6 +130,7 @@ ${postLines}
 注意事項:
 - author には必ず上記ワーカー一覧の UUID（「author に指定するID」）を使用してください
 - score フィールドは生成しないでください
+- is_summary は省略可（既定 false）。対象投稿の注記で案内された場合のみ、その投稿へのコメント生成時に true にしてください
 - 各 post の「コメント目標件数」を目安にコメントを生成してください
 - 各投稿の「投稿者ID」に一致するワーカーは、その投稿へのコメント候補から除外してください（自己返信禁止）
 - reply_to は同じ post 内コメントの 0 始まりインデックスを指定（返信でない場合は null）

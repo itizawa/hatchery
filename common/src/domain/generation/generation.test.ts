@@ -179,6 +179,11 @@ describe("GenerationOutputCommentSchema (まとめコメント・#1165)", () => 
     expect(result.success).toBe(true);
   });
 
+  it("is_summary を省略すると既定値 false になる（undefined にならない）", () => {
+    const result = GenerationOutputCommentSchema.parse(validComment);
+    expect(result.is_summary).toBe(false);
+  });
+
   it("is_summary に true を設定できる", () => {
     const result = GenerationOutputCommentSchema.parse({ ...validComment, is_summary: true });
     expect(result.is_summary).toBe(true);

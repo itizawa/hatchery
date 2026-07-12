@@ -251,28 +251,29 @@ export const PostThreadScene = (): ReactElement => {
     }
   }, [comments]);
 
-  // まとめコメント（is_summary: true）を先頭に固定表示する（#1165）。
-  // buildCommentTree は入力配列の順序をトップレベルの並び順に反映するため、
-  // ツリー構築前にまとめコメント優先で安定ソートしておく。
-  const commentsForTree = useMemo(
-    () =>
-      [...comments].sort(
-        // eslint-disable-next-line max-params
-        (a, b) => Number(b.is_summary === true) - Number(a.is_summary === true),
-      ),
-    [comments],
-  );
-
-  const commentTree = useMemo(
+  const rawCommentTree = useMemo(
     () =>
       buildCommentTree(
-        commentsForTree.map((c) => ({ id: c.id, parent_comment_id: c.parent_comment_id ?? null })),
+        comments.map((c) => ({ id: c.id, parent_comment_id: c.parent_comment_id ?? null })),
       ),
-    [commentsForTree],
+    [comments],
   );
   const commentMap = useMemo(
     () => new Map<string, Comment>(comments.map((c) => [c.id, c])),
     [comments],
+  );
+
+  // まとめコメント（is_summary: true）をトップレベルの先頭に固定表示する（#1165）。
+  // ルート（トップレベル）配列のみを並び替え、各ノードの children（返信の順序）には触れない。
+  const commentTree = useMemo(
+    () =>
+      [...rawCommentTree].sort(
+        // eslint-disable-next-line max-params
+        (a, b) =>
+          Number(commentMap.get(b.id)?.is_summary === true) -
+          Number(commentMap.get(a.id)?.is_summary === true),
+      ),
+    [rawCommentTree, commentMap],
   );
 
   return (

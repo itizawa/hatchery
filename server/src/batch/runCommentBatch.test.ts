@@ -768,6 +768,105 @@ describe("runCommentBatch (#673)", () => {
       expect(capturedPrompt).toContain("まとめコメント");
     });
 
+    it("既存コメントが閾値を超える post では、まとめコメント生成のため実際の既存コメント本文がプロンプトに含まれる", async () => {
+      const postRepo = createInMemoryPostRepository();
+      const commentRepo = createInMemoryCommentRepository();
+      const [post] = await postRepo.createMany(community1.id, [
+        {
+          slotKey: "slot-many-comments-context",
+          seq: 0,
+          author: botWorker.id,
+          title: "コメントが多い投稿",
+          text: "本文",
+          createdAt: recentDate(),
+        },
+      ]);
+      // eslint-disable-next-line max-params
+      await commentRepo.createMany(community1.id, Array.from({ length: 11 }, (_, i) => ({
+        postId: post!.id,
+        slotKey: "existing-slot",
+        seq: i,
+        author: commenterWorker.id,
+        text: `実在の既存コメント本文${i}`,
+        createdAt: recentDate(1),
+      })));
+
+      let capturedPrompt = "";
+      const generate = vi.fn().mockImplementation(async (prompt: string) => {
+        capturedPrompt = prompt;
+        return { text: makeCommentOutput("ref-1") };
+      });
+
+      await runCommentBatch({
+        communityRepo: createInMemoryCommunityRepository([community1]),
+        postRepo,
+        commentRepo,
+        workerCommunityRepo: createInMemoryWorkerCommunityRepository({
+          workers: [botWorker, commenterWorker],
+          links: [
+            { workerId: botWorker.id, communityId: community1.id },
+            { workerId: commenterWorker.id, communityId: community1.id },
+          ],
+        }),
+        generate,
+        anthropicApiKey: "test-key",
+        now: NOW,
+        revivalProbability: 0,
+      });
+
+      // まとめコメントの文脈として、実際の既存コメント本文がプロンプトに含まれること（#1165）。
+      expect(capturedPrompt).toContain("実在の既存コメント本文0");
+    });
+
+    it("既存コメントが閾値以下の post では既存コメント本文をプロンプトに含めない（文脈取得を省略する）", async () => {
+      const postRepo = createInMemoryPostRepository();
+      const commentRepo = createInMemoryCommentRepository();
+      const [post] = await postRepo.createMany(community1.id, [
+        {
+          slotKey: "slot-few-comments-context",
+          seq: 0,
+          author: botWorker.id,
+          title: "コメントが少ない投稿",
+          text: "本文",
+          createdAt: recentDate(),
+        },
+      ]);
+      // eslint-disable-next-line max-params
+      await commentRepo.createMany(community1.id, Array.from({ length: 3 }, (_, i) => ({
+        postId: post!.id,
+        slotKey: "existing-slot",
+        seq: i,
+        author: commenterWorker.id,
+        text: `既存コメント本文${i}`,
+        createdAt: recentDate(1),
+      })));
+
+      let capturedPrompt = "";
+      const generate = vi.fn().mockImplementation(async (prompt: string) => {
+        capturedPrompt = prompt;
+        return { text: makeCommentOutput("ref-1") };
+      });
+
+      await runCommentBatch({
+        communityRepo: createInMemoryCommunityRepository([community1]),
+        postRepo,
+        commentRepo,
+        workerCommunityRepo: createInMemoryWorkerCommunityRepository({
+          workers: [botWorker, commenterWorker],
+          links: [
+            { workerId: botWorker.id, communityId: community1.id },
+            { workerId: commenterWorker.id, communityId: community1.id },
+          ],
+        }),
+        generate,
+        anthropicApiKey: "test-key",
+        now: NOW,
+        revivalProbability: 0,
+      });
+
+      expect(capturedPrompt).not.toContain("既存コメント本文0");
+    });
+
     it("既存コメントが閾値以下の post のプロンプトにはまとめコメント指示が含まれない", async () => {
       const postRepo = createInMemoryPostRepository();
       const commentRepo = createInMemoryCommentRepository();

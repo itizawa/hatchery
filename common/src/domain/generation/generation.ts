@@ -18,8 +18,8 @@ export const GenerationOutputCommentSchema = z.object({
   text: z.string().min(1).max(COMMENT_TEXT_MAX_LENGTH),
   /** 出力内コメントの 0 始まりインデックス（返信先）。null / 省略 = トップレベル。 */
   reply_to: z.number().int().nonnegative().nullable().optional(),
-  /** まとめコメント候補フラグ（#1165）。省略時は false 扱い。 */
-  is_summary: z.boolean().optional(),
+  /** まとめコメント候補フラグ（#1165）。省略時は false。 */
+  is_summary: z.boolean().default(false),
 });
 
 export type GenerationOutputComment = z.infer<typeof GenerationOutputCommentSchema>;

@@ -556,6 +556,41 @@ describe("PostThreadScene まとめコメントの先頭固定表示 (#1165)", (
     );
     expect(ids[0]).toBe("comment-comment-summary-1");
   });
+
+  it("is_summary: true の返信コメントは兄弟コメントの並び順を変えず、トップレベルへは昇格しない", async () => {
+    // 親（comment-1）に 2 件の返信（reply-a → reply-b の順）があり、reply-b が is_summary: true。
+    // 修正前の実装（配列全体をソート）だと reply-b が reply-a より前に来てしまう回帰を防ぐ。
+    const commentsWithNestedSummary: Comment[] = [
+      mockComments[0]!,
+      {
+        ...mockComments[1]!,
+        id: "reply-a",
+        text: "先に投稿された返信",
+        parent_comment_id: "comment-1",
+      },
+      {
+        ...mockComments[1]!,
+        id: "reply-b",
+        text: "まとめではない後発の返信",
+        parent_comment_id: "comment-1",
+        is_summary: true,
+      },
+    ];
+    server.use(
+      http.get("/api/posts/:postId", () =>
+        HttpResponse.json({ post: mockPosts[0], comments: commentsWithNestedSummary, related_posts: [] }),
+      ),
+    );
+    const { container } = render(<BoundedScene />, { wrapper: Wrapper });
+
+    await screen.findByText("まとめではない後発の返信");
+
+    const ids = Array.from(container.querySelectorAll('[id^="comment-"]')).map((el) => el.id);
+    // トップレベル（comment-1）が先頭のまま。is_summary の返信が親を追い越してトップレベルに来ない。
+    expect(ids[0]).toBe("comment-comment-1");
+    // 返信同士の順序も元の投稿順（reply-a → reply-b）のまま維持される。
+    expect(ids.indexOf("comment-reply-a")).toBeLessThan(ids.indexOf("comment-reply-b"));
+  });
 });
 
 // #1077: ローディング中の左カラムが column flex 親（RootLayout の main）内で shrink-to-fit に

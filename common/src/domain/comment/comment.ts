@@ -18,6 +18,8 @@ export const COMMENT_TEXT_MAX_LENGTH = 1000;
  *   server が author（id か displayName）から解決して付与する。生成出力・永続化には含めない。
  * - my_vote は sessionId を元にした現セッションの投票状態（#831）。GET 時に sessionId を
  *   付与すると付く任意フィールド。未投票 / 未指定は省略。永続化・生成出力には含めない。
+ * - is_summary: 定時バッチが生成した「まとめコメント」を示すフラグ（#1165）。既定 false。
+ *   true のコメントは client でコメント一覧の先頭に固定表示される。
  */
 export const CommentSchema = z.object({
   id: z.string().min(1),
@@ -34,6 +36,8 @@ export const CommentSchema = z.object({
   author_worker: AuthorWorkerSchema.optional(),
   /** 現セッションの投票状態（#831）。sessionId 付き GET 時のみ付与。未投票 / 未指定は省略。 */
   my_vote: VoteDirectionSchema.nullable().optional(),
+  /** まとめコメントフラグ（#1165）。既定 false。 */
+  is_summary: z.boolean().default(false),
 });
 
 export type Comment = z.infer<typeof CommentSchema>;

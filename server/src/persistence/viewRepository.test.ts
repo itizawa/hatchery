@@ -97,4 +97,67 @@ describe("createInMemoryViewRepository", () => {
       expect(result.get("worker-1")).toBeUndefined();
     });
   });
+
+  describe("totalViewCount（#1113）", () => {
+    it("記録がない場合は 0 を返す", async () => {
+      const repo = createInMemoryViewRepository();
+      expect(await repo.totalViewCount()).toBe(0);
+    });
+
+    it("post / comment の新規閲覧をまとめて累計する", async () => {
+      const repo = createInMemoryViewRepository();
+      await repo.recordPostView("post-1", "sess-1", null);
+      await repo.recordPostView("post-1", "sess-2", null);
+      await repo.recordCommentViews(["c1", "c2"], "sess-1", null);
+      expect(await repo.totalViewCount()).toBe(4);
+    });
+
+    it("同一 (target, session) の重複閲覧は累計されない", async () => {
+      const repo = createInMemoryViewRepository();
+      await repo.recordPostView("post-1", "sess-1", null);
+      await repo.recordPostView("post-1", "sess-1", null);
+      expect(await repo.totalViewCount()).toBe(1);
+    });
+  });
+
+  describe("viewCountByCommunity（#1113）", () => {
+    it("記録がない場合は空の Map を返す", async () => {
+      const repo = createInMemoryViewRepository();
+      const result = await repo.viewCountByCommunity();
+      expect(result.size).toBe(0);
+    });
+
+    it("resolveCommunity で解決した community 単位に集計する", async () => {
+      // eslint-disable-next-line max-params
+      const repo = createInMemoryViewRepository(
+        undefined,
+        undefined,
+        (type, targetId) => (type === "post" ? `community-of-${targetId}` : null),
+      );
+      await repo.recordPostView("post-1", "sess-1", null);
+      await repo.recordPostView("post-1", "sess-2", null);
+      await repo.recordPostView("post-2", "sess-1", null);
+
+      const result = await repo.viewCountByCommunity();
+      expect(result.get("community-of-post-1")).toBe(2);
+      expect(result.get("community-of-post-2")).toBe(1);
+    });
+
+    it("resolveCommunity が null を返すターゲットは集計対象外", async () => {
+      // eslint-disable-next-line max-params
+      const repo = createInMemoryViewRepository(undefined, undefined, () => null);
+      await repo.recordPostView("post-1", "sess-1", null);
+
+      const result = await repo.viewCountByCommunity();
+      expect(result.size).toBe(0);
+    });
+
+    it("resolveCommunity 未注入のときは常に空の Map を返す", async () => {
+      const repo = createInMemoryViewRepository();
+      await repo.recordPostView("post-1", "sess-1", null);
+
+      const result = await repo.viewCountByCommunity();
+      expect(result.size).toBe(0);
+    });
+  });
 });

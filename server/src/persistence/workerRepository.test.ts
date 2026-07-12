@@ -312,4 +312,27 @@ describe("createInMemoryWorkerRepository", () => {
       expect(updated?.verbosity).toBe("concise");
     });
   });
+
+  describe("count（#1113）", () => {
+    it("worker が 0 件のとき 0 を返す", async () => {
+      const repo = createInMemoryWorkerRepository([]);
+      expect(await repo.count()).toBe(0);
+    });
+
+    it("worker が複数件のとき件数を返す", async () => {
+      const repo = createInMemoryWorkerRepository([
+        makeWorker({ id: "worker-1" }),
+        makeWorker({ id: "worker-2" }),
+      ]);
+      expect(await repo.count()).toBe(2);
+    });
+
+    it("論理削除済み worker は件数に含めない（listBotWorkersPaginated の includeDeleted=false と同じ除外条件）", async () => {
+      const repo = createInMemoryWorkerRepository([
+        makeWorker({ id: "worker-1" }),
+        makeWorker({ id: "worker-2", deletedAt: new Date("2026-01-01") }),
+      ]);
+      expect(await repo.count()).toBe(1);
+    });
+  });
 });

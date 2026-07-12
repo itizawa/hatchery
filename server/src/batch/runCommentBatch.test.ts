@@ -92,6 +92,7 @@ function makeCommentOutput(ref = "ref-1", authorId = "worker-commenter-1") {
 }
 
 /** is_summary 付きの生成出力（#1165）。 */
+// eslint-disable-next-line max-params
 function makeSummaryCommentOutput(ref = "ref-1", authorId = "worker-commenter-1") {
   return JSON.stringify({
     topic: "テストトピック",
@@ -730,13 +731,15 @@ describe("runCommentBatch (#673)", () => {
           createdAt: recentDate(),
         },
       ]);
-      // 既存コメントを 11 件作成（閾値 10 件を超える）。
+      // 既存コメントを 11 件作成（閾値 10 件を超える）。createdAt は NOW 以前（reveal フィルタ通過用）。
+      // eslint-disable-next-line max-params
       await commentRepo.createMany(community1.id, Array.from({ length: 11 }, (_, i) => ({
         postId: post!.id,
         slotKey: "existing-slot",
         seq: i,
         author: commenterWorker.id,
         text: `既存コメント${i}`,
+        createdAt: recentDate(1),
       })));
 
       let capturedPrompt = "";
@@ -778,13 +781,15 @@ describe("runCommentBatch (#673)", () => {
           createdAt: recentDate(),
         },
       ]);
-      // 既存コメントを 3 件だけ作成（閾値未満）。
+      // 既存コメントを 3 件だけ作成（閾値未満）。createdAt は NOW 以前（reveal フィルタ通過用）。
+      // eslint-disable-next-line max-params
       await commentRepo.createMany(community1.id, Array.from({ length: 3 }, (_, i) => ({
         postId: post!.id,
         slotKey: "existing-slot",
         seq: i,
         author: commenterWorker.id,
         text: `既存コメント${i}`,
+        createdAt: recentDate(1),
       })));
 
       let capturedPrompt = "";

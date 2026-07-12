@@ -115,6 +115,12 @@ async function processCommunityComments({
     return [];
   }
 
+  // まとめコメント生成候補判定用に、対象 post の既存コメント総数を取得する（#1165）。
+  const existingCommentCounts = await deps.commentRepo.countByPostIds(
+    allTargetPosts.map((post) => post.id),
+    { now },
+  );
+
   // 各 post のコメント数を vote スコアから計算し、TargetPostForComment を構築する。
   // eslint-disable-next-line max-params
   const targetPosts: TargetPostForComment[] = allTargetPosts.map((post, idx) => ({
@@ -125,6 +131,7 @@ async function processCommunityComments({
     authorId: post.author,
     commentCount: calcCommentCount(post.score),
     existingComments: [],
+    existingCommentCount: existingCommentCounts.get(post.id) ?? 0,
   }));
 
   // ref -> 投稿者ワーカーID（自己返信除外・#1069）。
@@ -256,6 +263,7 @@ async function processCommunityComments({
         text: comment.text,
         createdAt,
         parentCommentId: null as string | null,
+        isSummary: comment.is_summary === true,
       };
     });
 

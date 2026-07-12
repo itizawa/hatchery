@@ -743,6 +743,10 @@
               "up",
               "down"
             ]
+          },
+          "is_summary": {
+            "type": "boolean",
+            "default": false
           }
         },
         "required": [

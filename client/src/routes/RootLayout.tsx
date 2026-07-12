@@ -16,6 +16,7 @@ import EmojiEventsIcon from "@mui/icons-material/EmojiEventsRounded";
 import HomeIcon from "@mui/icons-material/HomeRounded";
 import InfoIcon from "@mui/icons-material/InfoRounded";
 import PrivacyTipIcon from "@mui/icons-material/PrivacyTipRounded";
+import QueryStatsRoundedIcon from "@mui/icons-material/QueryStatsRounded";
 import TrendingUpIcon from "@mui/icons-material/TrendingUpRounded";
 import { Link as RouterLink, Outlet, useLocation } from "@tanstack/react-router";
 import { Suspense, useEffect, useRef, useState, type ReactElement } from "react";
@@ -54,6 +55,7 @@ const SidebarGlobalNav = (): ReactElement => {
   const isHomeActive = pathname === "/";
   const isPopularActive = pathname === "/popular";
   const isRankingActive = pathname === "/ranking";
+  const isDashboardActive = pathname === "/dashboard";
 
   return (
     <List dense>
@@ -97,6 +99,20 @@ const SidebarGlobalNav = (): ReactElement => {
             <EmojiEventsIcon fontSize="small" />
           </ListItemIcon>
           <ListItemText primary="ランキング" />
+        </ListItemButton>
+      </ListItem>
+      <ListItem disablePadding>
+        <ListItemButton
+          component={RouterLink}
+          to="/dashboard"
+          selected={isDashboardActive}
+          aria-current={isDashboardActive ? "page" : undefined}
+          sx={navItemSx}
+        >
+          <ListItemIcon sx={SIDEBAR_ICON_SX}>
+            <QueryStatsRoundedIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="ダッシュボード" />
         </ListItemButton>
       </ListItem>
     </List>

@@ -82,6 +82,10 @@ const LazyWorkerRankingScene = lazyRouteComponent(
   () => import("./routes/WorkerRankingScene"),
   "WorkerRankingScene",
 );
+const LazyDashboardScene = lazyRouteComponent(
+  () => import("./routes/DashboardScene"),
+  "DashboardScene",
+);
 const LazyWorkerScene = lazyRouteComponent(
   () => import("./routes/WorkerScene"),
   "WorkerScene",
@@ -363,6 +367,17 @@ const rankingRoute = createRoute({
   ),
 });
 
+/** サイト全体の定量サマリダッシュボード（/dashboard）。認証不要の公開ページ（#1113）。 */
+const dashboardRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/dashboard",
+  component: () => (
+    <QueryBoundary fallback={<MainContentSkeleton />}>
+      <LazyDashboardScene />
+    </QueryBoundary>
+  ),
+});
+
 /** ワーカー個別プロフィールページ（/workers/$workerId）。認証不要の公開ページ（#929）。 */
 const workerRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -442,6 +457,7 @@ const routeTree = rootRoute.addChildren([
   privacyRoute,
   rankingRoute,
   workerRoute,
+  dashboardRoute,
 ]);
 
 export interface CreateAppRouterOptions {

@@ -536,6 +536,28 @@ describe("PostThreadScene コメントアンカー＆自動スクロール (#861
   });
 });
 
+describe("PostThreadScene まとめコメントの先頭固定表示 (#1165)", () => {
+  it("is_summary: true のコメントが一覧の先頭に表示される", async () => {
+    const commentsWithSummary: Comment[] = [
+      mockComments[0]!,
+      { ...mockComments[1]!, id: "comment-summary-1", text: "まとめコメント本文", is_summary: true },
+    ];
+    server.use(
+      http.get("/api/posts/:postId", () =>
+        HttpResponse.json({ post: mockPosts[0], comments: commentsWithSummary, related_posts: [] }),
+      ),
+    );
+    const { container } = render(<BoundedScene />, { wrapper: Wrapper });
+
+    await screen.findByText("まとめコメント本文");
+
+    const ids = Array.from(container.querySelectorAll('[id^="comment-comment-"]')).map(
+      (el) => el.id,
+    );
+    expect(ids[0]).toBe("comment-comment-summary-1");
+  });
+});
+
 // #1077: ローディング中の左カラムが column flex 親（RootLayout の main）内で shrink-to-fit に
 // なり右カラムより大幅に狭く潰れる幅バグの回帰テスト。jsdom は実レイアウト計算（layout/reflow）を
 // 行わないため getBoundingClientRect は実測に使えない（本リポジトリの PostCard.test.tsx /

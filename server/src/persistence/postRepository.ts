@@ -294,16 +294,7 @@ export function decodePopularCursor(cursor: string): PopularCursorPayload | null
   }
 }
 
-/** 人気順（score 降順 → createdAt 降順 → id 降順）の比較関数。 */
-// eslint-disable-next-line max-params
-function comparePopular(a: PostRecord, b: PostRecord): number {
-  if (a.score !== b.score) return b.score - a.score;
-  const timeDiff = b.createdAt.getTime() - a.createdAt.getTime();
-  if (timeDiff !== 0) return timeDiff;
-  return b.id < a.id ? -1 : b.id > a.id ? 1 : 0;
-}
-
-/** 新着順（createdAt 降順 → id 降順）の比較関数。 */
+/** 新着順（createdAt 降順 → id 降順）の比較関数。人気順のタイブレークにも使う。 */
 // eslint-disable-next-line max-params
 function compareRecent(a: PostRecord, b: PostRecord): number {
   const timeDiff = b.createdAt.getTime() - a.createdAt.getTime();
@@ -311,26 +302,64 @@ function compareRecent(a: PostRecord, b: PostRecord): number {
   return b.id < a.id ? -1 : b.id > a.id ? 1 : 0;
 }
 
-/** 新着順 keyset の cursor 一致判定（cursor より後ろ＝古い側を残す）。 */
+/** 人気順（score 降順 → createdAt 降順 → id 降順）の比較関数。同点時は compareRecent に委譲する。 */
 // eslint-disable-next-line max-params
-function matchesCursorRecent(record: PostRecord, cursor: CursorPayload): boolean {
-  const cursorTime = new Date(cursor.createdAt).getTime();
-  const recordTime = record.createdAt.getTime();
+function comparePopular(a: PostRecord, b: PostRecord): number {
+  if (a.score !== b.score) return b.score - a.score;
+  return compareRecent(a, b);
+}
+
+/** createdAt→id のタイブレークで cursor より後ろ（古い側）かどうかを判定する。 */
+function isPastCursorByTime({
+  recordTime,
+  recordId,
+  cursorTime,
+  cursorId,
+}: {
+  recordTime: number;
+  recordId: string;
+  cursorTime: number;
+  cursorId: string;
+}): boolean {
   if (recordTime < cursorTime) return true;
-  if (recordTime === cursorTime) return record.id < cursor.id;
+  if (recordTime === cursorTime) return recordId < cursorId;
   return false;
 }
 
+/** 新着順 keyset の cursor 一致判定（cursor より後ろ＝古い側を残す）。 */
+function matchesCursorRecent({ record, cursor }: { record: PostRecord; cursor: CursorPayload }): boolean {
+  return isPastCursorByTime({
+    recordTime: record.createdAt.getTime(),
+    recordId: record.id,
+    cursorTime: new Date(cursor.createdAt).getTime(),
+    cursorId: cursor.id,
+  });
+}
+
 /** 人気順 keyset の cursor 一致判定（cursor より後ろ＝スコア/時刻が劣後する側を残す）。 */
-// eslint-disable-next-line max-params
-function matchesCursorPopular(record: PostRecord, cursor: PopularCursorPayload): boolean {
+function matchesCursorPopular({ record, cursor }: { record: PostRecord; cursor: PopularCursorPayload }): boolean {
   if (record.score < cursor.score) return true;
   if (record.score > cursor.score) return false;
-  const cursorTime = new Date(cursor.createdAt).getTime();
-  const recordTime = record.createdAt.getTime();
-  if (recordTime < cursorTime) return true;
-  if (recordTime === cursorTime) return record.id < cursor.id;
-  return false;
+  return isPastCursorByTime({
+    recordTime: record.createdAt.getTime(),
+    recordId: record.id,
+    cursorTime: new Date(cursor.createdAt).getTime(),
+    cursorId: cursor.id,
+  });
+}
+
+/** cursor を decode し、不正なら INVALID_CURSOR を throw する（cursor が undefined なら null を返す）。 */
+function decodeCursorOrThrow<C>({
+  cursor,
+  decode,
+}: {
+  cursor: string | undefined;
+  decode: (cursor: string) => C | null;
+}): C | null {
+  if (cursor === undefined) return null;
+  const payload = decode(cursor);
+  if (!payload) throw new Error("INVALID_CURSOR");
+  return payload;
 }
 
 /**
@@ -339,7 +368,7 @@ function matchesCursorPopular(record: PostRecord, cursor: PopularCursorPayload):
  * limit+1 取得・hasMore 判定・nextCursor encode をまとめて行う。
  * cursor が不正な場合は INVALID_CURSOR を throw する（呼び出し元は async 関数のため rejected promise になる）。
  */
-function paginateSorted<T extends PostRecord, C>({
+function paginateSorted<C>({
   sorted,
   cursor,
   limit,
@@ -347,21 +376,18 @@ function paginateSorted<T extends PostRecord, C>({
   matchesCursor,
   encode,
 }: {
-  sorted: T[];
+  sorted: PostRecord[];
   cursor: string | undefined;
   limit: number;
   decode: (cursor: string) => C | null;
-  // eslint-disable-next-line max-params
-  matchesCursor: (record: T, cursor: C) => boolean;
-  encode: (record: T) => string;
-}): { posts: T[]; nextCursor: string | null } {
-  let cursorPayload: C | null = null;
-  if (cursor !== undefined) {
-    cursorPayload = decode(cursor);
-    if (!cursorPayload) throw new Error("INVALID_CURSOR");
-  }
+  matchesCursor: (args: { record: PostRecord; cursor: C }) => boolean;
+  encode: (record: PostRecord) => string;
+}): { posts: PostRecord[]; nextCursor: string | null } {
+  const cursorPayload = decodeCursorOrThrow({ cursor, decode });
 
-  const filtered = cursorPayload ? sorted.filter((r) => matchesCursor(r, cursorPayload!)) : sorted;
+  const filtered = cursorPayload
+    ? sorted.filter((r) => matchesCursor({ record: r, cursor: cursorPayload }))
+    : sorted;
   const fetched = filtered.slice(0, limit + 1);
   const hasMore = fetched.length > limit;
   const posts = hasMore ? fetched.slice(0, limit) : fetched;

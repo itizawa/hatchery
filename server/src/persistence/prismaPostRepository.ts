@@ -118,8 +118,9 @@ function withPopularCursor({
 }
 
 /**
- * カーソルページネーション共通処理（#1179）。
- * where/orderBy から limit+1 件取得し、hasMore 判定・nextCursor encode をまとめて行う。
+ * ページ取得の共通処理（#1179）。cursor の decode・where 構築は呼び出し側
+ * （withRecentCursor / withPopularCursor）が担い、本関数は組み立て済みの where/orderBy から
+ * limit+1 件取得し、hasMore 判定・nextCursor encode のみを行う。
  */
 async function findPage({
   prisma,

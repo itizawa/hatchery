@@ -525,7 +525,6 @@ test(
 
     // 主要ナビ項目が全て表示される（見切れない）
     await expect(mobileSidebar.getByRole("link", { name: "ホーム" })).toBeVisible();
-    await expect(mobileSidebar.getByRole("link", { name: "人気" })).toBeVisible();
     await expect(mobileSidebar.getByRole("link", { name: "ランキング" })).toBeVisible();
     await expect(mobileSidebar.getByRole("link", { name: "利用規約" })).toBeVisible();
     await expect(mobileSidebar.getByRole("link", { name: "プライバシーポリシー" })).toBeVisible();

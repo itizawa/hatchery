@@ -17,7 +17,6 @@ import HomeIcon from "@mui/icons-material/HomeRounded";
 import InfoIcon from "@mui/icons-material/InfoRounded";
 import PrivacyTipIcon from "@mui/icons-material/PrivacyTipRounded";
 import QueryStatsRoundedIcon from "@mui/icons-material/QueryStatsRounded";
-import TrendingUpIcon from "@mui/icons-material/TrendingUpRounded";
 import { Link as RouterLink, Outlet, useLocation } from "@tanstack/react-router";
 import { Suspense, useEffect, useRef, useState, type ReactElement } from "react";
 
@@ -47,13 +46,12 @@ const navItemSx = {
 
 /**
  * サイドバー最上部の Reddit 風グローバルナビゲーション（#435）。
- * ホーム（/）・人気（/popular）。
+ * ホーム（/）。#1067: 人気（/popular）はホームに統合されたため撤去。
  * 現在ルートに一致する項目をグレー背景でハイライトする。
  */
 const SidebarGlobalNav = (): ReactElement => {
   const { pathname } = useLocation();
   const isHomeActive = pathname === "/";
-  const isPopularActive = pathname === "/popular";
   const isRankingActive = pathname === "/ranking";
   const isDashboardActive = pathname === "/dashboard";
 
@@ -71,20 +69,6 @@ const SidebarGlobalNav = (): ReactElement => {
             <HomeIcon fontSize="small" />
           </ListItemIcon>
           <ListItemText primary="ホーム" />
-        </ListItemButton>
-      </ListItem>
-      <ListItem disablePadding>
-        <ListItemButton
-          component={RouterLink}
-          to="/popular"
-          selected={isPopularActive}
-          aria-current={isPopularActive ? "page" : undefined}
-          sx={navItemSx}
-        >
-          <ListItemIcon sx={SIDEBAR_ICON_SX}>
-            <TrendingUpIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText primary="人気" />
         </ListItemButton>
       </ListItem>
       <ListItem disablePadding>

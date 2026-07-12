@@ -143,7 +143,7 @@ async function setupCommonMocks(page: import("@playwright/test").Page) {
 
 /* ── テスト ──────────────────────────────────────────────────────────────────── */
 
-test("UC-HOME-01: 未ログインでもホームフィードに全コミュニティの投稿が新着順で表示される", async ({
+test("UC-HOME-01: 未ログインでもホームフィードに全コミュニティの投稿が人気順で表示される", async ({
   page,
 }) => {
   await setupCommonMocks(page);
@@ -1039,3 +1039,5 @@ test(
       .toBe(0);
   },
 );
+
+test.todo("UC-HOME-38: 旧 /popular ページへのアクセスは / へリダイレクトされる（#1067）");

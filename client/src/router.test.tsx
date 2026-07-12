@@ -101,7 +101,7 @@ describe("ログインモーダル導線（#454）", () => {
     render(renderRouter(router));
     expect(await screen.findByRole("button", { name: /Google でログイン/ })).toBeInTheDocument();
     // 背景にはホームフィード（ゲスト UI）が残る（DOM 上に存在する）。
-    expect(await screen.findByText("ホームフィード")).toBeInTheDocument();
+    expect(await screen.findByText("人気の投稿")).toBeInTheDocument();
   });
 
   // #454: URL 駆動（?login=1）でモーダルが復元され、背景の閲覧コンテキストが保持される。
@@ -111,7 +111,7 @@ describe("ログインモーダル導線（#454）", () => {
     });
     render(renderRouter(router));
     expect(await screen.findByRole("button", { name: /Google でログイン/ })).toBeInTheDocument();
-    expect(await screen.findByText("ホームフィード")).toBeInTheDocument();
+    expect(await screen.findByText("人気の投稿")).toBeInTheDocument();
   });
 
   // #454: login search param が無ければモーダルは閉じている。
@@ -120,7 +120,7 @@ describe("ログインモーダル導線（#454）", () => {
       history: createMemoryHistory({ initialEntries: ["/"] }),
     });
     render(renderRouter(router));
-    expect(await screen.findByRole("heading", { name: /ホームフィード/ })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /人気の投稿/ })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Google でログイン/ })).not.toBeInTheDocument();
   });
 });
@@ -159,7 +159,17 @@ describe("createAppRouter", () => {
       history: createMemoryHistory({ initialEntries: ["/"] }),
     });
     render(renderRouter(router));
-    expect(await screen.findByRole("heading", { name: /ホームフィード/ })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /人気の投稿/ })).toBeInTheDocument();
+  });
+
+  // #1067: ホームと人気ページを統合したため、/popular は / へリダイレクトする。
+  it("/popular を開くと / へリダイレクトされる", async () => {
+    const router = createAppRouter({
+      history: createMemoryHistory({ initialEntries: ["/popular"] }),
+    });
+    render(renderRouter(router));
+    expect(await screen.findByRole("heading", { name: /人気の投稿/ })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe("/");
   });
 
   it("サイドバーにコミュニティセクションが表示される", async () => {
@@ -232,7 +242,7 @@ describe("認証ガード（未ログイン時のリダイレクト）", () => {
       history: createMemoryHistory({ initialEntries: ["/"] }),
     });
     render(renderRouter(router));
-    expect(await screen.findByRole("heading", { name: /ホームフィード/ })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /人気の投稿/ })).toBeInTheDocument();
     // ログインページへリダイレクトしていないことを確認
     expect(screen.queryByRole("heading", { name: /^ログイン$/ })).not.toBeInTheDocument();
   });
@@ -246,7 +256,7 @@ describe("認証ガード（未ログイン時のリダイレクト）", () => {
     render(renderRouter(router));
     expect(await screen.findByRole("button", { name: /Google でログイン/ })).toBeInTheDocument();
     // 公開ホーム（ホームフィード）へリダイレクトされたうえでモーダルが重なる（背景は aria-hidden）。
-    expect(await screen.findByText("ホームフィード")).toBeInTheDocument();
+    expect(await screen.findByText("人気の投稿")).toBeInTheDocument();
   });
 
   it("未ログインで管理画面（/admin）を開くとホーム上にログインモーダルが開く", async () => {
@@ -255,7 +265,7 @@ describe("認証ガード（未ログイン時のリダイレクト）", () => {
     });
     render(renderRouter(router));
     expect(await screen.findByRole("button", { name: /Google でログイン/ })).toBeInTheDocument();
-    expect(await screen.findByText("ホームフィード")).toBeInTheDocument();
+    expect(await screen.findByText("人気の投稿")).toBeInTheDocument();
   });
 
   // #800: リダイレクト先の URL が /?login=1 であること（/?login=true は e2e 期待値と乖離する）。
@@ -354,7 +364,7 @@ describe("スクロール復元（#950）", () => {
       history: createMemoryHistory({ initialEntries: ["/"] }),
     });
     const { container } = render(renderRouter(router));
-    await screen.findByRole("heading", { name: /ホームフィード/ });
+    await screen.findByRole("heading", { name: /人気の投稿/ });
     const main = container.querySelector('main[data-scroll-restoration-id="main-content"]');
     expect(main).toBeInTheDocument();
   });

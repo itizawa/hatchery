@@ -80,6 +80,6 @@ describe("AppRoot", () => {
     // サイドバーのコミュニティセクション「コミュニティ」ラベルが表示される
     expect(await screen.findByText("コミュニティ")).toBeInTheDocument();
     // ホームフィードの見出しが表示される
-    expect(await screen.findByRole("heading", { name: /ホームフィード/ })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /人気の投稿/ })).toBeInTheDocument();
   });
 });

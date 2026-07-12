@@ -3,7 +3,7 @@
  * admin が community の作成・編集・一覧表示を行う。
  * #889: 作成・編集をダイアログからページ遷移に移行した。
  */
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { type ReactElement } from "react";
 
 import {
@@ -20,7 +20,9 @@ import {
 
 import type { AdminCommunity } from "@hatchery/common";
 import { useCommunities } from "../api/communities.js";
+import { useSavedFlagSnackbar } from "../hooks/useSavedFlagSnackbar.js";
 import { QueryBoundary } from "./QueryBoundary.js";
+import { SavedFlagSnackbar } from "./SavedFlagSnackbar.js";
 
 /** コミュニティ一覧テーブル行（編集ページへ遷移するボタンを持つ）。 */
 interface CommunityRowProps {
@@ -111,6 +113,13 @@ function CommunityListSkeleton(): ReactElement {
  */
 export function CommunitiesTab(): ReactElement {
   const navigate = useNavigate();
+  const { communitySaved } = useSearch({ from: "/admin" });
+  // #1081: コミュニティ編集の保存成功後に付与される一時フラグ。検知したら
+  // Snackbar を表示しつつ URL から即座に除去し、再訪問時の再表示を防ぐ（#1080 と同じ共通フック）。
+  const { open: showSavedSnackbar, close: closeSavedSnackbar } = useSavedFlagSnackbar({
+    flag: !!communitySaved,
+    flagKey: "communitySaved",
+  });
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
@@ -132,6 +141,11 @@ export function CommunitiesTab(): ReactElement {
           <CommunityListPanel />
         </QueryBoundary>
       </Box>
+      <SavedFlagSnackbar
+        open={showSavedSnackbar}
+        onClose={closeSavedSnackbar}
+        message="コミュニティを保存しました"
+      />
     </Box>
   );
 }

@@ -44,6 +44,8 @@ export function toPostResponse(r: EnrichedPostRecord) {
     comment_count: r.commentCount ?? 0,
     ...(r.myVote != null ? { my_vote: r.myVote } : {}),
     tags: r.tags,
+    is_pinned: r.isPinned,
+    pinned_at: r.pinnedAt ? r.pinnedAt.toISOString() : null,
   };
 }
 

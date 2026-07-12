@@ -1,5 +1,5 @@
 import { useForm } from "@tanstack/react-form";
-import { Link, useParams } from "@tanstack/react-router";
+import { Link, useNavigate, useParams } from "@tanstack/react-router";
 import { type ReactElement, useEffect, useRef } from "react";
 
 import type { AdminCommunity, UpdateCommunityInput } from "@hatchery/common";
@@ -23,6 +23,7 @@ import {
 function EditCommunityForm({ community }: { community: AdminCommunity }): ReactElement {
   const updateMutation = useUpdateCommunity();
   const isPending = updateMutation.isPending;
+  const navigate = useNavigate();
 
   const form = useForm({
     defaultValues: {
@@ -35,6 +36,9 @@ function EditCommunityForm({ community }: { community: AdminCommunity }): ReactE
     onSubmit: async ({ value }) => {
       try {
         await updateMutation.mutateAsync({ id: community.id, input: value });
+        // #1081: 保存成功後、一覧画面（コミュニティ管理タブ）へ自動遷移する。
+        // 保存成功のSnackbarは遷移先（CommunitiesTab）で communitySaved フラグを検知して表示する。
+        await navigate({ to: "/admin", search: { tab: "communities", communitySaved: 1 } });
       } catch {
         // エラー表示は updateMutation の状態に委ねる
       }

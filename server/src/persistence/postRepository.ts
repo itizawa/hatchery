@@ -17,6 +17,10 @@ export interface PostRecord {
   createdAt: Date;
   /** 投稿に付与されたタグ一覧（#1087）。省略時 `[]`。 */
   tags: string[];
+  /** admin による pin 状態（#1089）。community あたり最大 POST_PIN_MAX_COUNT 件。 */
+  isPinned: boolean;
+  /** pin された日時（#1089）。未 pin は null。 */
+  pinnedAt: Date | null;
 }
 
 /** Post 作成時の入力（バルク用）。 */
@@ -73,11 +77,14 @@ export interface PostRepository {
     cursor,
     limit,
     options,
+    excludePostIds,
   }: {
     communityId: string;
     cursor?: string;
     limit?: number;
     options?: RevealFilterOptions;
+    /** 結果から除外する post id（#1089・pin 済み post の重複表示防止）。省略時は除外しない。 */
+    excludePostIds?: string[];
   }): Promise<{ posts: PostRecord[]; nextCursor: string | null }>;
   /** ID で post を取得する。存在しない場合は null を返す。 */
   findById(id: string): Promise<PostRecord | null>;
@@ -131,11 +138,14 @@ export interface PostRepository {
     cursor,
     limit,
     options,
+    excludePostIds,
   }: {
     communityId: string;
     cursor?: string;
     limit?: number;
     options?: RevealFilterOptions;
+    /** 結果から除外する post id（#1089・pin 済み post の重複表示防止）。省略時は除外しない。 */
+    excludePostIds?: string[];
   }): Promise<{ posts: PostRecord[]; nextCursor: string | null }>;
   /**
    * community 内で直近 since 以降かつ score >= minScore の post を
@@ -185,6 +195,30 @@ export interface PostRepository {
    * 存在しない id は null を返す。
    */
   updateTitleAndText(params: { id: string; title: string; text: string }): Promise<PostRecord | null>;
+  /** post を pin する（#1089・admin 限定）。存在しない id は null を返す。 */
+  pinPost(params: { id: string; pinnedAt: Date }): Promise<PostRecord | null>;
+  /**
+   * community あたりの pin 済み件数が maxCount 未満のときのみ pin する（#1089）。
+   * 件数チェックと更新を単一の原子操作として行い、同時リクエストによる上限超過（TOCTOU）を防ぐ
+   * （Prisma 実装は SERIALIZABLE トランザクション + 直列化失敗の limit_exceeded フォールバックで担保する。
+   * in-memory 実装は JS のシングルスレッド性により本来的に原子的）。
+   * 既に pin 済みの post の再 pin は件数チェックの対象にしない（冪等）。
+   * 戻り値: pin 後の post / "not_found"（id が存在しない）/ "limit_exceeded"（上限到達）。
+   */
+  pinPostIfUnderLimit(params: {
+    id: string;
+    pinnedAt: Date;
+    maxCount: number;
+  }): Promise<PostRecord | "not_found" | "limit_exceeded">;
+  /** post の pin を解除する（#1089・admin 限定）。存在しない id は null を返す。 */
+  unpinPost(id: string): Promise<PostRecord | null>;
+  /** community 内の pin 済み post 件数を返す（#1089・POST_PIN_MAX_COUNT の上限チェック用）。 */
+  countPinnedByCommunity(communityId: string): Promise<number>;
+  /**
+   * community 内の pin 済み post を pinnedAt 降順（同点は id 降順）で返す（#1089・community フィード先頭表示用）。
+   * options.now を渡すと `createdAt <= now` の reveal フィルタが有効になる（ADR-0034・ドリップ配信で未公開の post を pin 表示しない）。
+   */
+  listPinnedByCommunity(communityId: string, options?: RevealFilterOptions): Promise<PostRecord[]>;
 }
 
 function cloneRecord(r: PostRecord): PostRecord {
@@ -299,6 +333,8 @@ export function createInMemoryPostRepository(): PostRepository {
           score: 0,
           createdAt: input.createdAt ?? new Date(),
           tags: input.tags ?? [],
+          isPinned: false,
+          pinnedAt: null,
         };
         records.push(record);
         created.push(cloneRecord(record));
@@ -324,11 +360,13 @@ export function createInMemoryPostRepository(): PostRepository {
       cursor,
       limit = 20,
       options,
+      excludePostIds,
     }: {
       communityId: string;
       cursor?: string;
       limit?: number;
       options?: RevealFilterOptions;
+      excludePostIds?: string[];
     }): Promise<{ posts: PostRecord[]; nextCursor: string | null }> {
       let cursorPayload: CursorPayload | null = null;
       if (cursor !== undefined) {
@@ -339,9 +377,11 @@ export function createInMemoryPostRepository(): PostRepository {
       }
 
       const now = options?.now;
+      const excludeSet = excludePostIds ? new Set(excludePostIds) : null;
       const sorted = [...records]
         .filter((r) => r.communityId === communityId)
         .filter((r) => now === undefined || r.createdAt.getTime() <= now.getTime())
+        .filter((r) => !excludeSet || !excludeSet.has(r.id))
         // eslint-disable-next-line max-params
         .sort((a, b) => {
           const timeDiff = b.createdAt.getTime() - a.createdAt.getTime();
@@ -375,11 +415,13 @@ export function createInMemoryPostRepository(): PostRepository {
       cursor,
       limit = 20,
       options,
+      excludePostIds,
     }: {
       communityId: string;
       cursor?: string;
       limit?: number;
       options?: RevealFilterOptions;
+      excludePostIds?: string[];
     }): Promise<{ posts: PostRecord[]; nextCursor: string | null }> {
       let cursorPayload: PopularCursorPayload | null = null;
       if (cursor !== undefined) {
@@ -390,9 +432,11 @@ export function createInMemoryPostRepository(): PostRepository {
       }
 
       const now = options?.now;
+      const excludeSet = excludePostIds ? new Set(excludePostIds) : null;
       const sorted = [...records]
         .filter((r) => r.communityId === communityId)
         .filter((r) => now === undefined || r.createdAt.getTime() <= now.getTime())
+        .filter((r) => !excludeSet || !excludeSet.has(r.id))
         .sort(comparePopular);
 
       let filtered = sorted;
@@ -670,6 +714,65 @@ export function createInMemoryPostRepository(): PostRepository {
       record.title = title;
       record.text = text;
       return Promise.resolve(cloneRecord(record));
+    },
+
+    pinPost({ id, pinnedAt }: { id: string; pinnedAt: Date }): Promise<PostRecord | null> {
+      const record = records.find((r) => r.id === id);
+      if (!record) return Promise.resolve(null);
+      record.isPinned = true;
+      record.pinnedAt = pinnedAt;
+      return Promise.resolve(cloneRecord(record));
+    },
+
+    pinPostIfUnderLimit({
+      id,
+      pinnedAt,
+      maxCount,
+    }: {
+      id: string;
+      pinnedAt: Date;
+      maxCount: number;
+    }): Promise<PostRecord | "not_found" | "limit_exceeded"> {
+      const record = records.find((r) => r.id === id);
+      if (!record) return Promise.resolve("not_found" as const);
+      if (!record.isPinned) {
+        const pinnedCount = records.filter(
+          (r) => r.communityId === record.communityId && r.isPinned,
+        ).length;
+        if (pinnedCount >= maxCount) return Promise.resolve("limit_exceeded" as const);
+      }
+      record.isPinned = true;
+      record.pinnedAt = pinnedAt;
+      return Promise.resolve(cloneRecord(record));
+    },
+
+    unpinPost(id: string): Promise<PostRecord | null> {
+      const record = records.find((r) => r.id === id);
+      if (!record) return Promise.resolve(null);
+      record.isPinned = false;
+      record.pinnedAt = null;
+      return Promise.resolve(cloneRecord(record));
+    },
+
+    countPinnedByCommunity(communityId: string): Promise<number> {
+      const count = records.filter((r) => r.communityId === communityId && r.isPinned).length;
+      return Promise.resolve(count);
+    },
+
+    // eslint-disable-next-line max-params
+    listPinnedByCommunity(communityId: string, options?: RevealFilterOptions): Promise<PostRecord[]> {
+      const now = options?.now;
+      const result = records
+        .filter((r) => r.communityId === communityId && r.isPinned)
+        .filter((r) => now === undefined || r.createdAt.getTime() <= now.getTime())
+        // eslint-disable-next-line max-params
+        .sort((a, b) => {
+          const pinnedAtDiff = (b.pinnedAt?.getTime() ?? 0) - (a.pinnedAt?.getTime() ?? 0);
+          if (pinnedAtDiff !== 0) return pinnedAtDiff;
+          return b.id < a.id ? -1 : b.id > a.id ? 1 : 0;
+        })
+        .map(cloneRecord);
+      return Promise.resolve(result);
     },
   };
 }

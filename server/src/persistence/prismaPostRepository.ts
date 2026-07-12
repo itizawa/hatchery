@@ -25,6 +25,8 @@ function toRecord(row: {
   score: number;
   createdAt: Date;
   tags: string[];
+  isPinned: boolean;
+  pinnedAt: Date | null;
 }): PostRecord {
   return {
     id: row.id,
@@ -37,6 +39,8 @@ function toRecord(row: {
     score: row.score,
     createdAt: row.createdAt,
     tags: row.tags,
+    isPinned: row.isPinned,
+    pinnedAt: row.pinnedAt,
   };
 }
 
@@ -94,16 +98,19 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
       cursor,
       limit = 20,
       options,
+      excludePostIds,
     }: {
       communityId: string;
       cursor?: string;
       limit?: number;
       options?: RevealFilterOptions;
+      excludePostIds?: string[];
     }): Promise<{ posts: PostRecord[]; nextCursor: string | null }> {
       const now = options?.now;
       let where: Prisma.PostWhereInput = {
         communityId,
         ...(now !== undefined ? { createdAt: { lte: now } } : {}),
+        ...(excludePostIds && excludePostIds.length > 0 ? { id: { notIn: excludePostIds } } : {}),
       };
 
       if (cursor !== undefined) {
@@ -141,16 +148,19 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
       cursor,
       limit = 20,
       options,
+      excludePostIds,
     }: {
       communityId: string;
       cursor?: string;
       limit?: number;
       options?: RevealFilterOptions;
+      excludePostIds?: string[];
     }): Promise<{ posts: PostRecord[]; nextCursor: string | null }> {
       const now = options?.now;
       let where: Prisma.PostWhereInput = {
         communityId,
         ...(now !== undefined ? { createdAt: { lte: now } } : {}),
+        ...(excludePostIds && excludePostIds.length > 0 ? { id: { notIn: excludePostIds } } : {}),
       };
 
       if (cursor !== undefined) {
@@ -450,6 +460,92 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
         }
         throw err;
       }
+    },
+
+    async pinPost({ id, pinnedAt }: { id: string; pinnedAt: Date }): Promise<PostRecord | null> {
+      try {
+        const row = await prisma.post.update({
+          where: { id },
+          data: { isPinned: true, pinnedAt },
+        });
+        return toRecord(row);
+      } catch (err) {
+        if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025") {
+          return null;
+        }
+        throw err;
+      }
+    },
+
+    async pinPostIfUnderLimit({
+      id,
+      pinnedAt,
+      maxCount,
+    }: {
+      id: string;
+      pinnedAt: Date;
+      maxCount: number;
+    }): Promise<PostRecord | "not_found" | "limit_exceeded"> {
+      try {
+        return await prisma.$transaction(
+          async (tx) => {
+            const post = await tx.post.findUnique({ where: { id } });
+            if (!post) return "not_found" as const;
+            if (!post.isPinned) {
+              const pinnedCount = await tx.post.count({
+                where: { communityId: post.communityId, isPinned: true },
+              });
+              if (pinnedCount >= maxCount) return "limit_exceeded" as const;
+            }
+            const updated = await tx.post.update({
+              where: { id },
+              data: { isPinned: true, pinnedAt },
+            });
+            return toRecord(updated);
+          },
+          { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+        );
+      } catch (err) {
+        // SERIALIZABLE 分離レベルでの直列化失敗（同時 pin リクエストの競合・P2034）は、
+        // 安全側に倒して上限超過扱いにする（#1089・TOCTOU 対策）。
+        if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2034") {
+          return "limit_exceeded" as const;
+        }
+        throw err;
+      }
+    },
+
+    async unpinPost(id: string): Promise<PostRecord | null> {
+      try {
+        const row = await prisma.post.update({
+          where: { id },
+          data: { isPinned: false, pinnedAt: null },
+        });
+        return toRecord(row);
+      } catch (err) {
+        if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025") {
+          return null;
+        }
+        throw err;
+      }
+    },
+
+    async countPinnedByCommunity(communityId: string): Promise<number> {
+      return prisma.post.count({ where: { communityId, isPinned: true } });
+    },
+
+    // eslint-disable-next-line max-params
+    async listPinnedByCommunity(communityId: string, options?: RevealFilterOptions): Promise<PostRecord[]> {
+      const now = options?.now;
+      const rows = await prisma.post.findMany({
+        where: {
+          communityId,
+          isPinned: true,
+          ...(now !== undefined ? { createdAt: { lte: now } } : {}),
+        },
+        orderBy: [{ pinnedAt: "desc" }, { id: "desc" }],
+      });
+      return rows.map(toRecord);
     },
   };
 }

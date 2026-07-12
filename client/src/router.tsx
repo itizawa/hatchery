@@ -34,7 +34,8 @@ interface RootSearch {
 
 /**
  * `?flag=1` / `?flag=true` 形式の真偽値 search param を判定する共通ヘルパー。
- * `login`（root）・`welcome`（/account）・`workerSaved`（/admin、#1080）で共有する。
+ * `login`（root）・`welcome`（/account）・`workerSaved`（/admin、#1080）・
+ * `communitySaved`（/admin、#1081）で共有する。
  */
 function parseTruthySearchFlag(raw: unknown): boolean {
   return raw === true || raw === 1 || raw === "1" || raw === "true";
@@ -282,7 +283,7 @@ const adminRoute = createRoute({
   beforeLoad: requireAdminRoute,
   validateSearch: (
     search: Record<string, unknown>,
-  ): { tab: SettingsTabValue; workerSaved?: 1 } => {
+  ): { tab: SettingsTabValue; workerSaved?: 1; communitySaved?: 1 } => {
     const tab = search.tab;
     const validTab: SettingsTabValue =
       typeof tab === "string" && (SETTINGS_TAB_VALUES as readonly string[]).includes(tab)
@@ -290,7 +291,13 @@ const adminRoute = createRoute({
         : "users";
     // #1080: ワーカー編集の保存成功後の一時フラグ。一覧画面が検知したら即座に URL から除去する。
     const workerSaved = parseTruthySearchFlag(search.workerSaved);
-    return workerSaved ? { tab: validTab, workerSaved: 1 } : { tab: validTab };
+    // #1081: コミュニティ編集の保存成功後の一時フラグ。workerSaved と同じ扱い。
+    const communitySaved = parseTruthySearchFlag(search.communitySaved);
+    return {
+      tab: validTab,
+      ...(workerSaved ? { workerSaved: 1 as const } : {}),
+      ...(communitySaved ? { communitySaved: 1 as const } : {}),
+    };
   },
 });
 

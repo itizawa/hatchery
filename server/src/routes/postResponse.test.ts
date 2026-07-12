@@ -14,6 +14,8 @@ const basePost: PostRecord = {
   score: 3,
   createdAt: new Date("2026-06-01T09:00:00Z"),
   tags: [],
+  isPinned: false,
+  pinnedAt: null,
 };
 
 const baseComment: CommentRecord = {
@@ -65,6 +67,19 @@ describe("toPostResponse", () => {
   it("tags 省略時は空配列を返す（#1087）", () => {
     const result = toPostResponse(basePost);
     expect(result.tags).toEqual([]);
+  });
+
+  it("is_pinned=true・pinned_at を ISO 文字列で返す（#1089）", () => {
+    const pinnedAt = new Date("2026-07-11T00:00:00Z");
+    const result = toPostResponse({ ...basePost, isPinned: true, pinnedAt });
+    expect(result.is_pinned).toBe(true);
+    expect(result.pinned_at).toBe("2026-07-11T00:00:00.000Z");
+  });
+
+  it("is_pinned=false・pinned_at=null を返す（未 pin・#1089）", () => {
+    const result = toPostResponse(basePost);
+    expect(result.is_pinned).toBe(false);
+    expect(result.pinned_at).toBeNull();
   });
 });
 

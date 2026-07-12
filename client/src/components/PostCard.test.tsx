@@ -457,6 +457,48 @@ describe("PostCard", () => {
     });
   });
 
+  describe("isPinned（固定ラベル・#1089）", () => {
+    it("isPinned={true} のとき「固定」ラベル Chip が表示される", () => {
+      render(<PostCard post={mockPost} onVote={vi.fn()} isPinned />);
+      expect(screen.getByText("固定")).toBeInTheDocument();
+    });
+
+    it("isPinned={false} のとき「固定」ラベル Chip が表示されない", () => {
+      render(<PostCard post={mockPost} onVote={vi.fn()} isPinned={false} />);
+      expect(screen.queryByText("固定")).not.toBeInTheDocument();
+    });
+
+    it("isPinned 未指定（デフォルト）のとき「固定」ラベル Chip が表示されない", () => {
+      render(<PostCard post={mockPost} onVote={vi.fn()} />);
+      expect(screen.queryByText("固定")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("onTogglePin（admin の pin/unpin 操作・#1089）", () => {
+    it("onTogglePin 未指定時は pin 操作ボタンを表示しない（admin 以外）", () => {
+      render(<PostCard post={mockPost} onVote={vi.fn()} />);
+      expect(screen.queryByRole("button", { name: "固定する" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "固定を解除する" })).not.toBeInTheDocument();
+    });
+
+    it("onTogglePin 指定時・isPinned=false のとき「固定する」ボタンが表示される", () => {
+      render(<PostCard post={mockPost} onVote={vi.fn()} onTogglePin={vi.fn()} isPinned={false} />);
+      expect(screen.getByRole("button", { name: "固定する" })).toBeInTheDocument();
+    });
+
+    it("onTogglePin 指定時・isPinned=true のとき「固定を解除する」ボタンが表示される", () => {
+      render(<PostCard post={mockPost} onVote={vi.fn()} onTogglePin={vi.fn()} isPinned />);
+      expect(screen.getByRole("button", { name: "固定を解除する" })).toBeInTheDocument();
+    });
+
+    it("pin 操作ボタンをクリックすると onTogglePin が呼ばれる", () => {
+      const onTogglePin = vi.fn();
+      render(<PostCard post={mockPost} onVote={vi.fn()} onTogglePin={onTogglePin} isPinned={false} />);
+      fireEvent.click(screen.getByRole("button", { name: "固定する" }));
+      expect(onTogglePin).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe("loading（Skeleton 表示・#807）", () => {
     it("loading=true のとき MUI Skeleton が描画される", () => {
       const { container } = render(<PostCard loading />);

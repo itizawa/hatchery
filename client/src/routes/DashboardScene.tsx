@@ -23,6 +23,7 @@ import {
   Typography,
 } from "../components/uiParts";
 import { useDashboardSummary } from "../api/dashboard.js";
+import { sidebarCardOuterBoxSx } from "../components/sidebarCardSx.js";
 import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
 import { SLACK_COLORS } from "../theme.js";
 
@@ -52,14 +53,20 @@ const STAT_CARD_DEFS: readonly StatCardDef[] = [
 ];
 
 /** サマリカード 1 枚（枠線のみ・shadow なし・角丸 8px）。 */
-const StatCard = ({ label, value }: { label: string; value: number }): ReactElement => (
+const StatCard = ({
+  testId,
+  label,
+  value,
+}: {
+  testId: string;
+  label: string;
+  value: number;
+}): ReactElement => (
   <Box
-    data-testid={`stat-${label}`}
+    data-testid={`stat-${testId}`}
     sx={{
-      border: 1,
-      borderColor: "divider",
+      ...sidebarCardOuterBoxSx,
       borderRadius: "8px",
-      p: 2,
       display: "flex",
       flexDirection: "column",
       gap: 0.5,
@@ -87,7 +94,7 @@ const SummaryCards = ({ summary }: { summary: DashboardSummary }): ReactElement 
     }}
   >
     {STAT_CARD_DEFS.map((def) => (
-      <StatCard key={def.key} label={def.key} value={summary[def.key]} />
+      <StatCard key={def.key} testId={def.key} label={def.label} value={summary[def.key]} />
     ))}
   </Box>
 );

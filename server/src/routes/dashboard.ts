@@ -37,33 +37,34 @@ export function createDashboardRouter({
 
   // eslint-disable-next-line max-params
   router.get("/", (_req, res, next) => {
+    // community/post/subscription の総数と累計閲覧数は、内訳集計のために取得済みの
+    // Map・community 一覧から導出できる（post/comment/subscription は必ず community に紐づくため
+    // 内訳の総和 = 全体数になる）。同じ値を得るための重複クエリ（count() / totalViewCount()）は発行しない。
     Promise.all([
       communityRepository.list(),
-      communityRepository.count(),
       workerRepository.count(),
-      postRepository.count(),
       postRepository.getStatsByCommunity(),
       commentRepository.count(),
       voteRepository.count(),
-      subscriptionRepository.count(),
       subscriptionRepository.subscriberCountPerCommunity(),
-      viewRepository.totalViewCount(),
       viewRepository.viewCountByCommunity(),
     ])
       .then(
         ([
           communities,
-          communityCount,
           workerCount,
-          postCount,
           postStatsByCommunity,
           commentCount,
           voteCount,
-          subscriptionCount,
           subscriberCounts,
-          totalViewCount,
           viewCountsByCommunity,
         ]) => {
+          const sum = (values: Iterable<number>): number => {
+            let total = 0;
+            for (const value of values) total += value;
+            return total;
+          };
+
           const breakdown = communities
             .map((c) => ({
               community_id: c.id,
@@ -77,13 +78,13 @@ export function createDashboardRouter({
             .sort((a, b) => b.view_count - a.view_count);
 
           const payload = DashboardSummarySchema.parse({
-            community_count: communityCount,
+            community_count: communities.length,
             worker_count: workerCount,
-            post_count: postCount,
+            post_count: sum(Array.from(postStatsByCommunity.values(), (s) => s.postCount)),
             comment_count: commentCount,
-            total_view_count: totalViewCount,
+            total_view_count: sum(viewCountsByCommunity.values()),
             total_vote_count: voteCount,
-            total_subscription_count: subscriptionCount,
+            total_subscription_count: sum(subscriberCounts.values()),
             communities: breakdown,
           });
 

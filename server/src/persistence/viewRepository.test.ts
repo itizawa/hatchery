@@ -61,9 +61,9 @@ describe("createInMemoryViewRepository", () => {
     });
 
     it("post view の author で集計される", async () => {
-      const repo = createInMemoryViewRepository(
-        (type) => (type === "post" ? "worker-1" : null),
-      );
+      const repo = createInMemoryViewRepository({
+        resolveAuthor: (type) => (type === "post" ? "worker-1" : null),
+      });
       await repo.recordPostView("post-1", "sess-1", null);
       await repo.recordPostView("post-1", "sess-2", null);
 
@@ -73,9 +73,9 @@ describe("createInMemoryViewRepository", () => {
     });
 
     it("comment view の author で集計される", async () => {
-      const repo = createInMemoryViewRepository(
-        (type) => (type === "comment" ? "worker-2" : null),
-      );
+      const repo = createInMemoryViewRepository({
+        resolveAuthor: (type) => (type === "comment" ? "worker-2" : null),
+      });
       await repo.recordCommentViews(["c1", "c2"], "sess-1", null);
 
       const since = new Date(Date.now() - 1000);
@@ -85,10 +85,10 @@ describe("createInMemoryViewRepository", () => {
 
     it("since より古い記録は除外される", async () => {
       const clock = { now: new Date("2026-01-01T00:00:00Z") };
-      const repo = createInMemoryViewRepository(
-        () => "worker-1",
-        () => clock.now,
-      );
+      const repo = createInMemoryViewRepository({
+        resolveAuthor: () => "worker-1",
+        clock: () => clock.now,
+      });
       await repo.recordPostView("post-1", "sess-1", null);
 
       clock.now = new Date("2026-06-01T00:00:00Z");
@@ -128,12 +128,10 @@ describe("createInMemoryViewRepository", () => {
     });
 
     it("resolveCommunity で解決した community 単位に集計する", async () => {
-      const repo = createInMemoryViewRepository(
-        undefined,
-        undefined,
+      const repo = createInMemoryViewRepository({
         // eslint-disable-next-line max-params
-        (type, targetId) => (type === "post" ? `community-of-${targetId}` : null),
-      );
+        resolveCommunity: (type, targetId) => (type === "post" ? `community-of-${targetId}` : null),
+      });
       await repo.recordPostView("post-1", "sess-1", null);
       await repo.recordPostView("post-1", "sess-2", null);
       await repo.recordPostView("post-2", "sess-1", null);
@@ -144,7 +142,7 @@ describe("createInMemoryViewRepository", () => {
     });
 
     it("resolveCommunity が null を返すターゲットは集計対象外", async () => {
-      const repo = createInMemoryViewRepository(undefined, undefined, () => null);
+      const repo = createInMemoryViewRepository({ resolveCommunity: () => null });
       await repo.recordPostView("post-1", "sess-1", null);
 
       const result = await repo.viewCountByCommunity();

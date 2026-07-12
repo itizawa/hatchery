@@ -104,21 +104,19 @@ export function createPrismaViewRepository(prisma: PrismaClient): ViewRepository
     },
 
     async viewCountByCommunity(): Promise<Map<string, number>> {
-      // Post.viewCount / Comment.viewCount カラムを communityId で UNION ALL → GROUP BY する
-      // （viewsByWorkerSince と同じ raw SQL の作法。ただし集計元は PageView ではなく viewCount カラム）。
-      const rows = await prisma.$queryRaw<{ communityId: string; totalViews: bigint }[]>(Prisma.sql`
-        SELECT "communityId", SUM("viewCount") AS "totalViews"
-        FROM (
-          SELECT "communityId", "viewCount" FROM "Post"
-          UNION ALL
-          SELECT "communityId", "viewCount" FROM "Comment"
-        ) AS resolved
-        GROUP BY "communityId"
-      `);
+      // Post / Comment はどちらも communityId を直接持つため、Prisma の groupBy で
+      // 集計できる（PageView 経由の author 解決が必要な viewsByWorkerSince とは異なり raw SQL は不要）。
+      const [postGroups, commentGroups] = await Promise.all([
+        prisma.post.groupBy({ by: ["communityId"], _sum: { viewCount: true } }),
+        prisma.comment.groupBy({ by: ["communityId"], _sum: { viewCount: true } }),
+      ]);
 
       const counts = new Map<string, number>();
-      for (const row of rows) {
-        counts.set(row.communityId, Number(row.totalViews));
+      for (const group of postGroups) {
+        counts.set(group.communityId, (counts.get(group.communityId) ?? 0) + (group._sum.viewCount ?? 0));
+      }
+      for (const group of commentGroups) {
+        counts.set(group.communityId, (counts.get(group.communityId) ?? 0) + (group._sum.viewCount ?? 0));
       }
       return counts;
     },

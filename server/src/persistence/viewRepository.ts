@@ -61,21 +61,21 @@ export type ResolveViewCommunity = (
   targetId: string,
 ) => string | null;
 
-/**
- * DB 非依存のインメモリ実装。ユースケース/ルートのテストで注入する。
- *
- * @param resolveAuthor `viewsByWorkerSince` で targetId → workerId を解決する関数。
- *   省略時は全ターゲットが解決不能（閲覧数集計は常に空）になる。
- * @param clock `viewedAt` に使う現在時刻供給関数（テストで固定するため）。既定は `() => new Date()`。
- * @param resolveCommunity `viewCountByCommunity` で targetId → communityId を解決する関数（#1113）。
- *   省略時は全ターゲットが解決不能（community 別集計は常に空）になる。
- */
-// eslint-disable-next-line max-params
-export function createInMemoryViewRepository(
-  resolveAuthor?: ResolveViewAuthor,
-  clock: () => Date = () => new Date(),
-  resolveCommunity?: ResolveViewCommunity,
-): ViewRepository {
+export interface CreateInMemoryViewRepositoryOptions {
+  /** `viewsByWorkerSince` で targetId → workerId を解決する関数。省略時は全ターゲットが解決不能（閲覧数集計は常に空）になる。 */
+  resolveAuthor?: ResolveViewAuthor;
+  /** `viewedAt` に使う現在時刻供給関数（テストで固定するため）。既定は `() => new Date()`。 */
+  clock?: () => Date;
+  /** `viewCountByCommunity` で targetId → communityId を解決する関数（#1113）。省略時は全ターゲットが解決不能（community 別集計は常に空）になる。 */
+  resolveCommunity?: ResolveViewCommunity;
+}
+
+/** DB 非依存のインメモリ実装。ユースケース/ルートのテストで注入する。 */
+export function createInMemoryViewRepository({
+  resolveAuthor,
+  clock = () => new Date(),
+  resolveCommunity,
+}: CreateInMemoryViewRepositoryOptions = {}): ViewRepository {
   // dedup キー: "post:postId:sessionId" or "comment:commentId:sessionId"
   const seen = new Set<string>();
   interface ViewRecord {

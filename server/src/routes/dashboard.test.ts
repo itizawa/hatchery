@@ -92,12 +92,10 @@ describe("GET /api/dashboard（認証不要のサイト全体定量サマリ・#
     await subscriptionRepository.add("user-1", "community-1");
     await subscriptionRepository.add("user-2", "community-1");
     await subscriptionRepository.add("user-3", "community-2");
-    const viewRepository = createInMemoryViewRepository(
-      undefined,
-      undefined,
+    const viewRepository = createInMemoryViewRepository({
       // eslint-disable-next-line max-params
-      (_type, targetId) => (targetId.startsWith("p") ? "community-1" : null),
-    );
+      resolveCommunity: (_type, targetId) => (targetId.startsWith("p") ? "community-1" : null),
+    });
     await viewRepository.recordPostView("post-x", "sess-1", null);
     await viewRepository.recordPostView("post-x", "sess-2", null);
 
@@ -154,7 +152,7 @@ describe("GET /api/dashboard（認証不要のサイト全体定量サマリ・#
       },
     ]);
     // eslint-disable-next-line max-params
-    const viewRepository = createInMemoryViewRepository(undefined, undefined, (_type, targetId) => targetId);
+    const viewRepository = createInMemoryViewRepository({ resolveCommunity: (_type, targetId) => targetId });
     await viewRepository.recordPostView("community-low", "s1", null);
     await viewRepository.recordPostView("community-high", "s1", null);
     await viewRepository.recordPostView("community-high", "s2", null);

@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import type { CommunityRecord } from "../persistence/communityRepository.js";
-import { buildCommentBatchPrompt, type TargetPostForComment } from "./buildCommentBatchPrompt.js";
+import {
+  buildCommentBatchPrompt,
+  COMMENT_SUMMARY_THRESHOLD,
+  type TargetPostForComment,
+} from "./buildCommentBatchPrompt.js";
 import type { WorkerDef } from "./buildCommunityPrompt.js";
 
 const community: CommunityRecord = {
@@ -178,5 +182,55 @@ describe("buildCommentBatchPrompt", () => {
     expect(prompt).toContain("投稿者ID: worker-uuid-1");
     expect(prompt).toContain("投稿者ID: worker-uuid-2");
     expect(prompt).toMatch(/投稿者.*除外|除外.*投稿者/);
+  });
+
+  describe("まとめコメント指示（#1165）", () => {
+    it("existingCommentCount が閾値以下の post ではまとめコメント指示が注入されない", () => {
+      const belowThresholdPosts: TargetPostForComment[] = [
+        { ...targetPosts[0]!, existingCommentCount: COMMENT_SUMMARY_THRESHOLD },
+      ];
+      const { prompt } = buildCommentBatchPrompt({
+        community,
+        workers,
+        recentLog: [],
+        targetPosts: belowThresholdPosts,
+      });
+      expect(prompt).not.toContain("まとめコメント");
+    });
+
+    it("existingCommentCount が未指定の post ではまとめコメント指示が注入されない", () => {
+      const { prompt } = buildCommentBatchPrompt({ community, workers, recentLog: [], targetPosts });
+      expect(prompt).not.toContain("まとめコメント");
+    });
+
+    it("existingCommentCount が閾値を超えた post ではまとめコメント指示が注入される", () => {
+      const aboveThresholdPosts: TargetPostForComment[] = [
+        { ...targetPosts[0]!, existingCommentCount: COMMENT_SUMMARY_THRESHOLD + 1 },
+      ];
+      const { prompt } = buildCommentBatchPrompt({
+        community,
+        workers,
+        recentLog: [],
+        targetPosts: aboveThresholdPosts,
+      });
+      expect(prompt).toContain("まとめコメント");
+      expect(prompt).toContain("is_summary");
+    });
+
+    it("閾値超過 post のみ指示され、閾値以下の post には注入されない（混在ケース）", () => {
+      const mixedPosts: TargetPostForComment[] = [
+        { ...targetPosts[0]!, ref: "ref-below", existingCommentCount: 3 },
+        { ...targetPosts[1]!, ref: "ref-above", existingCommentCount: COMMENT_SUMMARY_THRESHOLD + 5 },
+      ];
+      const { prompt } = buildCommentBatchPrompt({
+        community,
+        workers,
+        recentLog: [],
+        targetPosts: mixedPosts,
+      });
+      const belowBlock = prompt.split("ref-above")[0]!;
+      expect(belowBlock).not.toContain("まとめコメント");
+      expect(prompt).toContain("まとめコメント");
+    });
   });
 });

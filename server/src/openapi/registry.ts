@@ -10,6 +10,7 @@ import { z } from "zod";
 import { registerAdmin } from "./registrations/registerAdmin.js";
 import { registerAuth } from "./registrations/registerAuth.js";
 import { registerCommunities } from "./registrations/registerCommunities.js";
+import { registerDashboard } from "./registrations/registerDashboard.js";
 import { registerFeed } from "./registrations/registerFeed.js";
 import { registerHealth } from "./registrations/registerHealth.js";
 import { registerOgp } from "./registrations/registerOgp.js";
@@ -74,6 +75,8 @@ function buildRegistry(): OpenAPIRegistry {
   registerOgp(registry);
   // #1065: 末尾に追加（既存セクションの登録順序は変えない）。
   registerRanking(registry, ctx);
+  // #1113: 末尾に追加（既存セクションの登録順序は変えない）。
+  registerDashboard(registry);
 
   return registry;
 }

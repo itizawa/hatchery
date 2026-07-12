@@ -29,6 +29,16 @@ export interface ViewRepository {
    * @returns workerId → 閲覧数の Map。集計対象が無い worker はキーを持たない。
    */
   viewsByWorkerSince(since: Date): Promise<Map<string, number>>;
+  /**
+   * 全期間の累計閲覧数（Post + Comment の viewCount 合計）を返す（#1113・ダッシュボード集計用）。
+   * ADR-0032 の方針どおり、windowed 集計ではなく全期間の累計カウンタを読む。
+   */
+  totalViewCount(): Promise<number>;
+  /**
+   * community 別の累計閲覧数を返す（#1113・ダッシュボード集計用）。Post 経由で communityId に解決し集計する。
+   * 閲覧記録の無い community はキーを持たない（呼び出し元で 0 件扱いにする）。
+   */
+  viewCountByCommunity(): Promise<Map<string, number>>;
 }
 
 /**
@@ -42,16 +52,29 @@ export type ResolveViewAuthor = (
 ) => string | null;
 
 /**
+ * targetType / targetId から community を解決する関数（インメモリ実装用・#1113）。
+ * `viewCountByCommunity` で targetId → communityId を解決するために使う。解決できない場合は null。
+ */
+// eslint-disable-next-line max-params
+export type ResolveViewCommunity = (
+  targetType: ViewTargetType,
+  targetId: string,
+) => string | null;
+
+/**
  * DB 非依存のインメモリ実装。ユースケース/ルートのテストで注入する。
  *
  * @param resolveAuthor `viewsByWorkerSince` で targetId → workerId を解決する関数。
  *   省略時は全ターゲットが解決不能（閲覧数集計は常に空）になる。
  * @param clock `viewedAt` に使う現在時刻供給関数（テストで固定するため）。既定は `() => new Date()`。
+ * @param resolveCommunity `viewCountByCommunity` で targetId → communityId を解決する関数（#1113）。
+ *   省略時は全ターゲットが解決不能（community 別集計は常に空）になる。
  */
 // eslint-disable-next-line max-params
 export function createInMemoryViewRepository(
   resolveAuthor?: ResolveViewAuthor,
   clock: () => Date = () => new Date(),
+  resolveCommunity?: ResolveViewCommunity,
 ): ViewRepository {
   // dedup キー: "post:postId:sessionId" or "comment:commentId:sessionId"
   const seen = new Set<string>();
@@ -109,6 +132,22 @@ export function createInMemoryViewRepository(
         const workerId = resolveAuthor?.(record.targetType, record.targetId) ?? null;
         if (workerId === null) continue;
         counts.set(workerId, (counts.get(workerId) ?? 0) + 1);
+      }
+      return Promise.resolve(counts);
+    },
+
+    totalViewCount(): Promise<number> {
+      // 各 record は dedup 済みの新規閲覧イベント 1 件を表し、本番（Prisma）の
+      // viewCount インクリメント 1 回に対応する。そのため件数の総和がそのまま累計閲覧数になる。
+      return Promise.resolve(records.length);
+    },
+
+    viewCountByCommunity(): Promise<Map<string, number>> {
+      const counts = new Map<string, number>();
+      for (const record of records) {
+        const communityId = resolveCommunity?.(record.targetType, record.targetId) ?? null;
+        if (communityId === null) continue;
+        counts.set(communityId, (counts.get(communityId) ?? 0) + 1);
       }
       return Promise.resolve(counts);
     },

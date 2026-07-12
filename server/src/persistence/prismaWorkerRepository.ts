@@ -151,5 +151,9 @@ export function createPrismaWorkerRepository(prisma: PrismaClient): WorkerReposi
       });
       return toRecord(row);
     },
+
+    async count(): Promise<number> {
+      return prisma.worker.count({ where: { deletedAt: null } });
+    },
   };
 }

@@ -93,6 +93,9 @@ export interface VoteRepository {
    * ランキング画面右サイドバーの「直近7日間で評価を多く獲得した Post / Comment」表示に使う。
    */
   trendingItemsSince(params: { since: Date; limit: number }): Promise<TrendingItem[]>;
+
+  /** 総 vote 数を返す（#1113・ダッシュボード集計用）。 */
+  count(): Promise<number>;
 }
 
 /**
@@ -331,6 +334,10 @@ export function createInMemoryVoteRepository(
           b.id.localeCompare(a.id),
       );
       return items.slice(0, limit);
+    },
+
+    async count() {
+      return records.length;
     },
   };
 }

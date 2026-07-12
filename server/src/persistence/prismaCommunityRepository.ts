@@ -94,5 +94,9 @@ export function createPrismaCommunityRepository(prisma: PrismaClient): Community
         return null;
       }
     },
+
+    async count(): Promise<number> {
+      return prisma.community.count();
+    },
   };
 }

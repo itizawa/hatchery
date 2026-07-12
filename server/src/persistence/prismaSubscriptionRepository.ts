@@ -149,5 +149,9 @@ export function createPrismaSubscriptionRepository(prisma: PrismaClient): Subscr
       });
       return rows.map((r) => r.userId);
     },
+
+    async count(): Promise<number> {
+      return prisma.subscription.count();
+    },
   };
 }

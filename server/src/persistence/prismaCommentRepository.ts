@@ -167,5 +167,9 @@ export function createPrismaCommentRepository(prisma: PrismaClient): CommentRepo
       const nextCursor = hasNext ? (comments[comments.length - 1]?.id ?? null) : null;
       return { comments, nextCursor };
     },
+
+    async count(): Promise<number> {
+      return prisma.comment.count();
+    },
   };
 }

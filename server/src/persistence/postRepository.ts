@@ -219,6 +219,8 @@ export interface PostRepository {
    * options.now を渡すと `createdAt <= now` の reveal フィルタが有効になる（ADR-0034・ドリップ配信で未公開の post を pin 表示しない）。
    */
   listPinnedByCommunity(communityId: string, options?: RevealFilterOptions): Promise<PostRecord[]>;
+  /** 総 post 数を返す（#1113・ダッシュボード集計用）。reveal フィルタは適用しない（全件）。 */
+  count(): Promise<number>;
 }
 
 function cloneRecord(r: PostRecord): PostRecord {
@@ -773,6 +775,10 @@ export function createInMemoryPostRepository(): PostRepository {
         })
         .map(cloneRecord);
       return Promise.resolve(result);
+    },
+
+    count(): Promise<number> {
+      return Promise.resolve(records.length);
     },
   };
 }

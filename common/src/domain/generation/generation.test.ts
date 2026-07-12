@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  GenerationOutputCommentSchema,
   GenerationOutputReplySchema,
   GenerationOutputSchema,
   validateGenerationOutput,
@@ -167,6 +168,25 @@ describe("GenerationOutputSchema", () => {
       replies: [{ targetPostRef: "ref-1", author: "worker-ken", text: "あ".repeat(1001) }],
     };
     expect(GenerationOutputSchema.safeParse(data).success).toBe(false);
+  });
+});
+
+describe("GenerationOutputCommentSchema (まとめコメント・#1165)", () => {
+  const validComment = { author: "worker-ken", text: "お疲れ様、どんなバグだった？" };
+
+  it("is_summary は省略可能", () => {
+    const result = GenerationOutputCommentSchema.safeParse(validComment);
+    expect(result.success).toBe(true);
+  });
+
+  it("is_summary に true を設定できる", () => {
+    const result = GenerationOutputCommentSchema.parse({ ...validComment, is_summary: true });
+    expect(result.is_summary).toBe(true);
+  });
+
+  it("is_summary に boolean 以外を渡すと reject する", () => {
+    const result = GenerationOutputCommentSchema.safeParse({ ...validComment, is_summary: "yes" });
+    expect(result.success).toBe(false);
   });
 });
 

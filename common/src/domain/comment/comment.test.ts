@@ -125,6 +125,16 @@ describe("CommentSchema", () => {
   it("my_vote に無効な値は reject する（#831）", () => {
     expect(CommentSchema.safeParse({ ...validComment, my_vote: "neutral" }).success).toBe(false);
   });
+
+  it("is_summary は省略時 false（既定値）になる（#1165）", () => {
+    const result = CommentSchema.parse(validComment);
+    expect(result.is_summary).toBe(false);
+  });
+
+  it("is_summary に true を設定できる（まとめコメント・#1165）", () => {
+    const result = CommentSchema.parse({ ...validComment, is_summary: true });
+    expect(result.is_summary).toBe(true);
+  });
 });
 
 describe("CreateCommentRequestSchema (#433)", () => {

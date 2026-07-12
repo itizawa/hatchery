@@ -224,4 +224,26 @@ describe.skipIf(!DATABASE_URL)("createPrismaSubscriptionRepository (integration)
       expect(ids).toEqual([]);
     });
   });
+
+  describe("count（#1113）", () => {
+    it("subscription が 0 件のとき 0 を返す", async () => {
+      const repo = createPrismaSubscriptionRepository(prisma);
+
+      const result = await repo.count();
+
+      expect(result).toBe(0);
+    });
+
+    it("複数ユーザー・複数コミュニティの購読をまとめて総数で返す", async () => {
+      await setupFixtures();
+      const repo = createPrismaSubscriptionRepository(prisma);
+      await repo.add(userId, communityId);
+      await repo.add(userId, communityId2);
+      await repo.add(userId2, communityId);
+
+      const result = await repo.count();
+
+      expect(result).toBe(3);
+    });
+  });
 });

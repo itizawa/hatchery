@@ -133,4 +133,24 @@ describe.skipIf(!DATABASE_URL)("createPrismaCommunityRepository (integration)", 
       expect(result).toBeNull();
     });
   });
+
+  describe("count（#1113）", () => {
+    it("community が 0 件のとき 0 を返す", async () => {
+      const repo = createPrismaCommunityRepository(prisma);
+
+      const result = await repo.count();
+
+      expect(result).toBe(0);
+    });
+
+    it("community が複数件のとき件数を返す", async () => {
+      const repo = createPrismaCommunityRepository(prisma);
+      await repo.create({ slug: "count-1", name: "Count 1", description: "desc" });
+      await repo.create({ slug: "count-2", name: "Count 2", description: "desc" });
+
+      const result = await repo.count();
+
+      expect(result).toBe(2);
+    });
+  });
 });

@@ -8,8 +8,13 @@ import type { RegistryContext } from "./shared.js";
  * 認証（ADR-0029 / routes/auth.ts）の OpenAPI 登録（#535）。
  * #455: POST /api/auth/login は廃止。Google OAuth のみ。
  */
-// eslint-disable-next-line max-params
-export function registerAuth(registry: OpenAPIRegistry, ctx: RegistryContext): void {
+export function registerAuth({
+  registry,
+  ctx,
+}: {
+  registry: OpenAPIRegistry;
+  ctx: RegistryContext;
+}): void {
   const { errorJson, AuthUserComponent } = ctx;
 
   registry.registerPath({

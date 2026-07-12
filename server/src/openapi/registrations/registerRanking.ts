@@ -10,8 +10,13 @@ const TRENDING_QUERY_MAX_LIMIT = 20;
 /**
  * ランキング画面右サイドバー用のトレンド Post/Comment（認証不要・直近 7 日・#1065）の OpenAPI 登録。
  */
-// eslint-disable-next-line max-params
-export function registerRanking(registry: OpenAPIRegistry, ctx: RegistryContext): void {
+export function registerRanking({
+  registry,
+  ctx,
+}: {
+  registry: OpenAPIRegistry;
+  ctx: RegistryContext;
+}): void {
   const { errorJson } = ctx;
 
   const TrendingItemComponent = registry.register(

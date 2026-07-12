@@ -44,6 +44,105 @@ function toRecord(row: {
   };
 }
 
+/** 新着順（createdAt 降順 → id 降順）の Prisma orderBy（#1179）。 */
+const RECENT_ORDER_BY: Prisma.PostFindManyArgs["orderBy"] = [{ createdAt: "desc" }, { id: "desc" }];
+
+/** 人気順（score 降順 → createdAt 降順 → id 降順）の Prisma orderBy（#1179）。 */
+const POPULAR_ORDER_BY: Prisma.PostFindManyArgs["orderBy"] = [
+  { score: "desc" },
+  { createdAt: "desc" },
+  { id: "desc" },
+];
+
+/**
+ * 新着順 keyset cursor の where 条件をマージする（#1179）。
+ * cursor が不正な場合は INVALID_CURSOR を throw する（呼び出し元は async 関数のため rejected promise になる）。
+ */
+function withRecentCursor({
+  where,
+  cursor,
+}: {
+  where: Prisma.PostWhereInput;
+  cursor?: string;
+}): Prisma.PostWhereInput {
+  if (cursor === undefined) return where;
+  const payload = decodeCursor(cursor);
+  if (!payload) throw new Error("INVALID_CURSOR");
+  const cursorDate = new Date(payload.createdAt);
+  return {
+    ...where,
+    AND: [
+      {
+        OR: [
+          { createdAt: { lt: cursorDate } },
+          { createdAt: { equals: cursorDate }, id: { lt: payload.id } },
+        ],
+      },
+    ],
+  };
+}
+
+/**
+ * 人気順 keyset cursor の where 条件をマージする（#1179）。
+ * `listByCommunityPopularPaged`・`listPopularPaged` の両方から再利用し、
+ * 人気順の keyset 条件（score→createdAt→id）を単一情報源にする。
+ * cursor が不正な場合は INVALID_CURSOR を throw する。
+ */
+function withPopularCursor({
+  where,
+  cursor,
+}: {
+  where: Prisma.PostWhereInput;
+  cursor?: string;
+}): Prisma.PostWhereInput {
+  if (cursor === undefined) return where;
+  const payload = decodePopularCursor(cursor);
+  if (!payload) throw new Error("INVALID_CURSOR");
+  const cursorDate = new Date(payload.createdAt);
+  return {
+    ...where,
+    AND: [
+      {
+        OR: [
+          { score: { lt: payload.score } },
+          { score: { equals: payload.score }, createdAt: { lt: cursorDate } },
+          {
+            score: { equals: payload.score },
+            createdAt: { equals: cursorDate },
+            id: { lt: payload.id },
+          },
+        ],
+      },
+    ],
+  };
+}
+
+/**
+ * ページ取得の共通処理（#1179）。cursor の decode・where 構築は呼び出し側
+ * （withRecentCursor / withPopularCursor）が担い、本関数は組み立て済みの where/orderBy から
+ * limit+1 件取得し、hasMore 判定・nextCursor encode のみを行う。
+ */
+async function findPage({
+  prisma,
+  where,
+  orderBy,
+  limit,
+  encode,
+}: {
+  prisma: PrismaClient;
+  where: Prisma.PostWhereInput;
+  orderBy: Prisma.PostFindManyArgs["orderBy"];
+  limit: number;
+  encode: (record: PostRecord) => string;
+}): Promise<{ posts: PostRecord[]; nextCursor: string | null }> {
+  const rows = await prisma.post.findMany({ where, orderBy, take: limit + 1 });
+  const hasMore = rows.length > limit;
+  const posts = hasMore ? rows.slice(0, limit) : rows;
+  const last = posts.at(-1);
+  const nextCursor = hasMore && last ? encode(toRecord(last)) : null;
+  return { posts: posts.map(toRecord), nextCursor };
+}
+
 /** PostRepository の Prisma / PostgreSQL 実装（ADR-0019 / #305）。 */
 export function createPrismaPostRepository(prisma: PrismaClient): PostRepository {
   return {
@@ -107,40 +206,14 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
       excludePostIds?: string[];
     }): Promise<{ posts: PostRecord[]; nextCursor: string | null }> {
       const now = options?.now;
-      let where: Prisma.PostWhereInput = {
+      const base: Prisma.PostWhereInput = {
         communityId,
         ...(now !== undefined ? { createdAt: { lte: now } } : {}),
         ...(excludePostIds && excludePostIds.length > 0 ? { id: { notIn: excludePostIds } } : {}),
       };
+      const where = withRecentCursor({ where: base, cursor });
 
-      if (cursor !== undefined) {
-        const payload = decodeCursor(cursor);
-        if (!payload) throw new Error("INVALID_CURSOR");
-        const cursorDate = new Date(payload.createdAt);
-        where = {
-          ...where,
-          AND: [
-            {
-              OR: [
-                { createdAt: { lt: cursorDate } },
-                { createdAt: { equals: cursorDate }, id: { lt: payload.id } },
-              ],
-            },
-          ],
-        };
-      }
-
-      const rows = await prisma.post.findMany({
-        where,
-        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-        take: limit + 1,
-      });
-
-      const hasMore = rows.length > limit;
-      const posts = hasMore ? rows.slice(0, limit) : rows;
-      const nextCursor = hasMore ? encodeCursor(toRecord(posts[posts.length - 1]!)) : null;
-
-      return { posts: posts.map(toRecord), nextCursor };
+      return findPage({ prisma, where, orderBy: RECENT_ORDER_BY, limit, encode: encodeCursor });
     },
 
     async listByCommunityPopularPaged({
@@ -157,46 +230,14 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
       excludePostIds?: string[];
     }): Promise<{ posts: PostRecord[]; nextCursor: string | null }> {
       const now = options?.now;
-      let where: Prisma.PostWhereInput = {
+      const base: Prisma.PostWhereInput = {
         communityId,
         ...(now !== undefined ? { createdAt: { lte: now } } : {}),
         ...(excludePostIds && excludePostIds.length > 0 ? { id: { notIn: excludePostIds } } : {}),
       };
+      const where = withPopularCursor({ where: base, cursor });
 
-      if (cursor !== undefined) {
-        const payload = decodePopularCursor(cursor);
-        if (!payload) throw new Error("INVALID_CURSOR");
-        const cursorDate = new Date(payload.createdAt);
-        // keyset: score 降順 → createdAt 降順 → id 降順
-        where = {
-          ...where,
-          AND: [
-            {
-              OR: [
-                { score: { lt: payload.score } },
-                { score: { equals: payload.score }, createdAt: { lt: cursorDate } },
-                {
-                  score: { equals: payload.score },
-                  createdAt: { equals: cursorDate },
-                  id: { lt: payload.id },
-                },
-              ],
-            },
-          ],
-        };
-      }
-
-      const rows = await prisma.post.findMany({
-        where,
-        orderBy: [{ score: "desc" }, { createdAt: "desc" }, { id: "desc" }],
-        take: limit + 1,
-      });
-
-      const hasMore = rows.length > limit;
-      const posts = hasMore ? rows.slice(0, limit) : rows;
-      const nextCursor = hasMore ? encodePopularCursor(toRecord(posts[posts.length - 1]!)) : null;
-
-      return { posts: posts.map(toRecord), nextCursor };
+      return findPage({ prisma, where, orderBy: POPULAR_ORDER_BY, limit, encode: encodePopularCursor });
     },
 
     async findById(id: string): Promise<PostRecord | null> {
@@ -238,39 +279,13 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
       options?: RevealFilterOptions,
     ): Promise<{ posts: PostRecord[]; nextCursor: string | null }> {
       const now = options?.now;
-      let where: Prisma.PostWhereInput = {
+      const base: Prisma.PostWhereInput = {
         // reveal フィルタ（#556）: now が渡された場合、createdAt > now の post を除外する。
         ...(now !== undefined ? { createdAt: { lte: now } } : {}),
       };
+      const where = withRecentCursor({ where: base, cursor });
 
-      if (cursor !== undefined) {
-        const payload = decodeCursor(cursor);
-        if (!payload) throw new Error("INVALID_CURSOR");
-        const cursorDate = new Date(payload.createdAt);
-        where = {
-          ...where,
-          AND: [
-            {
-              OR: [
-                { createdAt: { lt: cursorDate } },
-                { createdAt: { equals: cursorDate }, id: { lt: payload.id } },
-              ],
-            },
-          ],
-        };
-      }
-
-      const rows = await prisma.post.findMany({
-        where,
-        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-        take: limit + 1,
-      });
-
-      const hasMore = rows.length > limit;
-      const posts = hasMore ? rows.slice(0, limit) : rows;
-      const nextCursor = hasMore ? encodeCursor(toRecord(posts[posts.length - 1]!)) : null;
-
-      return { posts: posts.map(toRecord), nextCursor };
+      return findPage({ prisma, where, orderBy: RECENT_ORDER_BY, limit, encode: encodeCursor });
     },
 
     // eslint-disable-next-line max-params
@@ -280,45 +295,13 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
       options?: RevealFilterOptions,
     ): Promise<{ posts: PostRecord[]; nextCursor: string | null }> {
       const now = options?.now;
-      let where: Prisma.PostWhereInput = {
+      const base: Prisma.PostWhereInput = {
         // reveal フィルタ（#556）: now が渡された場合、createdAt > now の post を除外する。
         ...(now !== undefined ? { createdAt: { lte: now } } : {}),
       };
+      const where = withPopularCursor({ where: base, cursor });
 
-      if (cursor !== undefined) {
-        const payload = decodePopularCursor(cursor);
-        if (!payload) throw new Error("INVALID_CURSOR");
-        const cursorDate = new Date(payload.createdAt);
-        // keyset: score 降順 → createdAt 降順 → id 降順
-        where = {
-          ...where,
-          AND: [
-            {
-              OR: [
-                { score: { lt: payload.score } },
-                { score: { equals: payload.score }, createdAt: { lt: cursorDate } },
-                {
-                  score: { equals: payload.score },
-                  createdAt: { equals: cursorDate },
-                  id: { lt: payload.id },
-                },
-              ],
-            },
-          ],
-        };
-      }
-
-      const rows = await prisma.post.findMany({
-        where,
-        orderBy: [{ score: "desc" }, { createdAt: "desc" }, { id: "desc" }],
-        take: limit + 1,
-      });
-
-      const hasMore = rows.length > limit;
-      const posts = hasMore ? rows.slice(0, limit) : rows;
-      const nextCursor = hasMore ? encodePopularCursor(toRecord(posts[posts.length - 1]!)) : null;
-
-      return { posts: posts.map(toRecord), nextCursor };
+      return findPage({ prisma, where, orderBy: POPULAR_ORDER_BY, limit, encode: encodePopularCursor });
     },
 
     async getStatsByCommunity(): Promise<Map<string, CommunityPostStats>> {

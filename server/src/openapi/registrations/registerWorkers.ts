@@ -18,8 +18,13 @@ const workerIdParam = z.string().openapi({ param: { name: "workerId", in: "path"
  * Worker CRUD（#38 / #329）と admin worker 作成・削除（#217 / #218 / #337）、
  * ワーカーの参加コミュニティ編集（#490）の OpenAPI 登録（#535）。
  */
-// eslint-disable-next-line max-params
-export function registerWorkers(registry: OpenAPIRegistry, ctx: RegistryContext): void {
+export function registerWorkers({
+  registry,
+  ctx,
+}: {
+  registry: OpenAPIRegistry;
+  ctx: RegistryContext;
+}): void {
   const { errorJson, WorkerComponent, CommunityComponent, CommentComponent } = ctx;
 
   const UpdateWorkerComponent = registry.register(

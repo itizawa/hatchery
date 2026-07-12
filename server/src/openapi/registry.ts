@@ -63,18 +63,18 @@ function buildRegistry(): OpenAPIRegistry {
   // registerCommunities が Post / Comment component を ctx に代入するため、
   // registerFeed / registerPosts / registerWorkers（#929: /:workerId/posts で PostComponent 参照）は
   // その後で呼ぶ必要がある。
-  registerAuth(registry, ctx);
-  registerAdmin(registry, ctx);
+  registerAuth({ registry, ctx });
+  registerAdmin({ registry, ctx });
   registerHealth(registry);
-  registerCommunities(registry, ctx);
-  registerWorkers(registry, ctx);
-  registerFeed(registry, ctx);
-  registerPosts(registry, ctx);
-  registerSubscriptions(registry, ctx);
+  registerCommunities({ registry, ctx });
+  registerWorkers({ registry, ctx });
+  registerFeed({ registry, ctx });
+  registerPosts({ registry, ctx });
+  registerSubscriptions({ registry, ctx });
   registerPushSubscriptions({ registry, ctx });
   registerOgp(registry);
   // #1065: 末尾に追加（既存セクションの登録順序は変えない）。
-  registerRanking(registry, ctx);
+  registerRanking({ registry, ctx });
   // #1113: 末尾に追加（既存セクションの登録順序は変えない）。
   registerDashboard(registry);
 

@@ -10,8 +10,13 @@ import type { RegistryContext } from "./shared.js";
 import { communitySlugParam } from "./shared.js";
 
 /** 購読 API（#933）の OpenAPI 登録。 */
-// eslint-disable-next-line max-params
-export function registerSubscriptions(registry: OpenAPIRegistry, ctx: RegistryContext): void {
+export function registerSubscriptions({
+  registry,
+  ctx,
+}: {
+  registry: OpenAPIRegistry;
+  ctx: RegistryContext;
+}): void {
   const { errorJson } = ctx;
 
   registry.register(

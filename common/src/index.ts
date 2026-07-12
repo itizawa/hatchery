@@ -23,6 +23,7 @@ export * from "./domain/auth/index.js";
 export * from "./domain/worker/index.js";
 export * from "./domain/ogp/index.js";
 export * from "./domain/search/index.js";
+export * from "./domain/dashboard/index.js";
 export * from "./errors/index.js";
 export * from "./result/index.js";
 

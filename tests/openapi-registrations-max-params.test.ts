@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { ESLint } from "eslint";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -29,10 +29,18 @@ describe("OpenAPI registration関数群のオブジェクト引数化 (#1173)", 
     expect(content).not.toContain("eslint-disable-next-line max-params");
   });
 
-  it.each(TARGET_FILES)("%s は disable コメント無しで max-params ルールに適合する", async (relPath) => {
-    const eslint = new ESLint({ cwd: repoRoot });
-    const [result] = await eslint.lintFiles([path.join(repoRoot, relPath)]);
-    const maxParamsErrors = result.messages.filter((m) => m.ruleId === "max-params");
-    expect(maxParamsErrors).toEqual([]);
+  describe("disable コメント無しで max-params ルールに適合する", () => {
+    let results: ESLint.LintResult[];
+
+    beforeAll(async () => {
+      const eslint = new ESLint({ cwd: repoRoot });
+      results = await eslint.lintFiles(TARGET_FILES.map((relPath) => path.join(repoRoot, relPath)));
+    });
+
+    it.each(TARGET_FILES)("%s", (relPath) => {
+      const result = results.find((r) => r.filePath === path.join(repoRoot, relPath));
+      const maxParamsErrors = result?.messages.filter((m) => m.ruleId === "max-params") ?? [];
+      expect(maxParamsErrors).toEqual([]);
+    });
   });
 });

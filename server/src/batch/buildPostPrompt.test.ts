@@ -94,6 +94,17 @@ describe("buildPostPrompt", () => {
     const { prompt } = buildPostPrompt({ community, workers, recentLog: [] });
     expect(prompt).toMatch(/URL.*含めない|含めない.*URL/);
   });
+
+  it("JSON フォーマット例に tags フィールドが含まれる（#1087）", () => {
+    const { prompt } = buildPostPrompt({ community, workers, recentLog: [] });
+    expect(prompt).toContain('"tags"');
+  });
+
+  it("tags の件数・文字数上限の指示が含まれる（#1087）", () => {
+    const { prompt } = buildPostPrompt({ community, workers, recentLog: [] });
+    expect(prompt).toMatch(/tags.*5|5.*tags/);
+    expect(prompt).toMatch(/tags.*30|30.*tags/);
+  });
 });
 
 describe("タイトル重複回避・修辞多様化指示（#1019）", () => {

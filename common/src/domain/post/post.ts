@@ -8,6 +8,24 @@ export const POST_TITLE_MAX_LENGTH = 100;
 /** Post の text の最大文字数（#91）。 */
 export const POST_TEXT_MAX_LENGTH = 1000;
 
+/** Post の tags 1 要素あたりの最大文字数（#91 / #1087）。 */
+export const POST_TAG_MAX_LENGTH = 30;
+
+/** Post の tags の最大件数（#1087）。 */
+export const POST_TAGS_MAX_COUNT = 5;
+
+/** community あたりの pin 済み post の最大件数（#1089）。 */
+export const POST_PIN_MAX_COUNT = 3;
+
+/**
+ * Post の tags の Zod スキーマ（#1087）。最大 5 件・各 30 文字以内。省略時 `[]`。
+ * PostSchema と GenerationOutputPostSchema（common/src/domain/generation/generation.ts）で共有する。
+ */
+export const PostTagsSchema = z
+  .array(z.string().min(1).max(POST_TAG_MAX_LENGTH))
+  .max(POST_TAGS_MAX_COUNT)
+  .default([]);
+
 /** vote 方向（ADR-0025: down vote 導入）。 */
 export const VoteDirectionSchema = z.enum(["up", "down"]);
 export type VoteDirection = z.infer<typeof VoteDirectionSchema>;
@@ -32,6 +50,8 @@ export type VoteRequest = z.infer<typeof VoteRequestSchema>;
  *   集計して付与する内部集計値（新規ユーザー入力ではないため .max() 対象外）。省略時 0。
  * - my_vote は sessionId を元にした現セッションの投票状態（#831）。GET 時に sessionId を
  *   付与すると付く任意フィールド。未投票 / 未指定は省略。永続化・生成出力には含めない。
+ * - tags は投稿に付与されたタグ一覧（#1087）。ワーカーが定時バッチ生成時に付与する想定で、
+ *   AI 生成物であっても件数・文字数の上限を設ける（#91）。省略時 `[]`。
  */
 export const PostSchema = z.object({
   id: z.string().min(1),
@@ -47,6 +67,12 @@ export const PostSchema = z.object({
   comment_count: z.number().int().nonnegative().default(0),
   /** 現セッションの投票状態（#831）。sessionId 付き GET 時のみ付与。未投票 / 未指定は省略。 */
   my_vote: VoteDirectionSchema.nullable().optional(),
+  /** 投稿に付与されたタグ一覧（#1087）。最大 5 件・各 30 文字以内。省略時 `[]`。 */
+  tags: PostTagsSchema,
+  /** admin による pin 状態（#1089）。community あたり最大 POST_PIN_MAX_COUNT 件。省略時 false。 */
+  is_pinned: z.boolean().default(false),
+  /** pin された日時（#1089）。未 pin は null。省略可（後方互換）。 */
+  pinned_at: z.date().nullable().optional(),
 });
 
 export type Post = z.infer<typeof PostSchema>;
@@ -81,3 +107,48 @@ export const CreatePostRequestSchema = z.object({
 });
 
 export type CreatePostRequest = z.infer<typeof CreatePostRequestSchema>;
+
+/**
+ * 本文冒頭のURL露出を検出する正規表現（#927 修正前に生成された投稿に残存。#1117）。
+ * 本文が `http(s)://` から始まり、URLの後に改行が続く形（`https://...\n\n本文`）のみを対象とする。
+ */
+const LEADING_URL_LINE_PATTERN = /^https?:\/\/\S+\n+/;
+
+/** タイトル末尾のURL露出を区切る文字列（#1022 修正前に生成された投稿に残存。#1117）。 */
+const TRAILING_URL_SEPARATOR = " / ";
+
+/** 本文冒頭にURL行が露出しているかを判定する（#1117）。 */
+export function hasLeadingUrlExposure(text: string): boolean {
+  return LEADING_URL_LINE_PATTERN.test(text);
+}
+
+/** 本文冒頭のURL行（改行込み）を除去する。露出が無ければ変更しない（#1117）。 */
+export function stripLeadingUrlLineFromPostText(text: string): string {
+  return text.replace(LEADING_URL_LINE_PATTERN, "");
+}
+
+/**
+ * タイトル末尾の ` / URL` 露出の開始位置を返す。無ければ -1。
+ * 正規表現ではなく文字列操作（lastIndexOf・startsWith）で判定することで、
+ * 非アンカーの正規表現に起因する多項式時間の ReDoS を構造的に避ける（#1117）。
+ */
+function findTrailingUrlSuffixStart(title: string): number {
+  const separatorIndex = title.lastIndexOf(TRAILING_URL_SEPARATOR);
+  if (separatorIndex === -1) return -1;
+  const rest = title.slice(separatorIndex + TRAILING_URL_SEPARATOR.length);
+  const isUrl = rest.startsWith("http://") || rest.startsWith("https://");
+  if (!isUrl) return -1;
+  // 末尾まで空白を含まない（URL の後に他のテキストが続かない）ことを確認する。
+  return /\s/.test(rest) ? -1 : separatorIndex;
+}
+
+/** タイトル末尾に ` / URL` が露出しているかを判定する（#1117）。 */
+export function hasTrailingUrlExposure(title: string): boolean {
+  return findTrailingUrlSuffixStart(title) !== -1;
+}
+
+/** タイトル末尾の ` / URL` を除去する。露出が無ければ変更しない（#1117）。 */
+export function stripTrailingUrlSuffixFromPostTitle(title: string): string {
+  const start = findTrailingUrlSuffixStart(title);
+  return start === -1 ? title : title.slice(0, start);
+}

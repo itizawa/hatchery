@@ -162,9 +162,16 @@ model Post {
   votes       Vote[]
   /// この post への閲覧記録（#665: Exclusive Arc 化の逆リレーション。Post 削除で cascade）。
   pageViews   PageView[]
+  /// 投稿に付与されたタグ一覧（#1087）。ワーカーが定時バッチ生成時に付与する。省略時 `[]`。
+  tags        String[] @default([])
+  /// admin による pin 状態（#1089）。community あたり最大 3 件（POST_PIN_MAX_COUNT）。
+  isPinned    Boolean   @default(false)
+  /// pin された日時（#1089）。未 pin は null。
+  pinnedAt    DateTime?
 
   @@unique([communityId, slotKey, seq])
   @@index([communityId, createdAt])
+  @@index([communityId, isPinned])
 }
 
 /// コメント。ADR-0019。AI ワーカーのみが author となる（ADR-0020）。

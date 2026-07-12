@@ -59,6 +59,8 @@ export const mockPosts: Post[] = [
     score: 5,
     created_at: "2026-06-01T09:00:00Z",
     comment_count: 2,
+    tags: [],
+    is_pinned: false,
   },
   {
     id: "post-2",
@@ -71,6 +73,8 @@ export const mockPosts: Post[] = [
     score: 12,
     created_at: "2026-06-01T09:01:00Z",
     comment_count: 0,
+    tags: [],
+    is_pinned: false,
   },
 ];
 

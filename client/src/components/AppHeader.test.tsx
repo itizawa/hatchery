@@ -185,20 +185,22 @@ describe("AppHeader", () => {
     const logoutItem = await screen.findByRole("menuitem", { name: /ログアウト/ });
     await userEvent.click(logoutItem);
 
-    // ログインモーダル（heading "ログイン"）は開かず、ヘッダーのログインリンクが表示される。
-    expect(await screen.findByRole("link", { name: /ログイン/ })).toBeInTheDocument();
+    // ログインモーダル（heading "ログイン"）は開かず、ヘッダーにゲストメニュートリガーが表示される。
+    expect(await screen.findByRole("button", { name: /ゲストメニュー/ })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: /^ログイン$/ })).not.toBeInTheDocument();
   });
 
-  // #454: ヘッダーのログインリンクをクリックすると、ページ遷移せずログインモーダルが開く（背景が保持される）。
-  it("ログインリンクをクリックするとログインモーダルが開き、背景のコンテンツが保持される", async () => {
+  // #454, #1146: ヘッダーのゲストメニュー経由で「ログイン」を選択すると、ページ遷移せずログインモーダルが開く（背景が保持される）。
+  it("ゲストメニューの「ログイン」menuitem をクリックするとログインモーダルが開き、背景のコンテンツが保持される", async () => {
     stubFetch(false);
     renderApp("/");
 
     // 背景にホームフィードが描画されていることを確認（モーダルを開く前は role でも見つかる）。
     await screen.findByRole("heading", { name: /ホームフィード/ });
-    const loginLink = await screen.findByRole("link", { name: /ログイン/ });
-    await userEvent.click(loginLink);
+    const guestTrigger = await screen.findByRole("button", { name: /ゲストメニュー/ });
+    await userEvent.click(guestTrigger);
+    const loginItem = await screen.findByRole("menuitem", { name: /ログイン/ });
+    await userEvent.click(loginItem);
 
     // モーダル（Google でログイン）が開く。
     expect(await screen.findByRole("button", { name: /Google でログイン/ })).toBeInTheDocument();
@@ -232,20 +234,30 @@ describe("AppHeader", () => {
     expect(await screen.findByRole("link", { name: /Hatchery/ })).toBeInTheDocument();
   });
 
-  // Issue #255: 未認証ユーザーへのログイン誘導 UI
-  it("未ログイン時にヘッダーにログインリンクが表示される", async () => {
+  // Issue #255, #1146: 未認証ユーザーへのログイン誘導 UI(ゲストアイコン＋メニュー経由)
+  it("未ログイン時にヘッダーにゲストメニュートリガー(アイコンボタン)が表示される", async () => {
     stubFetch(false);
     renderApp("/channels/zatsudan");
 
-    expect(await screen.findByRole("link", { name: /ログイン/ })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /ゲストメニュー/ })).toBeInTheDocument();
   });
 
-  it("ログイン済み時にヘッダーにログインリンクが表示されない", async () => {
+  it("未ログイン時、ゲストメニュートリガークリックで「ログイン」menuitem が表示される", async () => {
+    stubFetch(false);
+    renderApp("/channels/zatsudan");
+
+    const guestTrigger = await screen.findByRole("button", { name: /ゲストメニュー/ });
+    await userEvent.click(guestTrigger);
+
+    expect(await screen.findByRole("menuitem", { name: /ログイン/ })).toBeInTheDocument();
+  });
+
+  it("ログイン済み時にヘッダーにゲストメニュートリガーが表示されない", async () => {
     stubFetch(true);
     renderApp("/");
 
     await screen.findByRole("button", { name: /ユーザーメニュー/ });
-    expect(screen.queryByRole("link", { name: /ログイン/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /ゲストメニュー/ })).not.toBeInTheDocument();
   });
 
   // Issue #485: ヘッダー高さの一定化・区切りの borderBottom 化
@@ -265,7 +277,7 @@ describe("AppHeader", () => {
       stubFetch(false);
       renderApp("/channels/zatsudan");
 
-      await screen.findByRole("link", { name: /ログイン/ });
+      await screen.findByRole("button", { name: /ゲストメニュー/ });
       const slot = screen.getByTestId("header-right-slot");
       expect(slot).toHaveStyle({ height: EXPECTED_SLOT_HEIGHT });
     });

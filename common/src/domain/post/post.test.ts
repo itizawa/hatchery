@@ -3,10 +3,17 @@ import { describe, expect, it } from "vitest";
 import {
   buildManualSlotKey,
   CreatePostRequestSchema,
+  hasLeadingUrlExposure,
+  hasTrailingUrlExposure,
   MANUAL_SLOT_KEY_PREFIX,
   PostSchema,
+  POST_PIN_MAX_COUNT,
+  POST_TAGS_MAX_COUNT,
+  POST_TAG_MAX_LENGTH,
   POST_TEXT_MAX_LENGTH,
   POST_TITLE_MAX_LENGTH,
+  stripLeadingUrlLineFromPostText,
+  stripTrailingUrlSuffixFromPostTitle,
 } from "./post.js";
 
 describe("PostSchema", () => {
@@ -136,6 +143,67 @@ describe("PostSchema", () => {
   it("my_vote に無効な値は reject する（#831）", () => {
     expect(PostSchema.safeParse({ ...validPost, my_vote: "neutral" }).success).toBe(false);
   });
+
+  it("tags は省略時 空配列（既定値）になる（#1087）", () => {
+    const result = PostSchema.parse(validPost);
+    expect(result.tags).toEqual([]);
+  });
+
+  it("tags を持てる（#1087）", () => {
+    const result = PostSchema.parse({ ...validPost, tags: ["react", "typescript"] });
+    expect(result.tags).toEqual(["react", "typescript"]);
+  });
+
+  it(`tags は最大 ${POST_TAGS_MAX_COUNT} 件まで（超過は reject・#1087）`, () => {
+    // eslint-disable-next-line max-params
+    const tooMany = Array.from({ length: POST_TAGS_MAX_COUNT + 1 }, (_, i) => `tag${i}`);
+    expect(PostSchema.safeParse({ ...validPost, tags: tooMany }).success).toBe(false);
+  });
+
+  it(`tags は ${POST_TAGS_MAX_COUNT} 件までなら有効（#1087）`, () => {
+    // eslint-disable-next-line max-params
+    const maxTags = Array.from({ length: POST_TAGS_MAX_COUNT }, (_, i) => `tag${i}`);
+    expect(PostSchema.safeParse({ ...validPost, tags: maxTags }).success).toBe(true);
+  });
+
+  it(`tags の要素は最大 ${POST_TAG_MAX_LENGTH} 文字まで（超過は reject・#1087）`, () => {
+    const data = { ...validPost, tags: ["あ".repeat(POST_TAG_MAX_LENGTH + 1)] };
+    expect(PostSchema.safeParse(data).success).toBe(false);
+  });
+
+  it("tags の要素が空文字だと reject する（#1087）", () => {
+    expect(PostSchema.safeParse({ ...validPost, tags: [""] }).success).toBe(false);
+  });
+
+  it("is_pinned は省略時 false（既定値）になる（#1089）", () => {
+    const result = PostSchema.parse(validPost);
+    expect(result.is_pinned).toBe(false);
+  });
+
+  it("is_pinned に true を設定できる（#1089）", () => {
+    const result = PostSchema.parse({ ...validPost, is_pinned: true });
+    expect(result.is_pinned).toBe(true);
+  });
+
+  it("pinned_at は省略可能（後方互換・#1089）", () => {
+    const result = PostSchema.safeParse(validPost);
+    expect(result.success).toBe(true);
+  });
+
+  it("pinned_at に Date を設定できる（#1089）", () => {
+    const pinnedAt = new Date("2026-07-01T00:00:00.000Z");
+    const result = PostSchema.parse({ ...validPost, pinned_at: pinnedAt });
+    expect(result.pinned_at).toEqual(pinnedAt);
+  });
+
+  it("pinned_at に null を設定できる（未 pin・#1089）", () => {
+    const result = PostSchema.parse({ ...validPost, pinned_at: null });
+    expect(result.pinned_at).toBeNull();
+  });
+
+  it("POST_PIN_MAX_COUNT は 3 件（#1089）", () => {
+    expect(POST_PIN_MAX_COUNT).toBe(3);
+  });
 });
 
 describe("CreatePostRequestSchema (#433)", () => {
@@ -197,5 +265,68 @@ describe("buildManualSlotKey (#433)", () => {
     const slotKey = buildManualSlotKey("2026-06-13T09:00");
     expect(slotKey.startsWith(MANUAL_SLOT_KEY_PREFIX)).toBe(true);
     expect(slotKey).not.toBe("2026-06-13T09:00");
+  });
+});
+
+describe("hasLeadingUrlExposure / stripLeadingUrlLineFromPostText (#1117)", () => {
+  it("本文が http から始まる場合に露出ありと判定する", () => {
+    const text = "https://b.hatena.ne.jp/hotentry/general\n\n本文の要約がここに続く。";
+    expect(hasLeadingUrlExposure(text)).toBe(true);
+  });
+
+  it("本文が https から始まる場合に露出ありと判定する", () => {
+    expect(hasLeadingUrlExposure("https://example.com/entry\n\n本文")).toBe(true);
+  });
+
+  it("本文が URL から始まらない場合は露出なしと判定する", () => {
+    expect(hasLeadingUrlExposure("今日はいい天気だった。")).toBe(false);
+  });
+
+  it("本文中間に URL を含むだけの場合は露出なしと判定する（先頭のみ対象）", () => {
+    const text = "参考: https://example.com/entry を見た感想です。";
+    expect(hasLeadingUrlExposure(text)).toBe(false);
+  });
+
+  it("先頭の URL 行（改行込み）を除去し本文の意味内容は変更しない", () => {
+    const text = "https://b.hatena.ne.jp/hotentry/general\n\n「週休3日制」導入企業じわじわ増加——という話。";
+    const stripped = stripLeadingUrlLineFromPostText(text);
+    expect(stripped).toBe("「週休3日制」導入企業じわじわ増加——という話。");
+  });
+
+  it("URL 露出がない本文は変更しない", () => {
+    const text = "今日はいい天気だった。";
+    expect(stripLeadingUrlLineFromPostText(text)).toBe(text);
+  });
+});
+
+describe("hasTrailingUrlExposure / stripTrailingUrlSuffixFromPostTitle (#1117)", () => {
+  it("タイトル末尾が ' / URL' の場合に露出ありと判定する", () => {
+    const title =
+      "ライドシェア解禁の議論、またループしてるけど今回こそ本気でやる気あるの？ / https://b.hatena.ne.jp/hotentry/general";
+    expect(hasTrailingUrlExposure(title)).toBe(true);
+  });
+
+  it("末尾に URL が無いタイトルは露出なしと判定する", () => {
+    expect(hasTrailingUrlExposure("普通のタイトルです")).toBe(false);
+  });
+
+  it("タイトル中間に URL を含むだけ（末尾形式でない）場合は露出なしと判定する", () => {
+    expect(hasTrailingUrlExposure("https://example.com を貼っただけの本文っぽいタイトル")).toBe(
+      false,
+    );
+  });
+
+  it("末尾の ' / URL' を除去しタイトルの意味内容は変更しない", () => {
+    const title =
+      "ライドシェア解禁の議論、またループしてるけど今回こそ本気でやる気あるの？ / https://b.hatena.ne.jp/hotentry/general";
+    const stripped = stripTrailingUrlSuffixFromPostTitle(title);
+    expect(stripped).toBe(
+      "ライドシェア解禁の議論、またループしてるけど今回こそ本気でやる気あるの？",
+    );
+  });
+
+  it("URL 露出がないタイトルは変更しない", () => {
+    const title = "普通のタイトルです";
+    expect(stripTrailingUrlSuffixFromPostTitle(title)).toBe(title);
   });
 });

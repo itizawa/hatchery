@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createInMemoryPostRepository } from "./postRepository.js";
+import type { PostRecord } from "./postRepository.js";
 
 describe("createInMemoryPostRepository", () => {
   describe("createMany", () => {
@@ -509,6 +510,470 @@ describe("createInMemoryPostRepository", () => {
       ]);
       const { posts } = await repo.listPopularPaged(undefined, 20);
       expect(posts).toHaveLength(2);
+    });
+  });
+
+  describe("tags（#1087）", () => {
+    it("createMany で tags を永続化できる", async () => {
+      const repo = createInMemoryPostRepository();
+      const [created] = await repo.createMany("community-1", [
+        { slotKey: "s", seq: 0, author: "w", title: "t", text: "text", tags: ["react", "vite"] },
+      ]);
+      expect(created.tags).toEqual(["react", "vite"]);
+    });
+
+    it("tags を省略すると空配列になる", async () => {
+      const repo = createInMemoryPostRepository();
+      const [created] = await repo.createMany("community-1", [
+        { slotKey: "s", seq: 0, author: "w", title: "t", text: "text" },
+      ]);
+      expect(created.tags).toEqual([]);
+    });
+
+    it("findById で取得した post も tags を持つ", async () => {
+      const repo = createInMemoryPostRepository();
+      const [created] = await repo.createMany("community-1", [
+        { slotKey: "s", seq: 0, author: "w", title: "t", text: "text", tags: ["react"] },
+      ]);
+      const found = await repo.findById(created.id);
+      expect(found?.tags).toEqual(["react"]);
+    });
+  });
+
+  describe("listRelatedByTags（#1087）", () => {
+    it("同一 community 内でタグを 1 つ以上共有する post を新着順で返す", async () => {
+      const repo = createInMemoryPostRepository();
+      const [target] = await repo.createMany("community-1", [
+        { slotKey: "s", seq: 0, author: "w", title: "target", text: "text", tags: ["react", "vite"] },
+      ]);
+      await new Promise((r) => setTimeout(r, 5));
+      const [older] = await repo.createMany("community-1", [
+        { slotKey: "s", seq: 1, author: "w", title: "older-match", text: "text", tags: ["react"] },
+      ]);
+      await new Promise((r) => setTimeout(r, 5));
+      const [newer] = await repo.createMany("community-1", [
+        { slotKey: "s", seq: 2, author: "w", title: "newer-match", text: "text", tags: ["vite", "typescript"] },
+      ]);
+      await repo.createMany("community-1", [
+        { slotKey: "s", seq: 3, author: "w", title: "no-match", text: "text", tags: ["golang"] },
+      ]);
+
+      const result = await repo.listRelatedByTags({
+        communityId: "community-1",
+        tags: target.tags,
+        excludePostId: target.id,
+        limit: 5,
+      });
+
+      expect(result.map((p) => p.id)).toEqual([newer.id, older.id]);
+    });
+
+    it("自分自身（excludePostId）は結果に含めない", async () => {
+      const repo = createInMemoryPostRepository();
+      const [target] = await repo.createMany("community-1", [
+        { slotKey: "s", seq: 0, author: "w", title: "target", text: "text", tags: ["react"] },
+      ]);
+
+      const result = await repo.listRelatedByTags({
+        communityId: "community-1",
+        tags: target.tags,
+        excludePostId: target.id,
+        limit: 5,
+      });
+
+      expect(result).toEqual([]);
+    });
+
+    it("別 community の post は含めない", async () => {
+      const repo = createInMemoryPostRepository();
+      await repo.createMany("community-2", [
+        { slotKey: "s", seq: 0, author: "w", title: "other-community", text: "text", tags: ["react"] },
+      ]);
+
+      const result = await repo.listRelatedByTags({
+        communityId: "community-1",
+        tags: ["react"],
+        excludePostId: "nonexistent",
+        limit: 5,
+      });
+
+      expect(result).toEqual([]);
+    });
+
+    it("tags が空配列のときは空配列を返す", async () => {
+      const repo = createInMemoryPostRepository();
+      await repo.createMany("community-1", [
+        { slotKey: "s", seq: 0, author: "w", title: "post", text: "text", tags: ["react"] },
+      ]);
+
+      const result = await repo.listRelatedByTags({
+        communityId: "community-1",
+        tags: [],
+        excludePostId: "nonexistent",
+        limit: 5,
+      });
+
+      expect(result).toEqual([]);
+    });
+
+    it("limit で件数を絞る", async () => {
+      const repo = createInMemoryPostRepository();
+      for (let i = 0; i < 3; i++) {
+        await repo.createMany("community-1", [
+          { slotKey: "s", seq: i, author: "w", title: `match-${i}`, text: "text", tags: ["react"] },
+        ]);
+      }
+
+      const result = await repo.listRelatedByTags({
+        communityId: "community-1",
+        tags: ["react"],
+        excludePostId: "nonexistent",
+        limit: 2,
+      });
+
+      expect(result).toHaveLength(2);
+    });
+
+    it("options.now を渡すと createdAt > now（ドリップ配信で未公開）の post を除外する", async () => {
+      const repo = createInMemoryPostRepository();
+      const now = new Date("2026-07-09T12:00:00Z");
+      await repo.createMany("community-1", [
+        {
+          slotKey: "s",
+          seq: 0,
+          author: "w",
+          title: "revealed",
+          text: "text",
+          tags: ["react"],
+          createdAt: new Date("2026-07-09T11:00:00Z"),
+        },
+        {
+          slotKey: "s",
+          seq: 1,
+          author: "w",
+          title: "not-yet-revealed",
+          text: "text",
+          tags: ["react"],
+          createdAt: new Date("2026-07-09T13:00:00Z"),
+        },
+      ]);
+
+      const result = await repo.listRelatedByTags({
+        communityId: "community-1",
+        tags: ["react"],
+        excludePostId: "nonexistent",
+        limit: 5,
+        options: { now },
+      });
+
+      expect(result.map((p) => p.title)).toEqual(["revealed"]);
+    });
+
+    it("options を渡さないときは createdAt によるフィルタを行わない（後方互換）", async () => {
+      const repo = createInMemoryPostRepository();
+      await repo.createMany("community-1", [
+        {
+          slotKey: "s",
+          seq: 0,
+          author: "w",
+          title: "future",
+          text: "text",
+          tags: ["react"],
+          createdAt: new Date("2999-01-01T00:00:00Z"),
+        },
+      ]);
+
+      const result = await repo.listRelatedByTags({
+        communityId: "community-1",
+        tags: ["react"],
+        excludePostId: "nonexistent",
+        limit: 5,
+      });
+
+      expect(result).toHaveLength(1);
+    });
+  });
+
+  describe("updateTitleAndText (#1117)", () => {
+    it("指定 id の title/text を更新する", async () => {
+      const repo = createInMemoryPostRepository();
+      const [created] = await repo.createMany("community-1", [
+        { slotKey: "s", seq: 0, author: "w", title: "旧タイトル", text: "旧本文" },
+      ]);
+
+      const updated = await repo.updateTitleAndText({
+        id: created.id,
+        title: "新タイトル",
+        text: "新本文",
+      });
+
+      expect(updated?.title).toBe("新タイトル");
+      expect(updated?.text).toBe("新本文");
+      const found = await repo.findById(created.id);
+      expect(found?.title).toBe("新タイトル");
+      expect(found?.text).toBe("新本文");
+    });
+
+    it("存在しない id の場合は null を返す", async () => {
+      const repo = createInMemoryPostRepository();
+      const updated = await repo.updateTitleAndText({
+        id: "nonexistent",
+        title: "新タイトル",
+        text: "新本文",
+      });
+      expect(updated).toBeNull();
+    });
+  });
+
+  describe("pin / unpin (#1089)", () => {
+    it("createMany で作成した post は isPinned: false / pinnedAt: null で初期化される", async () => {
+      const repo = createInMemoryPostRepository();
+      const [created] = await repo.createMany("community-1", [
+        { slotKey: "s", seq: 0, author: "w", title: "post", text: "text" },
+      ]);
+      expect(created.isPinned).toBe(false);
+      expect(created.pinnedAt).toBeNull();
+    });
+
+    it("pinPost で post を pin できる", async () => {
+      const repo = createInMemoryPostRepository();
+      const [created] = await repo.createMany("community-1", [
+        { slotKey: "s", seq: 0, author: "w", title: "post", text: "text" },
+      ]);
+      const pinnedAt = new Date("2026-07-11T00:00:00Z");
+      const updated = await repo.pinPost({ id: created.id, pinnedAt });
+      expect(updated?.isPinned).toBe(true);
+      expect(updated?.pinnedAt).toEqual(pinnedAt);
+      const found = await repo.findById(created.id);
+      expect(found?.isPinned).toBe(true);
+    });
+
+    it("pinPost で存在しない id の場合は null を返す", async () => {
+      const repo = createInMemoryPostRepository();
+      const result = await repo.pinPost({ id: "nonexistent", pinnedAt: new Date() });
+      expect(result).toBeNull();
+    });
+
+    it("unpinPost で pin を解除できる", async () => {
+      const repo = createInMemoryPostRepository();
+      const [created] = await repo.createMany("community-1", [
+        { slotKey: "s", seq: 0, author: "w", title: "post", text: "text" },
+      ]);
+      await repo.pinPost({ id: created.id, pinnedAt: new Date() });
+      const updated = await repo.unpinPost(created.id);
+      expect(updated?.isPinned).toBe(false);
+      expect(updated?.pinnedAt).toBeNull();
+    });
+
+    it("unpinPost で存在しない id の場合は null を返す", async () => {
+      const repo = createInMemoryPostRepository();
+      const result = await repo.unpinPost("nonexistent");
+      expect(result).toBeNull();
+    });
+
+    it("countPinnedByCommunity は community 内の pin 済み件数を返す", async () => {
+      const repo = createInMemoryPostRepository();
+      const posts = await repo.createMany("community-1", [
+        { slotKey: "s", seq: 0, author: "w", title: "p1", text: "t" },
+        { slotKey: "s", seq: 1, author: "w", title: "p2", text: "t" },
+        { slotKey: "s", seq: 2, author: "w", title: "p3", text: "t" },
+      ]);
+      await repo.pinPost({ id: posts[0]!.id, pinnedAt: new Date() });
+      await repo.pinPost({ id: posts[1]!.id, pinnedAt: new Date() });
+      const count = await repo.countPinnedByCommunity("community-1");
+      expect(count).toBe(2);
+    });
+
+    it("countPinnedByCommunity は別の community の pin を数えない", async () => {
+      const repo = createInMemoryPostRepository();
+      const [post] = await repo.createMany("community-2", [
+        { slotKey: "s", seq: 0, author: "w", title: "p1", text: "t" },
+      ]);
+      await repo.pinPost({ id: post!.id, pinnedAt: new Date() });
+      const count = await repo.countPinnedByCommunity("community-1");
+      expect(count).toBe(0);
+    });
+
+    it("listPinnedByCommunity は pin 済み post を pinnedAt 降順で返す", async () => {
+      const repo = createInMemoryPostRepository();
+      const posts = await repo.createMany("community-1", [
+        { slotKey: "s", seq: 0, author: "w", title: "older-pin", text: "t" },
+        { slotKey: "s", seq: 1, author: "w", title: "newer-pin", text: "t" },
+        { slotKey: "s", seq: 2, author: "w", title: "not-pinned", text: "t" },
+      ]);
+      await repo.pinPost({ id: posts[0]!.id, pinnedAt: new Date("2026-07-01T00:00:00Z") });
+      await repo.pinPost({ id: posts[1]!.id, pinnedAt: new Date("2026-07-05T00:00:00Z") });
+      const result = await repo.listPinnedByCommunity("community-1");
+      expect(result.map((p) => p.title)).toEqual(["newer-pin", "older-pin"]);
+    });
+
+    it("listPinnedByCommunity は pin が 0 件のとき空配列を返す", async () => {
+      const repo = createInMemoryPostRepository();
+      await repo.createMany("community-1", [
+        { slotKey: "s", seq: 0, author: "w", title: "post", text: "text" },
+      ]);
+      const result = await repo.listPinnedByCommunity("community-1");
+      expect(result).toEqual([]);
+    });
+
+    it("同一 pinnedAt の場合は id 降順を tie-break にする（バックエンド間の順序整合）", async () => {
+      const repo = createInMemoryPostRepository();
+      const posts = await repo.createMany("community-1", [
+        { slotKey: "s", seq: 0, author: "w", title: "a", text: "t" },
+        { slotKey: "s", seq: 1, author: "w", title: "b", text: "t" },
+      ]);
+      const samePinnedAt = new Date("2026-07-01T00:00:00Z");
+      await repo.pinPost({ id: posts[0]!.id, pinnedAt: samePinnedAt });
+      await repo.pinPost({ id: posts[1]!.id, pinnedAt: samePinnedAt });
+      const result = await repo.listPinnedByCommunity("community-1");
+      // eslint-disable-next-line max-params
+      const sortedByIdDesc = [...posts].sort((x, y) => (x.id < y.id ? 1 : x.id > y.id ? -1 : 0));
+      expect(result.map((p) => p.id)).toEqual(sortedByIdDesc.map((p) => p.id));
+    });
+
+    it("options.now を渡すと createdAt > now（ドリップ配信で未公開）の pin 済み post を除外する（ADR-0034）", async () => {
+      const repo = createInMemoryPostRepository();
+      const now = new Date("2026-07-11T12:00:00Z");
+      const posts = await repo.createMany("community-1", [
+        {
+          slotKey: "s",
+          seq: 0,
+          author: "w",
+          title: "revealed",
+          text: "t",
+          createdAt: new Date("2026-07-11T11:00:00Z"),
+        },
+        {
+          slotKey: "s",
+          seq: 1,
+          author: "w",
+          title: "not-yet-revealed",
+          text: "t",
+          createdAt: new Date("2026-07-11T13:00:00Z"),
+        },
+      ]);
+      await repo.pinPost({ id: posts[0]!.id, pinnedAt: new Date("2026-07-10T00:00:00Z") });
+      await repo.pinPost({ id: posts[1]!.id, pinnedAt: new Date("2026-07-10T00:00:00Z") });
+      const result = await repo.listPinnedByCommunity("community-1", { now });
+      expect(result.map((p) => p.title)).toEqual(["revealed"]);
+    });
+
+    it("options を渡さないときは createdAt によるフィルタを行わない（後方互換）", async () => {
+      const repo = createInMemoryPostRepository();
+      const [post] = await repo.createMany("community-1", [
+        {
+          slotKey: "s",
+          seq: 0,
+          author: "w",
+          title: "future",
+          text: "t",
+          createdAt: new Date("2999-01-01T00:00:00Z"),
+        },
+      ]);
+      await repo.pinPost({ id: post!.id, pinnedAt: new Date() });
+      const result = await repo.listPinnedByCommunity("community-1");
+      expect(result).toHaveLength(1);
+    });
+  });
+
+  describe("pinPostIfUnderLimit（#1089・上限チェックの原子化・セルフレビュー指摘）", () => {
+    it("community あたりの pin 件数が上限未満なら pin して post を返す", async () => {
+      const repo = createInMemoryPostRepository();
+      const [created] = await repo.createMany("community-1", [
+        { slotKey: "s", seq: 0, author: "w", title: "post", text: "text" },
+      ]);
+      const pinnedAt = new Date("2026-07-11T00:00:00Z");
+
+      const result = await repo.pinPostIfUnderLimit({ id: created.id, pinnedAt, maxCount: 3 });
+
+      expect(result).not.toBe("not_found");
+      expect(result).not.toBe("limit_exceeded");
+      expect((result as PostRecord).isPinned).toBe(true);
+      expect((result as PostRecord).pinnedAt).toEqual(pinnedAt);
+    });
+
+    it("community あたりの pin 件数が上限に達している場合は limit_exceeded を返し pin しない", async () => {
+      const repo = createInMemoryPostRepository();
+      const posts = await repo.createMany("community-1", [
+        { slotKey: "s", seq: 0, author: "w", title: "p1", text: "t" },
+        { slotKey: "s", seq: 1, author: "w", title: "p2", text: "t" },
+        { slotKey: "s", seq: 2, author: "w", title: "p3", text: "t" },
+        { slotKey: "s", seq: 3, author: "w", title: "p4", text: "t" },
+      ]);
+      await repo.pinPostIfUnderLimit({ id: posts[0]!.id, pinnedAt: new Date(), maxCount: 3 });
+      await repo.pinPostIfUnderLimit({ id: posts[1]!.id, pinnedAt: new Date(), maxCount: 3 });
+      await repo.pinPostIfUnderLimit({ id: posts[2]!.id, pinnedAt: new Date(), maxCount: 3 });
+
+      const result = await repo.pinPostIfUnderLimit({ id: posts[3]!.id, pinnedAt: new Date(), maxCount: 3 });
+
+      expect(result).toBe("limit_exceeded");
+      const found = await repo.findById(posts[3]!.id);
+      expect(found?.isPinned).toBe(false);
+    });
+
+    it("既に pin 済みの post を再度 pin しても上限チェックの対象にならない（冪等）", async () => {
+      const repo = createInMemoryPostRepository();
+      const posts = await repo.createMany("community-1", [
+        { slotKey: "s", seq: 0, author: "w", title: "p1", text: "t" },
+        { slotKey: "s", seq: 1, author: "w", title: "p2", text: "t" },
+        { slotKey: "s", seq: 2, author: "w", title: "p3", text: "t" },
+      ]);
+      await repo.pinPostIfUnderLimit({ id: posts[0]!.id, pinnedAt: new Date(), maxCount: 3 });
+      await repo.pinPostIfUnderLimit({ id: posts[1]!.id, pinnedAt: new Date(), maxCount: 3 });
+      await repo.pinPostIfUnderLimit({ id: posts[2]!.id, pinnedAt: new Date(), maxCount: 3 });
+
+      // community は既に上限 3 件の pin 済みだが、posts[0] 自身は既に pin 済みなので再 pin は成功する
+      const newPinnedAt = new Date("2026-07-11T09:00:00Z");
+      const result = await repo.pinPostIfUnderLimit({ id: posts[0]!.id, pinnedAt: newPinnedAt, maxCount: 3 });
+
+      expect(result).not.toBe("limit_exceeded");
+      expect((result as PostRecord).pinnedAt).toEqual(newPinnedAt);
+    });
+
+    it("存在しない id の場合は not_found を返す", async () => {
+      const repo = createInMemoryPostRepository();
+      const result = await repo.pinPostIfUnderLimit({ id: "nonexistent", pinnedAt: new Date(), maxCount: 3 });
+      expect(result).toBe("not_found");
+    });
+  });
+
+  describe("listByCommunityPaged の excludePostIds (#1089)", () => {
+    it("excludePostIds で指定した id を結果から除外する", async () => {
+      const repo = createInMemoryPostRepository();
+      const posts = await repo.createMany("community-1", [
+        { slotKey: "s", seq: 0, author: "w", title: "a", text: "t" },
+        { slotKey: "s", seq: 1, author: "w", title: "b", text: "t" },
+      ]);
+      const result = await repo.listByCommunityPaged({
+        communityId: "community-1",
+        excludePostIds: [posts[1]!.id],
+      });
+      expect(result.posts.map((p) => p.title)).toEqual(["a"]);
+    });
+
+    it("excludePostIds 未指定時は従来どおり全件返す（後方互換）", async () => {
+      const repo = createInMemoryPostRepository();
+      await repo.createMany("community-1", [
+        { slotKey: "s", seq: 0, author: "w", title: "a", text: "t" },
+      ]);
+      const result = await repo.listByCommunityPaged({ communityId: "community-1" });
+      expect(result.posts).toHaveLength(1);
+    });
+  });
+
+  describe("listByCommunityPopularPaged の excludePostIds (#1089)", () => {
+    it("excludePostIds で指定した id を結果から除外する", async () => {
+      const repo = createInMemoryPostRepository();
+      const posts = await repo.createMany("community-1", [
+        { slotKey: "s", seq: 0, author: "w", title: "a", text: "t" },
+        { slotKey: "s", seq: 1, author: "w", title: "b", text: "t" },
+      ]);
+      await repo.addScore(posts[1]!.id, 10);
+      const result = await repo.listByCommunityPopularPaged({
+        communityId: "community-1",
+        excludePostIds: [posts[1]!.id],
+      });
+      expect(result.posts.map((p) => p.title)).toEqual(["a"]);
     });
   });
 });

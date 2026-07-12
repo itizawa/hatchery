@@ -6,17 +6,23 @@ import {
   MAX_IMAGE_SIZE_BYTES,
 } from "../services/storageService.js";
 
+// eslint-disable-next-line max-params
+export function imageFileFilter(
+  _req: Request,
+  file: Express.Multer.File,
+  callback: multer.FileFilterCallback,
+): void {
+  const allowedMimes: readonly string[] = ALLOWED_IMAGE_MIME_TYPES;
+  if (allowedMimes.includes(file.mimetype)) {
+    callback(null, true);
+  } else {
+    callback(null, false);
+  }
+}
+
 export const imageUpload = multer({
   storage: multer.memoryStorage(),
-  // eslint-disable-next-line max-params
-  fileFilter(_req, file, callback) {
-    const allowedMimes: readonly string[] = ALLOWED_IMAGE_MIME_TYPES;
-    if (allowedMimes.includes(file.mimetype)) {
-      callback(null, true);
-    } else {
-      callback(null, false);
-    }
-  },
+  fileFilter: imageFileFilter,
   limits: { fileSize: MAX_IMAGE_SIZE_BYTES },
 });
 

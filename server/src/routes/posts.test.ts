@@ -34,6 +34,62 @@ describe("GET /api/posts/:postId", () => {
     expect(res.body.comments[0]).toMatchObject({ text: "Reply" });
   });
 
+  it("post の tags を返す（#1087）", async () => {
+    const postRepo = createInMemoryPostRepository();
+    const commentRepo = createInMemoryCommentRepository();
+
+    const [post] = await postRepo.createMany("community-1", [
+      { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "T", text: "Body", tags: ["react", "vite"] },
+    ]);
+
+    const deps = await createTestDeps({ postRepository: postRepo, commentRepository: commentRepo });
+    const app = createApp(deps);
+
+    const res = await request(app).get(`/api/posts/${post.id}`);
+    expect(res.status).toBe(200);
+    expect(res.body.post.tags).toEqual(["react", "vite"]);
+  });
+
+  it("同一タグを共有する他の post を related_posts として返す（#1087）", async () => {
+    const postRepo = createInMemoryPostRepository();
+    const commentRepo = createInMemoryCommentRepository();
+
+    const [post] = await postRepo.createMany("community-1", [
+      { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "Main Post", text: "Body", tags: ["react"] },
+    ]);
+    const [related] = await postRepo.createMany("community-1", [
+      { slotKey: "2026-06-10T10:00", seq: 0, author: "worker-2", title: "Related Post", text: "Body2", tags: ["react", "vite"] },
+    ]);
+    // 別 community の同タグ post は関連投稿に含まれない
+    await postRepo.createMany("community-2", [
+      { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-3", title: "Other Community", text: "Body3", tags: ["react"] },
+    ]);
+
+    const deps = await createTestDeps({ postRepository: postRepo, commentRepository: commentRepo });
+    const app = createApp(deps);
+
+    const res = await request(app).get(`/api/posts/${post.id}`);
+    expect(res.status).toBe(200);
+    expect(res.body.related_posts).toHaveLength(1);
+    expect(res.body.related_posts[0]).toMatchObject({ id: related.id, title: "Related Post" });
+  });
+
+  it("post に tags が無い場合 related_posts は空配列（#1087）", async () => {
+    const postRepo = createInMemoryPostRepository();
+    const commentRepo = createInMemoryCommentRepository();
+
+    const [post] = await postRepo.createMany("community-1", [
+      { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "No Tags", text: "Body" },
+    ]);
+
+    const deps = await createTestDeps({ postRepository: postRepo, commentRepository: commentRepo });
+    const app = createApp(deps);
+
+    const res = await request(app).get(`/api/posts/${post.id}`);
+    expect(res.status).toBe(200);
+    expect(res.body.related_posts).toEqual([]);
+  });
+
   it("レスポンスのフィールド名が OpenAPI スキーマ（snake_case）と一致し camelCase を含まない（#499）", async () => {
     const postRepo = createInMemoryPostRepository();
     const commentRepo = createInMemoryCommentRepository();

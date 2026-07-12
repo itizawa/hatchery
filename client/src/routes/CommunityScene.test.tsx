@@ -349,6 +349,115 @@ describe("CommunityScene", () => {
   });
 });
 
+describe("CommunityScene — admin pin/unpin（#1089）", () => {
+  const pinTestPost = {
+    id: "post-1089",
+    community_id: "community-1",
+    slot_key: "2026-07-11-morning",
+    seq: 1,
+    author: "worker-haru",
+    title: "pin テスト投稿",
+    text: "内容",
+    score: 0,
+    created_at: "2026-07-11T00:00:00Z",
+    comment_count: 0,
+    tags: [] as string[],
+    is_pinned: false,
+  };
+
+  function renderWithUser({
+    role,
+    post = pinTestPost,
+  }: {
+    role: "admin" | "member" | null;
+    post?: typeof pinTestPost;
+  }) {
+    const qc = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    });
+    qc.setQueryData(["communities"], [mockCommunity]);
+    qc.setQueryData(communityFeedQueryKey({ slug: "ai-dev" }), {
+      pages: [{ posts: [post], nextCursor: null }],
+      pageParams: [undefined],
+    });
+    qc.setQueryData(communitySubscriptionQueryKey("ai-dev"), { subscribed: false });
+    qc.setQueryData(
+      AUTH_ME_QUERY_KEY,
+      role ? { id: "user-1", displayName: "Admin", role } : null,
+    );
+    qc.setQueryData(communityWorkersQueryKey("ai-dev"), {
+      pages: [{ items: mockCommunityWorkers, nextCursor: null }],
+      pageParams: [undefined],
+    });
+
+    return render(
+      <QueryClientProvider client={qc}>
+        <QueryBoundary fallback={<MainContentSkeleton />}>
+          <CommunityScene />
+        </QueryBoundary>
+      </QueryClientProvider>,
+    );
+  }
+
+  it("admin ユーザーには pin 操作ボタンが表示される", async () => {
+    renderWithUser({ role: "admin" });
+    expect(await screen.findByText("pin テスト投稿")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "固定する" })).toBeInTheDocument();
+  });
+
+  it("member ユーザーには pin 操作ボタンが表示されない", async () => {
+    renderWithUser({ role: "member" });
+    expect(await screen.findByText("pin テスト投稿")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "固定する" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "固定を解除する" })).not.toBeInTheDocument();
+  });
+
+  it("未ログインユーザーには pin 操作ボタンが表示されない", async () => {
+    renderWithUser({ role: null });
+    expect(await screen.findByText("pin テスト投稿")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "固定する" })).not.toBeInTheDocument();
+  });
+
+  it("pin 済み post には「固定」ラベルが表示される", async () => {
+    renderWithUser({ role: "admin", post: { ...pinTestPost, is_pinned: true } });
+    expect(await screen.findByText("pin テスト投稿")).toBeInTheDocument();
+    expect(screen.getByText("固定")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "固定を解除する" })).toBeInTheDocument();
+  });
+
+  it("admin が pin ボタンをクリックすると pin API が呼ばれる", async () => {
+    let pinRequested = false;
+    server.use(
+      http.post("/api/admin/posts/:id/pin", () => {
+        pinRequested = true;
+        return HttpResponse.json({ ...pinTestPost, is_pinned: true });
+      }),
+    );
+    renderWithUser({ role: "admin" });
+    const pinButton = await screen.findByRole("button", { name: "固定する" });
+    await act(async () => {
+      await userEvent.click(pinButton);
+    });
+    await waitFor(() => expect(pinRequested).toBe(true));
+  });
+
+  it("admin が unpin ボタンをクリックすると unpin API が呼ばれる", async () => {
+    let unpinRequested = false;
+    server.use(
+      http.delete("/api/admin/posts/:id/pin", () => {
+        unpinRequested = true;
+        return HttpResponse.json({ ...pinTestPost, is_pinned: false });
+      }),
+    );
+    renderWithUser({ role: "admin", post: { ...pinTestPost, is_pinned: true } });
+    const unpinButton = await screen.findByRole("button", { name: "固定を解除する" });
+    await act(async () => {
+      await userEvent.click(unpinButton);
+    });
+    await waitFor(() => expect(unpinRequested).toBe(true));
+  });
+});
+
 describe("CommunityScene — vote 楽観的更新（#924）", () => {
   const votePost = {
     id: "post-924",

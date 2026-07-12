@@ -55,6 +55,7 @@ export async function persistBatchOutput({
     author: post.author,
     title: post.title,
     text: post.text,
+    tags: post.tags,
     createdAt: new Date(now.getTime() + postIdx * postStaggerMs),
   }));
   const createdPosts = await postRepo.createMany(communityId, postInputs);

@@ -282,6 +282,9 @@ async function processCommunitePosts({
     title: post.title,
     text: post.text,
     createdAt: dripTimestamps[idx] ?? new Date(now.getTime() + idx * 1000),
+    // 生成出力の tags をそのまま永続化する（#1087）。GenerationOutputPostSchema が
+    // .default([]) を持つため post.tags は必ず配列。
+    tags: post.tags,
   }));
 
   const savedPosts = await deps.postRepo.createMany(community.id, postInputs);

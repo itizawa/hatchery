@@ -1,4 +1,4 @@
-import { Box, Skeleton, Typography } from "../components/uiParts";
+import { Box, Chip, Skeleton, Typography } from "../components/uiParts";
 import { useParams, Link as RouterLink } from "@tanstack/react-router";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeftRounded";
 import type { ReactElement } from "react";
@@ -22,9 +22,32 @@ import { CommentCard } from "../components/CommentCard.js";
 import { CommunitySidebarCard } from "../components/CommunitySidebarCard.js";
 import { postThreadContainerSx } from "../components/postThreadContainerSx.js";
 import { QueryBoundary } from "../components/QueryBoundary.js";
+import { RelatedPostsSection } from "../components/RelatedPostsSection.js";
 import { SubscriptionStatus } from "../components/SubscriptionStatus.js";
 import type { VoteDirection } from "../components/VoteControl.js";
 import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
+
+/**
+ * post のタグバッジ行（#1087）。tags が空のときは何も描画しない。
+ * outlined Chip で表示し、アクセントカラー（SLACK_COLORS.blue）は使わず中立色に留める
+ * （デザイン規約: 1 画面のアクセントカラーは 1〜2 箇所に絞る）。
+ */
+const PostTags = ({ tags }: { tags: string[] }): ReactElement | null => {
+  if (tags.length === 0) return null;
+  return (
+    <Box data-testid="post-tags" sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, mb: 1.5 }}>
+      {tags.map((tag) => (
+        <Chip
+          key={tag}
+          label={tag}
+          size="small"
+          variant="outlined"
+          sx={{ color: "text.secondary", borderColor: "divider" }}
+        />
+      ))}
+    </Box>
+  );
+};
 
 /** 右サイドバーの sticky ラッパー（md 未満で非表示）。 */
 const SidebarColumn = ({ children }: { children: ReactElement }): ReactElement => (
@@ -208,6 +231,8 @@ export const PostThreadScene = (): ReactElement => {
   const { commentRef } = useCommentImpressions(id);
 
   const { post, comments } = data;
+  // related_posts は server が常に返すが、テスト用モック等の後方互換のため未指定時は空配列にフォールバックする（#1087）。
+  const relatedPosts = data.related_posts ?? [];
   const postUrl = `${window.location.origin}/posts/${post.id}`;
 
   useDocumentTitle(`${post.title} - Hatchery`);
@@ -257,6 +282,8 @@ export const PostThreadScene = (): ReactElement => {
           >
             <CommunityBreadcrumb communityId={post.community_id} />
           </QueryBoundary>
+          {/* post.tags は generated type 上必須だが、実装が古いテスト用モック等では省略され得るため防御的にフォールバックする（#1087）。 */}
+          <PostTags tags={post.tags ?? []} />
           <PostCard
             post={post}
             onVote={(direction: VoteDirection) =>
@@ -296,6 +323,8 @@ export const PostThreadScene = (): ReactElement => {
               </Typography>
             </Box>
           )}
+
+          <RelatedPostsSection posts={relatedPosts} />
         </Box>
 
         {/* 右カラム: 所属コミュニティ詳細。取得中はスケルトン、特定できなければ右カラムごと描画しない。 */}

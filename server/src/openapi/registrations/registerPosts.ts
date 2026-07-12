@@ -62,12 +62,15 @@ export function registerPosts(registry: OpenAPIRegistry, ctx: RegistryContext): 
     },
     responses: {
       200: {
-        description: "post と comments の一覧",
+        description: "post と comments の一覧（related_posts: 同一 community 内でタグを 1 つ以上共有する post 一覧・最大 5 件・#1087）",
         content: {
           "application/json": {
             schema: z.object({
               post: PostComponent,
               comments: z.array(CommentComponent),
+              related_posts: z.array(PostComponent).openapi({
+                description: "同一 community 内でタグを 1 つ以上共有する関連投稿一覧（新着順・最大 5 件・#1087）",
+              }),
             }),
           },
         },

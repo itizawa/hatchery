@@ -1,4 +1,4 @@
-import { Box, Skeleton, Typography } from "./uiParts";
+import { Box, Chip, Skeleton, Typography } from "./uiParts";
 import type { ReactElement } from "react";
 import type React from "react";
 import { Link as RouterLink } from "@tanstack/react-router";
@@ -11,6 +11,8 @@ import { VoteControl } from "./VoteControl.js";
 import { ShareButton } from "./ShareButton.js";
 import { MarkdownContent } from "./MarkdownContent.js";
 import type { VoteDirection } from "./VoteControl.js";
+import SummarizeRounded from "@mui/icons-material/SummarizeRounded";
+import { SLACK_COLORS } from "../theme.js";
 
 /** コネクターラインの色（MUI テーマのカラーキー）。 */
 const CONNECTOR_COLOR = "divider";
@@ -107,11 +109,16 @@ export const CommentCard = (props: CommentCardProps): ReactElement => {
   const shareUrl = postId ? `${window.location.origin}/posts/${postId}#comment-${comment.id}` : undefined;
   const shareTitle = shareUrl ? truncateCodePoints({ text: comment.text, limit: 50 }) : "";
 
+  // まとめコメント（定時バッチ生成・#1165）: 通常コメントと視覚的に区別する。
+  const isSummary = comment.is_summary === true;
+
   return (
     <Box
+      data-testid={isSummary ? "comment-summary" : undefined}
       sx={{
         pl: `16px`,
         position: "relative",
+        ...(isSummary ? { bgcolor: "rgba(17, 100, 163, 0.06)", borderRadius: "4px" } : {}),
       }}
     >
       {/* L 字コネクター（#746）: アバター底辺（30px）まで左偏線を引き、縦線と縫目なく接続する。 */}
@@ -208,6 +215,15 @@ export const CommentCard = (props: CommentCardProps): ReactElement => {
                 </Typography>
               )}
               <PostedTime createdAt={comment.created_at} />
+              {isSummary && (
+                <Chip
+                  icon={<SummarizeRounded sx={{ fontSize: "0.8rem !important" }} />}
+                  label="まとめ"
+                  size="small"
+                  variant="outlined"
+                  sx={{ borderColor: SLACK_COLORS.blue, color: SLACK_COLORS.blue }}
+                />
+              )}
             </Box>
             <MarkdownContent content={comment.text} variant="body2" />
             {firstUrl && <OgpCard url={firstUrl} />}

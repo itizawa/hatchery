@@ -17,6 +17,8 @@ export interface CommentRecord {
   createdAt: Date;
   /** 返信先コメント id（nullable）。#520 ネスト対応。トップレベルは null。 */
   parentCommentId: string | null;
+  /** まとめコメントフラグ（#1165）。既定 false。 */
+  isSummary: boolean;
 }
 
 /** Comment 作成時の入力（バルク用）。 */
@@ -35,6 +37,8 @@ export interface CommentCreateInput {
    * 「じわじわ」公開を実現する。
    */
   createdAt?: Date;
+  /** まとめコメントフラグ（#1165）。省略時は false。 */
+  isSummary?: boolean;
 }
 
 /** reveal フィルタのオプション（#556）。 */
@@ -133,6 +137,7 @@ export function createInMemoryCommentRepository(): CommentRepository {
           score: 0,
           createdAt: input.createdAt ?? new Date(),
           parentCommentId: input.parentCommentId ?? null,
+          isSummary: input.isSummary ?? false,
         };
         records.push(record);
         created.push(cloneRecord(record));

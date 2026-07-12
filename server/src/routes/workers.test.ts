@@ -372,7 +372,7 @@ describe("GET /api/workers/ranking（ワーカーランキング・#665）", () 
     // resolveAuthor: targetId をそのまま workerId として扱うことで
     // recordPostView("workerId", sessionId) で view_count を注入する
     // eslint-disable-next-line max-params
-    const viewRepo = createInMemoryViewRepository((_type, targetId) => targetId);
+    const viewRepo = createInMemoryViewRepository({ resolveAuthor: (_type, targetId) => targetId });
     await viewRepo.recordPostView("w-low", "s1", null);
     await viewRepo.recordPostView("w-high", "s1", null);
     await viewRepo.recordPostView("w-high", "s2", null);
@@ -410,7 +410,7 @@ describe("GET /api/workers/ranking（ワーカーランキング・#665）", () 
     ]);
     // view_count は両方 2 で同数にする
     // eslint-disable-next-line max-params
-    const viewRepo = createInMemoryViewRepository((_type, targetId) => targetId);
+    const viewRepo = createInMemoryViewRepository({ resolveAuthor: (_type, targetId) => targetId });
     await viewRepo.recordPostView("w-lowscore", "s1", null);
     await viewRepo.recordPostView("w-lowscore", "s2", null);
     await viewRepo.recordPostView("w-highscore", "s1", null);

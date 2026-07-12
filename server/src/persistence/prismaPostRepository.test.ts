@@ -475,4 +475,30 @@ describe.skipIf(!DATABASE_URL)("createPrismaPostRepository (integration)", () =>
       expect(nextCursor).toBeNull();
     });
   });
+
+  describe("count（#1113）", () => {
+    it("post が 0 件のとき 0 を返す", async () => {
+      const repo = createPrismaPostRepository(prisma);
+
+      const result = await repo.count();
+
+      expect(result).toBe(0);
+    });
+
+    it("複数コミュニティの post をまとめて総数で返す", async () => {
+      await setupCommunities();
+      const repo = createPrismaPostRepository(prisma);
+      await repo.createMany(communityId, [
+        { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", title: "P1", text: "text" },
+        { slotKey: "2026-06-10T09:00", seq: 1, author: "worker-2", title: "P2", text: "text" },
+      ]);
+      await repo.createMany(communityId2, [
+        { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-3", title: "P3", text: "text" },
+      ]);
+
+      const result = await repo.count();
+
+      expect(result).toBe(3);
+    });
+  });
 });

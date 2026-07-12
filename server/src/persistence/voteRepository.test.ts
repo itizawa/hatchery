@@ -430,4 +430,26 @@ describe("createInMemoryVoteRepository", () => {
       expect(result).toEqual([]);
     });
   });
+
+  describe("count（#1113）", () => {
+    it("vote が 0 件のとき 0 を返す", async () => {
+      const repo = createInMemoryVoteRepository();
+      expect(await repo.count()).toBe(0);
+    });
+
+    it("複数 vote をまとめて総数で返す（post/comment 混在）", async () => {
+      const repo = createInMemoryVoteRepository();
+      await repo.vote({ sessionId: "s1", userId: null, targetType: "post", targetId: "p1", direction: "up" });
+      await repo.vote({ sessionId: "s2", userId: null, targetType: "post", targetId: "p1", direction: "down" });
+      await repo.vote({ sessionId: "s3", userId: null, targetType: "comment", targetId: "c1", direction: "up" });
+      expect(await repo.count()).toBe(3);
+    });
+
+    it("toggle off（同一 vote の再送信）で解除された vote は件数に含まれない", async () => {
+      const repo = createInMemoryVoteRepository();
+      await repo.vote({ sessionId: "s1", userId: null, targetType: "post", targetId: "p1", direction: "up" });
+      await repo.vote({ sessionId: "s1", userId: null, targetType: "post", targetId: "p1", direction: "up" });
+      expect(await repo.count()).toBe(0);
+    });
+  });
 });

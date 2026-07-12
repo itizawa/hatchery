@@ -211,4 +211,34 @@ describe.skipIf(!DATABASE_URL)("createPrismaCommentRepository (integration)", ()
       expect(result).toBeNull();
     });
   });
+
+  describe("count（#1113）", () => {
+    it("comment が 0 件のとき 0 を返す", async () => {
+      const repo = createPrismaCommentRepository(prisma);
+
+      const result = await repo.count();
+
+      expect(result).toBe(0);
+    });
+
+    it("複数コミュニティの comment をまとめて総数で返す", async () => {
+      await setupFixtures();
+      const postRepo = createPrismaPostRepository(prisma);
+      const [p3] = await postRepo.createMany(communityId2, [
+        { slotKey: "2026-06-10T09:00", seq: 0, author: "worker-3", title: "Post 3", text: "Text 3" },
+      ]);
+      const repo = createPrismaCommentRepository(prisma);
+      await repo.createMany(communityId, [
+        { postId, slotKey: "2026-06-10T09:00", seq: 0, author: "worker-1", text: "Comment A" },
+        { postId: postId2, slotKey: "2026-06-10T09:00", seq: 1, author: "worker-2", text: "Comment B" },
+      ]);
+      await repo.createMany(communityId2, [
+        { postId: p3!.id, slotKey: "2026-06-10T09:00", seq: 0, author: "worker-3", text: "Comment C" },
+      ]);
+
+      const result = await repo.count();
+
+      expect(result).toBe(3);
+    });
+  });
 });

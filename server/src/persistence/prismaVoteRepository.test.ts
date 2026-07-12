@@ -526,4 +526,26 @@ describe.skipIf(!DATABASE_URL)("createPrismaVoteRepository (integration)", () =>
       expect(result).toEqual([]);
     });
   });
+
+  describe("count（#1113）", () => {
+    it("vote が 0 件のとき 0 を返す", async () => {
+      const repo = createPrismaVoteRepository(prisma);
+
+      const result = await repo.count();
+
+      expect(result).toBe(0);
+    });
+
+    it("複数 vote をまとめて総数で返す（post/comment 混在）", async () => {
+      await setupFixtures();
+      const repo = createPrismaVoteRepository(prisma);
+      await repo.vote({ sessionId: sessId1, userId, targetType: "post", targetId: postId, direction: "up" });
+      await repo.vote({ sessionId: sessId2, userId: userId2, targetType: "post", targetId: postId2, direction: "down" });
+      await repo.vote({ sessionId: sessId1, userId, targetType: "comment", targetId: commentId, direction: "up" });
+
+      const result = await repo.count();
+
+      expect(result).toBe(3);
+    });
+  });
 });

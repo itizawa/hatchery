@@ -547,5 +547,9 @@ export function createPrismaPostRepository(prisma: PrismaClient): PostRepository
       });
       return rows.map(toRecord);
     },
+
+    async count(): Promise<number> {
+      return prisma.post.count();
+    },
   };
 }

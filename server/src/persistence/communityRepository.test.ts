@@ -110,4 +110,20 @@ describe("createInMemoryCommunityRepository", () => {
       expect(updated).toBeNull();
     });
   });
+
+  describe("count（#1113）", () => {
+    it("community が 0 件のとき 0 を返す", async () => {
+      const repo = createInMemoryCommunityRepository([]);
+      expect(await repo.count()).toBe(0);
+    });
+
+    it("community が複数件のとき件数を返す", async () => {
+      const repo = createInMemoryCommunityRepository([
+        makeCommunity({ id: "community-1", slug: "tech" }),
+        makeCommunity({ id: "community-2", slug: "news" }),
+        makeCommunity({ id: "community-3", slug: "games" }),
+      ]);
+      expect(await repo.count()).toBe(3);
+    });
+  });
 });

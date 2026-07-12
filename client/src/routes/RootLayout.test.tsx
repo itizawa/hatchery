@@ -295,6 +295,14 @@ describe("サイドバーのナビゲーション (#307)", () => {
     expect(exploreLink).toHaveAttribute("href", "/communities");
   });
 
+  it("「ダッシュボード」が /dashboard へのリンクを持つ ListItemButton でレンダリングされる（#1113）", async () => {
+    stubFetch(true);
+    renderWithRouter("/");
+
+    const dashboardLink = await screen.findByRole("link", { name: /ダッシュボード/ });
+    expect(dashboardLink).toHaveAttribute("href", "/dashboard");
+  });
+
   it("admin ユーザーには管理画面が /admin へのリンクを持つ ListItemButton で表示される", async () => {
     stubFetch(true, "admin");
     renderWithRouter("/");

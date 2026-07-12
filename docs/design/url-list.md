@@ -18,6 +18,7 @@
 | `/login` | ログイン（LoginScene） | Google ログイン専用の画面（#455）。サイドバーなしの AuthLayout で描画する | 不要 | [./issue-455.md](./issue-455.md) |
 | `/admin` | 管理画面（SettingsScene） | 管理者専用の設定画面（ユーザー一覧タブ等）。未ログインは `/login`、非 admin は `/` へリダイレクト | 必須（admin ロール） | [./issue-25.md](./issue-25.md) / [./issue-136.md](./issue-136.md) |
 | `/account` | アカウント設定（AccountScene） | 自分自身のアカウント情報を表示・更新する。未ログイン／ネットワークエラー時は `/login` へリダイレクト | 必須 | [./issue-50.md](./issue-50.md) / [./issue-51.md](./issue-51.md) |
+| `/dashboard` | 定量データダッシュボード（DashboardScene） | サイト全体のコミュニティ数・ワーカー数・投稿数・コメント数・累計閲覧数・累計 vote 数・購読数のサマリと、コミュニティ別内訳（view_count 降順）を表示する | 不要 | [./issue-1113.md](./issue-1113.md) |
 
 ## 補足
 

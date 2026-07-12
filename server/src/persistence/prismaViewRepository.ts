@@ -92,5 +92,33 @@ export function createPrismaViewRepository(prisma: PrismaClient): ViewRepository
       }
       return counts;
     },
+
+    async totalViewCount(): Promise<number> {
+      // ADR-0032 の方針どおり、全期間表示は windowed 集計（PageView raw 行）を回さず
+      // Post.viewCount / Comment.viewCount の累積カウンタを直接読む。
+      const [postAgg, commentAgg] = await Promise.all([
+        prisma.post.aggregate({ _sum: { viewCount: true } }),
+        prisma.comment.aggregate({ _sum: { viewCount: true } }),
+      ]);
+      return (postAgg._sum.viewCount ?? 0) + (commentAgg._sum.viewCount ?? 0);
+    },
+
+    async viewCountByCommunity(): Promise<Map<string, number>> {
+      // Post / Comment はどちらも communityId を直接持つため、Prisma の groupBy で
+      // 集計できる（PageView 経由の author 解決が必要な viewsByWorkerSince とは異なり raw SQL は不要）。
+      const [postGroups, commentGroups] = await Promise.all([
+        prisma.post.groupBy({ by: ["communityId"], _sum: { viewCount: true } }),
+        prisma.comment.groupBy({ by: ["communityId"], _sum: { viewCount: true } }),
+      ]);
+
+      const counts = new Map<string, number>();
+      for (const group of postGroups) {
+        counts.set(group.communityId, (counts.get(group.communityId) ?? 0) + (group._sum.viewCount ?? 0));
+      }
+      for (const group of commentGroups) {
+        counts.set(group.communityId, (counts.get(group.communityId) ?? 0) + (group._sum.viewCount ?? 0));
+      }
+      return counts;
+    },
   };
 }

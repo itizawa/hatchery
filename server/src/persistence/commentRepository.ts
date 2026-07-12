@@ -94,6 +94,8 @@ export interface CommentRepository {
     comments: CommentRecord[];
     nextCursor: string | null;
   }>;
+  /** 総 comment 数を返す（#1113・ダッシュボード集計用）。reveal フィルタは適用しない（全件）。 */
+  count(): Promise<number>;
 }
 
 function cloneRecord(r: CommentRecord): CommentRecord {
@@ -226,6 +228,10 @@ export function createInMemoryCommentRepository(): CommentRepository {
       const comments = page.slice(0, limit).map(cloneRecord);
       const nextCursor = hasNext ? (comments[comments.length - 1]?.id ?? null) : null;
       return Promise.resolve({ comments, nextCursor });
+    },
+
+    count(): Promise<number> {
+      return Promise.resolve(records.length);
     },
   };
 }

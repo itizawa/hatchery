@@ -35,6 +35,7 @@ import { createBatchLogsRouter } from "./routes/batch-logs.js";
 import { createTokenUsageRouter } from "./routes/token-usage.js";
 import { createAuthRouter } from "./routes/auth.js";
 import { createCommunitiesRouter } from "./routes/communities.js";
+import { createDashboardRouter } from "./routes/dashboard.js";
 import { createWorkersRouter } from "./routes/workers.js";
 import { createFeedRouter } from "./routes/feed.js";
 import { healthRouter } from "./routes/health.js";
@@ -273,6 +274,19 @@ export function createApp(deps: AppDeps): Express {
   );
   app.use("/api/feed", publicCache, createFeedRouter({ postRepo, workerRepo: deps.workerRepository, commentRepo, voteRepo }));
   app.use("/api/ranking", publicCache, createRankingRouter({ voteRepository: voteRepo }));
+  app.use(
+    "/api/dashboard",
+    publicCache,
+    createDashboardRouter({
+      communityRepository: communityRepo,
+      workerRepository: deps.workerRepository,
+      postRepository: postRepo,
+      commentRepository: commentRepo,
+      voteRepository: voteRepo,
+      subscriptionRepository: subscriptionRepo,
+      viewRepository: viewRepo,
+    }),
+  );
   app.use(
     "/api/subscriptions",
     noStoreCache,

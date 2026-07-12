@@ -95,6 +95,7 @@ describe("GET /api/dashboard（認証不要のサイト全体定量サマリ・#
     const viewRepository = createInMemoryViewRepository(
       undefined,
       undefined,
+      // eslint-disable-next-line max-params
       (_type, targetId) => (targetId.startsWith("p") ? "community-1" : null),
     );
     await viewRepository.recordPostView("post-x", "sess-1", null);

@@ -128,10 +128,10 @@ describe("createInMemoryViewRepository", () => {
     });
 
     it("resolveCommunity で解決した community 単位に集計する", async () => {
-      // eslint-disable-next-line max-params
       const repo = createInMemoryViewRepository(
         undefined,
         undefined,
+        // eslint-disable-next-line max-params
         (type, targetId) => (type === "post" ? `community-of-${targetId}` : null),
       );
       await repo.recordPostView("post-1", "sess-1", null);
@@ -144,7 +144,6 @@ describe("createInMemoryViewRepository", () => {
     });
 
     it("resolveCommunity が null を返すターゲットは集計対象外", async () => {
-      // eslint-disable-next-line max-params
       const repo = createInMemoryViewRepository(undefined, undefined, () => null);
       await repo.recordPostView("post-1", "sess-1", null);
 

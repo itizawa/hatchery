@@ -271,4 +271,23 @@ describe("CommentCard", () => {
       );
     });
   });
+
+  describe("まとめコメント表示（#1165）", () => {
+    it("is_summary=true のとき「まとめ」ラベルが表示される", () => {
+      render(<CommentCard comment={{ ...mockComment, is_summary: true }} onVote={vi.fn()} />);
+      expect(screen.getByText("まとめ")).toBeInTheDocument();
+    });
+
+    it("is_summary=false（または省略）のとき「まとめ」ラベルは表示されない", () => {
+      render(<CommentCard comment={mockComment} onVote={vi.fn()} />);
+      expect(screen.queryByText("まとめ")).not.toBeInTheDocument();
+    });
+
+    it("is_summary=true のとき通常コメントと区別されるルート要素（comment-summary）が描画される", () => {
+      const { container } = render(
+        <CommentCard comment={{ ...mockComment, is_summary: true }} onVote={vi.fn()} />,
+      );
+      expect(container.querySelector('[data-testid="comment-summary"]')).toBeInTheDocument();
+    });
+  });
 });

@@ -91,6 +91,19 @@ function makeCommentOutput(ref = "ref-1", authorId = "worker-commenter-1") {
   });
 }
 
+/** is_summary 付きの生成出力（#1165）。 */
+function makeSummaryCommentOutput(ref = "ref-1", authorId = "worker-commenter-1") {
+  return JSON.stringify({
+    topic: "テストトピック",
+    posts: [
+      {
+        ref,
+        comments: [{ author: authorId, text: "まとめコメント本文", reply_to: null, is_summary: true }],
+      },
+    ],
+  });
+}
+
 describe("runCommentBatch (#673)", () => {
   beforeEach(() => {
     vi.spyOn(console, "error").mockImplementation(() => {});
@@ -700,6 +713,178 @@ describe("runCommentBatch (#673)", () => {
 
     it("DEFAULT_COMMENT_DRIP_WINDOW_MS は 3 時間（10800000ms）である", () => {
       expect(DEFAULT_COMMENT_DRIP_WINDOW_MS).toBe(3 * 60 * 60 * 1000);
+    });
+  });
+
+  describe("まとめコメント (#1165)", () => {
+    it("既存コメントが閾値(10件)を超える post のプロンプトにまとめコメント指示が含まれる", async () => {
+      const postRepo = createInMemoryPostRepository();
+      const commentRepo = createInMemoryCommentRepository();
+      const [post] = await postRepo.createMany(community1.id, [
+        {
+          slotKey: "slot-many-comments",
+          seq: 0,
+          author: botWorker.id,
+          title: "コメントが多い投稿",
+          text: "本文",
+          createdAt: recentDate(),
+        },
+      ]);
+      // 既存コメントを 11 件作成（閾値 10 件を超える）。
+      await commentRepo.createMany(community1.id, Array.from({ length: 11 }, (_, i) => ({
+        postId: post!.id,
+        slotKey: "existing-slot",
+        seq: i,
+        author: commenterWorker.id,
+        text: `既存コメント${i}`,
+      })));
+
+      let capturedPrompt = "";
+      const generate = vi.fn().mockImplementation(async (prompt: string) => {
+        capturedPrompt = prompt;
+        return { text: makeCommentOutput("ref-1") };
+      });
+
+      await runCommentBatch({
+        communityRepo: createInMemoryCommunityRepository([community1]),
+        postRepo,
+        commentRepo,
+        workerCommunityRepo: createInMemoryWorkerCommunityRepository({
+          workers: [botWorker, commenterWorker],
+          links: [
+            { workerId: botWorker.id, communityId: community1.id },
+            { workerId: commenterWorker.id, communityId: community1.id },
+          ],
+        }),
+        generate,
+        anthropicApiKey: "test-key",
+        now: NOW,
+        revivalProbability: 0,
+      });
+
+      expect(capturedPrompt).toContain("まとめコメント");
+    });
+
+    it("既存コメントが閾値以下の post のプロンプトにはまとめコメント指示が含まれない", async () => {
+      const postRepo = createInMemoryPostRepository();
+      const commentRepo = createInMemoryCommentRepository();
+      const [post] = await postRepo.createMany(community1.id, [
+        {
+          slotKey: "slot-few-comments",
+          seq: 0,
+          author: botWorker.id,
+          title: "コメントが少ない投稿",
+          text: "本文",
+          createdAt: recentDate(),
+        },
+      ]);
+      // 既存コメントを 3 件だけ作成（閾値未満）。
+      await commentRepo.createMany(community1.id, Array.from({ length: 3 }, (_, i) => ({
+        postId: post!.id,
+        slotKey: "existing-slot",
+        seq: i,
+        author: commenterWorker.id,
+        text: `既存コメント${i}`,
+      })));
+
+      let capturedPrompt = "";
+      const generate = vi.fn().mockImplementation(async (prompt: string) => {
+        capturedPrompt = prompt;
+        return { text: makeCommentOutput("ref-1") };
+      });
+
+      await runCommentBatch({
+        communityRepo: createInMemoryCommunityRepository([community1]),
+        postRepo,
+        commentRepo,
+        workerCommunityRepo: createInMemoryWorkerCommunityRepository({
+          workers: [botWorker, commenterWorker],
+          links: [
+            { workerId: botWorker.id, communityId: community1.id },
+            { workerId: commenterWorker.id, communityId: community1.id },
+          ],
+        }),
+        generate,
+        anthropicApiKey: "test-key",
+        now: NOW,
+        revivalProbability: 0,
+      });
+
+      expect(capturedPrompt).not.toContain("まとめコメント");
+    });
+
+    it("生成出力の is_summary: true が永続化された CommentRecord の isSummary に反映される", async () => {
+      const postRepo = createInMemoryPostRepository();
+      const commentRepo = createInMemoryCommentRepository();
+      await postRepo.createMany(community1.id, [
+        {
+          slotKey: "slot-summary",
+          seq: 0,
+          author: botWorker.id,
+          title: "投稿",
+          text: "本文",
+          createdAt: recentDate(),
+        },
+      ]);
+
+      const generate = vi.fn().mockResolvedValue({ text: makeSummaryCommentOutput("ref-1") });
+
+      const result = await runCommentBatch({
+        communityRepo: createInMemoryCommunityRepository([community1]),
+        postRepo,
+        commentRepo,
+        workerCommunityRepo: createInMemoryWorkerCommunityRepository({
+          workers: [botWorker, commenterWorker],
+          links: [
+            { workerId: botWorker.id, communityId: community1.id },
+            { workerId: commenterWorker.id, communityId: community1.id },
+          ],
+        }),
+        generate,
+        anthropicApiKey: "test-key",
+        now: NOW,
+        revivalProbability: 0,
+      });
+
+      expect(result.comments).toHaveLength(1);
+      expect(result.comments[0]?.isSummary).toBe(true);
+    });
+
+    it("生成出力に is_summary が無い通常コメントは isSummary: false で永続化される", async () => {
+      const postRepo = createInMemoryPostRepository();
+      const commentRepo = createInMemoryCommentRepository();
+      await postRepo.createMany(community1.id, [
+        {
+          slotKey: "slot-normal",
+          seq: 0,
+          author: botWorker.id,
+          title: "投稿",
+          text: "本文",
+          createdAt: recentDate(),
+        },
+      ]);
+
+      const generate = vi.fn().mockResolvedValue({ text: makeCommentOutput("ref-1") });
+
+      const result = await runCommentBatch({
+        communityRepo: createInMemoryCommunityRepository([community1]),
+        postRepo,
+        commentRepo,
+        workerCommunityRepo: createInMemoryWorkerCommunityRepository({
+          workers: [botWorker, commenterWorker],
+          links: [
+            { workerId: botWorker.id, communityId: community1.id },
+            { workerId: commenterWorker.id, communityId: community1.id },
+          ],
+        }),
+        generate,
+        anthropicApiKey: "test-key",
+        now: NOW,
+        revivalProbability: 0,
+      });
+
+      expect(result.comments).toHaveLength(1);
+      expect(result.comments[0]?.isSummary).toBe(false);
     });
   });
 

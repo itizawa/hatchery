@@ -3,6 +3,7 @@ import type { ReactElement } from "react";
 import type React from "react";
 import type { Post } from "../api/communities.js";
 import { extractFirstUrl } from "@hatchery/common";
+import type { WorkerMentionCandidate } from "@hatchery/common";
 import { AuthorByline } from "./AuthorByline.js";
 import { OgpCard } from "./OgpCard.js";
 import { PostedTime } from "./PostedTime.js";
@@ -69,6 +70,11 @@ type PostCardProps =
        * ワーカープロフィールページへ遷移する RouterLink に切り替える。
        */
       onWorkerClick?: (e: React.MouseEvent) => void;
+      /**
+       * 本文中の既知ワーカー表示名をプロフィールへの自動リンクとして検出する対象（#1163）。
+       * 未指定時は検出しない（後方互換）。
+       */
+      knownWorkers?: readonly WorkerMentionCandidate[];
       /**
        * カード表示（デフォルト）またはフラットリスト表示を選択する（#834）。
        * "card": 現行スタイル（border + bgcolor: background.paper + borderRadius + mb）。
@@ -176,6 +182,7 @@ export const PostCard = (props: PostCardProps): ReactElement => {
     onCommunityClick,
     onCommentClick,
     onWorkerClick,
+    knownWorkers,
     variant = "card",
     isNew = false,
     isPinned = false,
@@ -229,6 +236,7 @@ export const PostCard = (props: PostCardProps): ReactElement => {
         content={post.text}
         variant="body2"
         clampToLines={truncateText ? 3 : undefined}
+        knownWorkers={knownWorkers}
       />
       {firstUrl && <OgpCard url={firstUrl} />}
       <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 1 }}>

@@ -4,7 +4,7 @@ import ChevronLeftIcon from "@mui/icons-material/ChevronLeftRounded";
 import type { ReactElement } from "react";
 import type React from "react";
 import { useEffect, useMemo, useRef } from "react";
-import { buildCommentTree, type CommentTreeNode } from "@hatchery/common";
+import { buildCommentTree, type CommentTreeNode, type WorkerMentionCandidate } from "@hatchery/common";
 
 import {
   usePostThread,
@@ -167,6 +167,7 @@ function renderCommentTree({
   pendingVoteDirection,
   postId,
   onWorkerClick,
+  knownWorkers,
 }: {
   nodes: CommentTreeNode[];
   commentMap: Map<string, Comment>;
@@ -177,6 +178,7 @@ function renderCommentTree({
   pendingVoteDirection?: VoteDirection | null;
   postId: string;
   onWorkerClick?: (e: React.MouseEvent) => void;
+  knownWorkers: readonly WorkerMentionCandidate[];
 }): ReactElement[] {
   return nodes.flatMap((node) => {
     const comment = commentMap.get(node.id);
@@ -184,7 +186,7 @@ function renderCommentTree({
 
     const childElements =
       node.children.length > 0
-        ? renderCommentTree({ nodes: node.children, commentMap, onVote, commentRef, pendingVoteCommentId, pendingVoteDirection, postId, onWorkerClick })
+        ? renderCommentTree({ nodes: node.children, commentMap, onVote, commentRef, pendingVoteCommentId, pendingVoteDirection, postId, onWorkerClick, knownWorkers })
         : null;
 
     return [
@@ -199,11 +201,33 @@ function renderCommentTree({
           postId={postId}
           currentVote={comment.my_vote ?? null}
           onWorkerClick={comment.author_worker ? onWorkerClick : undefined}
+          knownWorkers={knownWorkers}
           children={childElements && childElements.length > 0 ? <>{childElements}</> : null}
         />
       </div>,
     ];
   });
+}
+
+/**
+ * post + 全 comment の author_worker（スレッド参加ワーカー）を id で重複除去して集める（#1163）。
+ * community 全体のワーカーロスターではなく、この会話に実際に登場したワーカーのみを
+ * 「本文中の言及を検出する対象」とする設計判断は docs/design/issue-1163.md §2 を参照。
+ */
+function collectKnownWorkers({
+  post,
+  comments,
+}: {
+  post: { author_worker?: { id: string; display_name: string } | null };
+  comments: Comment[];
+}): WorkerMentionCandidate[] {
+  const byId = new Map<string, WorkerMentionCandidate>();
+  const authorWorkers = [post.author_worker, ...comments.map((c) => c.author_worker)];
+  for (const authorWorker of authorWorkers) {
+    if (!authorWorker) continue;
+    byId.set(authorWorker.id, { id: authorWorker.id, displayName: authorWorker.display_name });
+  }
+  return [...byId.values()];
 }
 
 /**
@@ -263,6 +287,13 @@ export const PostThreadScene = (): ReactElement => {
     [comments],
   );
 
+  // 本文中のワーカー名自動リンク化（#1163）の検出対象: このスレッドに登場した
+  // post + 全 comment の author_worker（community 全体のロスターではない）。
+  const knownWorkers = useMemo(
+    () => collectKnownWorkers({ post, comments }),
+    [post, comments],
+  );
+
   // まとめコメント（is_summary: true）をトップレベルの先頭に固定表示する（#1165）。
   // ルート（トップレベル）配列のみを並び替え、各ノードの children（返信の順序）には触れない。
   const commentTree = useMemo(
@@ -308,6 +339,7 @@ export const PostThreadScene = (): ReactElement => {
             currentVote={post.my_vote ?? null}
             onWorkerClick={post.author_worker ? () => {} : undefined}
             onCommentClick={comments.length > 0 ? scrollToComments : undefined}
+            knownWorkers={knownWorkers}
           />
 
           {comments.length > 0 && (
@@ -325,6 +357,7 @@ export const PostThreadScene = (): ReactElement => {
                 pendingVoteDirection: isVotingComment ? votingCommentVars?.direction : undefined,
                 postId: post.id,
                 onWorkerClick: () => {},
+                knownWorkers,
               })}
             </Box>
           )}

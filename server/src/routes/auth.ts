@@ -11,16 +11,21 @@ import { validateBody } from "../middleware/validateBody.js";
 import type { UserRepository } from "../persistence/userRepository.js";
 
 // #455: Google-only auth。dev-login は NODE_ENV !== 'production' のときのみ登録。
-// eslint-disable-next-line max-params
-export function createAuthRouter(
-  passportInstance: PassportInstance,
-  userRepository: UserRepository,
-  googleConfig?: GoogleAuthConfig,
-  nodeEnv: string = process.env.NODE_ENV ?? "development",
+export function createAuthRouter({
+  passportInstance,
+  userRepository,
+  googleConfig,
+  nodeEnv = process.env.NODE_ENV ?? "development",
   // #78: OAuth 後の戻り先フロント絶対 URL。API（Cloud Run）とフロント（Pages）が別オリジンのため、
   // 相対パスへリダイレクトすると API 側に戻ってしまい 404 になる。フロントのオリジンを前置する。
-  frontendBaseUrl: string = DEFAULT_PUBLIC_BASE_URL,
-): Router {
+  frontendBaseUrl = DEFAULT_PUBLIC_BASE_URL,
+}: {
+  passportInstance: PassportInstance;
+  userRepository: UserRepository;
+  googleConfig?: GoogleAuthConfig;
+  nodeEnv?: string;
+  frontendBaseUrl?: string;
+}): Router {
   const router = Router();
   const frontendOrigin = frontendBaseUrl.replace(/\/$/, "");
 

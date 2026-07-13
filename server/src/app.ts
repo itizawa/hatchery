@@ -180,19 +180,21 @@ export function createApp(deps: AppDeps): Express {
   app.use(
     "/sitemap.xml",
     publicCache,
-    createSitemapRouter(communityRepo, deps.publicBaseUrl ?? DEFAULT_PUBLIC_BASE_URL),
+    createSitemapRouter({
+      communityRepo,
+      baseUrl: deps.publicBaseUrl ?? DEFAULT_PUBLIC_BASE_URL,
+    }),
   );
   app.use(
     "/api/auth",
     noStoreCache,
-    createAuthRouter(
+    createAuthRouter({
       passportInstance,
-      deps.userRepository,
-      deps.googleAuth,
-      process.env.NODE_ENV ?? "development",
+      userRepository: deps.userRepository,
+      googleConfig: deps.googleAuth,
       // #78: OAuth 後の戻り先はフロントエンド（公開ページ）のオリジン。sitemap と同じ publicBaseUrl を使う。
-      deps.publicBaseUrl ?? DEFAULT_PUBLIC_BASE_URL,
-    ),
+      frontendBaseUrl: deps.publicBaseUrl ?? DEFAULT_PUBLIC_BASE_URL,
+    }),
   );
   app.use(
     "/api/workers",
@@ -224,53 +226,59 @@ export function createApp(deps: AppDeps): Express {
   app.use(
     "/api/admin",
     noStoreCache,
-    createAdminRouter(
-      deps.workerRepository,
-      communityRepo,
-      postRepo,
-      commentRepo,
-    ),
+    createAdminRouter({
+      workerRepository: deps.workerRepository,
+      communityRepository: communityRepo,
+      postRepository: postRepo,
+      commentRepository: commentRepo,
+    }),
   );
   app.use(
     "/api/admin",
     noStoreCache,
-    createAdminWorkerImageRouter(deps.workerRepository, deps.storageService),
+    createAdminWorkerImageRouter({
+      workerRepository: deps.workerRepository,
+      storageService: deps.storageService,
+    }),
   );
   app.use(
     "/api/admin",
     noStoreCache,
-    createAdminCommunityImageRouter(communityRepo, deps.storageService),
+    createAdminCommunityImageRouter({
+      communityRepository: communityRepo,
+      storageService: deps.storageService,
+    }),
   );
   app.use(
     "/api/admin",
     noStoreCache,
-    createAdminWorkerCommunitiesRouter(
-      deps.workerRepository,
-      deps.workerCommunityRepository,
-      communityRepo,
-    ),
+    createAdminWorkerCommunitiesRouter({
+      workerRepository: deps.workerRepository,
+      workerCommunityRepository: deps.workerCommunityRepository,
+      communityRepository: communityRepo,
+    }),
   );
   app.use(
     "/api/admin",
     noStoreCache,
-    createAdminCommunityWorkersRouter(
-      communityRepo,
-      deps.workerCommunityRepository,
-      deps.workerRepository,
-    ),
+    createAdminCommunityWorkersRouter({
+      communityRepository: communityRepo,
+      workerCommunityRepository: deps.workerCommunityRepository,
+      workerRepository: deps.workerRepository,
+    }),
   );
   app.use(
     "/api/communities",
     publicCache,
-    createCommunitiesRouter(
+    createCommunitiesRouter({
       communityRepo,
       postRepo,
       subscriptionRepo,
-      deps.workerRepository,
+      workerRepo: deps.workerRepository,
       commentRepo,
       voteRepo,
-      deps.workerCommunityRepository,
-    ),
+      workerCommunityRepo: deps.workerCommunityRepository,
+    }),
   );
   app.use("/api/feed", publicCache, createFeedRouter({ postRepo, workerRepo: deps.workerRepository, commentRepo, voteRepo }));
   app.use("/api/ranking", publicCache, createRankingRouter({ voteRepository: voteRepo }));
@@ -301,7 +309,13 @@ export function createApp(deps: AppDeps): Express {
   app.use(
     "/api",
     publicCache,
-    createPostsRouter(postRepo, commentRepo, voteRepo, viewRepo, deps.workerRepository),
+    createPostsRouter({
+      postRepo,
+      commentRepo,
+      voteRepo,
+      viewRepo,
+      workerRepo: deps.workerRepository,
+    }),
   );
 
   app.use(errorHandler);

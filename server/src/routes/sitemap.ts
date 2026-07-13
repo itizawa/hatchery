@@ -30,11 +30,13 @@ function normalizeBaseUrl(baseUrl: string): string {
  * GET /sitemap.xml ルータ（#259）。公開ページ（トップ + 全 community）を列挙して
  * クローラーにインデックスを促す。認証不要（公共コミュニティ・ADR-0019/0020）。
  */
-// eslint-disable-next-line max-params
-export function createSitemapRouter(
-  communityRepo: CommunityRepository,
-  baseUrl: string,
-): Router {
+export function createSitemapRouter({
+  communityRepo,
+  baseUrl,
+}: {
+  communityRepo: CommunityRepository;
+  baseUrl: string;
+}): Router {
   const router = Router();
   const base = normalizeBaseUrl(baseUrl);
 

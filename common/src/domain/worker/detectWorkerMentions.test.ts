@@ -56,6 +56,23 @@ describe("detectWorkerMentions", () => {
     ]);
   });
 
+  it("サロゲートペア（絵文字）を含む表示名でも、コードポイント単位で最長一致を判定する", () => {
+    // 絵文字1文字 + "ab"（3コードポイント・UTF-16では4単位）と "abcd"（4コードポイント・4単位）は
+    // UTF-16 の .length では同じ 4 だが、コードポイント長では abcd の方が長い。
+    // コードポイント長で比較すれば abcd が優先され、絵文字側と重ならない範囲のみ両方検出される。
+    const emojiWorker = { id: "worker-emoji", displayName: "😀ab" };
+    const longerWorker = { id: "worker-longer", displayName: "abcd" };
+
+    const mentions = detectWorkerMentions({
+      text: "😀abcd",
+      workers: [emojiWorker, longerWorker],
+    });
+
+    expect(mentions).toEqual([
+      { workerId: "worker-longer", displayName: "abcd", start: 2, end: 6 },
+    ]);
+  });
+
   it("表示名が2文字未満のワーカーは検出対象から除外する", () => {
     const mentions = detectWorkerMentions({
       text: "Aiが返信した",

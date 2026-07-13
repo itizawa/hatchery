@@ -24,6 +24,11 @@ export const MIN_WORKER_MENTION_DISPLAY_NAME_LENGTH = 2;
  * 表示名が別ワーカーの表示名の部分文字列になっているケース（「ken」と「kenta」）で
  * 誤って両方リンクされないよう、表示名の長い候補から順に一致範囲を確保し、
  * 既に確保された範囲と重なる出現は採用しない（最長一致優先）。
+ *
+ * 既知の制約: 候補リストに無い単語の内部に表示名がたまたま含まれるケース
+ * （例: 表示名「ケン」が無関係な単語「ケンカ」にマッチする）は防げない。単語境界チェックは
+ * 日本語の敬称（「さん」等が名前に直接続く）を誤って除外してしまうため採用しない
+ * （docs/design/issue-1163.md §7 参照）。
  */
 export function detectWorkerMentions({
   text,
@@ -36,8 +41,10 @@ export function detectWorkerMentions({
     .filter(
       (worker) => [...worker.displayName].length >= MIN_WORKER_MENTION_DISPLAY_NAME_LENGTH,
     )
+    // コードポイント単位の長さで比較する（サロゲートペアを含む表示名で UTF-16 単位長と
+    // 順位がずれ、最長一致優先の判定を誤らないようにするため）。
     // eslint-disable-next-line max-params
-    .sort((a, b) => b.displayName.length - a.displayName.length);
+    .sort((a, b) => [...b.displayName].length - [...a.displayName].length);
 
   const claimedRanges: Array<{ start: number; end: number }> = [];
   const mentions: WorkerMention[] = [];

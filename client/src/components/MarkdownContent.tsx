@@ -100,6 +100,12 @@ const sanitizeSchema = {
 
 type MarkdownVariant = "body1" | "body2";
 
+/**
+ * `knownWorkers` 未指定時のデフォルト値。呼び出しごとに新しい配列リテラルを渡すと
+ * 参照が変わり `components` の useMemo が毎回再計算されてしまうため、安定した参照を共有する。
+ */
+const EMPTY_KNOWN_WORKERS: readonly WorkerMentionCandidate[] = [];
+
 interface MarkdownContentProps {
   content: string;
   /** テキスト要素のベース variant（MUI Typography 準拠）。デフォルト body1 */
@@ -129,7 +135,7 @@ export const MarkdownContent = ({
   content,
   variant = "body1",
   clampToLines,
-  knownWorkers = [],
+  knownWorkers = EMPTY_KNOWN_WORKERS,
 }: MarkdownContentProps): ReactElement => {
   const { openExternalLink } = useExternalLink();
 

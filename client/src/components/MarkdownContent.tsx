@@ -10,11 +10,90 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
-import { useMemo } from "react";
+import { Fragment, useMemo } from "react";
 import type { ReactElement, ReactNode } from "react";
+import { Link as RouterLink } from "@tanstack/react-router";
+import { detectWorkerMentions } from "@hatchery/common";
+import type { WorkerMentionCandidate } from "@hatchery/common";
 import { isExternalUrl, useExternalLink } from "../hooks/useExternalLink.js";
 import { Box, Link, Typography } from "./uiParts";
 import type { Components } from "react-markdown";
+
+/**
+ * `text` 中の既知ワーカー表示名（#1163）をワーカープロフィールへの `RouterLink` に変換する。
+ * ユーザーが `@名前` を入力するメンションは成立しない（ADR-0020）ため、AI 生成本文中に
+ * 自然に現れる表示名を検出してリンク化する。マッチが無ければ元の文字列をそのまま返す。
+ */
+function renderTextWithWorkerMentions({
+  text,
+  workers,
+}: {
+  text: string;
+  workers: readonly WorkerMentionCandidate[];
+}): ReactNode {
+  const mentions = detectWorkerMentions({ text, workers });
+  if (mentions.length === 0) return text;
+
+  const nodes: ReactNode[] = [];
+  let cursor = 0;
+  // eslint-disable-next-line max-params
+  mentions.forEach((mention, index) => {
+    if (mention.start > cursor) {
+      nodes.push(text.slice(cursor, mention.start));
+    }
+    nodes.push(
+      <Link
+        key={`worker-mention-${index}-${mention.workerId}`}
+        component={RouterLink}
+        to="/workers/$workerId"
+        params={{ workerId: mention.workerId }}
+        color="inherit"
+        underline="hover"
+        sx={{ cursor: "pointer" }}
+      >
+        {mention.displayName}
+      </Link>,
+    );
+    cursor = mention.end;
+  });
+  if (cursor < text.length) {
+    nodes.push(text.slice(cursor));
+  }
+  return nodes;
+}
+
+/**
+ * 段落・リスト項目等の直下の文字列 children にのみワーカー名検出を適用する。
+ * 既に `strong` / `a` / `code` 等の要素になっている children はそのまま透過し、
+ * それらの内部までは再帰的に処理しない（インライン装飾内部の誤検出を避ける・#1163）。
+ */
+function renderChildrenWithWorkerMentions({
+  children,
+  workers,
+}: {
+  children?: ReactNode;
+  workers: readonly WorkerMentionCandidate[];
+}): ReactNode {
+  if (workers.length === 0 || children === undefined || children === null) {
+    return children;
+  }
+  if (typeof children === "string") {
+    return renderTextWithWorkerMentions({ text: children, workers });
+  }
+  if (Array.isArray(children)) {
+    // eslint-disable-next-line max-params
+    return children.map((child, index) =>
+      typeof child === "string" ? (
+        <Fragment key={index}>
+          {renderTextWithWorkerMentions({ text: child, workers })}
+        </Fragment>
+      ) : (
+        child
+      ),
+    );
+  }
+  return children;
+}
 
 /** img タグを除外したサニタイズスキーマ（インライン画像を許可しない）。 */
 const sanitizeSchema = {
@@ -37,6 +116,11 @@ interface MarkdownContentProps {
    * 未指定時は外側コンテナを追加せず全文表示する（詳細画面用）。
    */
   clampToLines?: number;
+  /**
+   * 本文中の既知ワーカー表示名をプロフィール（`/workers/{id}`）への内部リンクとして
+   * 検出する対象ワーカー（#1163）。未指定時（デフォルト空配列）は従来どおり検出しない。
+   */
+  knownWorkers?: readonly WorkerMentionCandidate[];
 }
 
 /**
@@ -48,16 +132,17 @@ export const MarkdownContent = ({
   content,
   variant = "body1",
   clampToLines,
+  knownWorkers = [],
 }: MarkdownContentProps): ReactElement => {
   const { openExternalLink } = useExternalLink();
 
-  // components オブジェクトは variant が変わったときだけ再生成する
+  // components オブジェクトは variant / knownWorkers が変わったときだけ再生成する
   const components: Components = useMemo(() => {
     return ({
     // 段落: Typography で描画（variant は呼び出し元から渡す）
     p: ({ children }: { children?: ReactNode }) => (
       <Typography variant={variant} component="p" sx={{ mb: 0.5, mt: 0 }}>
-        {children}
+        {renderChildrenWithWorkerMentions({ children, workers: knownWorkers })}
       </Typography>
     ),
 
@@ -169,7 +254,7 @@ export const MarkdownContent = ({
           color: "text.secondary",
         }}
       >
-        {children}
+        {renderChildrenWithWorkerMentions({ children, workers: knownWorkers })}
       </Box>
     ),
 
@@ -186,7 +271,7 @@ export const MarkdownContent = ({
     ),
     li: ({ children }: { children?: ReactNode }) => (
       <Box component="li" sx={{ mb: 0.25 }}>
-        {children}
+        {renderChildrenWithWorkerMentions({ children, workers: knownWorkers })}
       </Box>
     ),
 
@@ -254,7 +339,7 @@ export const MarkdownContent = ({
           textAlign: "left",
         }}
       >
-        {children}
+        {renderChildrenWithWorkerMentions({ children, workers: knownWorkers })}
       </Box>
     ),
     td: ({ children }: { children?: ReactNode }) => (
@@ -266,7 +351,7 @@ export const MarkdownContent = ({
           p: 0.5,
         }}
       >
-        {children}
+        {renderChildrenWithWorkerMentions({ children, workers: knownWorkers })}
       </Box>
     ),
 
@@ -300,7 +385,7 @@ export const MarkdownContent = ({
       return <span>[{label}]</span>;
     },
   });
-  }, [variant, openExternalLink]);
+  }, [variant, openExternalLink, knownWorkers]);
 
   const markdown = (
     <ReactMarkdown

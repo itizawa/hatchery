@@ -282,7 +282,13 @@ describe("OAuth コールバックのリダイレクト先（フロント絶対 
     const app = express();
     app.use(
       "/api/auth",
-      createAuthRouter(passthroughPassport, createTestUserRepository(), googleConfig, "production", frontendBaseUrl),
+      createAuthRouter({
+        passportInstance: passthroughPassport,
+        userRepository: createTestUserRepository(),
+        googleConfig,
+        nodeEnv: "production",
+        frontendBaseUrl,
+      }),
     );
     return app;
   }
@@ -311,7 +317,13 @@ describe("OAuth コールバックのリダイレクト先（フロント絶対 
     const app = express();
     app.use(
       "/api/auth",
-      createAuthRouter(newUserPassport, createTestUserRepository(), googleConfig, "production", "https://develop.hatchery.pages.dev"),
+      createAuthRouter({
+        passportInstance: newUserPassport,
+        userRepository: createTestUserRepository(),
+        googleConfig,
+        nodeEnv: "production",
+        frontendBaseUrl: "https://develop.hatchery.pages.dev",
+      }),
     );
     const res = await request(app).get("/api/auth/google/callback");
     expect(res.status).toBe(302);

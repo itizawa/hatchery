@@ -78,4 +78,39 @@ describe("generateOpenApiDocument", () => {
     const paths = Object.keys(doc.paths ?? {});
     expect(paths.some((p) => p.includes("invitation"))).toBe(false);
   });
+
+  it("paths に worker 画像アップロードエンドポイントが含まれる（#1180）", () => {
+    const doc = generateOpenApiDocument();
+    expect(doc.paths?.["/api/admin/workers/{id}/image"]?.post).toBeDefined();
+  });
+
+  it("components.schemas に画像アップロード系レスポンス component が含まれる（#1180）", () => {
+    const doc = generateOpenApiDocument();
+    expect(doc.components?.schemas).toHaveProperty("WorkerImageUploadResponse");
+    expect(doc.components?.schemas).toHaveProperty("CommunityIconUploadResponse");
+    expect(doc.components?.schemas).toHaveProperty("CommunityCoverUploadResponse");
+  });
+
+  it("worker 画像アップロードの 200 レスポンスが WorkerImageUploadResponse を参照する（#1180）", () => {
+    const doc = generateOpenApiDocument();
+    const post = doc.paths?.["/api/admin/workers/{id}/image"]?.post;
+    const okRef = (
+      post?.responses?.["200"] as { content?: Record<string, { schema?: { $ref?: string } }> }
+    )?.content?.["application/json"]?.schema?.$ref;
+    expect(okRef).toBe("#/components/schemas/WorkerImageUploadResponse");
+  });
+
+  it("community icon/cover アップロードの 200 レスポンスがそれぞれの named component を参照する（#1180）", () => {
+    const doc = generateOpenApiDocument();
+    const icon = doc.paths?.["/api/admin/communities/{id}/icon"]?.post;
+    const cover = doc.paths?.["/api/admin/communities/{id}/cover"]?.post;
+    const iconRef = (
+      icon?.responses?.["200"] as { content?: Record<string, { schema?: { $ref?: string } }> }
+    )?.content?.["application/json"]?.schema?.$ref;
+    const coverRef = (
+      cover?.responses?.["200"] as { content?: Record<string, { schema?: { $ref?: string } }> }
+    )?.content?.["application/json"]?.schema?.$ref;
+    expect(iconRef).toBe("#/components/schemas/CommunityIconUploadResponse");
+    expect(coverRef).toBe("#/components/schemas/CommunityCoverUploadResponse");
+  });
 });

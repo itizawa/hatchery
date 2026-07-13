@@ -4,6 +4,7 @@ import type React from "react";
 import { Link as RouterLink } from "@tanstack/react-router";
 import type { Comment } from "../api/communities.js";
 import { extractFirstUrl } from "@hatchery/common";
+import type { WorkerMentionCandidate } from "@hatchery/common";
 import { WorkerAvatar } from "./WorkerAvatar.js";
 import { OgpCard } from "./OgpCard.js";
 import { PostedTime } from "./PostedTime.js";
@@ -53,6 +54,11 @@ type CommentCardProps =
        * RouterLink でラップしてプロフィールページへ遷移する。
        */
       onWorkerClick?: (e: React.MouseEvent) => void;
+      /**
+       * 本文中の既知ワーカー表示名をプロフィールへの自動リンクとして検出する対象（#1163）。
+       * 未指定時は検出しない（後方互換）。
+       */
+      knownWorkers?: readonly WorkerMentionCandidate[];
     };
 
 /**
@@ -92,6 +98,7 @@ export const CommentCard = (props: CommentCardProps): ReactElement => {
     hasChildren = false,
     postId,
     onWorkerClick,
+    knownWorkers,
   } = props;
 
   // コードポイント単位で文字列を切り詰める。サロゲートペア（絵文字等）の途中で切れるのを防ぐ。
@@ -226,7 +233,7 @@ export const CommentCard = (props: CommentCardProps): ReactElement => {
                 />
               )}
             </Box>
-            <MarkdownContent content={comment.text} variant="body2" />
+            <MarkdownContent content={comment.text} variant="body2" knownWorkers={knownWorkers} />
             {firstUrl && <OgpCard url={firstUrl} />}
             <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 0.5 }}>
               <VoteControl

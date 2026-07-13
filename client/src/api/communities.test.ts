@@ -240,6 +240,9 @@ describe("uploadCommunityImage (POST /api/admin/communities/:id/:kind)", () => {
     const result = await uploadCommunityImage("community-1", "icon", file);
 
     expect(result.id).toBe("community-1");
+    if (!("iconUrl" in result)) {
+      throw new Error("expected iconUrl in result");
+    }
     expect(result.iconUrl).toBe("https://example.com/icon.png");
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toContain("/api/admin/communities/community-1/icon");

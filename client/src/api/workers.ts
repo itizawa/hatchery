@@ -63,6 +63,8 @@ export function useUpdateWorker() {
   });
 }
 
+export type WorkerImageUploadResponse = components["schemas"]["WorkerImageUploadResponse"];
+
 /**
  * ワーカー画像アップロードの useMutation フック（#204）。
  * POST /api/admin/workers/:id/image でワーカーのアバター画像をアップロードする。
@@ -81,7 +83,7 @@ export function useUploadWorkerImage() {
     }: {
       workerId: string;
       file: File;
-    }): Promise<{ id: string; imageUrl: string }> => {
+    }): Promise<WorkerImageUploadResponse> => {
       const formData = new FormData();
       formData.append("image", file);
 
@@ -101,7 +103,7 @@ export function useUploadWorkerImage() {
         throw new Error(body.error ?? `Upload failed: ${res.status}`);
       }
 
-      return res.json() as Promise<{ id: string; imageUrl: string }>;
+      return res.json() as Promise<WorkerImageUploadResponse>;
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: BOT_WORKERS_QUERY_KEY });

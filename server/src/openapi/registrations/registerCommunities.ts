@@ -175,6 +175,22 @@ export function registerCommunities({
     },
   };
 
+  // レスポンスは icon/cover で形状が異なる（iconUrl のみ / coverUrl のみ）ため、
+  // named component を分けて登録する（#1180: client から components["schemas"][...] 参照可能にする）。
+  const CommunityIconUploadResponseComponent = registry.register(
+    "CommunityIconUploadResponse",
+    z.object({ id: z.string(), iconUrl: z.string().nullable() }).openapi({
+      description: "アップロード後の community id と iconUrl（#457 / #1180）",
+    }),
+  );
+
+  const CommunityCoverUploadResponseComponent = registry.register(
+    "CommunityCoverUploadResponse",
+    z.object({ id: z.string(), coverUrl: z.string().nullable() }).openapi({
+      description: "アップロード後の community id と coverUrl（#457 / #1180）",
+    }),
+  );
+
   registry.registerPath({
     method: "post",
     path: "/api/admin/communities/{id}/icon",
@@ -186,11 +202,7 @@ export function registerCommunities({
     responses: {
       200: {
         description: "アップロード後の community id と iconUrl",
-        content: {
-          "application/json": {
-            schema: z.object({ id: z.string(), iconUrl: z.string().nullable() }),
-          },
-        },
+        content: { "application/json": { schema: CommunityIconUploadResponseComponent } },
       },
       400: { description: "ファイル不正（MIME / サイズ超過 / 未添付）", ...errorJson },
       401: { description: "未認証", ...errorJson },
@@ -210,11 +222,7 @@ export function registerCommunities({
     responses: {
       200: {
         description: "アップロード後の community id と coverUrl",
-        content: {
-          "application/json": {
-            schema: z.object({ id: z.string(), coverUrl: z.string().nullable() }),
-          },
-        },
+        content: { "application/json": { schema: CommunityCoverUploadResponseComponent } },
       },
       400: { description: "ファイル不正（MIME / サイズ超過 / 未添付）", ...errorJson },
       401: { description: "未認証", ...errorJson },

@@ -192,7 +192,6 @@ export function createApp(deps: AppDeps): Express {
       passportInstance,
       userRepository: deps.userRepository,
       googleConfig: deps.googleAuth,
-      nodeEnv: process.env.NODE_ENV ?? "development",
       // #78: OAuth 後の戻り先はフロントエンド（公開ページ）のオリジン。sitemap と同じ publicBaseUrl を使う。
       frontendBaseUrl: deps.publicBaseUrl ?? DEFAULT_PUBLIC_BASE_URL,
     }),

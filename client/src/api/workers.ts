@@ -72,6 +72,8 @@ export function useUpdateWorker() {
  * 同じ解決（#78: クロスオリジン配信）を行う。
  * 成功時に Bot Worker 一覧クエリを無効化して最新状態を反映する。
  */
+export type WorkerImageUploadResponse = components["schemas"]["WorkerImageUploadResponse"];
+
 export function useUploadWorkerImage() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -81,7 +83,7 @@ export function useUploadWorkerImage() {
     }: {
       workerId: string;
       file: File;
-    }): Promise<{ id: string; imageUrl: string }> => {
+    }): Promise<WorkerImageUploadResponse> => {
       const formData = new FormData();
       formData.append("image", file);
 
@@ -101,7 +103,7 @@ export function useUploadWorkerImage() {
         throw new Error(body.error ?? `Upload failed: ${res.status}`);
       }
 
-      return res.json() as Promise<{ id: string; imageUrl: string }>;
+      return res.json() as Promise<WorkerImageUploadResponse>;
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: BOT_WORKERS_QUERY_KEY });

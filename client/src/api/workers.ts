@@ -63,6 +63,8 @@ export function useUpdateWorker() {
   });
 }
 
+export type WorkerImageUploadResponse = components["schemas"]["WorkerImageUploadResponse"];
+
 /**
  * ワーカー画像アップロードの useMutation フック（#204）。
  * POST /api/admin/workers/:id/image でワーカーのアバター画像をアップロードする。
@@ -72,8 +74,6 @@ export function useUpdateWorker() {
  * 同じ解決（#78: クロスオリジン配信）を行う。
  * 成功時に Bot Worker 一覧クエリを無効化して最新状態を反映する。
  */
-export type WorkerImageUploadResponse = components["schemas"]["WorkerImageUploadResponse"];
-
 export function useUploadWorkerImage() {
   const queryClient = useQueryClient();
   return useMutation({

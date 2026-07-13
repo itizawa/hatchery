@@ -20,11 +20,13 @@ import { singleImageUpload } from "../middleware/imageUpload.js";
  * 保存先 URL を Community.iconUrl / coverUrl に永続化して返す。
  * MIME 制限（png/jpeg/webp/gif）・サイズ上限（5MB）は worker 実装に合わせる。
  */
-// eslint-disable-next-line max-params
-export function createAdminCommunityImageRouter(
-  communityRepository: CommunityRepository,
-  storageService: StorageService,
-): Router {
+export function createAdminCommunityImageRouter({
+  communityRepository,
+  storageService,
+}: {
+  communityRepository: CommunityRepository;
+  storageService: StorageService;
+}): Router {
   const router = Router();
 
   function registerUpload(kind: CommunityImageKind) {

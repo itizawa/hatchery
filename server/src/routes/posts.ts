@@ -26,14 +26,19 @@ const RELATED_POSTS_LIMIT = 5;
  * - 閲覧ビーコン（/view・/comment-views）は認証不要（ゲスト対応・#665）
  * - #479: スレッドの post / 各 comment に発言者の表示用ワーカー情報（author_worker）を付与する。
  */
-// eslint-disable-next-line max-params
-export function createPostsRouter(
-  postRepo: PostRepository,
-  commentRepo: CommentRepository,
-  voteRepo: VoteRepository,
-  viewRepo: ViewRepository,
-  workerRepo: WorkerRepository,
-): Router {
+export function createPostsRouter({
+  postRepo,
+  commentRepo,
+  voteRepo,
+  viewRepo,
+  workerRepo,
+}: {
+  postRepo: PostRepository;
+  commentRepo: CommentRepository;
+  voteRepo: VoteRepository;
+  viewRepo: ViewRepository;
+  workerRepo: WorkerRepository;
+}): Router {
   const router = Router();
 
   // 投稿全文検索（title / text ILIKE 部分一致・認証不要・#751）

@@ -914,6 +914,44 @@
         },
         "description": "コミュニティ更新リクエストボディ（#310 / #337）"
       },
+      "CommunityIconUploadResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "iconUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "iconUrl"
+        ],
+        "description": "アップロード後の community id と iconUrl（#457 / #1180）"
+      },
+      "CommunityCoverUploadResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "coverUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "coverUrl"
+        ],
+        "description": "アップロード後の community id と coverUrl（#457 / #1180）"
+      },
       "CommunityWorkerAssignments": {
         "type": "object",
         "properties": {
@@ -1147,6 +1185,22 @@
           "communityIds"
         ],
         "description": "ワーカーの参加コミュニティを置き換えるリクエストボディ（#490）"
+      },
+      "WorkerImageUploadResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "imageUrl": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "imageUrl"
+        ],
+        "description": "アップロード後の worker id と imageUrl（#204 / #1180）"
       },
       "PostViewRequest": {
         "type": "object",
@@ -2060,22 +2114,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string"
-                    },
-                    "iconUrl": {
-                      "type": [
-                        "string",
-                        "null"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "iconUrl"
-                  ]
+                  "$ref": "#/components/schemas/CommunityIconUploadResponse"
                 }
               }
             }
@@ -2160,22 +2199,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string"
-                    },
-                    "coverUrl": {
-                      "type": [
-                        "string",
-                        "null"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "coverUrl"
-                  ]
+                  "$ref": "#/components/schemas/CommunityCoverUploadResponse"
                 }
               }
             }
@@ -3631,6 +3655,91 @@
           },
           "400": {
             "description": "バリデーションエラー / 存在しない communityId",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未認証",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "admin 権限なし",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Worker が存在しない",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/workers/{id}/image": {
+      "post": {
+        "summary": "ワーカーの画像をアップロード（認証必須・admin のみ・#204 / #1180）",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "image": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                },
+                "required": [
+                  "image"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "アップロード後の worker id と imageUrl",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerImageUploadResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ファイル不正（MIME / サイズ超過 / 未添付）",
             "content": {
               "application/json": {
                 "schema": {

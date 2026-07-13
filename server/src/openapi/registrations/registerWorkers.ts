@@ -289,4 +289,41 @@ export function registerWorkers({
       404: { description: "Worker が存在しない", ...errorJson },
     },
   });
+
+  // admin: ワーカー画像アップロード（#204 / ADR-0022）。認証必須・admin のみ。
+  // multipart/form-data の `image` フィールドで送信する（#1180: OpenAPI 未登録の是正）。
+  const WorkerImageUploadResponseComponent = registry.register(
+    "WorkerImageUploadResponse",
+    z.object({ id: z.string(), imageUrl: z.string() }).openapi({
+      description: "アップロード後の worker id と imageUrl（#204 / #1180）",
+    }),
+  );
+
+  registry.registerPath({
+    method: "post",
+    path: "/api/admin/workers/{id}/image",
+    summary: "ワーカーの画像をアップロード（認証必須・admin のみ・#204 / #1180）",
+    request: {
+      params: z.object({ id: workerPathIdParam }),
+      body: {
+        content: {
+          "multipart/form-data": {
+            schema: z.object({
+              image: z.string().openapi({ type: "string", format: "binary" }),
+            }),
+          },
+        },
+      },
+    },
+    responses: {
+      200: {
+        description: "アップロード後の worker id と imageUrl",
+        content: { "application/json": { schema: WorkerImageUploadResponseComponent } },
+      },
+      400: { description: "ファイル不正（MIME / サイズ超過 / 未添付）", ...errorJson },
+      401: { description: "未認証", ...errorJson },
+      403: { description: "admin 権限なし", ...errorJson },
+      404: { description: "Worker が存在しない", ...errorJson },
+    },
+  });
 }

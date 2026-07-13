@@ -54,7 +54,7 @@ Hatchery はユーザーが自由テキストを入力しない設計（concept.
   - 新規 optional prop `knownWorkers?: WorkerMentionCandidate[]`（`@hatchery/common` から型 import）。
   - ヘルパー関数 `renderWithWorkerMentions({ node, workers })`: children が文字列またはその配列のときのみ `detectWorkerMentions` を適用し、一致箇所を `RouterLink to="/workers/$workerId"` に置き換えた `ReactNode[]` を返す。文字列以外（既にコンポーネント化された `strong`/`a`/`code` 等）はそのまま透過する。
   - `p` / `li` / `blockquote` / `td` / `th` の各コンポーネントで、`knownWorkers` が渡されていれば children をこのヘルパーに通してから描画する。
-  - リンクのスタイルは本文に溶け込む形にしつつ hover 時のみ視覚的フィードバックを出す（`AuthorByline.tsx` のリンクパターンを参考にしつつ、下線 + `SLACK_COLORS.blue` は使わずテキスト色を継承し hover で下線を出す控えめな見た目とする。デザイン規約のアクセントカラー節約方針に従う）。
+  - リンクは MUI `Link` の `component` prop 経由では `@tanstack/react-router` の `Link` の `params` 型と噛み合わず `tsc` でビルドエラーになるため、`AuthorByline.tsx` / `CommentCard.tsx` と同じく `RouterLink` を直接使う。スタイルは `style={{ color: "inherit", textDecoration: "underline" }}` とし、`SLACK_COLORS.blue` 等のアクセントカラーは使わずテキスト色を継承する（デザイン規約のアクセントカラー節約方針に従う）。
 
 - `client/src/components/CommentCard.tsx` / `client/src/components/PostCard.tsx`
   - 新規 optional prop `knownWorkers?: WorkerMentionCandidate[]` を受け取り、そのまま `MarkdownContent` に渡す。

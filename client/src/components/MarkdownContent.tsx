@@ -42,17 +42,14 @@ function renderTextWithWorkerMentions({
       nodes.push(text.slice(cursor, mention.start));
     }
     nodes.push(
-      <Link
+      <RouterLink
         key={`worker-mention-${index}-${mention.workerId}`}
-        component={RouterLink}
         to="/workers/$workerId"
         params={{ workerId: mention.workerId }}
-        color="inherit"
-        underline="hover"
-        sx={{ cursor: "pointer" }}
+        style={{ color: "inherit", textDecoration: "underline", cursor: "pointer" }}
       >
         {mention.displayName}
-      </Link>,
+      </RouterLink>,
     );
     cursor = mention.end;
   });

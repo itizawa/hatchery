@@ -32,7 +32,7 @@ function makeRepo(workers: WorkerRecord[]): WorkerRepository {
 describe("attachAuthorWorker", () => {
   it("空配列を渡すと [] を即返し、listBotWorkers は呼ばれない", async () => {
     const repo = makeRepo([workerA]);
-    const result = await attachAuthorWorker([], repo);
+    const result = await attachAuthorWorker({ records: [], workerRepo: repo });
     expect(result).toEqual([]);
     expect(repo.listBotWorkers).not.toHaveBeenCalled();
   });
@@ -40,7 +40,7 @@ describe("attachAuthorWorker", () => {
   it("author が id で一致するとき author_worker が付く（#479）", async () => {
     const repo = makeRepo([workerA]);
     const posts = [{ id: "post-1", author: "worker-uuid-1" }];
-    const result = await attachAuthorWorker(posts, repo);
+    const result = await attachAuthorWorker({ records: posts, workerRepo: repo });
     expect(result[0].author_worker).toEqual({
       id: "worker-uuid-1",
       display_name: "haru",
@@ -51,7 +51,7 @@ describe("attachAuthorWorker", () => {
   it("author が displayName で一致するとき author_worker が付く（#479）", async () => {
     const repo = makeRepo([workerA]);
     const posts = [{ id: "post-1", author: "haru" }];
-    const result = await attachAuthorWorker(posts, repo);
+    const result = await attachAuthorWorker({ records: posts, workerRepo: repo });
     expect(result[0].author_worker).toEqual({
       id: "worker-uuid-1",
       display_name: "haru",
@@ -62,7 +62,7 @@ describe("attachAuthorWorker", () => {
   it("解決できない author のレコードには author_worker が付かない（client がフォールバック）", async () => {
     const repo = makeRepo([workerA]);
     const posts = [{ id: "post-1", author: "unknown-worker" }];
-    const result = await attachAuthorWorker(posts, repo);
+    const result = await attachAuthorWorker({ records: posts, workerRepo: repo });
     expect(result[0]).not.toHaveProperty("author_worker");
     expect(result[0].id).toBe("post-1");
   });
@@ -70,7 +70,7 @@ describe("attachAuthorWorker", () => {
   it("imageUrl=null のワーカーは image_url が null になる（#1015: 死んだ URL を返さない）", async () => {
     const repo = makeRepo([workerB]);
     const posts = [{ id: "post-1", author: "worker-uuid-2" }];
-    const result = await attachAuthorWorker(posts, repo);
+    const result = await attachAuthorWorker({ records: posts, workerRepo: repo });
     expect(result[0].author_worker?.image_url).toBeNull();
   });
 
@@ -80,7 +80,7 @@ describe("attachAuthorWorker", () => {
       { id: "post-1", author: "worker-uuid-1" },
       { id: "post-2", author: "unknown-worker" },
     ];
-    const result = await attachAuthorWorker(posts, repo);
+    const result = await attachAuthorWorker({ records: posts, workerRepo: repo });
     expect(result[0].author_worker?.id).toBe("worker-uuid-1");
     expect(result[1]).not.toHaveProperty("author_worker");
     expect(result[1].id).toBe("post-2");

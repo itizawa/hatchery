@@ -61,9 +61,9 @@ async function callClaudeText({
   });
   if (message.stop_reason === "max_tokens") {
     const snippet = prompt.length > 100 ? `${prompt.slice(0, 100)}...` : prompt;
-    logBatchInfo("ai_generation.max_tokens_truncated", {
-      maxTokens,
-      promptSnippet: snippet,
+    logBatchInfo({
+      event: "ai_generation.max_tokens_truncated",
+      fields: { maxTokens, promptSnippet: snippet },
     });
   }
   return {
@@ -201,9 +201,9 @@ export function createBatchConversationGenerator(
       status = polled.processing_status;
     }
     if (status !== "ended") {
-      logBatchInfo("ai_generation.batch_not_ended", {
-        batchId: batch.id,
-        maxPolls,
+      logBatchInfo({
+        event: "ai_generation.batch_not_ended",
+        fields: { batchId: batch.id, maxPolls },
       });
       return { text: "" };
     }
@@ -223,11 +223,11 @@ export function createBatchConversationGenerator(
           model: msg.model,
         };
       }
-      logBatchError(
-        "ai_generation.batch_result_failed",
-        `batch result type was ${result.result.type}`,
-        { customId: result.custom_id, resultType: result.result.type },
-      );
+      logBatchError({
+        event: "ai_generation.batch_result_failed",
+        err: `batch result type was ${result.result.type}`,
+        fields: { customId: result.custom_id, resultType: result.result.type },
+      });
       return { text: "" };
     }
     return { text: "" };

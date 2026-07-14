@@ -37,8 +37,15 @@ export function resolveBatchHours(envValue?: string): number[] {
  * now（ローカル時刻基準）から、次に hour:minute が訪れるまでの ms を返す。
  * 当日の同時刻ちょうど・過去なら翌日分を返す（常に正）。
  */
-// eslint-disable-next-line max-params
-export function msUntilNext(hour: number, minute: number, now: Date = new Date()): number {
+export function msUntilNext({
+  hour,
+  minute,
+  now = new Date(),
+}: {
+  hour: number;
+  minute: number;
+  now?: Date;
+}): number {
   const next = new Date(now);
   next.setHours(hour, minute, 0, 0);
   if (next.getTime() <= now.getTime()) {
@@ -73,7 +80,7 @@ export function createSystemScheduler(): SchedulerPort {
 
       const arm = (): void => {
         // 早発火による二重発火を防ぐため、極端に短い待機は翌日へ繰り上げる。
-        const delay = msUntilNext(hour, minute);
+        const delay = msUntilNext({ hour, minute });
         const safeDelay = delay < MIN_REARM_DELAY_MS ? delay + DAY_MS : delay;
         timer = setTimeout(() => {
           if (cancelled) return;
@@ -118,7 +125,7 @@ export function startMessageBatchScheduler(
   const cancels = hours.map((hour) =>
     scheduler.scheduleDaily(hour, minute, () => {
       void run().catch((err: unknown) => {
-        logBatchError("scheduled_run.failed", err);
+        logBatchError({ event: "scheduled_run.failed", err });
       });
     }),
   );

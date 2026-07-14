@@ -40,8 +40,7 @@ export function extractErrorMessage(err: unknown): string {
  * @param event ドット区切りの event 名（例 "community_batch.completed"）。
  * @param fields 任意の構造化フィールド。
  */
-// eslint-disable-next-line max-params
-export function logBatchInfo(event: string, fields?: BatchLogFields): void {
+export function logBatchInfo({ event, fields }: { event: string; fields?: BatchLogFields }): void {
   const payload = { level: "info", event, ...sanitizeFields(fields) };
   console.log(JSON.stringify(payload));
 }
@@ -53,8 +52,15 @@ export function logBatchInfo(event: string, fields?: BatchLogFields): void {
  * @param err 失敗の原因（Error / 非 Error いずれも可）。
  * @param fields 任意の構造化フィールド。
  */
-// eslint-disable-next-line max-params
-export function logBatchError(event: string, err: unknown, fields?: BatchLogFields): void {
+export function logBatchError({
+  event,
+  err,
+  fields,
+}: {
+  event: string;
+  err: unknown;
+  fields?: BatchLogFields;
+}): void {
   const payload = {
     level: "error",
     event,

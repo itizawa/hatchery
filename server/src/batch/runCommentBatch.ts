@@ -95,7 +95,7 @@ async function processCommunityComments({
   const botWorkers = communityWorkers.length > 0 ? [] : await botWorkersPromise;
   const resolvedWorkers = selectCommunityWorkers({ communityWorkers, allBotWorkers: botWorkers });
   if (resolvedWorkers.length === 0) {
-    logBatchInfo("comment_batch.skipped_no_workers", { communityId: community.id });
+    logBatchInfo({ event: "comment_batch.skipped_no_workers", fields: { communityId: community.id } });
     return [];
   }
 
@@ -121,7 +121,7 @@ async function processCommunityComments({
     : recentPosts;
 
   if (allTargetPosts.length === 0) {
-    logBatchInfo("comment_batch.skipped_no_posts", { communityId: community.id });
+    logBatchInfo({ event: "comment_batch.skipped_no_posts", fields: { communityId: community.id } });
     return [];
   }
 
@@ -184,16 +184,21 @@ async function processCommunityComments({
       try {
         parsed = JSON.parse(raw);
       } catch {
-        logBatchError("comment_batch.json_parse_failed", "JSON parse failed", { communityId: community.id });
+        logBatchError({
+          event: "comment_batch.json_parse_failed",
+          err: "JSON parse failed",
+          fields: { communityId: community.id },
+        });
         throw new RetryableGenerationError(`${community.id}: JSON パース失敗`);
       }
 
       // Zod スキーマ検証。
       const validated = CommentBatchOutputSchema.safeParse(parsed);
       if (!validated.success) {
-        logBatchError("comment_batch.schema_validation_failed", "schema validation failed", {
-          communityId: community.id,
-          issues: validated.error.format(),
+        logBatchError({
+          event: "comment_batch.schema_validation_failed",
+          err: "schema validation failed",
+          fields: { communityId: community.id, issues: validated.error.format() },
         });
         throw new RetryableGenerationError(`${community.id}: スキーマ検証失敗`);
       }
@@ -202,9 +207,10 @@ async function processCommunityComments({
       for (const postOutput of validated.data.posts) {
         for (const comment of postOutput.comments) {
           if (!knownWorkerIds.has(comment.author)) {
-            logBatchError("comment_batch.author_validation_failed", "unknown author", {
-              communityId: community.id,
-              author: comment.author,
+            logBatchError({
+              event: "comment_batch.author_validation_failed",
+              err: "unknown author",
+              fields: { communityId: community.id, author: comment.author },
             });
             throw new RetryableGenerationError(`${community.id}: author 検証失敗`);
           }
@@ -247,9 +253,9 @@ async function processCommunityComments({
       .map((comment, originalIndex) => ({ comment, originalIndex }))
       .filter(({ comment }) => {
         if (comment.author === postAuthorId) {
-          logBatchInfo("comment_batch.self_reply_excluded", {
-            communityId: community.id,
-            postId: targetPostId,
+          logBatchInfo({
+            event: "comment_batch.self_reply_excluded",
+            fields: { communityId: community.id, postId: targetPostId },
           });
           return false;
         }
@@ -361,7 +367,7 @@ async function processCommunityComments({
 export async function runCommentBatch(deps: RunCommentBatchDeps): Promise<RunCommentBatchResult> {
   const apiKey = deps.anthropicApiKey;
   if (!apiKey) {
-    logBatchInfo("comment_batch.skipped_no_api_key");
+    logBatchInfo({ event: "comment_batch.skipped_no_api_key" });
     return { comments: [] };
   }
 
@@ -409,8 +415,10 @@ export async function runCommentBatch(deps: RunCommentBatchDeps): Promise<RunCom
       savedComments.push(...result.value);
     } else {
       const message = extractErrorMessage(result.reason);
-      logBatchError("comment_batch.community_failed", result.reason, {
-        communityId: community.id,
+      logBatchError({
+        event: "comment_batch.community_failed",
+        err: result.reason,
+        fields: { communityId: community.id },
       });
       try {
         await deps.batchRunLogRepository?.create({
@@ -420,8 +428,10 @@ export async function runCommentBatch(deps: RunCommentBatchDeps): Promise<RunCom
           errorCode: null,
         });
       } catch (logErr) {
-        logBatchError("comment_batch.failure_log_write_failed", logErr, {
-          communityId: community.id,
+        logBatchError({
+          event: "comment_batch.failure_log_write_failed",
+          err: logErr,
+          fields: { communityId: community.id },
         });
       }
     }

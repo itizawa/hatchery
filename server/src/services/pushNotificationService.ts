@@ -47,9 +47,17 @@ export function createPushNotificationService({
               await pushSubscriptionRepo.delete(sub.endpoint);
             } else if (status === 401 || status === 403) {
               // VAPID 認証エラー: キー設定ミスの可能性が高いため専用キーで記録する。
-              logBatchError("push_notification.vapid_auth_failed", err, { endpoint: sub.endpoint });
+              logBatchError({
+                event: "push_notification.vapid_auth_failed",
+                err,
+                fields: { endpoint: sub.endpoint },
+              });
             } else {
-              logBatchError("push_notification.send_failed", err, { endpoint: sub.endpoint });
+              logBatchError({
+                event: "push_notification.send_failed",
+                err,
+                fields: { endpoint: sub.endpoint },
+              });
             }
           }
         }),

@@ -21,7 +21,11 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
     // AppError でも 5xx（InternalServerError 等）はサーバ側の障害なので必ずログに残す。
     // 4xx（NotFound/BadRequest 等）は想定内なのでログしない。
     if (err.statusCode >= 500) {
-      logError("http.error", err, { statusCode: err.statusCode, method: req.method, path: req.originalUrl });
+      logError({
+        event: "http.error",
+        err,
+        fields: { statusCode: err.statusCode, method: req.method, path: req.originalUrl },
+      });
     }
     res.status(err.statusCode).json({ error: err.message });
     return;
@@ -33,6 +37,6 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
   }
   // 想定外の例外は 500 に変換する。原因追跡のため、どのリクエストで何が起きたかを
   // 必ずログに残す（これが無いと本番の 500 がスタックトレースなしで不可視になる）。
-  logError("http.500", err, { method: req.method, path: req.originalUrl });
+  logError({ event: "http.500", err, fields: { method: req.method, path: req.originalUrl } });
   res.status(500).json({ error: "InternalServerError" });
 };

@@ -344,10 +344,12 @@ describe("runPostBatch (#672)", () => {
       });
 
       expect(logSpy).toHaveBeenCalledWith(
-        "post_batch.duplicate_text_detected",
         expect.objectContaining({
-          communityId: community1.id,
-          matchedTitle: "AIの進歩について",
+          event: "post_batch.duplicate_text_detected",
+          fields: expect.objectContaining({
+            communityId: community1.id,
+            matchedTitle: "AIの進歩について",
+          }),
         }),
       );
     });

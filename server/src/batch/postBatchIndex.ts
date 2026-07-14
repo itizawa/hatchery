@@ -34,9 +34,7 @@ export async function runPostBatchCli(cliDeps: PostBatchCliDeps): Promise<RunPos
   try {
     const result = await runPostBatch(cliDeps.batchDeps);
 
-    logBatchInfo("post_batch.completed", {
-      posts: result.posts.length,
-    });
+    logBatchInfo({ event: "post_batch.completed", fields: { posts: result.posts.length } });
 
     if (cliDeps.pushNotificationService && cliDeps.subscriptionRepo && result.posts.length > 0) {
       const { pushNotificationService, subscriptionRepo } = cliDeps;
@@ -50,7 +48,9 @@ export async function runPostBatchCli(cliDeps: PostBatchCliDeps): Promise<RunPos
             userIds,
           });
         })
-        .catch((err: unknown) => logBatchError("push_notification.batch_send_failed", err));
+        .catch((err: unknown) =>
+          logBatchError({ event: "push_notification.batch_send_failed", err }),
+        );
     }
 
     return result;
@@ -135,7 +135,7 @@ const isDirectRun =
 
 if (isDirectRun) {
   main().catch((err: unknown) => {
-    logBatchError("post_batch.cli_failed", err);
+    logBatchError({ event: "post_batch.cli_failed", err });
     process.exitCode = 1;
   });
 }

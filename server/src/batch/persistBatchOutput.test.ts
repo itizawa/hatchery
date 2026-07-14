@@ -259,8 +259,9 @@ describe("persistBatchOutput: タイトル URL 検出ログ（#1022）", () => {
       rng: () => 0.5,
     });
 
-    expect(spy).toHaveBeenCalledWith("persist_batch.title_url_detected", {
-      title: "詳細はこちら https://example.com/article",
+    expect(spy).toHaveBeenCalledWith({
+      event: "persist_batch.title_url_detected",
+      fields: { title: "詳細はこちら https://example.com/article" },
     });
 
     spy.mockRestore();

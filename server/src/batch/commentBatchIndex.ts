@@ -28,9 +28,7 @@ export async function runCommentBatchCli(
   try {
     const result = await runCommentBatch(cliDeps.batchDeps);
 
-    logBatchInfo("comment_batch.completed", {
-      comments: result.comments.length,
-    });
+    logBatchInfo({ event: "comment_batch.completed", fields: { comments: result.comments.length } });
 
     return result;
   } finally {
@@ -89,7 +87,7 @@ const isDirectRun =
 
 if (isDirectRun) {
   main().catch((err: unknown) => {
-    logBatchError("comment_batch.cli_failed", err);
+    logBatchError({ event: "comment_batch.cli_failed", err });
     process.exitCode = 1;
   });
 }

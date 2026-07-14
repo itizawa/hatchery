@@ -41,7 +41,7 @@ export async function persistBatchOutput({
 
   for (const post of output.posts) {
     if (URL_PATTERN.test(post.title)) {
-      logBatchInfo("persist_batch.title_url_detected", { title: post.title });
+      logBatchInfo({ event: "persist_batch.title_url_detected", fields: { title: post.title } });
     }
   }
 

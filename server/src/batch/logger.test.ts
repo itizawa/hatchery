@@ -18,7 +18,7 @@ function parseLastCall(spy: ReturnType<typeof vi.spyOn>): Record<string, unknown
 describe("logBatchInfo — info レベルの構造化ログ", () => {
   it("level:info と event を 1 行 JSON で console.log に出す", () => {
     const spy = vi.spyOn(console, "log").mockImplementation(() => {});
-    logBatchInfo("community_batch.completed");
+    logBatchInfo({ event: "community_batch.completed" });
     expect(parseLastCall(spy)).toEqual({
       level: "info",
       event: "community_batch.completed",
@@ -27,7 +27,7 @@ describe("logBatchInfo — info レベルの構造化ログ", () => {
 
   it("fields をマージして出力する", () => {
     const spy = vi.spyOn(console, "log").mockImplementation(() => {});
-    logBatchInfo("community_batch.completed", { posts: 3, comments: 5 });
+    logBatchInfo({ event: "community_batch.completed", fields: { posts: 3, comments: 5 } });
     expect(parseLastCall(spy)).toEqual({
       level: "info",
       event: "community_batch.completed",
@@ -39,7 +39,7 @@ describe("logBatchInfo — info レベルの構造化ログ", () => {
   it("console.error には出力しない", () => {
     vi.spyOn(console, "log").mockImplementation(() => {});
     const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    logBatchInfo("x.y");
+    logBatchInfo({ event: "x.y" });
     expect(errSpy).not.toHaveBeenCalled();
   });
 });
@@ -47,7 +47,7 @@ describe("logBatchInfo — info レベルの構造化ログ", () => {
 describe("logBatchError — error レベルの構造化ログ", () => {
   it("Error のとき message を error フィールドに入れて console.error に出す", () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
-    logBatchError("scheduled_run.failed", new Error("boom"));
+    logBatchError({ event: "scheduled_run.failed", err: new Error("boom") });
     expect(parseLastCall(spy)).toEqual({
       level: "error",
       event: "scheduled_run.failed",
@@ -57,7 +57,7 @@ describe("logBatchError — error レベルの構造化ログ", () => {
 
   it("非 Error（文字列）のとき String(err) を error に入れる", () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
-    logBatchError("x.y", "plain string");
+    logBatchError({ event: "x.y", err: "plain string" });
     expect(parseLastCall(spy)).toEqual({
       level: "error",
       event: "x.y",
@@ -67,15 +67,17 @@ describe("logBatchError — error レベルの構造化ログ", () => {
 
   it("非 Error（オブジェクト）のとき String(err) を error に入れる", () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
-    logBatchError("x.y", { code: 1 });
+    logBatchError({ event: "x.y", err: { code: 1 } });
     const parsed = parseLastCall(spy);
     expect(parsed.error).toBe(String({ code: 1 }));
   });
 
   it("fields をマージして出力する", () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
-    logBatchError("community_batch.community_failed", new Error("oops"), {
-      communityId: "c1",
+    logBatchError({
+      event: "community_batch.community_failed",
+      err: new Error("oops"),
+      fields: { communityId: "c1" },
     });
     expect(parseLastCall(spy)).toEqual({
       level: "error",
@@ -88,7 +90,7 @@ describe("logBatchError — error レベルの構造化ログ", () => {
   it("console.log には出力しない", () => {
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     vi.spyOn(console, "error").mockImplementation(() => {});
-    logBatchError("x.y", new Error("z"));
+    logBatchError({ event: "x.y", err: new Error("z") });
     expect(logSpy).not.toHaveBeenCalled();
   });
 });

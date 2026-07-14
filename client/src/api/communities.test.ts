@@ -237,7 +237,7 @@ describe("uploadCommunityImage (POST /api/admin/communities/:id/:kind)", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const file = new File(["dummy"], "icon.png", { type: "image/png" });
-    const result = await uploadCommunityImage("community-1", "icon", file);
+    const result = await uploadCommunityImage({ communityId: "community-1", kind: "icon", file });
 
     expect(result.id).toBe("community-1");
     if (!("iconUrl" in result)) {
@@ -257,6 +257,8 @@ describe("uploadCommunityImage (POST /api/admin/communities/:id/:kind)", () => {
       vi.fn().mockResolvedValue(jsonResponse(400, { error: "FileTooLarge" })),
     );
     const file = new File(["dummy"], "icon.png", { type: "image/png" });
-    await expect(uploadCommunityImage("community-1", "icon", file)).rejects.toThrow();
+    await expect(
+      uploadCommunityImage({ communityId: "community-1", kind: "icon", file }),
+    ).rejects.toThrow();
   });
 });

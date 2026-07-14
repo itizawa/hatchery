@@ -103,7 +103,7 @@ function EditCommunityForm({ community }: { community: AdminCommunity }): ReactE
         onClose={() => updateMutation.reset()}
       >
         <Alert severity="error" onClose={() => updateMutation.reset()}>
-          {getApiErrorMessage(updateMutation.error, "コミュニティの更新に失敗しました")}
+          {getApiErrorMessage({ error: updateMutation.error, fallback: "コミュニティの更新に失敗しました" })}
         </Alert>
       </Snackbar>
     </>
@@ -193,7 +193,7 @@ function CommunityWorkersEditSection({ communityId }: { communityId: string }): 
         onClose={() => setWorkersMutation.reset()}
       >
         <Alert severity="error" onClose={() => setWorkersMutation.reset()}>
-          {getApiErrorMessage(setWorkersMutation.error, "所属ワーカーの更新に失敗しました")}
+          {getApiErrorMessage({ error: setWorkersMutation.error, fallback: "所属ワーカーの更新に失敗しました" })}
         </Alert>
       </Snackbar>
     </Box>

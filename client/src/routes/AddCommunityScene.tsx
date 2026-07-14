@@ -113,7 +113,7 @@ export function AddCommunityScene(): ReactElement {
         onClose={() => createMutation.reset()}
       >
         <Alert severity="error" onClose={() => createMutation.reset()}>
-          {getApiErrorMessage(createMutation.error, "コミュニティの作成に失敗しました")}
+          {getApiErrorMessage({ error: createMutation.error, fallback: "コミュニティの作成に失敗しました" })}
         </Alert>
       </Snackbar>
     </Box>

@@ -172,7 +172,7 @@ export const AccountScene = (): ReactElement => {
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
         <Alert severity="error" onClose={() => updateMutation.reset()}>
-          {getApiErrorMessage(updateMutation.error, "プロフィールの更新に失敗しました")}
+          {getApiErrorMessage({ error: updateMutation.error, fallback: "プロフィールの更新に失敗しました" })}
         </Alert>
       </Snackbar>
     </Box>

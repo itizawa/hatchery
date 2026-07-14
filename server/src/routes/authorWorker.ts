@@ -13,11 +13,13 @@ export type AuthorWorkerEnricher = <T extends HasAuthor>(
   records: readonly T[],
 ) => Array<T & { author_worker?: AuthorWorker }>;
 
-// eslint-disable-next-line max-params
-function enrichWith<T extends HasAuthor>(
-  records: readonly T[],
-  resolve: (author: string) => AuthorWorker | undefined,
-): Array<T & { author_worker?: AuthorWorker }> {
+function enrichWith<T extends HasAuthor>({
+  records,
+  resolve,
+}: {
+  records: readonly T[];
+  resolve: (author: string) => AuthorWorker | undefined;
+}): Array<T & { author_worker?: AuthorWorker }> {
   return records.map((record) => {
     const author_worker = resolve(record.author);
     return author_worker ? { ...record, author_worker } : { ...record };
@@ -36,18 +38,20 @@ export async function buildAuthorWorkerEnricher(
 ): Promise<AuthorWorkerEnricher> {
   const workers = await workerRepo.listBotWorkers();
   const resolve = buildAuthorWorkerResolver(workers);
-  return (records) => enrichWith(records, resolve);
+  return (records) => enrichWith({ records, resolve });
 }
 
 /**
  * 単一コレクション（feed / community feed）の post レコードに `author_worker` を付与する（#479）。
  * 解決できない author のレコードは `author_worker` を付けずにそのまま返す（client が生 author にフォールバック）。
  */
-// eslint-disable-next-line max-params
-export async function attachAuthorWorker<T extends HasAuthor>(
-  records: readonly T[],
-  workerRepo: WorkerRepository,
-): Promise<Array<T & { author_worker?: AuthorWorker }>> {
+export async function attachAuthorWorker<T extends HasAuthor>({
+  records,
+  workerRepo,
+}: {
+  records: readonly T[];
+  workerRepo: WorkerRepository;
+}): Promise<Array<T & { author_worker?: AuthorWorker }>> {
   if (records.length === 0) return [];
   const enrich = await buildAuthorWorkerEnricher(workerRepo);
   return enrich(records);

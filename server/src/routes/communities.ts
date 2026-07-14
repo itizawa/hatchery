@@ -62,7 +62,11 @@ export function createCommunitiesRouter({
       .then(([communities, statsMap, subscriberMap]) =>
         res.status(200).json(
           communities.map((c) =>
-            toCommunityResponse(c, statsMap.get(c.id), subscriberMap.get(c.id) ?? 0),
+            toCommunityResponse({
+              r: c,
+              stats: statsMap.get(c.id),
+              subscriberCount: subscriberMap.get(c.id) ?? 0,
+            }),
           ),
         ),
       )
@@ -101,8 +105,8 @@ export function createCommunitiesRouter({
         return { ...result, posts: [...pinnedForThisPage, ...result.posts] };
       })
       .then(async (result) => {
-        const enriched = await attachAuthorWorker(result.posts, workerRepo);
-        const withCounts = await attachCommentCount(enriched, commentRepo, { now });
+        const enriched = await attachAuthorWorker({ records: result.posts, workerRepo });
+        const withCounts = await attachCommentCount({ records: enriched, commentRepo, options: { now } });
         if (sessionId) {
           const voteMap = await voteRepo.findVotesBySessionAndTargets({
             sessionId,

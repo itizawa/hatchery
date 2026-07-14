@@ -2,9 +2,9 @@ import type { Page } from "@playwright/test";
 import { test, expect } from "../support/test.js";
 
 /**
- * ranking e2e テスト（#665 / #1065）。
+ * ranking e2e テスト（#665 / #1065 / #1161）。
  *
- * e2e/ranking/usecases.md の UC-RANK-01〜05 に対応する実テスト。
+ * e2e/ranking/usecases.md の UC-RANK-01〜06 に対応する実テスト。
  * page.route() で API をモックし、バックエンドなしでブラウザ側の振る舞いを検証する。
  */
 
@@ -33,6 +33,15 @@ const MOCK_RANKING_WORKERS = [
     image_url: null,
   },
 ];
+
+/** UC-RANK-06 用: 1 位（worker-1・アリス）のワーカープロフィールモックデータ（#1161）。 */
+const MOCK_WORKER_PROFILE = {
+  id: "worker-1",
+  displayName: "アリス",
+  role: null,
+  personality: null,
+  imageUrl: null,
+};
 
 /** 右サイドバー用のトレンド Post/Comment モックデータ（#1065）。 */
 const MOCK_TRENDING_ITEMS = [
@@ -119,6 +128,41 @@ async function mockTrendingApi({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({ items }),
+    }),
+  );
+}
+
+/**
+ * ワーカープロフィールページ（/workers/worker-1）が依存する4エンドポイントを一括モックする（#1161）。
+ * WorkerScene は4つの独立した QueryBoundary を持つため、常に全件モックする。
+ */
+async function mockWorkerProfile(page: Page): Promise<void> {
+  await page.route("**/api/workers/worker-1", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(MOCK_WORKER_PROFILE),
+    }),
+  );
+  await page.route("**/api/workers/worker-1/posts", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ posts: [] }),
+    }),
+  );
+  await page.route("**/api/workers/worker-1/communities", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ communities: [] }),
+    }),
+  );
+  await page.route("**/api/workers/worker-1/comments", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ comments: [], nextCursor: null }),
     }),
   );
 }
@@ -260,5 +304,25 @@ test(
 
     // 左カラムのランキングテーブルは独立して表示されること
     await expect(page.getByRole("table", { name: "ワーカーランキング" })).toBeVisible();
+  },
+);
+
+test(
+  "UC-RANK-06: ランキング行の名前・アイコンをクリックするとそのワーカーの詳細画面に遷移する",
+  async ({ page }) => {
+    await mockUnauthenticated(page);
+    await mockCommunitiesApi(page);
+    await mockRankingApi({ page });
+    await mockTrendingApi({ page });
+    await mockWorkerProfile(page);
+
+    await page.goto("/ranking");
+
+    // 1 位（アリス・worker-1）の名前・アイコン領域をクリックする
+    await page.getByTestId("ranking-row-worker-link-worker-1").click();
+
+    // ワーカー詳細画面へ遷移すること
+    await expect(page).toHaveURL("/workers/worker-1");
+    await expect(page.getByTestId("worker-display-name")).toHaveText("アリス");
   },
 );

@@ -127,7 +127,7 @@ export function AddWorkerScene(): ReactElement {
       </Box>
       <Snackbar open={isSaveError} autoHideDuration={6000} onClose={handleErrorClose}>
         <Alert severity="error" onClose={handleErrorClose}>
-          {getApiErrorMessage(saveError, "ワーカーの作成に失敗しました")}
+          {getApiErrorMessage({ error: saveError, fallback: "ワーカーの作成に失敗しました" })}
         </Alert>
       </Snackbar>
     </Box>

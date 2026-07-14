@@ -222,7 +222,7 @@ function EditWorkerForm({ workerId }: { workerId: string }): ReactElement {
       </Box>
       <Snackbar open={isSaveError} autoHideDuration={6000} onClose={handleErrorClose}>
         <Alert severity="error" onClose={handleErrorClose}>
-          {getApiErrorMessage(saveError, "ワーカーの更新に失敗しました")}
+          {getApiErrorMessage({ error: saveError, fallback: "ワーカーの更新に失敗しました" })}
         </Alert>
       </Snackbar>
     </>

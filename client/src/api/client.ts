@@ -47,7 +47,7 @@ type FetchResult<T, E> = {
 export function unwrap<T, E>({ result, label }: { result: FetchResult<T, E>; label: string }): NonNullable<T> {
   const { data, error, response } = result;
   if (error || !response.ok || data == null) {
-    throw new Error(buildApiErrorMessage(error, response.status, label));
+    throw new Error(buildApiErrorMessage({ errorBody: error, status: response.status, fallback: label }));
   }
   return data as NonNullable<T>;
 }
@@ -63,7 +63,7 @@ export function unwrap<T, E>({ result, label }: { result: FetchResult<T, E>; lab
 export function ensureOk<T, E>({ result, label }: { result: FetchResult<T, E>; label: string }): T | undefined {
   const { data, error, response } = result;
   if (error || !response.ok) {
-    throw new Error(buildApiErrorMessage(error, response.status, label));
+    throw new Error(buildApiErrorMessage({ errorBody: error, status: response.status, fallback: label }));
   }
   return data;
 }

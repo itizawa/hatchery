@@ -18,6 +18,8 @@ import {
 import EmojiEventsIcon from "@mui/icons-material/EmojiEventsRounded";
 import type { ReactElement } from "react";
 
+import { Link as RouterLink } from "@tanstack/react-router";
+
 import { WorkerAvatar } from "../components/WorkerAvatar.js";
 import { useTrendingItems } from "../api/ranking.js";
 import { useWorkerRanking } from "../api/workers.js";
@@ -39,18 +41,32 @@ const RankingRow = ({
       {rank}
     </TableCell>
     <TableCell>
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-        <WorkerAvatar
-          id={item.worker_id}
-          imageUrl={item.image_url}
-          size={28}
-          alt={item.display_name}
-          displayName={item.display_name}
-        />
-        <Typography variant="body2" sx={{ fontWeight: 600 }}>
-          {item.display_name}
-        </Typography>
-      </Box>
+      <RouterLink
+        to="/workers/$workerId"
+        params={{ workerId: item.worker_id }}
+        data-testid={`ranking-row-worker-link-${item.worker_id}`}
+        style={{ textDecoration: "none", color: "inherit" }}
+      >
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+            "&:hover": { textDecoration: "underline" },
+          }}
+        >
+          <WorkerAvatar
+            id={item.worker_id}
+            imageUrl={item.image_url}
+            size={28}
+            alt={item.display_name}
+            displayName={item.display_name}
+          />
+          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+            {item.display_name}
+          </Typography>
+        </Box>
+      </RouterLink>
     </TableCell>
     <TableCell align="right">{item.view_count.toLocaleString()}</TableCell>
     <TableCell

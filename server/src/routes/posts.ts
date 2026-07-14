@@ -58,7 +58,7 @@ export function createPostsRouter({
       .then(async (posts) => {
         // author_worker 付与と投票状態取得は互いに依存しないため並行実行する（#1059）。
         const [enriched, voteMap] = await Promise.all([
-          attachAuthorWorker(posts, workerRepo),
+          attachAuthorWorker({ records: posts, workerRepo }),
           sessionId
             ? voteRepo.findVotesBySessionAndTargets({ sessionId, targetType: "post", targetIds: posts.map((p) => p.id) })
             : Promise.resolve(new Map()),

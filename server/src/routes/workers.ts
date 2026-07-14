@@ -117,7 +117,7 @@ export function createWorkersRouter({
           .listByAuthor({ authorId: workerId, limit: WORKER_POSTS_DEFAULT_LIMIT, now })
           .then((posts) => {
             // 既に findById で取得済みのワーカーを使って author_worker を付与する。
-            // attachAuthorWorker(posts, workerRepository) は内部で listBotWorkers() を呼び
+            // attachAuthorWorker({ records: posts, workerRepo: workerRepository }) は内部で listBotWorkers() を呼び
             // 全ワーカーをフルスキャンするため、そのコストを避ける。
             const resolve = buildAuthorWorkerResolver([worker]);
             const enriched = posts.map((post) => {
@@ -152,7 +152,7 @@ export function createWorkersRouter({
             });
           })
           .then((communities) => {
-            res.status(200).json({ communities: communities.map((c) => toCommunityResponse(c)) });
+            res.status(200).json({ communities: communities.map((c) => toCommunityResponse({ r: c })) });
           });
       })
       .catch(next);

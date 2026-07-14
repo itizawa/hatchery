@@ -10,12 +10,15 @@ import type { CommunityRecord } from "../persistence/communityRepository.js";
  * - post_count / last_post_at は stats から付与する（#527）
  * - subscriber_count は一括集計した購読者数から付与する（#930）
  */
-// eslint-disable-next-line max-params
-export function toCommunityResponse(
-  r: CommunityRecord,
-  stats?: CommunityPostStats,
+export function toCommunityResponse({
+  r,
+  stats,
   subscriberCount = 0,
-) {
+}: {
+  r: CommunityRecord;
+  stats?: CommunityPostStats;
+  subscriberCount?: number;
+}) {
   return {
     id: r.id,
     slug: r.slug,
@@ -38,7 +41,7 @@ export function toCommunityResponse(
  */
 export function toAdminCommunityResponse(r: CommunityRecord) {
   return {
-    ...toCommunityResponse(r),
+    ...toCommunityResponse({ r }),
     generationInstruction: r.generationInstruction ?? null,
     feedUrl: r.feedUrl ?? null,
     generationPaused: r.generationPaused ?? false,

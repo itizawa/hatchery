@@ -28,7 +28,10 @@ export async function runCommentBatchCli(
   try {
     const result = await runCommentBatch(cliDeps.batchDeps);
 
-    logBatchInfo({ event: "comment_batch.completed", fields: { comments: result.comments.length } });
+    logBatchInfo({
+      event: "comment_batch.completed",
+      fields: { comments: result.comments.length },
+    });
 
     return result;
   } finally {

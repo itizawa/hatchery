@@ -18,7 +18,11 @@ import {
   type TargetPostForComment,
 } from "./buildCommentBatchPrompt.js";
 import type { WorkerDef } from "./buildCommunityPrompt.js";
-import { calcCommentCount, pickOldPostForRevival, REVIVAL_PROBABILITY } from "./calcCommentCounts.js";
+import {
+  calcCommentCount,
+  pickOldPostForRevival,
+  REVIVAL_PROBABILITY,
+} from "./calcCommentCounts.js";
 import { extractErrorMessage, logBatchError, logBatchInfo } from "./logger.js";
 import { withGenerationRetry, RetryableGenerationError } from "./withGenerationRetry.js";
 
@@ -95,7 +99,10 @@ async function processCommunityComments({
   const botWorkers = communityWorkers.length > 0 ? [] : await botWorkersPromise;
   const resolvedWorkers = selectCommunityWorkers({ communityWorkers, allBotWorkers: botWorkers });
   if (resolvedWorkers.length === 0) {
-    logBatchInfo({ event: "comment_batch.skipped_no_workers", fields: { communityId: community.id } });
+    logBatchInfo({
+      event: "comment_batch.skipped_no_workers",
+      fields: { communityId: community.id },
+    });
     return [];
   }
 
@@ -116,12 +123,13 @@ async function processCommunityComments({
   const oldPosts = await deps.postRepo.listOldByCommunity(community.id, since, OLD_POSTS_LIMIT);
   const revivalPost = pickOldPostForRevival(oldPosts, revivalProbability, rng);
 
-  const allTargetPosts = revivalPost
-    ? [...recentPosts, revivalPost]
-    : recentPosts;
+  const allTargetPosts = revivalPost ? [...recentPosts, revivalPost] : recentPosts;
 
   if (allTargetPosts.length === 0) {
-    logBatchInfo({ event: "comment_batch.skipped_no_posts", fields: { communityId: community.id } });
+    logBatchInfo({
+      event: "comment_batch.skipped_no_posts",
+      fields: { communityId: community.id },
+    });
     return [];
   }
 
@@ -240,7 +248,10 @@ async function processCommunityComments({
   // drip タイムスタンプの総数をフィルタ後の件数で算出するため、永続化ループの前に行う。
   // 元のインデックスは reply_to 解決のため保持する。
   type GenComment = (typeof output.posts)[number]["comments"][number];
-  const filteredEntriesByRef = new Map<string, Array<{ comment: GenComment; originalIndex: number }>>();
+  const filteredEntriesByRef = new Map<
+    string,
+    Array<{ comment: GenComment; originalIndex: number }>
+  >();
   let totalCommentCount = 0;
 
   for (const postOutput of output.posts) {
@@ -320,7 +331,8 @@ async function processCommunityComments({
 
         const replyTo = genComment.reply_to ?? null;
         if (replyTo === null) continue;
-        if (replyTo < 0 || replyTo >= postOutput.comments.length || replyTo === originalIndex) continue;
+        if (replyTo < 0 || replyTo >= postOutput.comments.length || replyTo === originalIndex)
+          continue;
 
         const parentGenComment = postOutput.comments[replyTo];
         const parentCreated = createdByOriginalIndex.get(replyTo);

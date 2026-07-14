@@ -87,7 +87,12 @@ function extractFirstText(content: readonly Anthropic.Messages.ContentBlock[]): 
 export function createClaudeConversationGenerator(model: BatchModel): ConversationGenerator {
   // eslint-disable-next-line max-params
   return (prompt, apiKey) =>
-    callClaudeText({ client: new Anthropic({ apiKey }), prompt, model, maxTokens: CONVERSATION_MAX_TOKENS });
+    callClaudeText({
+      client: new Anthropic({ apiKey }),
+      prompt,
+      model,
+      maxTokens: CONVERSATION_MAX_TOKENS,
+    });
 }
 
 /** Claude で会話 JSON を生成する既定実装（既定モデル sonnet-4-6・#53 / #389）。 */
@@ -113,7 +118,8 @@ export function createSummaryGenerator(model: BatchModel): SummaryGenerator {
 }
 
 /** Claude であらすじを生成する既定実装（既定モデル = DEFAULT_BATCH_MODEL・#53 / #940）。 */
-export const generateSummaryWithClaude: SummaryGenerator = createSummaryGenerator(DEFAULT_BATCH_MODEL);
+export const generateSummaryWithClaude: SummaryGenerator =
+  createSummaryGenerator(DEFAULT_BATCH_MODEL);
 
 /**
  * Batches API 経路の ConversationGenerator を作る依存（#389 AC3・DI でテスト可能にする）。
@@ -138,7 +144,8 @@ export interface BatchConversationGeneratorDeps {
 }
 
 /** 既定の待機関数（指定ミリ秒スリープ）。 */
-const defaultSleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+const defaultSleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * バッチ結果の最小形（custom_id と成否）。SDK 型に依存しすぎないようローカルで narrowing する。

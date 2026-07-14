@@ -35,12 +35,23 @@ export function extractErrorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
 
+export interface LogBatchInfoOptions {
+  event: string;
+  fields?: BatchLogFields;
+}
+
+export interface LogBatchErrorOptions {
+  event: string;
+  err: unknown;
+  fields?: BatchLogFields;
+}
+
 /**
  * info レベルの構造化ログを 1 行 JSON で標準出力に出す（#470 AC1）。
- * @param event ドット区切りの event 名（例 "community_batch.completed"）。
- * @param fields 任意の構造化フィールド。
+ * @param options.event ドット区切りの event 名（例 "community_batch.completed"）。
+ * @param options.fields 任意の構造化フィールド。
  */
-export function logBatchInfo({ event, fields }: { event: string; fields?: BatchLogFields }): void {
+export function logBatchInfo({ event, fields }: LogBatchInfoOptions): void {
   const payload = { level: "info", event, ...sanitizeFields(fields) };
   console.log(JSON.stringify(payload));
 }
@@ -48,19 +59,11 @@ export function logBatchInfo({ event, fields }: { event: string; fields?: BatchL
 /**
  * error レベルの構造化ログを 1 行 JSON で標準エラーに出す（#470 AC1 / AC3）。
  * `err` からのメッセージ抽出は extractErrorMessage に集約し `error` フィールドに入れる。
- * @param event ドット区切りの event 名（例 "community_batch.community_failed"）。
- * @param err 失敗の原因（Error / 非 Error いずれも可）。
- * @param fields 任意の構造化フィールド。
+ * @param options.event ドット区切りの event 名（例 "community_batch.community_failed"）。
+ * @param options.err 失敗の原因（Error / 非 Error いずれも可）。
+ * @param options.fields 任意の構造化フィールド。
  */
-export function logBatchError({
-  event,
-  err,
-  fields,
-}: {
-  event: string;
-  err: unknown;
-  fields?: BatchLogFields;
-}): void {
+export function logBatchError({ event, err, fields }: LogBatchErrorOptions): void {
   const payload = {
     level: "error",
     event,

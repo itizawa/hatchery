@@ -66,39 +66,37 @@ describe("startMessageBatchScheduler — 1 日数回の定時実行（#32）", (
   it("既定では DEFAULT_BATCH_HOURS の回数だけジョブを登録する", () => {
     const scheduled: Array<{ hour: number; minute: number }> = [];
     const fake: SchedulerPort = {
-      // eslint-disable-next-line max-params
-      scheduleDaily(hour, minute) {
+      scheduleDaily({ hour, minute }) {
         scheduled.push({ hour, minute });
         return () => {};
       },
     };
-    startMessageBatchScheduler(async () => {}, { scheduler: fake });
+    startMessageBatchScheduler({ run: async () => {}, scheduler: fake });
     expect(scheduled.map((s) => s.hour)).toEqual([...DEFAULT_BATCH_HOURS]);
   });
 
   it("指定した hours の数だけ登録する", () => {
     const scheduled: number[] = [];
     const fake: SchedulerPort = {
-      scheduleDaily(hour) {
+      scheduleDaily({ hour }) {
         scheduled.push(hour);
         return () => {};
       },
     };
-    startMessageBatchScheduler(async () => {}, { hours: [9, 18], scheduler: fake });
+    startMessageBatchScheduler({ run: async () => {}, hours: [9, 18], scheduler: fake });
     expect(scheduled).toEqual([9, 18]);
   });
 
   it("登録ハンドラを発火するとジョブが実行される（モック可能）", async () => {
     let handler: (() => void) | undefined;
     const fake: SchedulerPort = {
-      // eslint-disable-next-line max-params
-      scheduleDaily(_hour, _minute, h) {
+      scheduleDaily({ handler: h }) {
         handler = h;
         return () => {};
       },
     };
     const run = vi.fn(async () => {});
-    startMessageBatchScheduler(run, { hours: [9], scheduler: fake });
+    startMessageBatchScheduler({ run, hours: [9], scheduler: fake });
     expect(handler).toBeTypeOf("function");
     handler?.();
     await vi.waitFor(() => expect(run).toHaveBeenCalledTimes(1));
@@ -113,7 +111,11 @@ describe("startMessageBatchScheduler — 1 日数回の定時実行（#32）", (
         return cancel;
       },
     };
-    const cancelAll = startMessageBatchScheduler(async () => {}, { hours: [9, 12], scheduler: fake });
+    const cancelAll = startMessageBatchScheduler({
+      run: async () => {},
+      hours: [9, 12],
+      scheduler: fake,
+    });
     cancelAll();
     for (const cancel of cancels) {
       expect(cancel).toHaveBeenCalledTimes(1);

@@ -7,14 +7,17 @@ import {
   type CommunityRecord,
 } from "../persistence/communityRepository.js";
 import { createInMemoryPostRepository } from "../persistence/postRepository.js";
-import {
-  createInMemoryWorkerCommunityRepository,
-} from "../persistence/workerCommunityRepository.js";
+import { createInMemoryWorkerCommunityRepository } from "../persistence/workerCommunityRepository.js";
 import type { WorkerRecord } from "../persistence/workerRepository.js";
 import { createInMemoryWorldStateRepository } from "../persistence/worldStateRepository.js";
 
 import * as logger from "./logger.js";
-import { runPostBatch, POST_COUNT_MIN, POST_COUNT_MAX, DEFAULT_POST_DRIP_WINDOW_MS } from "./runPostBatch.js";
+import {
+  runPostBatch,
+  POST_COUNT_MIN,
+  POST_COUNT_MAX,
+  DEFAULT_POST_DRIP_WINDOW_MS,
+} from "./runPostBatch.js";
 
 const botWorkers: WorkerRecord[] = [
   {
@@ -383,15 +386,15 @@ describe("runPostBatch (#672)", () => {
       });
 
       expect(logSpy).not.toHaveBeenCalledWith(
-        "post_batch.duplicate_text_detected",
-        expect.anything(),
+        expect.objectContaining({ event: "post_batch.duplicate_text_detected" }),
       );
     });
   });
 
   describe("リトライ (#626)", () => {
     it("JSON パース失敗が 1 回でリトライ成功する場合、generate が 2 回呼ばれ post が永続化される", async () => {
-      const generate = vi.fn()
+      const generate = vi
+        .fn()
         .mockResolvedValueOnce({ text: "INVALID JSON" })
         .mockResolvedValueOnce({ text: validPostOutput });
 
@@ -436,7 +439,8 @@ describe("runPostBatch (#672)", () => {
         topic: "test",
         posts: [{ id: "p1", author: "unknown-xyz", title: "タイトル", text: "本文", comments: [] }],
       });
-      const generate = vi.fn()
+      const generate = vi
+        .fn()
         .mockResolvedValueOnce({ text: badAuthorOutput })
         .mockResolvedValueOnce({ text: validPostOutput });
 
@@ -542,9 +546,16 @@ describe("外部フィード（feedUrl）の post バッチへの注入（#1104 
       feedUrl: "https://zenn.dev/feed",
     };
     const generate = vi.fn().mockResolvedValue({ text: validPostOutput });
-    const fetchFeed = vi.fn().mockResolvedValue([
-      { title: "TypeScript 5.0 の新機能", url: "https://zenn.dev/a", summary: "概要", author: "yamada" },
-    ]);
+    const fetchFeed = vi
+      .fn()
+      .mockResolvedValue([
+        {
+          title: "TypeScript 5.0 の新機能",
+          url: "https://zenn.dev/a",
+          summary: "概要",
+          author: "yamada",
+        },
+      ]);
 
     await runPostBatch({
       communityRepo: createInMemoryCommunityRepository([communityWithFeed]),

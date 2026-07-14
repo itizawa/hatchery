@@ -90,7 +90,11 @@ describe("logError — error レベルの構造化ログ（stack 保持）", () 
 
   it("fields をマージして出力する", () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
-    logError({ event: "http.500", err: new Error("oops"), fields: { method: "GET", path: "/api/test" } });
+    logError({
+      event: "http.500",
+      err: new Error("oops"),
+      fields: { method: "GET", path: "/api/test" },
+    });
     const parsed = parseLastCall(spy);
     expect(parsed.method).toBe("GET");
     expect(parsed.path).toBe("/api/test");

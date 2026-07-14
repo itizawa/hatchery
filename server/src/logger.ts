@@ -28,20 +28,23 @@ export function extractErrorInfo(err: unknown): { message: string; stack?: strin
   return { message: String(err) };
 }
 
-export function logInfo({ event, fields }: { event: string; fields?: LogFields }): void {
+export interface LogInfoOptions {
+  event: string;
+  fields?: LogFields;
+}
+
+export interface LogErrorOptions {
+  event: string;
+  err: unknown;
+  fields?: LogFields;
+}
+
+export function logInfo({ event, fields }: LogInfoOptions): void {
   const payload = { severity: "INFO", level: "info", event, ...sanitizeFields(fields) };
   console.log(JSON.stringify(payload));
 }
 
-export function logError({
-  event,
-  err,
-  fields,
-}: {
-  event: string;
-  err: unknown;
-  fields?: LogFields;
-}): void {
+export function logError({ event, err, fields }: LogErrorOptions): void {
   const { message, stack } = extractErrorInfo(err);
   const payload = {
     severity: "ERROR",

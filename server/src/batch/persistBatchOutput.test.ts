@@ -156,9 +156,7 @@ describe("persistBatchOutput (#716)", () => {
           comments: [],
         },
       ],
-      replies: [
-        { targetPostRef: "ref-1", author: "worker2", text: "既存投稿への返信" },
-      ],
+      replies: [{ targetPostRef: "ref-1", author: "worker2", text: "既存投稿への返信" }],
     };
 
     const result = await persistBatchOutput({
@@ -299,7 +297,9 @@ describe("persistBatchOutput: タイトル URL 検出ログ（#1022）", () => {
       rng: () => 0.5,
     });
 
-    expect(spy).not.toHaveBeenCalledWith("persist_batch.title_url_detected", expect.anything());
+    expect(spy).not.toHaveBeenCalledWith(
+      expect.objectContaining({ event: "persist_batch.title_url_detected" }),
+    );
 
     spy.mockRestore();
   });

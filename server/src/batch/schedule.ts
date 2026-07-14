@@ -33,19 +33,18 @@ export function resolveBatchHours(envValue?: string): number[] {
   return parsed.slice(0, MAX_BATCH_RUNS_PER_DAY);
 }
 
+/** msUntilNext に渡すオプション。 */
+export interface MsUntilNextOptions {
+  hour: number;
+  minute: number;
+  now?: Date;
+}
+
 /**
  * now（ローカル時刻基準）から、次に hour:minute が訪れるまでの ms を返す。
  * 当日の同時刻ちょうど・過去なら翌日分を返す（常に正）。
  */
-export function msUntilNext({
-  hour,
-  minute,
-  now = new Date(),
-}: {
-  hour: number;
-  minute: number;
-  now?: Date;
-}): number {
+export function msUntilNext({ hour, minute, now = new Date() }: MsUntilNextOptions): number {
   const next = new Date(now);
   next.setHours(hour, minute, 0, 0);
   if (next.getTime() <= now.getTime()) {
@@ -54,12 +53,19 @@ export function msUntilNext({
   return next.getTime() - now.getTime();
 }
 
+/** scheduleDaily に渡すオプション。 */
+export interface ScheduleDailyOptions {
+  hour: number;
+  minute: number;
+  handler: () => void;
+}
+
 /** スケジューリングの副作用境界（ポート）。テストではフェイク実装を注入する。 */
 export interface SchedulerPort {
   /**
    * 毎日 hour:minute に handler を呼ぶジョブを登録し、解除関数を返す。
    */
-  scheduleDaily(hour: number, minute: number, handler: () => void): () => void;
+  scheduleDaily(options: ScheduleDailyOptions): () => void;
 }
 
 /**
@@ -73,8 +79,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 /** setTimeout ベースの既定スケジューラ。発火後に翌日分を再登録して日次運用する。 */
 export function createSystemScheduler(): SchedulerPort {
   return {
-    // eslint-disable-next-line max-params
-    scheduleDaily(hour: number, minute: number, handler: () => void): () => void {
+    scheduleDaily({ hour, minute, handler }: ScheduleDailyOptions): () => void {
       let timer: ReturnType<typeof setTimeout>;
       let cancelled = false;
 
@@ -100,6 +105,8 @@ export function createSystemScheduler(): SchedulerPort {
 
 /** startMessageBatchScheduler のオプション。 */
 export interface StartSchedulerOptions {
+  /** 定時ごとに実行する処理。 */
+  run: () => Promise<unknown>;
   /** 定時の時（ローカル時刻）。既定 DEFAULT_BATCH_HOURS。 */
   hours?: readonly number[];
   /** 各定時の分（既定 0）。 */
@@ -113,20 +120,21 @@ export interface StartSchedulerOptions {
  * 各定時ごとにジョブを登録し、全ジョブを解除する cancel 関数を返す。
  * run の失敗はプロセスを落とさずログに留める（次回の定時は継続させる）。
  */
-// eslint-disable-next-line max-params
-export function startMessageBatchScheduler(
-  run: () => Promise<unknown>,
-  options: StartSchedulerOptions = {},
-): () => void {
-  const hours = options.hours ?? DEFAULT_BATCH_HOURS;
-  const minute = options.minute ?? 0;
-  const scheduler = options.scheduler ?? createSystemScheduler();
-
+export function startMessageBatchScheduler({
+  run,
+  hours = DEFAULT_BATCH_HOURS,
+  minute = 0,
+  scheduler = createSystemScheduler(),
+}: StartSchedulerOptions): () => void {
   const cancels = hours.map((hour) =>
-    scheduler.scheduleDaily(hour, minute, () => {
-      void run().catch((err: unknown) => {
-        logBatchError({ event: "scheduled_run.failed", err });
-      });
+    scheduler.scheduleDaily({
+      hour,
+      minute,
+      handler: () => {
+        void run().catch((err: unknown) => {
+          logBatchError({ event: "scheduled_run.failed", err });
+        });
+      },
     }),
   );
 

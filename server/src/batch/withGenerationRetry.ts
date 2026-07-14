@@ -33,7 +33,11 @@ export async function withGenerationRetry<T>({
       if (err instanceof RetryableGenerationError) {
         lastError = err;
         if (attempt < maxRetries) {
-          logBatchError({ event: "generation.retry_failed", err, fields: { label, attempt, maxRetries } });
+          logBatchError({
+            event: "generation.retry_failed",
+            err,
+            fields: { label, attempt, maxRetries },
+          });
         } else {
           logBatchError({
             event: "generation.retry_exhausted",

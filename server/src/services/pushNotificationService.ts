@@ -26,7 +26,13 @@ export function createPushNotificationService({
   webpush.setVapidDetails(config.subject, config.publicKey, config.privateKey);
 
   return {
-    async sendToUsers({ payload, userIds }: { payload: PushPayload; userIds: string[] }): Promise<void> {
+    async sendToUsers({
+      payload,
+      userIds,
+    }: {
+      payload: PushPayload;
+      userIds: string[];
+    }): Promise<void> {
       if (userIds.length === 0) return;
       const subs = await pushSubscriptionRepo.listByUserIds(userIds);
       if (subs.length === 0) return;

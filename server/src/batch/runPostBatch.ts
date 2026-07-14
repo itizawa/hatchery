@@ -136,7 +136,11 @@ async function processCommunitePosts({
   const rotatedWorkers = worldStateRepo
     ? (() => {
         const count = deps.appearingWorkerCount ?? resolvedWorkers.length;
-        const orderedIds = selectRotatedWorkers({ workers: resolvedWorkers, workerStates: currentWorkerStates, count });
+        const orderedIds = selectRotatedWorkers({
+          workers: resolvedWorkers,
+          workerStates: currentWorkerStates,
+          count,
+        });
         const byId = new Map(resolvedWorkers.map((w) => [w.id, w]));
         return orderedIds.flatMap((id) => {
           const w = byId.get(id);

@@ -25,7 +25,7 @@ export async function withGenerationRetry<T>({
   let lastError: RetryableGenerationError | undefined;
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     if (attempt > 0) {
-      logBatchInfo("generation.retry", { label, attempt, maxRetries });
+      logBatchInfo({ event: "generation.retry", fields: { label, attempt, maxRetries } });
     }
     try {
       return await fn();
@@ -33,9 +33,17 @@ export async function withGenerationRetry<T>({
       if (err instanceof RetryableGenerationError) {
         lastError = err;
         if (attempt < maxRetries) {
-          logBatchError("generation.retry_failed", err, { label, attempt, maxRetries });
+          logBatchError({
+            event: "generation.retry_failed",
+            err,
+            fields: { label, attempt, maxRetries },
+          });
         } else {
-          logBatchError("generation.retry_exhausted", err, { label, attempt, maxRetries });
+          logBatchError({
+            event: "generation.retry_exhausted",
+            err,
+            fields: { label, attempt, maxRetries },
+          });
         }
         continue;
       }

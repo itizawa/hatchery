@@ -61,9 +61,9 @@ async function callClaudeText({
   });
   if (message.stop_reason === "max_tokens") {
     const snippet = prompt.length > 100 ? `${prompt.slice(0, 100)}...` : prompt;
-    logBatchInfo("ai_generation.max_tokens_truncated", {
-      maxTokens,
-      promptSnippet: snippet,
+    logBatchInfo({
+      event: "ai_generation.max_tokens_truncated",
+      fields: { maxTokens, promptSnippet: snippet },
     });
   }
   return {
@@ -87,7 +87,12 @@ function extractFirstText(content: readonly Anthropic.Messages.ContentBlock[]): 
 export function createClaudeConversationGenerator(model: BatchModel): ConversationGenerator {
   // eslint-disable-next-line max-params
   return (prompt, apiKey) =>
-    callClaudeText({ client: new Anthropic({ apiKey }), prompt, model, maxTokens: CONVERSATION_MAX_TOKENS });
+    callClaudeText({
+      client: new Anthropic({ apiKey }),
+      prompt,
+      model,
+      maxTokens: CONVERSATION_MAX_TOKENS,
+    });
 }
 
 /** Claude で会話 JSON を生成する既定実装（既定モデル sonnet-4-6・#53 / #389）。 */
@@ -113,7 +118,8 @@ export function createSummaryGenerator(model: BatchModel): SummaryGenerator {
 }
 
 /** Claude であらすじを生成する既定実装（既定モデル = DEFAULT_BATCH_MODEL・#53 / #940）。 */
-export const generateSummaryWithClaude: SummaryGenerator = createSummaryGenerator(DEFAULT_BATCH_MODEL);
+export const generateSummaryWithClaude: SummaryGenerator =
+  createSummaryGenerator(DEFAULT_BATCH_MODEL);
 
 /**
  * Batches API 経路の ConversationGenerator を作る依存（#389 AC3・DI でテスト可能にする）。
@@ -138,7 +144,8 @@ export interface BatchConversationGeneratorDeps {
 }
 
 /** 既定の待機関数（指定ミリ秒スリープ）。 */
-const defaultSleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+const defaultSleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * バッチ結果の最小形（custom_id と成否）。SDK 型に依存しすぎないようローカルで narrowing する。
@@ -201,9 +208,9 @@ export function createBatchConversationGenerator(
       status = polled.processing_status;
     }
     if (status !== "ended") {
-      logBatchInfo("ai_generation.batch_not_ended", {
-        batchId: batch.id,
-        maxPolls,
+      logBatchInfo({
+        event: "ai_generation.batch_not_ended",
+        fields: { batchId: batch.id, maxPolls },
       });
       return { text: "" };
     }
@@ -223,11 +230,11 @@ export function createBatchConversationGenerator(
           model: msg.model,
         };
       }
-      logBatchError(
-        "ai_generation.batch_result_failed",
-        `batch result type was ${result.result.type}`,
-        { customId: result.custom_id, resultType: result.result.type },
-      );
+      logBatchError({
+        event: "ai_generation.batch_result_failed",
+        err: `batch result type was ${result.result.type}`,
+        fields: { customId: result.custom_id, resultType: result.result.type },
+      });
       return { text: "" };
     }
     return { text: "" };

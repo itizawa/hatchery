@@ -18,7 +18,11 @@ import {
   type TargetPostForComment,
 } from "./buildCommentBatchPrompt.js";
 import type { WorkerDef } from "./buildCommunityPrompt.js";
-import { calcCommentCount, pickOldPostForRevival, REVIVAL_PROBABILITY } from "./calcCommentCounts.js";
+import {
+  calcCommentCount,
+  pickOldPostForRevival,
+  REVIVAL_PROBABILITY,
+} from "./calcCommentCounts.js";
 import { extractErrorMessage, logBatchError, logBatchInfo } from "./logger.js";
 import { withGenerationRetry, RetryableGenerationError } from "./withGenerationRetry.js";
 
@@ -95,7 +99,10 @@ async function processCommunityComments({
   const botWorkers = communityWorkers.length > 0 ? [] : await botWorkersPromise;
   const resolvedWorkers = selectCommunityWorkers({ communityWorkers, allBotWorkers: botWorkers });
   if (resolvedWorkers.length === 0) {
-    logBatchInfo("comment_batch.skipped_no_workers", { communityId: community.id });
+    logBatchInfo({
+      event: "comment_batch.skipped_no_workers",
+      fields: { communityId: community.id },
+    });
     return [];
   }
 
@@ -116,12 +123,13 @@ async function processCommunityComments({
   const oldPosts = await deps.postRepo.listOldByCommunity(community.id, since, OLD_POSTS_LIMIT);
   const revivalPost = pickOldPostForRevival(oldPosts, revivalProbability, rng);
 
-  const allTargetPosts = revivalPost
-    ? [...recentPosts, revivalPost]
-    : recentPosts;
+  const allTargetPosts = revivalPost ? [...recentPosts, revivalPost] : recentPosts;
 
   if (allTargetPosts.length === 0) {
-    logBatchInfo("comment_batch.skipped_no_posts", { communityId: community.id });
+    logBatchInfo({
+      event: "comment_batch.skipped_no_posts",
+      fields: { communityId: community.id },
+    });
     return [];
   }
 
@@ -184,16 +192,21 @@ async function processCommunityComments({
       try {
         parsed = JSON.parse(raw);
       } catch {
-        logBatchError("comment_batch.json_parse_failed", "JSON parse failed", { communityId: community.id });
+        logBatchError({
+          event: "comment_batch.json_parse_failed",
+          err: "JSON parse failed",
+          fields: { communityId: community.id },
+        });
         throw new RetryableGenerationError(`${community.id}: JSON パース失敗`);
       }
 
       // Zod スキーマ検証。
       const validated = CommentBatchOutputSchema.safeParse(parsed);
       if (!validated.success) {
-        logBatchError("comment_batch.schema_validation_failed", "schema validation failed", {
-          communityId: community.id,
-          issues: validated.error.format(),
+        logBatchError({
+          event: "comment_batch.schema_validation_failed",
+          err: "schema validation failed",
+          fields: { communityId: community.id, issues: validated.error.format() },
         });
         throw new RetryableGenerationError(`${community.id}: スキーマ検証失敗`);
       }
@@ -202,9 +215,10 @@ async function processCommunityComments({
       for (const postOutput of validated.data.posts) {
         for (const comment of postOutput.comments) {
           if (!knownWorkerIds.has(comment.author)) {
-            logBatchError("comment_batch.author_validation_failed", "unknown author", {
-              communityId: community.id,
-              author: comment.author,
+            logBatchError({
+              event: "comment_batch.author_validation_failed",
+              err: "unknown author",
+              fields: { communityId: community.id, author: comment.author },
             });
             throw new RetryableGenerationError(`${community.id}: author 検証失敗`);
           }
@@ -234,7 +248,10 @@ async function processCommunityComments({
   // drip タイムスタンプの総数をフィルタ後の件数で算出するため、永続化ループの前に行う。
   // 元のインデックスは reply_to 解決のため保持する。
   type GenComment = (typeof output.posts)[number]["comments"][number];
-  const filteredEntriesByRef = new Map<string, Array<{ comment: GenComment; originalIndex: number }>>();
+  const filteredEntriesByRef = new Map<
+    string,
+    Array<{ comment: GenComment; originalIndex: number }>
+  >();
   let totalCommentCount = 0;
 
   for (const postOutput of output.posts) {
@@ -247,9 +264,9 @@ async function processCommunityComments({
       .map((comment, originalIndex) => ({ comment, originalIndex }))
       .filter(({ comment }) => {
         if (comment.author === postAuthorId) {
-          logBatchInfo("comment_batch.self_reply_excluded", {
-            communityId: community.id,
-            postId: targetPostId,
+          logBatchInfo({
+            event: "comment_batch.self_reply_excluded",
+            fields: { communityId: community.id, postId: targetPostId },
           });
           return false;
         }
@@ -314,7 +331,8 @@ async function processCommunityComments({
 
         const replyTo = genComment.reply_to ?? null;
         if (replyTo === null) continue;
-        if (replyTo < 0 || replyTo >= postOutput.comments.length || replyTo === originalIndex) continue;
+        if (replyTo < 0 || replyTo >= postOutput.comments.length || replyTo === originalIndex)
+          continue;
 
         const parentGenComment = postOutput.comments[replyTo];
         const parentCreated = createdByOriginalIndex.get(replyTo);
@@ -361,7 +379,7 @@ async function processCommunityComments({
 export async function runCommentBatch(deps: RunCommentBatchDeps): Promise<RunCommentBatchResult> {
   const apiKey = deps.anthropicApiKey;
   if (!apiKey) {
-    logBatchInfo("comment_batch.skipped_no_api_key");
+    logBatchInfo({ event: "comment_batch.skipped_no_api_key" });
     return { comments: [] };
   }
 
@@ -409,8 +427,10 @@ export async function runCommentBatch(deps: RunCommentBatchDeps): Promise<RunCom
       savedComments.push(...result.value);
     } else {
       const message = extractErrorMessage(result.reason);
-      logBatchError("comment_batch.community_failed", result.reason, {
-        communityId: community.id,
+      logBatchError({
+        event: "comment_batch.community_failed",
+        err: result.reason,
+        fields: { communityId: community.id },
       });
       try {
         await deps.batchRunLogRepository?.create({
@@ -420,8 +440,10 @@ export async function runCommentBatch(deps: RunCommentBatchDeps): Promise<RunCom
           errorCode: null,
         });
       } catch (logErr) {
-        logBatchError("comment_batch.failure_log_write_failed", logErr, {
-          communityId: community.id,
+        logBatchError({
+          event: "comment_batch.failure_log_write_failed",
+          err: logErr,
+          fields: { communityId: community.id },
         });
       }
     }

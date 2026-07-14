@@ -26,7 +26,13 @@ export function createPushNotificationService({
   webpush.setVapidDetails(config.subject, config.publicKey, config.privateKey);
 
   return {
-    async sendToUsers({ payload, userIds }: { payload: PushPayload; userIds: string[] }): Promise<void> {
+    async sendToUsers({
+      payload,
+      userIds,
+    }: {
+      payload: PushPayload;
+      userIds: string[];
+    }): Promise<void> {
       if (userIds.length === 0) return;
       const subs = await pushSubscriptionRepo.listByUserIds(userIds);
       if (subs.length === 0) return;
@@ -47,9 +53,17 @@ export function createPushNotificationService({
               await pushSubscriptionRepo.delete(sub.endpoint);
             } else if (status === 401 || status === 403) {
               // VAPID 認証エラー: キー設定ミスの可能性が高いため専用キーで記録する。
-              logBatchError("push_notification.vapid_auth_failed", err, { endpoint: sub.endpoint });
+              logBatchError({
+                event: "push_notification.vapid_auth_failed",
+                err,
+                fields: { endpoint: sub.endpoint },
+              });
             } else {
-              logBatchError("push_notification.send_failed", err, { endpoint: sub.endpoint });
+              logBatchError({
+                event: "push_notification.send_failed",
+                err,
+                fields: { endpoint: sub.endpoint },
+              });
             }
           }
         }),

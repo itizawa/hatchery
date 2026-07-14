@@ -28,14 +28,23 @@ export function extractErrorInfo(err: unknown): { message: string; stack?: strin
   return { message: String(err) };
 }
 
-// eslint-disable-next-line max-params
-export function logInfo(event: string, fields?: LogFields): void {
+export interface LogInfoOptions {
+  event: string;
+  fields?: LogFields;
+}
+
+export interface LogErrorOptions {
+  event: string;
+  err: unknown;
+  fields?: LogFields;
+}
+
+export function logInfo({ event, fields }: LogInfoOptions): void {
   const payload = { severity: "INFO", level: "info", event, ...sanitizeFields(fields) };
   console.log(JSON.stringify(payload));
 }
 
-// eslint-disable-next-line max-params
-export function logError(event: string, err: unknown, fields?: LogFields): void {
+export function logError({ event, err, fields }: LogErrorOptions): void {
   const { message, stack } = extractErrorInfo(err);
   const payload = {
     severity: "ERROR",

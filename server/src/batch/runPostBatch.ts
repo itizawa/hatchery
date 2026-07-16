@@ -128,7 +128,7 @@ async function processCommunitePosts({
   const botWorkers = communityWorkers.length > 0 ? [] : await botWorkersPromise;
   const resolvedWorkers = selectCommunityWorkers({ communityWorkers, allBotWorkers: botWorkers });
   if (resolvedWorkers.length === 0) {
-    logBatchInfo("post_batch.skipped_no_workers", { communityId: community.id });
+    logBatchInfo({ event: "post_batch.skipped_no_workers", fields: { communityId: community.id } });
     return { posts: [], appearedWorkerIds };
   }
 
@@ -136,7 +136,11 @@ async function processCommunitePosts({
   const rotatedWorkers = worldStateRepo
     ? (() => {
         const count = deps.appearingWorkerCount ?? resolvedWorkers.length;
-        const orderedIds = selectRotatedWorkers({ workers: resolvedWorkers, workerStates: currentWorkerStates, count });
+        const orderedIds = selectRotatedWorkers({
+          workers: resolvedWorkers,
+          workerStates: currentWorkerStates,
+          count,
+        });
         const byId = new Map(resolvedWorkers.map((w) => [w.id, w]));
         return orderedIds.flatMap((id) => {
           const w = byId.get(id);
@@ -169,6 +173,7 @@ async function processCommunitePosts({
         countByPostIds: async () => new Map(),
         addScore: async () => null,
         listByWorker: async () => ({ comments: [], nextCursor: null }),
+        count: async () => 0,
       },
       community,
       recentLimit,
@@ -207,16 +212,21 @@ async function processCommunitePosts({
       try {
         parsed = JSON.parse(raw);
       } catch {
-        logBatchError("post_batch.json_parse_failed", "JSON parse failed", { communityId: community.id });
+        logBatchError({
+          event: "post_batch.json_parse_failed",
+          err: "JSON parse failed",
+          fields: { communityId: community.id },
+        });
         throw new RetryableGenerationError(`${community.id}: JSON パース失敗`);
       }
 
       // Zod スキーマ検証。
       const validated = GenerationOutputSchema.safeParse(parsed);
       if (!validated.success) {
-        logBatchError("post_batch.schema_validation_failed", "schema validation failed", {
-          communityId: community.id,
-          issues: validated.error.format(),
+        logBatchError({
+          event: "post_batch.schema_validation_failed",
+          err: "schema validation failed",
+          fields: { communityId: community.id, issues: validated.error.format() },
         });
         throw new RetryableGenerationError(`${community.id}: スキーマ検証失敗`);
       }
@@ -225,7 +235,11 @@ async function processCommunitePosts({
       try {
         validateGenerationOutput({ output: validated.data, knownWorkerIds: workerIds });
       } catch (err) {
-        logBatchError("post_batch.author_validation_failed", err, { communityId: community.id });
+        logBatchError({
+          event: "post_batch.author_validation_failed",
+          err,
+          fields: { communityId: community.id },
+        });
         throw new RetryableGenerationError(`${community.id}: author 検証失敗`);
       }
 
@@ -256,11 +270,14 @@ async function processCommunitePosts({
       recentPosts: recentPostsForReply,
     });
     if (duplicateMatch) {
-      logBatchInfo("post_batch.duplicate_text_detected", {
-        communityId: community.id,
-        title: post.title,
-        matchedTitle: duplicateMatch.matchedTitle,
-        similarity: duplicateMatch.similarity,
+      logBatchInfo({
+        event: "post_batch.duplicate_text_detected",
+        fields: {
+          communityId: community.id,
+          title: post.title,
+          matchedTitle: duplicateMatch.matchedTitle,
+          similarity: duplicateMatch.similarity,
+        },
       });
     }
   }
@@ -324,7 +341,7 @@ async function processCommunitePosts({
 export async function runPostBatch(deps: RunPostBatchDeps): Promise<RunPostBatchResult> {
   const apiKey = deps.anthropicApiKey;
   if (!apiKey) {
-    logBatchInfo("post_batch.skipped_no_api_key");
+    logBatchInfo({ event: "post_batch.skipped_no_api_key" });
     return { posts: [] };
   }
 
@@ -386,8 +403,10 @@ export async function runPostBatch(deps: RunPostBatchDeps): Promise<RunPostBatch
       }
     } else {
       const message = extractErrorMessage(result.reason);
-      logBatchError("post_batch.community_failed", result.reason, {
-        communityId: community.id,
+      logBatchError({
+        event: "post_batch.community_failed",
+        err: result.reason,
+        fields: { communityId: community.id },
       });
       try {
         await deps.batchRunLogRepository?.create({
@@ -397,8 +416,10 @@ export async function runPostBatch(deps: RunPostBatchDeps): Promise<RunPostBatch
           errorCode: null,
         });
       } catch (logErr) {
-        logBatchError("post_batch.failure_log_write_failed", logErr, {
-          communityId: community.id,
+        logBatchError({
+          event: "post_batch.failure_log_write_failed",
+          err: logErr,
+          fields: { communityId: community.id },
         });
       }
     }

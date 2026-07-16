@@ -15,12 +15,15 @@ import type { WorkerCommunityRepository } from "../persistence/workerCommunityRe
  * `adminWorkerCommunities.ts`（#490・ワーカー起点）の逆方向。admin 権限必須。
  * リクエスト検証は common の Zod スキーマで行う（ADR-0006）。
  */
-// eslint-disable-next-line max-params
-export function createAdminCommunityWorkersRouter(
-  communityRepository: CommunityRepository,
-  workerCommunityRepository: WorkerCommunityRepository,
-  workerRepository: WorkerRepository,
-): Router {
+export function createAdminCommunityWorkersRouter({
+  communityRepository,
+  workerCommunityRepository,
+  workerRepository,
+}: {
+  communityRepository: CommunityRepository;
+  workerCommunityRepository: WorkerCommunityRepository;
+  workerRepository: WorkerRepository;
+}): Router {
   const router = Router();
 
   router.use(requireAdminAccess);

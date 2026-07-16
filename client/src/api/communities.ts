@@ -58,6 +58,11 @@ export {
 /** community 画像の種別（#457）。 */
 export type CommunityImageKind = "icon" | "cover";
 
+/** community icon/cover アップロードのレスポンス型（種別ごとにレスポンス形状が異なるため union・#1180）。 */
+export type CommunityImageUploadResponse =
+  | components["schemas"]["CommunityIconUploadResponse"]
+  | components["schemas"]["CommunityCoverUploadResponse"];
+
 // ─── 公開 API 向け型定義（openapi.gen.ts より）────────────────────────────────────────────────
 export type Community = components["schemas"]["Community"];
 
@@ -160,12 +165,15 @@ export function useUpdateCommunity() {
  * openapi-fetch は multipart/form-data 非対応のため worker 同様 fetch を直接呼ぶ。
  * baseUrl は clientEnv.apiBaseUrl（クロスオリジン配信 #78）→ window.location.origin の順で解決。
  */
-// eslint-disable-next-line max-params
-export async function uploadCommunityImage(
-  communityId: string,
-  kind: CommunityImageKind,
-  file: File,
-): Promise<{ id: string; iconUrl?: string | null; coverUrl?: string | null }> {
+export async function uploadCommunityImage({
+  communityId,
+  kind,
+  file,
+}: {
+  communityId: string;
+  kind: CommunityImageKind;
+  file: File;
+}): Promise<CommunityImageUploadResponse> {
   const formData = new FormData();
   formData.append("image", file);
 
@@ -183,7 +191,7 @@ export async function uploadCommunityImage(
     throw new Error(body.error ?? `Upload failed: ${res.status}`);
   }
 
-  return res.json() as Promise<{ id: string; iconUrl?: string | null; coverUrl?: string | null }>;
+  return res.json() as Promise<CommunityImageUploadResponse>;
 }
 
 /**
@@ -201,7 +209,7 @@ export function useUploadCommunityImage() {
       communityId: string;
       kind: CommunityImageKind;
       file: File;
-    }) => uploadCommunityImage(communityId, kind, file),
+    }) => uploadCommunityImage({ communityId, kind, file }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ADMIN_COMMUNITIES_QUERY_KEY });
       void queryClient.invalidateQueries({ queryKey: ["communities"] });

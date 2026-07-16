@@ -743,6 +743,10 @@
               "up",
               "down"
             ]
+          },
+          "is_summary": {
+            "type": "boolean",
+            "default": false
           }
         },
         "required": [
@@ -909,6 +913,44 @@
           }
         },
         "description": "コミュニティ更新リクエストボディ（#310 / #337）"
+      },
+      "CommunityIconUploadResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "iconUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "iconUrl"
+        ],
+        "description": "アップロード後の community id と iconUrl（#457 / #1180）"
+      },
+      "CommunityCoverUploadResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "coverUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "coverUrl"
+        ],
+        "description": "アップロード後の community id と coverUrl（#457 / #1180）"
       },
       "CommunityWorkerAssignments": {
         "type": "object",
@@ -1143,6 +1185,22 @@
           "communityIds"
         ],
         "description": "ワーカーの参加コミュニティを置き換えるリクエストボディ（#490）"
+      },
+      "WorkerImageUploadResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "imageUrl": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "imageUrl"
+        ],
+        "description": "アップロード後の worker id と imageUrl（#204 / #1180）"
       },
       "PostViewRequest": {
         "type": "object",
@@ -1471,6 +1529,93 @@
           }
         ],
         "description": "直近 7 日間で評価（vote）を多く獲得した Post / Comment（#1065）"
+      },
+      "DashboardSummary": {
+        "type": "object",
+        "properties": {
+          "community_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "worker_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "post_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "comment_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "total_view_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "total_vote_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "total_subscription_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "communities": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "community_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                "slug": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 50
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 50
+                },
+                "post_count": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "subscriber_count": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "view_count": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "community_id",
+                "slug",
+                "name",
+                "post_count",
+                "subscriber_count",
+                "view_count"
+              ]
+            }
+          }
+        },
+        "required": [
+          "community_count",
+          "worker_count",
+          "post_count",
+          "comment_count",
+          "total_view_count",
+          "total_vote_count",
+          "total_subscription_count",
+          "communities"
+        ],
+        "description": "サイト全体の定量サマリ（コミュニティ数・ワーカー数・投稿数・コメント数・累計閲覧数・累計 vote 数・購読数）とコミュニティ別内訳（view_count 降順）。#1113"
       }
     },
     "parameters": {}
@@ -1969,22 +2114,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string"
-                    },
-                    "iconUrl": {
-                      "type": [
-                        "string",
-                        "null"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "iconUrl"
-                  ]
+                  "$ref": "#/components/schemas/CommunityIconUploadResponse"
                 }
               }
             }
@@ -2069,22 +2199,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string"
-                    },
-                    "coverUrl": {
-                      "type": [
-                        "string",
-                        "null"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "coverUrl"
-                  ]
+                  "$ref": "#/components/schemas/CommunityCoverUploadResponse"
                 }
               }
             }
@@ -3581,6 +3696,91 @@
         }
       }
     },
+    "/api/admin/workers/{id}/image": {
+      "post": {
+        "summary": "ワーカーの画像をアップロード（認証必須・admin のみ・#204 / #1180）",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "image": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                },
+                "required": [
+                  "image"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "アップロード後の worker id と imageUrl",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerImageUploadResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ファイル不正（MIME / サイズ超過 / 未添付）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未認証",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "admin 権限なし",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Worker が存在しない",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/feed": {
       "get": {
         "summary": "ホームフィードを取得（認証不要・全 community の投稿・新着順・カーソルページネーション #367）",
@@ -4265,6 +4465,23 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dashboard": {
+      "get": {
+        "summary": "サイト全体の定量サマリダッシュボードを取得（認証不要）（#1113）",
+        "responses": {
+          "200": {
+            "description": "サイト全体サマリ + コミュニティ別内訳（view_count 降順）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardSummary"
                 }
               }
             }

@@ -22,13 +22,17 @@ import type { CommunityRepository } from "../persistence/communityRepository.js"
 import type { PostRepository } from "../persistence/postRepository.js";
 import type { WorkerRepository } from "../persistence/workerRepository.js";
 
-// eslint-disable-next-line max-params
-export function createAdminRouter(
-  workerRepository: WorkerRepository,
-  communityRepository: CommunityRepository,
-  postRepository: PostRepository,
-  commentRepository: CommentRepository,
-): Router {
+export function createAdminRouter({
+  workerRepository,
+  communityRepository,
+  postRepository,
+  commentRepository,
+}: {
+  workerRepository: WorkerRepository;
+  communityRepository: CommunityRepository;
+  postRepository: PostRepository;
+  commentRepository: CommentRepository;
+}): Router {
   const router = Router();
 
   router.use(requireAdminAccess);

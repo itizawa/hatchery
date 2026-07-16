@@ -35,8 +35,8 @@ interface GracefulShutdownDeps {
 export async function gracefulShutdown({
   server,
   disconnect,
-  onError = (err: unknown) => logError("server.shutdown_error", err),
-  log = (message: string) => logInfo("server.lifecycle", { message }),
+  onError = (err: unknown) => logError({ event: "server.shutdown_error", err }),
+  log = (message: string) => logInfo({ event: "server.lifecycle", fields: { message } }),
 }: GracefulShutdownDeps): Promise<void> {
   log("[server] graceful shutdown: closing server (draining in-flight requests)");
   await new Promise<void>((resolve) => {
@@ -89,8 +89,8 @@ export function registerGracefulShutdown({
   signals = ["SIGTERM", "SIGINT"],
   exit = (code) => process.exit(code),
   process: proc = process,
-  onError = (err: unknown) => logError("server.shutdown_error", err),
-  log = (message: string) => logInfo("server.lifecycle", { message }),
+  onError = (err: unknown) => logError({ event: "server.shutdown_error", err }),
+  log = (message: string) => logInfo({ event: "server.lifecycle", fields: { message } }),
   forceExitAfterMs = 10_000,
 }: RegisterGracefulShutdownDeps): void {
   let shuttingDown = false;

@@ -63,6 +63,8 @@ export interface CommunityRepository {
   create(input: CreateCommunityRecordInput): Promise<CommunityRecord>;
   /** name / description を部分更新して返す。存在しない場合は null（#310 / admin CRUD）。 */
   update(id: string, input: UpdateCommunityRecordInput): Promise<CommunityRecord | null>;
+  /** 総 community 数を返す（#1113・ダッシュボード集計用）。 */
+  count(): Promise<number>;
 }
 
 function cloneRecord(r: CommunityRecord): CommunityRecord {
@@ -124,6 +126,10 @@ export function createInMemoryCommunityRepository(
       if (input.feedUrl !== undefined) record.feedUrl = input.feedUrl;
       if (input.generationPaused !== undefined) record.generationPaused = input.generationPaused;
       return Promise.resolve(cloneRecord(record));
+    },
+
+    count(): Promise<number> {
+      return Promise.resolve(records.length);
     },
   };
 }

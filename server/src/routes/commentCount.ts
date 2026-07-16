@@ -13,12 +13,15 @@ interface HasId {
  *
  * 解決後の整形（`comment_count` への変換）は `toPostResponse` が担う。
  */
-// eslint-disable-next-line max-params
-export async function attachCommentCount<T extends HasId>(
-  records: readonly T[],
-  commentRepo: CommentRepository,
-  options?: RevealFilterOptions,
-): Promise<Array<T & { commentCount: number }>> {
+export async function attachCommentCount<T extends HasId>({
+  records,
+  commentRepo,
+  options,
+}: {
+  records: readonly T[];
+  commentRepo: CommentRepository;
+  options?: RevealFilterOptions;
+}): Promise<Array<T & { commentCount: number }>> {
   if (records.length === 0) return [];
   const counts = await commentRepo.countByPostIds(records.map((r) => r.id), options);
   return records.map((r) => ({ ...r, commentCount: counts.get(r.id) ?? 0 }));

@@ -9,8 +9,13 @@ import { type RegistryContext, commentIdParam, postIdParam } from "./shared.js";
  *
  * Post / Comment component は registerCommunities が ctx に代入済み。これより前に呼ばないこと。
  */
-// eslint-disable-next-line max-params
-export function registerPosts(registry: OpenAPIRegistry, ctx: RegistryContext): void {
+export function registerPosts({
+  registry,
+  ctx,
+}: {
+  registry: OpenAPIRegistry;
+  ctx: RegistryContext;
+}): void {
   const { errorJson, PostComponent, CommentComponent } = ctx;
   if (!PostComponent || !CommentComponent) {
     throw new Error(

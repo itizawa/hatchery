@@ -48,20 +48,20 @@ async function main(): Promise<void> {
   // 伝える（健全な旧リビジョンが維持され、全リクエストが 500 になるインスタンスを公開しない）。
   try {
     await prisma.$connect();
-    logInfo("server.database_connected");
+    logInfo({ event: "server.database_connected" });
   } catch (err) {
-    logError("server.database_connection_failed", err);
+    logError({ event: "server.database_connection_failed", err });
     process.exit(1);
   }
 
   const server = app.listen(env.port, () => {
-    logInfo("server.listening", { port: env.port });
+    logInfo({ event: "server.listening", fields: { port: env.port } });
   });
 
   // listen 失敗（ポート使用中等）は 'error' イベントで飛ぶ。ハンドラが無いと
   // 不明瞭な uncaught 例外でクラッシュするため、明示的にログして exit する。
   server.on("error", (err) => {
-    logError("server.listen_error", err);
+    logError({ event: "server.listen_error", err });
     process.exit(1);
   });
 

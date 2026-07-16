@@ -349,4 +349,35 @@ describe.skipIf(!DATABASE_URL)("createPrismaWorkerRepository (integration)", () 
       expect(updated?.imageUrl).toBeNull();
     });
   });
+
+  describe("count（#1113）", () => {
+    it("worker が 0 件のとき 0 を返す", async () => {
+      const repo = createPrismaWorkerRepository(prisma);
+
+      const result = await repo.count();
+
+      expect(result).toBe(0);
+    });
+
+    it("worker が複数件のとき件数を返す", async () => {
+      const repo = createPrismaWorkerRepository(prisma);
+      await repo.create({ id: "count-w1", displayName: "A" });
+      await repo.create({ id: "count-w2", displayName: "B" });
+
+      const result = await repo.count();
+
+      expect(result).toBe(2);
+    });
+
+    it("論理削除済み worker は件数に含めない", async () => {
+      const repo = createPrismaWorkerRepository(prisma);
+      await repo.create({ id: "count-w1", displayName: "A" });
+      await repo.create({ id: "count-w2", displayName: "B" });
+      await repo.softDelete("count-w2");
+
+      const result = await repo.count();
+
+      expect(result).toBe(1);
+    });
+  });
 });

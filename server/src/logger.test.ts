@@ -17,7 +17,7 @@ function parseLastCall(spy: ReturnType<typeof vi.spyOn>): Record<string, unknown
 describe("logInfo — info レベルの構造化ログ", () => {
   it("severity:INFO, level:info, event を 1 行 JSON で console.log に出す", () => {
     const spy = vi.spyOn(console, "log").mockImplementation(() => {});
-    logInfo("server.listening");
+    logInfo({ event: "server.listening" });
     const parsed = parseLastCall(spy);
     expect(parsed).toEqual({
       severity: "INFO",
@@ -28,7 +28,7 @@ describe("logInfo — info レベルの構造化ログ", () => {
 
   it("fields をマージして出力する", () => {
     const spy = vi.spyOn(console, "log").mockImplementation(() => {});
-    logInfo("server.listening", { port: 3000 });
+    logInfo({ event: "server.listening", fields: { port: 3000 } });
     const parsed = parseLastCall(spy);
     expect(parsed).toEqual({
       severity: "INFO",
@@ -41,13 +41,16 @@ describe("logInfo — info レベルの構造化ログ", () => {
   it("console.error には出力しない", () => {
     vi.spyOn(console, "log").mockImplementation(() => {});
     const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    logInfo("server.listening");
+    logInfo({ event: "server.listening" });
     expect(errSpy).not.toHaveBeenCalled();
   });
 
   it("予約キー（level, severity, event）は fields で上書きされない", () => {
     const spy = vi.spyOn(console, "log").mockImplementation(() => {});
-    logInfo("server.listening", { level: "warn", severity: "WARNING", event: "hacked" });
+    logInfo({
+      event: "server.listening",
+      fields: { level: "warn", severity: "WARNING", event: "hacked" },
+    });
     const parsed = parseLastCall(spy);
     expect(parsed.level).toBe("info");
     expect(parsed.severity).toBe("INFO");
@@ -59,7 +62,7 @@ describe("logError — error レベルの構造化ログ（stack 保持）", () 
   it("Error のとき error(message) + stack を JSON で console.error に出す", () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
     const err = new Error("boom");
-    logError("http.500", err);
+    logError({ event: "http.500", err });
     const parsed = parseLastCall(spy);
     expect(parsed.severity).toBe("ERROR");
     expect(parsed.level).toBe("error");
@@ -71,7 +74,7 @@ describe("logError — error レベルの構造化ログ（stack 保持）", () 
 
   it("非 Error（文字列）のとき error: String(err) で stack を省略する", () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
-    logError("http.500", "plain string");
+    logError({ event: "http.500", err: "plain string" });
     const parsed = parseLastCall(spy);
     expect(parsed.error).toBe("plain string");
     expect(parsed).not.toHaveProperty("stack");
@@ -79,7 +82,7 @@ describe("logError — error レベルの構造化ログ（stack 保持）", () 
 
   it("非 Error（オブジェクト）のとき String(err) を error に入れる", () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
-    logError("http.500", { code: 1 });
+    logError({ event: "http.500", err: { code: 1 } });
     const parsed = parseLastCall(spy);
     expect(parsed.error).toBe(String({ code: 1 }));
     expect(parsed).not.toHaveProperty("stack");
@@ -87,7 +90,11 @@ describe("logError — error レベルの構造化ログ（stack 保持）", () 
 
   it("fields をマージして出力する", () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
-    logError("http.500", new Error("oops"), { method: "GET", path: "/api/test" });
+    logError({
+      event: "http.500",
+      err: new Error("oops"),
+      fields: { method: "GET", path: "/api/test" },
+    });
     const parsed = parseLastCall(spy);
     expect(parsed.method).toBe("GET");
     expect(parsed.path).toBe("/api/test");
@@ -97,18 +104,22 @@ describe("logError — error レベルの構造化ログ（stack 保持）", () 
   it("console.log には出力しない", () => {
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     vi.spyOn(console, "error").mockImplementation(() => {});
-    logError("http.500", new Error("z"));
+    logError({ event: "http.500", err: new Error("z") });
     expect(logSpy).not.toHaveBeenCalled();
   });
 
   it("予約キー（level, severity, event, error, stack）は fields で上書きされない", () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
-    logError("http.500", new Error("real"), {
-      level: "warn",
-      severity: "WARNING",
-      event: "hacked",
-      error: "fake",
-      stack: "fake-stack",
+    logError({
+      event: "http.500",
+      err: new Error("real"),
+      fields: {
+        level: "warn",
+        severity: "WARNING",
+        event: "hacked",
+        error: "fake",
+        stack: "fake-stack",
+      },
     });
     const parsed = parseLastCall(spy);
     expect(parsed.level).toBe("error");

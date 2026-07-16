@@ -29,6 +29,7 @@ const baseComment: CommentRecord = {
   score: 1,
   createdAt: new Date("2026-06-01T09:01:00Z"),
   parentCommentId: null,
+  isSummary: false,
 };
 
 describe("toPostResponse", () => {
@@ -109,5 +110,15 @@ describe("toCommentResponse", () => {
   it("myVote 省略のとき my_vote フィールドを含まない（#831）", () => {
     const result = toCommentResponse(baseComment);
     expect(result).not.toHaveProperty("my_vote");
+  });
+
+  it("is_summary=false を返す（まとめコメント・#1165）", () => {
+    const result = toCommentResponse(baseComment);
+    expect(result.is_summary).toBe(false);
+  });
+
+  it("is_summary=true を返す（まとめコメント・#1165）", () => {
+    const result = toCommentResponse({ ...baseComment, isSummary: true });
+    expect(result.is_summary).toBe(true);
   });
 });

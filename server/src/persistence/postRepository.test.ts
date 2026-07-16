@@ -976,4 +976,23 @@ describe("createInMemoryPostRepository", () => {
       expect(result.posts.map((p) => p.title)).toEqual(["a"]);
     });
   });
+
+  describe("count（#1113）", () => {
+    it("post が 0 件のとき 0 を返す", async () => {
+      const repo = createInMemoryPostRepository();
+      expect(await repo.count()).toBe(0);
+    });
+
+    it("複数コミュニティの post をまとめて総数で返す", async () => {
+      const repo = createInMemoryPostRepository();
+      await repo.createMany("community-1", [
+        { slotKey: "s", seq: 0, author: "w", title: "a", text: "t" },
+        { slotKey: "s", seq: 1, author: "w", title: "b", text: "t" },
+      ]);
+      await repo.createMany("community-2", [
+        { slotKey: "s", seq: 0, author: "w", title: "c", text: "t" },
+      ]);
+      expect(await repo.count()).toBe(3);
+    });
+  });
 });

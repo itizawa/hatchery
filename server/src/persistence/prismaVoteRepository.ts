@@ -338,5 +338,9 @@ export function createPrismaVoteRepository(prisma: PrismaClient): VoteRepository
         created_at: row.createdAt.toISOString(),
       }));
     },
+
+    async count(): Promise<number> {
+      return prisma.vote.count();
+    },
   };
 }

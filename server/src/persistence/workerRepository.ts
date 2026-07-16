@@ -48,6 +48,11 @@ export interface WorkerRepository {
     limit: number,
     includeDeleted?: boolean,
   ): Promise<{ workers: WorkerRecord[]; total: number }>;
+  /**
+   * bot worker の総数を返す（#1113・ダッシュボード集計用）。
+   * `listBotWorkersPaginated` の既定（`includeDeleted=false`）と同じ、論理削除済みを除外する条件を踏襲する。
+   */
+  count(): Promise<number>;
 }
 
 export function createInMemoryWorkerRepository(
@@ -153,6 +158,10 @@ export function createInMemoryWorkerRepository(
       const total = filtered.length;
       const sliced = filtered.slice((page - 1) * limit, page * limit);
       return Promise.resolve({ workers: sliced.map((w) => ({ ...w })), total });
+    },
+
+    count(): Promise<number> {
+      return Promise.resolve(workers.filter((w) => w.deletedAt === null).length);
     },
   };
 }

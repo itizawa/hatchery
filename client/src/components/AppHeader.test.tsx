@@ -196,7 +196,7 @@ describe("AppHeader", () => {
     renderApp("/");
 
     // 背景にホームフィードが描画されていることを確認（モーダルを開く前は role でも見つかる）。
-    await screen.findByRole("heading", { name: /ホームフィード/ });
+    await screen.findByRole("heading", { name: /人気の投稿/ });
     const guestTrigger = await screen.findByRole("button", { name: /ゲストメニュー/ });
     await userEvent.click(guestTrigger);
     const loginItem = await screen.findByRole("menuitem", { name: /ログイン/ });
@@ -206,7 +206,7 @@ describe("AppHeader", () => {
     expect(await screen.findByRole("button", { name: /Google でログイン/ })).toBeInTheDocument();
     // 背景のホームフィードは DOM 上に残ったまま（ページ遷移していない）。
     // モーダル展開後は背景が aria-hidden になるため role ではなく text で存在を確認する。
-    expect(screen.getByText("ホームフィード")).toBeInTheDocument();
+    expect(screen.getByText("人気の投稿")).toBeInTheDocument();
   });
 
   it("未ログイン時は displayName が表示されない", async () => {
@@ -368,7 +368,7 @@ describe("AppHeader", () => {
       const homeLink = await screen.findByRole("link", { name: /ホーム/ });
       await userEvent.click(homeLink);
 
-      await screen.findByRole("heading", { name: /ホームフィード/ });
+      await screen.findByRole("heading", { name: /人気の投稿/ });
       expect(input.value).toBe("foobar");
     });
 

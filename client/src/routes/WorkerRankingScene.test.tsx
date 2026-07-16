@@ -20,7 +20,30 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@tanstack/react-router")>();
   return {
     ...actual,
-    Link: ({ children, to }: { children: React.ReactNode; to: string }) => <a href={to}>{children}</a>,
+    Link: ({
+      children,
+      to,
+      params,
+      ...rest
+    }: {
+      children: React.ReactNode;
+      to: string;
+      params?: Record<string, string>;
+      [key: string]: unknown;
+    }) => {
+      const href = params
+        ? Object.entries(params).reduce(
+            // eslint-disable-next-line max-params
+            (t, [k, v]) => t.replace(`$${k}`, v),
+            to,
+          )
+        : to;
+      return (
+        <a href={href} {...rest}>
+          {children}
+        </a>
+      );
+    },
   };
 });
 
@@ -159,6 +182,23 @@ describe("WorkerRankingScene (#956) — アバター表示", () => {
     renderWithData({ workers: [] });
     await screen.findByTestId("ranking-empty");
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
+  });
+});
+
+describe("WorkerRankingScene (#1161) — 名前・アイコンからワーカー詳細への遷移リンク", () => {
+  it("各行の名前・アイコン領域が data-testid=ranking-row-worker-link を持ち、対応する worker_id への href になっている", async () => {
+    renderWithData();
+    const aliceLink = await screen.findByTestId("ranking-row-worker-link-worker-1");
+    expect(aliceLink).toHaveAttribute("href", "/workers/worker-1");
+    const bobLink = screen.getByTestId("ranking-row-worker-link-worker-2");
+    expect(bobLink).toHaveAttribute("href", "/workers/worker-2");
+  });
+
+  it("リンク内にワーカー名とアバターが表示される", async () => {
+    renderWithData();
+    const aliceLink = await screen.findByTestId("ranking-row-worker-link-worker-1");
+    expect(aliceLink).toHaveTextContent("Alice");
+    expect(screen.getByRole("img", { name: "Alice" })).toBeInTheDocument();
   });
 });
 

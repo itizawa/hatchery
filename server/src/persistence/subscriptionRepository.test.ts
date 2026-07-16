@@ -168,4 +168,26 @@ describe("createInMemorySubscriptionRepository", () => {
       expect(result[0].communityId).toBe("community-1");
     });
   });
+
+  describe("count（#1113）", () => {
+    it("subscription が 0 件のとき 0 を返す", async () => {
+      const repo = createInMemorySubscriptionRepository();
+      expect(await repo.count()).toBe(0);
+    });
+
+    it("複数ユーザー・複数コミュニティの購読をまとめて総数で返す", async () => {
+      const repo = createInMemorySubscriptionRepository();
+      await repo.add("user-1", "community-1");
+      await repo.add("user-1", "community-2");
+      await repo.add("user-2", "community-1");
+      expect(await repo.count()).toBe(3);
+    });
+
+    it("解除された購読は件数に含まれない", async () => {
+      const repo = createInMemorySubscriptionRepository();
+      await repo.add("user-1", "community-1");
+      await repo.remove("user-1", "community-1");
+      expect(await repo.count()).toBe(0);
+    });
+  });
 });

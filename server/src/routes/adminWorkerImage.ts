@@ -14,11 +14,13 @@ import { singleImageUpload } from "../middleware/imageUpload.js";
  * admin 管理者向けワーカー画像アップロードルーター（#204 / ADR-0022）。
  * POST /api/admin/workers/:id/image
  */
-// eslint-disable-next-line max-params
-export function createAdminWorkerImageRouter(
-  workerRepository: WorkerRepository,
-  storageService: StorageService,
-): Router {
+export function createAdminWorkerImageRouter({
+  workerRepository,
+  storageService,
+}: {
+  workerRepository: WorkerRepository;
+  storageService: StorageService;
+}): Router {
   const router = Router();
 
   router.post(

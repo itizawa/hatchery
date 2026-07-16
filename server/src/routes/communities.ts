@@ -29,16 +29,23 @@ import { toPostResponse } from "./postResponse.js";
  * - 購読・購読解除は認証必須（up vote と購読のみ・ADR-0020）
  * - #831: community フィードでも sessionId 付きのとき my_vote を付与する。
  */
-// eslint-disable-next-line max-params
-export function createCommunitiesRouter(
-  communityRepo: CommunityRepository,
-  postRepo: PostRepository,
-  subscriptionRepo: SubscriptionRepository,
-  workerRepo: WorkerRepository,
-  commentRepo: CommentRepository,
-  voteRepo: VoteRepository,
-  workerCommunityRepo: WorkerCommunityRepository,
-): Router {
+export function createCommunitiesRouter({
+  communityRepo,
+  postRepo,
+  subscriptionRepo,
+  workerRepo,
+  commentRepo,
+  voteRepo,
+  workerCommunityRepo,
+}: {
+  communityRepo: CommunityRepository;
+  postRepo: PostRepository;
+  subscriptionRepo: SubscriptionRepository;
+  workerRepo: WorkerRepository;
+  commentRepo: CommentRepository;
+  voteRepo: VoteRepository;
+  workerCommunityRepo: WorkerCommunityRepository;
+}): Router {
   const router = Router();
 
   // community 一覧（認証不要・公共コミュニティ）
@@ -55,7 +62,11 @@ export function createCommunitiesRouter(
       .then(([communities, statsMap, subscriberMap]) =>
         res.status(200).json(
           communities.map((c) =>
-            toCommunityResponse(c, statsMap.get(c.id), subscriberMap.get(c.id) ?? 0),
+            toCommunityResponse({
+              r: c,
+              stats: statsMap.get(c.id),
+              subscriberCount: subscriberMap.get(c.id) ?? 0,
+            }),
           ),
         ),
       )
@@ -94,8 +105,8 @@ export function createCommunitiesRouter(
         return { ...result, posts: [...pinnedForThisPage, ...result.posts] };
       })
       .then(async (result) => {
-        const enriched = await attachAuthorWorker(result.posts, workerRepo);
-        const withCounts = await attachCommentCount(enriched, commentRepo, { now });
+        const enriched = await attachAuthorWorker({ records: result.posts, workerRepo });
+        const withCounts = await attachCommentCount({ records: enriched, commentRepo, options: { now } });
         if (sessionId) {
           const voteMap = await voteRepo.findVotesBySessionAndTargets({
             sessionId,

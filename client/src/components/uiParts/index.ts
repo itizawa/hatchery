@@ -53,4 +53,4 @@ export { default as Tabs } from "@mui/material/Tabs";
 export { default as TextField } from "@mui/material/TextField";
 export { default as Typography } from "@mui/material/Typography";
 export { default as useMediaQuery } from "@mui/material/useMediaQuery";
-export { useTheme } from "@mui/material/styles";
+export { alpha, useTheme } from "@mui/material/styles";

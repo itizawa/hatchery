@@ -62,6 +62,9 @@ export interface SubscriptionRepository {
 
   /** 指定 community 群のうち notifyEnabled=true の購読者 userId を重複なく返す（#1088）。 */
   listNotifiableUserIds(communityIds: string[]): Promise<string[]>;
+
+  /** 総 subscription 数を返す（#1113・ダッシュボード集計用）。 */
+  count(): Promise<number>;
 }
 
 /** DB 非依存のインメモリ実装。ユースケース/ルートのテストで注入する。 */
@@ -161,6 +164,10 @@ export function createInMemorySubscriptionRepository(): SubscriptionRepository {
           .map((r) => r.userId),
       );
       return Promise.resolve([...ids]);
+    },
+
+    count(): Promise<number> {
+      return Promise.resolve(records.length);
     },
   };
 }

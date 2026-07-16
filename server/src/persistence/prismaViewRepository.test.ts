@@ -120,4 +120,49 @@ describe.skipIf(!DATABASE_URL)("createPrismaViewRepository (integration)", () =>
       expect(result.size).toBe(0);
     });
   });
+
+  describe("totalViewCount（#1113）", () => {
+    it("記録がない場合は 0 を返す", async () => {
+      const repo = createPrismaViewRepository(prisma);
+
+      const result = await repo.totalViewCount();
+
+      expect(result).toBe(0);
+    });
+
+    it("Post.viewCount / Comment.viewCount の合計を返す", async () => {
+      await setupFixtures();
+      const repo = createPrismaViewRepository(prisma);
+
+      await repo.recordPostView(postId, "sess-1", null);
+      await repo.recordPostView(postId, "sess-2", null);
+      await repo.recordCommentViews([commentId], "sess-1", null);
+
+      const result = await repo.totalViewCount();
+
+      expect(result).toBe(3);
+    });
+  });
+
+  describe("viewCountByCommunity（#1113）", () => {
+    it("記録がない場合は空の Map を返す", async () => {
+      const repo = createPrismaViewRepository(prisma);
+
+      const result = await repo.viewCountByCommunity();
+
+      expect(result.size).toBe(0);
+    });
+
+    it("community 単位で Post.viewCount / Comment.viewCount の合計を返す", async () => {
+      await setupFixtures();
+      const repo = createPrismaViewRepository(prisma);
+
+      await repo.recordPostView(postId, "sess-1", null);
+      await repo.recordCommentViews([commentId], "sess-1", null);
+
+      const result = await repo.viewCountByCommunity();
+
+      expect(result.get(communityId)).toBe(2);
+    });
+  });
 });

@@ -11,8 +11,21 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import type React from "react";
 
 import { MarkdownContent } from "./MarkdownContent";
+
+// #1163: ワーカー名の自動リンク化は内部で RouterLink を使う。他コンポーネントのテスト
+// （PostThreadScene.test.tsx 等）と同じく、router context 無しで描画できるよう Link をモックする。
+vi.mock("@tanstack/react-router", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@tanstack/react-router")>();
+  return {
+    ...actual,
+    Link: ({ children, to }: { children: React.ReactNode; to: string; params?: unknown }) => (
+      <a href={to}>{children}</a>
+    ),
+  };
+});
 
 describe("MarkdownContent", () => {
   describe("基本 Markdown 記法のレンダリング", () => {
@@ -244,6 +257,47 @@ const x = 1;
       const { container } = render(<MarkdownContent content={"# 見出し\n\n本文段落"} />);
       const wrapper = container.firstElementChild;
       expect(wrapper).not.toHaveStyle({ display: "-webkit-box" });
+    });
+  });
+
+  describe("ワーカー名の自動リンク化（knownWorkers・#1163）", () => {
+    it("knownWorkers に含まれるワーカー名が本文中に現れると RouterLink として描画される", () => {
+      const { container } = render(
+        <MarkdownContent
+          content="ケンタと話しました"
+          knownWorkers={[{ id: "worker-kenta", displayName: "ケンタ" }]}
+        />,
+      );
+      const link = container.querySelector("a");
+      expect(link).not.toBeNull();
+      expect(link?.textContent).toBe("ケンタ");
+      expect(link?.getAttribute("href")).toBe("/workers/$workerId");
+    });
+
+    it("マッチした部分以外の本文はそのままプレーンテキストで表示される", () => {
+      const { container } = render(
+        <MarkdownContent
+          content="ケンタと話しました"
+          knownWorkers={[{ id: "worker-kenta", displayName: "ケンタ" }]}
+        />,
+      );
+      expect(container.textContent).toBe("ケンタと話しました");
+    });
+
+    it("knownWorkers 未指定時は従来どおりプレーンテキストのまま描画される（後方互換）", () => {
+      const { container } = render(<MarkdownContent content="ケンタと話しました" />);
+      expect(container.querySelector("a")).toBeNull();
+      expect(screen.getByText("ケンタと話しました")).toBeInTheDocument();
+    });
+
+    it("本文中に一致するワーカー名が無いときはリンク化されない", () => {
+      const { container } = render(
+        <MarkdownContent
+          content="誰にも言及していません"
+          knownWorkers={[{ id: "worker-kenta", displayName: "ケンタ" }]}
+        />,
+      );
+      expect(container.querySelector("a")).toBeNull();
     });
   });
 });

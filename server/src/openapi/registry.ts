@@ -10,6 +10,7 @@ import { z } from "zod";
 import { registerAdmin } from "./registrations/registerAdmin.js";
 import { registerAuth } from "./registrations/registerAuth.js";
 import { registerCommunities } from "./registrations/registerCommunities.js";
+import { registerDashboard } from "./registrations/registerDashboard.js";
 import { registerFeed } from "./registrations/registerFeed.js";
 import { registerHealth } from "./registrations/registerHealth.js";
 import { registerOgp } from "./registrations/registerOgp.js";
@@ -62,18 +63,20 @@ function buildRegistry(): OpenAPIRegistry {
   // registerCommunities が Post / Comment component を ctx に代入するため、
   // registerFeed / registerPosts / registerWorkers（#929: /:workerId/posts で PostComponent 参照）は
   // その後で呼ぶ必要がある。
-  registerAuth(registry, ctx);
-  registerAdmin(registry, ctx);
+  registerAuth({ registry, ctx });
+  registerAdmin({ registry, ctx });
   registerHealth(registry);
-  registerCommunities(registry, ctx);
-  registerWorkers(registry, ctx);
-  registerFeed(registry, ctx);
-  registerPosts(registry, ctx);
-  registerSubscriptions(registry, ctx);
+  registerCommunities({ registry, ctx });
+  registerWorkers({ registry, ctx });
+  registerFeed({ registry, ctx });
+  registerPosts({ registry, ctx });
+  registerSubscriptions({ registry, ctx });
   registerPushSubscriptions({ registry, ctx });
   registerOgp(registry);
   // #1065: 末尾に追加（既存セクションの登録順序は変えない）。
-  registerRanking(registry, ctx);
+  registerRanking({ registry, ctx });
+  // #1113: 末尾に追加（既存セクションの登録順序は変えない）。
+  registerDashboard(registry);
 
   return registry;
 }

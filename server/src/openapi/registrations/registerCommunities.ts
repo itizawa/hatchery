@@ -31,8 +31,13 @@ import {
  * このモジュールは Post / Comment component を register し、後続の feed / posts モジュールが
  * 参照できるよう {@link RegistryContext} に代入する（分割前と同じ登録順序を保つため）。
  */
-// eslint-disable-next-line max-params
-export function registerCommunities(registry: OpenAPIRegistry, ctx: RegistryContext): void {
+export function registerCommunities({
+  registry,
+  ctx,
+}: {
+  registry: OpenAPIRegistry;
+  ctx: RegistryContext;
+}): void {
   const { errorJson, WorkerComponent } = ctx;
 
   const CommunityComponent = registry.register(
@@ -170,6 +175,22 @@ export function registerCommunities(registry: OpenAPIRegistry, ctx: RegistryCont
     },
   };
 
+  // レスポンスは icon/cover で形状が異なる（iconUrl のみ / coverUrl のみ）ため、
+  // named component を分けて登録する（#1180: client から components["schemas"][...] 参照可能にする）。
+  const CommunityIconUploadResponseComponent = registry.register(
+    "CommunityIconUploadResponse",
+    z.object({ id: z.string(), iconUrl: z.string().nullable() }).openapi({
+      description: "アップロード後の community id と iconUrl（#457 / #1180）",
+    }),
+  );
+
+  const CommunityCoverUploadResponseComponent = registry.register(
+    "CommunityCoverUploadResponse",
+    z.object({ id: z.string(), coverUrl: z.string().nullable() }).openapi({
+      description: "アップロード後の community id と coverUrl（#457 / #1180）",
+    }),
+  );
+
   registry.registerPath({
     method: "post",
     path: "/api/admin/communities/{id}/icon",
@@ -181,11 +202,7 @@ export function registerCommunities(registry: OpenAPIRegistry, ctx: RegistryCont
     responses: {
       200: {
         description: "アップロード後の community id と iconUrl",
-        content: {
-          "application/json": {
-            schema: z.object({ id: z.string(), iconUrl: z.string().nullable() }),
-          },
-        },
+        content: { "application/json": { schema: CommunityIconUploadResponseComponent } },
       },
       400: { description: "ファイル不正（MIME / サイズ超過 / 未添付）", ...errorJson },
       401: { description: "未認証", ...errorJson },
@@ -205,11 +222,7 @@ export function registerCommunities(registry: OpenAPIRegistry, ctx: RegistryCont
     responses: {
       200: {
         description: "アップロード後の community id と coverUrl",
-        content: {
-          "application/json": {
-            schema: z.object({ id: z.string(), coverUrl: z.string().nullable() }),
-          },
-        },
+        content: { "application/json": { schema: CommunityCoverUploadResponseComponent } },
       },
       400: { description: "ファイル不正（MIME / サイズ超過 / 未添付）", ...errorJson },
       401: { description: "未認証", ...errorJson },
